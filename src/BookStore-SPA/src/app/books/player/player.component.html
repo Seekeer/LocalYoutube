@@ -1,0 +1,6 @@
+<div class="jumbtron">
+  <video height="auto" autoplay  #videoElement (click)="videoClick()" (ended)="videoEnded()">
+    <source src="{{videoURL}}" type="video/mp4"/>
+    <!-- <source src="https://localhost:44382/api/Files/getFileById?fileId=1" type="video/mp4" /> -->
+  </video>
+</div>

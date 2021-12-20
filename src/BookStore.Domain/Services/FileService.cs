@@ -1,0 +1,72 @@
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using FileStore.Domain.Interfaces;
+using FileStore.Domain.Models;
+
+namespace FileStore.Domain.Services
+{
+    public class FileService : IFileService
+    {
+        private readonly IFileRepository _FileRepository;
+
+        public FileService(IFileRepository FileRepository)
+        {
+            _FileRepository = FileRepository;
+        }
+
+        public async Task<IEnumerable<VideoFile>> GetAll()
+        {
+            return await _FileRepository.GetAll();
+        }
+
+        public async Task<VideoFile> GetById(int id)
+        {
+            return await _FileRepository.GetById(id);
+        }
+
+        public async Task<VideoFile> Add(VideoFile File)
+        {
+            if (_FileRepository.Search(b => b.Name == File.Name).Result.Any())
+                return null;
+
+            await _FileRepository.Add(File);
+            return File;
+        }
+
+        public async Task<VideoFile> Update(VideoFile File)
+        {
+            if (_FileRepository.Search(b => b.Name == File.Name && b.Id != File.Id).Result.Any())
+                return null;
+
+            await _FileRepository.Update(File);
+            return File;
+        }
+
+        public async Task<bool> Remove(VideoFile File)
+        {
+            await _FileRepository.Remove(File);
+            return true;
+        }
+
+        public async Task<IEnumerable<VideoFile>> GetFilesBySearies(int SeriesId)
+        {
+            return await _FileRepository.GetFilesBySeriesAsync(SeriesId);
+        }
+
+        public async Task<IEnumerable<VideoFile>> Search(string FileName)
+        {
+            return await _FileRepository.Search(c => c.Name.Contains(FileName));
+        }
+
+        public async Task<IEnumerable<VideoFile>> SearchFileWithSeries(string searchedValue)
+        {
+            return await _FileRepository.SearchFileWithSeasonAsync(searchedValue);
+        }
+
+        public void Dispose()
+        {
+            _FileRepository?.Dispose();
+        }
+    }
+}

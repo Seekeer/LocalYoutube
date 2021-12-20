@@ -1,0 +1,21 @@
+<div class="col-md-12">
+<hr/>
+<hr/>
+<hr/>
+  <div class="form-group">
+      <div class="input-group">
+        <div class="input-group-prepend">
+          Сериал
+        </div>
+        <input class="ml-2" type="text" [(ngModel)]="searchTerm" (ngModelChange)="searchBooks()"/>
+      </div>
+    </div>
+
+    <div *ngFor="let book of books">
+      
+        <p class="h6">{{book.name}}</p>
+
+        <img src='data:image/jpg;base64,{{book.cover}}' (click)="openVideo(book.id)" /> 
+
+    </div>
+</div>
