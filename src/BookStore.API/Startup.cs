@@ -1,7 +1,6 @@
 using AutoMapper;
 using FileStore.API.Configuration;
 using FileStore.Infrastructure.Context;
-using Microsoft.AspNetCore.Authentication.Certificate;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -21,15 +20,10 @@ namespace FileStore.API
 
         public IConfiguration Configuration { get; }
 
+        private readonly string _policyName = "CorsPolicy";
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddCors();
-
-            services.AddAuthentication(
-                CertificateAuthenticationDefaults.AuthenticationScheme)
-                .AddCertificate();
-
             services.AddDbContext<VideoCatalogDbContext>(options =>
             {
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
@@ -37,18 +31,27 @@ namespace FileStore.API
 
             services.AddAutoMapper(typeof(Startup));
 
+            services.AddCors(opt =>
+            {
+                opt.AddPolicy(name: _policyName, builder =>
+                {
+                    builder.AllowAnyOrigin()
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+            });
             services.AddControllers();
 
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo()
                 {
-                    Title = "FileStore API",
+                    Title = "BookStore API",
                     Version = "v1"
                 });
             });
 
-            services.AddCors();
+            //services.AddCors();
 
             services.ResolveDependencies();
         }
@@ -71,9 +74,10 @@ namespace FileStore.API
 
             app.UseRouting();
 
-            app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            app.UseCors(_policyName);
             app.UseAuthorization();
 
+            //app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 
             app.UseEndpoints(endpoints =>
             {

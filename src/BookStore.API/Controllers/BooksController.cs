@@ -7,11 +7,13 @@ using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using Infrastructure;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FileStore.API.Controllers
 {
+    [EnableCors()]
     [Route("api/[controller]")]
     public class FilesController : MainController
     {

@@ -18,6 +18,7 @@ export class BookListComponent implements OnInit {
   public books: any;
   public listComplet: any;
   public searchTerm: string;
+  public seriesCount: number = 1;
   public searchValueChanged: Subject<string> = new Subject<string>();
 
   constructor(private router: Router,
@@ -95,12 +96,11 @@ export class BookListComponent implements OnInit {
     const queryParams: any = {};
     let arrayOfValues = [id];
 
-    let numberOfVideos = 4;
     var index = 0;
     do{
       if(this.books[index++].id != id)
         arrayOfValues.push(this.books[index -1].id);
-    }while (arrayOfValues.length < Math.min(numberOfVideos, this.books.length))
+    }while (arrayOfValues.length < Math.min(this.seriesCount, this.books.length))
     arrayOfValues = arrayOfValues.reverse();
 
     queryParams.myArray = JSON.stringify(arrayOfValues);
@@ -110,39 +110,5 @@ export class BookListComponent implements OnInit {
 
    // Navigate to component B
    this.router.navigate(['/player'], navigationExtras);
-
-    // this.router.navigate(['/player', 1]);
-  }
-
-
-  mimeCodec = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';// i have make sure the file is mp4 type only
-  playVideo() {
-    if (
-      "MediaSource" in window &&
-      MediaSource.isTypeSupported(this.mimeCodec)
-    ) {
-      const mediaSource = new MediaSource();
-      (this.video.nativeElement as HTMLVideoElement).src = URL.createObjectURL(
-        mediaSource
-      );
-      mediaSource.addEventListener("sourceopen", () =>
-        this.sourceOpen(mediaSource)
-      );
-    } else {
-      console.error("Unsupported MIME type or codec: ", this.mimeCodec);
-    }
-  }
-  sourceOpen(mediaSource) {
-    let url = "https://localhost:44382/api/Files/getFileById?fileId=1";
-    const sourceBuffer = mediaSource.addSourceBuffer(this.mimeCodec);
-    return this.http
-      .get(url, { responseType: "blob" })
-      .subscribe((blob) => {
-        sourceBuffer.addEventListener("updateend", () => {
-          mediaSource.endOfStream();
-          this.video.nativeElement.play();
-        });
-        blob.arrayBuffer().then((x) => sourceBuffer.appendBuffer(x));
-      });
   }
 }
