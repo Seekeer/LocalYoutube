@@ -105,23 +105,22 @@ export class BookListComponent implements OnInit {
   }
 
   openVideo(id: number) {
-    const queryParams: any = {};
-    let arrayOfValues = [id];
+    const queryParams: PlayerParameters = {
+      seriesId : this.books[0].categoryId,
+      videoId : id,
+      videosCount : this.episodeCount
+    };
 
-    var index = 0;
-    while (arrayOfValues.length < Math.min(this.episodeCount, this.books.length))
-    {
-      if(this.books[index++].id != id)
-        arrayOfValues.push(this.books[index -1].id);
-    }
-    arrayOfValues = arrayOfValues.reverse();
-
-    queryParams.myArray = JSON.stringify(arrayOfValues);
     const navigationExtras: NavigationExtras = {
-      queryParams
+      state: queryParams
    };
 
-   // Navigate to component B
    this.router.navigate(['/player'], navigationExtras);
   }
+}
+
+export class PlayerParameters {
+  videoId: number;
+  seriesId: number;
+  videosCount: number;
 }

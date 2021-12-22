@@ -48,9 +48,13 @@ namespace FileStore.Infrastructure.Repositories
 
             var rand = new Random();
             var files = (Db.Files.Where(f => f.SeriesId == series.Id).ToList());
-            var result = files.OrderBy(x => Guid.NewGuid()).Take(5).ToList();
+            var result = files.OrderBy(x => Guid.NewGuid()).Take(resultCount).ToList();
             result.ToList().ForEach(
-                x => Db.Entry(x).Reference(x => x.VideoFileExtendedInfo).Load());
+                x =>
+                {
+                    Db.Entry(x).Reference(x => x.VideoFileExtendedInfo).Load();
+                    x.SeriesId = series.Id;
+                });
 
             return result;
 

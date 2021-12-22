@@ -2,6 +2,9 @@
   <video controls height="auto" autoplay  #videoElement (ended)="videoEnded()">
     <source src="{{videoURL}}" type="video/mp4"/>
   </video>
+
+  <button (clicked)="skipVideo()">Следующее</button>
+  <div>{{statStr}}</div>
 </div>
 
 <!-- https://openbase.com/js/@vime/angular

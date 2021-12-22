@@ -15,6 +15,9 @@ export class FileService {
     public getVideoURLById(id: number) {
         return this.baseUrl +'Files/getFileById?fileId=' + id;
     }
+    public getRandomVideoBySeries(seriesId: number) {
+        return this.baseUrl +'Files/getRandomFileBySeriesId?seriesId=' + seriesId;
+    }
 
     public addBook(book: Book) {
         return this.http.post(this.baseUrl + 'files', book);

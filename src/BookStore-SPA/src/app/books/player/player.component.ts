@@ -5,6 +5,9 @@ import { Book } from 'src/app/_models/Book';
 import { FileService } from 'src/app/_services/file.service';
 import { ToastrService } from 'ngx-toastr';
 import { SeriesService } from 'src/app/_services/series.service';
+import { PlayerParameters } from '../book-list/book-list.component';
+import { Moment } from 'moment';
+import * as moment from 'moment';
 
 @Component({
   selector: 'app-player',
@@ -18,7 +21,11 @@ export class PlayerComponent implements OnInit {
   public formData: Book;
   public categories: any;
   public videoURL: string;
-  arrayOfValues: number[];
+  public statStr: string;
+  private previousVideoTimePlayed: Moment = moment.unix(0);
+  
+  playedVideoCount: number = 0;
+  parameters: PlayerParameters;
 
   constructor(public service: FileService,
     private categoryService: SeriesService,
@@ -27,15 +34,12 @@ export class PlayerComponent implements OnInit {
     private toastr: ToastrService) { }
 
   ngOnInit() {
-    const myArray = this.route.snapshot.queryParamMap.get('myArray');
-    if (myArray === null) {
-      this.arrayOfValues = new Array<number>();
-    } else {
-      this.arrayOfValues = JSON.parse(myArray);
-    }
 
-    this.setNextVideo();
+    this.parameters = <PlayerParameters>history.state;
 
+    this.setNextVideo(true);
+    
+    // setInterval(() => this.updateStat(), 1000);
   }
   
   private getVideoElement(){
@@ -44,19 +48,40 @@ export class PlayerComponent implements OnInit {
   
   public videoEnded() {
     console.log('ended');
-    if(this.setNextVideo())
+    if(this.setNextVideo(true))
       this.getVideoElement().play();
     // TODO - show end show screen
   }
-  
-  private setNextVideo() {
-    if(this.arrayOfValues.length == 0)
+  public skipVideo() {
+    // this.setNextVideo(false);
+    this.updateStat();
+  }
+
+  private setNextVideo(encreaseCounter:boolean) {
+    if(this.parameters.videosCount <= this.playedVideoCount)
       return false;
 
-    var id = this.arrayOfValues.pop();
-    this.videoURL = this.service.getVideoURLById(id);
+      if(this.parameters.videoId != 0){
+        this.videoURL = this.service.getVideoURLById(this.parameters.videoId);
+        this.parameters.videoId = 0;
+      }
+      else
+        this.videoURL = this.service.getRandomVideoBySeries(this.parameters.seriesId);
+
+    if(encreaseCounter)
+      this.playedVideoCount++;
 
     return true;
   }
+
+  private updateStat() {
+    var video = this.getVideoElement();
+    var totalDuration = this.previousVideoTimePlayed;
+    if(video)
+      totalDuration = totalDuration.seconds(video.currentTime);
+
+    this.statStr = `${totalDuration.format("mm:ss")} ${this.playedVideoCount}/${this.parameters.videosCount}`
+  }
+  
 }
 
