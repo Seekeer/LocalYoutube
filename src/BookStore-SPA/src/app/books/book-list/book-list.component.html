@@ -4,7 +4,10 @@
       <div class="input-group-prepend">
         Сериал
       </div>
-      <input class="ml-2" type="text" [(ngModel)]="searchTerm" (ngModelChange)="searchBooks()" />
+      <input class="ml-2" type="text" [(ngModel)]="searchTerm" (ngModelChange)="searchBooks()" list="browsers">
+      <datalist id="browsers">
+        <option *ngFor="let data of series" value="{{data.name}}">
+      </datalist>
       
       <div class="input-group-prepend ml-2">
         Число серий

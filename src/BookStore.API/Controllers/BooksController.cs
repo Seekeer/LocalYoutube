@@ -33,7 +33,8 @@ namespace FileStore.API.Controllers
         public async Task<IActionResult> GetAll()
         {
             var dbUpdater = new DbUpdateManager(_db);
-            dbUpdater.FillSeries(@"Z:\Smth\Bittorrent\Анюта\Сериалы");
+            dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Мультсериалы");
+            //dbUpdater.FillSeries(@"Z:\Smth\Bittorrent\Анюта\Сериалы");
 
             var Files = await _FileService.GetAll();
 
@@ -137,9 +138,15 @@ namespace FileStore.API.Controllers
         [Route("getFileById")]
         public async Task<FileResult> GetVideoById(int fileId)
         {
-            return PhysicalFile(@"C:\Users\Dim\AppData\LocalLow\iTop Screen Recorder\Outputs\20211217_184225.mp4", "application/octet-stream", enableRangeProcessing: true);
-
             var file = await _FileService.GetById(fileId);
+            return PhysicalFile($"{file.Path}", "application/octet-stream", enableRangeProcessing: true);
+        }
+
+        [HttpGet]
+        [Route("getRandomFileBySeriesId")]
+        public async Task<FileResult> GetRandomFileBySeriesId(int seriesId)
+        {
+            var file = await _FileService.GetRandomFileBySeriesId(seriesId);
             return PhysicalFile($"{file.Path}", "application/octet-stream", enableRangeProcessing: true);
         }
     }

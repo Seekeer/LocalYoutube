@@ -8,6 +8,7 @@ using FileStore.Domain.Models;
 using System.Text.RegularExpressions;
 using FFMpegCore;
 using System.Drawing;
+using System.Threading.Tasks;
 //using MediaToolkit.Model;
 //using MediaToolkit;
 //using MediaToolkit.Options;
@@ -22,6 +23,16 @@ namespace Infrastructure
         {
             this._db = db;
             GlobalFFOptions.Configure(new FFOptions { BinaryFolder = @"C:\Dev\_Smth\BookStore-master\src\BookStore.API\bin\Debug\netcoreapp3.1\ffmpeg\" });
+        }
+        public void FillFilms(string rootPath)
+        {
+            var dirInfo = new DirectoryInfo(rootPath);
+            foreach (var dir in dirInfo.GetDirectories())
+            {
+                AddSeries(dir);
+            }
+
+            _db.SaveChanges();
         }
 
         public void FillSeries(string rootPath)
@@ -55,13 +66,14 @@ namespace Infrastructure
         {
             var season = AddOrUpdateSeason(series, dir.Name);
 
+            //Parallel.ForEach(dir.EnumerateFiles(), file =>
             foreach (var file in dir.EnumerateFiles())
             {
                 try
                 {
 
                     if (file.Name.EndsWith("jpg") || file.Name.EndsWith("jpeg") || file.Name.EndsWith("nfo") || file.Name.EndsWith("mp3"))
-                        continue;
+                        return;
 
                     // TODO - quality
                     VideoFile videoInfo = GetVideoInfo(series, season, file);
@@ -73,6 +85,7 @@ namespace Infrastructure
                 {
                 }
             }
+            //);
         }
 
         private Season AddOrUpdateSeason(Series series, string name)
@@ -159,9 +172,6 @@ namespace Infrastructure
 
         private void FillVideoProperties(VideoFile videoFile)
         {
-            //var bitmap = FFMpeg.Snapshot(file.FullName, new Size(800, 600), TimeSpan.FromMinutes(1));
-            //bitmap.Save("123.jpg");
-
             var bitmap = FFMpeg.Snapshot(videoFile.Path, null, TimeSpan.FromMinutes(1));
             videoFile.Quality = DetectQuality(bitmap);
 
@@ -172,6 +182,16 @@ namespace Infrastructure
                 videoFile.VideoFileExtendedInfo = new VideoFileExtendedInfo();
                 videoFile.VideoFileExtendedInfo.Cover = memoryStream.ToArray();
             }
+
+            var probe = FFProbe.Analyse(videoFile.Path);
+            //videoFile.Duration = probe.Duration;
+
+            //var objMediaInfo = new MediaInfo.MediaInfo();
+
+            //objMediaInfo.Open(@"TheFullPathOf\test.mp4");
+            //string result = objMediaInfo.Inform();
+            //string duration = objMediaInfo.Option("Duration");
+            //objMediaInfo.Close();
 
             //return File.ReadAllBytes(@"C:\Dev\_Smth\BookStore-master\src\BookStore.Infrastructure\bin\Debug\netcoreapp3.1\photo_2021-12-10_10-47-35.jpg");
             //var inputFile = new MediaFile { Filename = file.FullName };

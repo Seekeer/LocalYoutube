@@ -68,5 +68,10 @@ namespace FileStore.Domain.Services
         {
             _FileRepository?.Dispose();
         }
+
+        public async Task<VideoFile> GetRandomFileBySeriesId(int seriesId)
+        {
+            return await _FileRepository.GetRandomFileBySeriesId(seriesId);
+        }
     }
 }

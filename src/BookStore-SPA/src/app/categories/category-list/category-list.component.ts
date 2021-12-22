@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { CategoryService } from 'src/app/_services/category.service';
+import { SeriesService } from 'src/app/_services/series.service';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationDialogService } from 'src/app/_services/confirmation-dialog.service';
 import { Subject } from 'rxjs';
@@ -17,7 +17,7 @@ export class CategoryListComponent implements OnInit {
   public searchValueChanged: Subject<string> = new Subject<string>();
 
   constructor(private router: Router,
-              private service: CategoryService,
+              private service: SeriesService,
               private toastr: ToastrService,
               private confirmationDialogService: ConfirmationDialogService) { }
 

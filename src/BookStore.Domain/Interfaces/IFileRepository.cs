@@ -10,5 +10,6 @@ namespace FileStore.Domain.Interfaces
         new Task<VideoFile> GetById(int id);
         Task<IEnumerable<VideoFile>> GetFilesBySeriesAsync(int seriesId);
         Task<IEnumerable<VideoFile>> SearchFileWithSeasonAsync(string searchedValue, int resultCount =10);
+        Task<VideoFile> GetRandomFileBySeriesId(int seriesId);
     }
 }

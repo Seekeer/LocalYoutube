@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgForm } from '@angular/forms';
-import { Category } from 'src/app/_models/Category';
+import { Serie } from 'src/app/_models/Category';
 import { ToastrService } from 'ngx-toastr';
-import { CategoryService } from 'src/app/_services/category.service';
+import { SeriesService } from 'src/app/_services/series.service';
 
 @Component({
   selector: 'app-category',
@@ -11,9 +11,9 @@ import { CategoryService } from 'src/app/_services/category.service';
   styleUrls: ['./category.component.css']
 })
 export class CategoryComponent implements OnInit {
-  public formData: Category;
+  public formData: Serie;
 
-  constructor(public service: CategoryService,
+  constructor(public service: SeriesService,
               private router: Router,
               private route: ActivatedRoute,
               private toastr: ToastrService) { }

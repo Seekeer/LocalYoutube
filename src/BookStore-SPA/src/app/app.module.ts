@@ -9,8 +9,7 @@ import { ToastrModule } from 'ngx-toastr';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { BookService } from './_services/book.service';
-import { CategoryService } from './_services/category.service';
+import { FileService } from './_services/file.service';
 import { ConfirmationDialogService } from './_services/confirmation-dialog.service';
 import { CategoryComponent } from './categories/category/category.component';
 import { CategoryListComponent } from './categories/category-list/category-list.component';
@@ -20,6 +19,7 @@ import { HomeComponent } from './home/home.component';
 import { NavComponent } from './nav/nav.component';
 import { ConfirmationDialogComponent } from './confirmation-dialog/confirmation-dialog.component';
 import { NgbdDatepickerPopup } from './datepicker/datepicker-popup';
+import { SeriesService } from './_services/series.service';
 
 @NgModule({
   declarations: [
@@ -43,8 +43,8 @@ import { NgbdDatepickerPopup } from './datepicker/datepicker-popup';
     ToastrModule.forRoot()
   ],
   providers: [
-    BookService,
-    CategoryService,
+    FileService,
+    SeriesService,
     ConfirmationDialogService
   ],
   bootstrap: [AppComponent]

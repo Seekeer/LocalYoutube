@@ -2,9 +2,9 @@ import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgForm } from '@angular/forms';
 import { Book } from 'src/app/_models/Book';
-import { BookService } from 'src/app/_services/book.service';
+import { FileService } from 'src/app/_services/file.service';
 import { ToastrService } from 'ngx-toastr';
-import { CategoryService } from 'src/app/_services/category.service';
+import { SeriesService } from 'src/app/_services/series.service';
 
 @Component({
   selector: 'app-player',
@@ -20,8 +20,8 @@ export class PlayerComponent implements OnInit {
   public videoURL: string;
   arrayOfValues: number[];
 
-  constructor(public service: BookService,
-    private categoryService: CategoryService,
+  constructor(public service: FileService,
+    private categoryService: SeriesService,
     private router: Router,
     private route: ActivatedRoute,
     private toastr: ToastrService) { }

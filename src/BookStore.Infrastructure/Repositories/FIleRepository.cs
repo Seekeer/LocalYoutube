@@ -32,10 +32,16 @@ namespace FileStore.Infrastructure.Repositories
             return await Search(b => b.SeriesId == seriesId);
         }
 
+        public async Task<VideoFile> GetRandomFileBySeriesId(int seriesId)
+        {
+            var result = await Search(b => b.SeriesId == seriesId, 1);
+
+            return result.FirstOrDefault();
+        }
+
         public async Task<IEnumerable<VideoFile>> SearchFileWithSeasonAsync(string searchedValue, int resultCount)
         {
             var series = Db.Series.FirstOrDefault(x => EF.Functions.Like(x.Name, $"%{searchedValue.ToLower()}%"));
-            //var series = Db.Series.FirstOrDefault(x => x.Id == 1);
 
             if (series == null)
                 return new List<VideoFile>();
@@ -43,27 +49,11 @@ namespace FileStore.Infrastructure.Repositories
             var rand = new Random();
             var files = (Db.Files.Where(f => f.SeriesId == series.Id).ToList());
             var result = files.OrderBy(x => Guid.NewGuid()).Take(5).ToList();
-            result.Add(Db.Files.FirstOrDefault(x => x.Id == 1));
             result.ToList().ForEach(
-            x => Db.Entry(x).Reference(x => x.VideoFileExtendedInfo).Load());
-            //foreach (var item in result)
-            //{
-            //    item.VideoFileExtendedInfo = Db.FilesInfo.FirstOrDefault(info => info.VideoFileId == item.Id);
-            //}
+                x => Db.Entry(x).Reference(x => x.VideoFileExtendedInfo).Load());
 
-            var info = Db.FilesInfo.FirstOrDefault(info => info.VideoFileId == 41);
             return result;
 
-            //return await Random(Db.Files.AsNoTracking()
-            //        .Where(f => f.SeriesId == series.Id), resultCount)
-            //    .ToListAsync();
-
-            //return await Random(Db.Files.AsNoTracking()
-            //        .Include(b => b.Season)
-            //        .Include(b => b.Series)
-            //        .Where(b => b.Name.Contains(searchedValue) ||
-            //                    b.Series.Name.Contains(searchedValue)), resultCount)
-            //    .ToListAsync();
         }
     }
 }

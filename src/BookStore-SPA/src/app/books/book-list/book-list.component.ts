@@ -1,11 +1,14 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { NavigationExtras, Router } from '@angular/router';
-import { BookService } from 'src/app/_services/book.service';
+import { FileService } from 'src/app/_services/file.service';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationDialogService } from 'src/app/_services/confirmation-dialog.service';
 import { Subject } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
+import { SeriesService } from 'src/app/_services/series.service';
+import { Serie } from 'src/app/_models/Category';
+
 
 @Component({
   selector: 'app-book-list',
@@ -18,21 +21,30 @@ export class BookListComponent implements OnInit {
   public books: any;
   public listComplet: any;
   public searchTerm: string;
-  public seriesCount: number = 1;
+  public episodeCount: number = 1;
   public searchValueChanged: Subject<string> = new Subject<string>();
+  public series: Serie[];
 
   constructor(private router: Router,
-              private service: BookService,
+              private service: FileService,
+              private seriesService: SeriesService,
               private toastr: ToastrService,
               private http:HttpClient,
               private confirmationDialogService: ConfirmationDialogService) { }
 
   ngOnInit() {
+    this.getSeries();
     // this.getValues();
 
     this.searchValueChanged.pipe(debounceTime(1000))
     .subscribe(() => {
       this.search();
+    });
+  }
+  getSeries() {
+    
+    this.seriesService.getAll().subscribe(series => {
+      this.series =series;
     });
   }
 
@@ -97,10 +109,11 @@ export class BookListComponent implements OnInit {
     let arrayOfValues = [id];
 
     var index = 0;
-    do{
+    while (arrayOfValues.length < Math.min(this.episodeCount, this.books.length))
+    {
       if(this.books[index++].id != id)
         arrayOfValues.push(this.books[index -1].id);
-    }while (arrayOfValues.length < Math.min(this.seriesCount, this.books.length))
+    }
     arrayOfValues = arrayOfValues.reverse();
 
     queryParams.myArray = JSON.stringify(arrayOfValues);
