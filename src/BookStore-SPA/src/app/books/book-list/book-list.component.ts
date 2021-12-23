@@ -8,6 +8,7 @@ import { debounceTime } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import { SeriesService } from 'src/app/_services/series.service';
 import { Serie } from 'src/app/_models/Category';
+import { Book as VideoFile } from 'src/app/_models/Book';
 
 
 @Component({
@@ -18,7 +19,7 @@ import { Serie } from 'src/app/_models/Category';
 export class BookListComponent implements OnInit {
   @ViewChild('videoElement') video:ElementRef; 
   
-  public books: any;
+  public books: VideoFile[];
   public listComplet: any;
   public searchTerm: string;
   public episodeCount: number = 1;
@@ -94,7 +95,7 @@ export class BookListComponent implements OnInit {
 
   private search() {
     if (this.searchTerm !== '') {
-      this.service.searchBooksWithCategory(this.searchTerm).subscribe(book => {
+      this.service.searchFilesWithSeries(this.searchTerm).subscribe(book => {
         this.books = book;
       }, error => {
         this.books = [];
@@ -104,15 +105,30 @@ export class BookListComponent implements OnInit {
     }
   }
 
+  // openVideo(id: number) {
+  //   const queryParams: PlayerParameters = {
+  //     seriesId : this.books[0].seriesId,
+  //     videoId : id,
+  //     videosCount : this.episodeCount
+  //   };
+
+  //   const navigationExtras: NavigationExtras = {
+  //     state: queryParams
+  //  };
+
+  //  this.router.navigate(['/player'], navigationExtras);
+  // }
+  
   openVideo(id: number) {
     const queryParams: PlayerParameters = {
-      seriesId : this.books[0].categoryId,
+      seriesId : this.books[0].seriesId,
       videoId : id,
       videosCount : this.episodeCount
     };
 
+    var queryStr = JSON.stringify(queryParams);
     const navigationExtras: NavigationExtras = {
-      state: queryParams
+      queryParams
    };
 
    this.router.navigate(['/player'], navigationExtras);

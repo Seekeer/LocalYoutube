@@ -39,7 +39,7 @@ export class FileService {
         return this.http.get<Book>(this.baseUrl + 'files/' + id);
     }
 
-    public searchBooksWithCategory(searchedValue: string): Observable<Book[]> {
+    public searchFilesWithSeries(searchedValue: string): Observable<Book[]> {
         return this.http.get<Book[]>(`${this.baseUrl}files/search-file-with-series/${searchedValue}`);
     }
 }

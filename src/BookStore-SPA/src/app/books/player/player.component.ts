@@ -35,15 +35,19 @@ export class PlayerComponent implements OnInit {
 
   ngOnInit() {
 
-    this.parameters = <PlayerParameters>history.state;
+    this.parameters = <PlayerParameters>(JSON.parse(JSON.stringify((<any>this.route.snapshot.queryParamMap).params)));
+    // this.parameters = <PlayerParameters>((<any>this.route.snapshot.queryParamMap).params);
+
+    // this.parameters = <PlayerParameters>history.state;
 
     this.setNextVideo(true);
     
-    // setInterval(() => this.updateStat(), 1000);
+    setInterval(() => this.updateStat(), 1000);
   }
   
   private getVideoElement(){
-    return  (this.video.nativeElement as HTMLVideoElement);
+    if (this.video)
+      return  (this.video.nativeElement as HTMLVideoElement);
   }
   
   public videoEnded() {
@@ -53,8 +57,15 @@ export class PlayerComponent implements OnInit {
     // TODO - show end show screen
   }
   public skipVideo() {
-    // this.setNextVideo(false);
-    this.updateStat();
+      this.getVideoElement().pause();
+      this.getVideoElement().currentTime = 0;
+      this.videoURL ='';
+      this.getVideoElement().load();
+
+      this.setNextVideo(false);
+      this.getVideoElement().load();
+      // this.getVideoElement().play();
+      // this.updateStat();
   }
 
   private setNextVideo(encreaseCounter:boolean) {
@@ -69,18 +80,24 @@ export class PlayerComponent implements OnInit {
         this.videoURL = this.service.getRandomVideoBySeries(this.parameters.seriesId);
 
     if(encreaseCounter)
+    {
       this.playedVideoCount++;
+
+      var video = this.getVideoElement();
+      if(video)
+        this.previousVideoTimePlayed.seconds(video.currentTime);
+    }
 
     return true;
   }
 
   private updateStat() {
     var video = this.getVideoElement();
-    var totalDuration = this.previousVideoTimePlayed;
+    var totalDuration = moment(this.previousVideoTimePlayed);
     if(video)
       totalDuration = totalDuration.seconds(video.currentTime);
 
-    this.statStr = `${totalDuration.format("mm:ss")} ${this.playedVideoCount}/${this.parameters.videosCount}`
+    this.statStr = `Общее время просмотра ${totalDuration.format("mm:ss")} ${this.playedVideoCount}/${this.parameters.videosCount}`
   }
   
 }

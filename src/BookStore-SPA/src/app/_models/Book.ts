@@ -1,10 +1,7 @@
 export class Book {
     id: number;
+    seriesId: number;
     name: string;
     cover: string;
-    author: string;
-    description: string;
-    value: number;
-    publishDate: any;
-    categoryId: number;
+    seriesName: string;
 }
