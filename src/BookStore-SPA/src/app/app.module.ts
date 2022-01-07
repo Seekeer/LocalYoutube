@@ -20,6 +20,7 @@ import { NavComponent } from './nav/nav.component';
 import { ConfirmationDialogComponent } from './confirmation-dialog/confirmation-dialog.component';
 import { NgbdDatepickerPopup } from './datepicker/datepicker-popup';
 import { SeriesService } from './_services/series.service';
+import { VimeModule } from '@vime/angular';
 
 @NgModule({
   declarations: [
@@ -39,6 +40,7 @@ import { SeriesService } from './_services/series.service';
     HttpClientModule,
     FormsModule,
     NgbModule,
+    VimeModule,
     BrowserAnimationsModule,
     ToastrModule.forRoot()
   ],

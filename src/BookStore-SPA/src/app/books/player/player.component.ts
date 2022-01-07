@@ -8,6 +8,7 @@ import { SeriesService } from 'src/app/_services/series.service';
 import { PlayerParameters } from '../book-list/book-list.component';
 import { Moment } from 'moment';
 import * as moment from 'moment';
+import { Player } from '@vime/angular';
 
 @Component({
   selector: 'app-player',
@@ -16,8 +17,10 @@ import * as moment from 'moment';
 })
 export class PlayerComponent implements OnInit {
   
-  @ViewChild('videoElement') video:ElementRef; 
+  // @ViewChild('videoElement') video:ElementRef; 
+  @ViewChild('player') player!: Player;
 
+  public loaded: boolean;
   public formData: Book;
   public categories: any;
   public videoURL: string;
@@ -45,39 +48,47 @@ export class PlayerComponent implements OnInit {
     setInterval(() => this.updateStat(), 1000);
   }
   
-  private getVideoElement(){
-    if (this.video)
-      return  (this.video.nativeElement as HTMLVideoElement);
+  private getVideoElement():Player{
+    return this.player;
+
+    // if (this.video)
+    //   return  (this.video.nativeElement as HTMLVideoElement);
   }
   
   public videoEnded() {
     console.log('ended');
     if(this.setNextVideo(true))
-      this.getVideoElement().play();
+      console.log(true);
+      // this.getVideoElement().play();
+
     // TODO - show end show screen
   }
   public skipVideo() {
-      this.getVideoElement().pause();
-      this.getVideoElement().currentTime = 0;
-      this.videoURL ='';
-      this.getVideoElement().load();
-
-      this.setNextVideo(false);
-      this.getVideoElement().load();
+      this.getVideoElement().currentTime =  this.getVideoElement().duration ;
+      //this.setNextVideo(false);
+      // this.getVideoElement().pause();
+      // // this.getVideoElement().currentTime = 0;
+      // this.videoURL ='';
+      
       // this.getVideoElement().play();
-      // this.updateStat();
+      // // this.getVideoElement().load();
+      // // this.getVideoElement().play();
+      // // this.updateStat();
   }
 
   private setNextVideo(encreaseCounter:boolean) {
     if(this.parameters.videosCount <= this.playedVideoCount)
       return false;
 
-      if(this.parameters.videoId != 0){
-        this.videoURL = this.service.getVideoURLById(this.parameters.videoId);
-        this.parameters.videoId = 0;
-      }
-      else
-        this.videoURL = this.service.getRandomVideoBySeries(this.parameters.seriesId);
+      this.setUrl(this.service.getRandomVideoBySeries(this.parameters.seriesId));
+
+      // if(this.parameters.videoId != 0){
+      //   this.setUrl(this.service.getVideoURLById(this.parameters.videoId));
+      //   this.parameters.videoId = 0;
+      // }
+      // else
+      //   // this.setUrl(this.service.getVideoURLById(1797));
+      //   this.setUrl(this.service.getRandomVideoBySeries(this.parameters.seriesId));
 
     if(encreaseCounter)
     {
@@ -88,8 +99,33 @@ export class PlayerComponent implements OnInit {
         this.previousVideoTimePlayed.seconds(video.currentTime);
     }
 
+    // if(this.getVideoElement())
+    // {
+    //   this.getVideoElement().autoplay = true;
+    //   this.getVideoElement().autoplay = false;
+    // }
     return true;
   }
+
+  private setUrl(url:string) {
+		if(!this.loaded) {
+			// assign url immediately on first assignment
+			this.videoURL = url;
+			this.loaded = true; 
+		} else {
+			// set url to null to remove player through ngIf, 
+			//then assign new url in next tick to create new vime instance
+			this.videoURL = null; 
+			setTimeout(()=>{
+				this.videoURL = url;
+        setTimeout(()=>{
+          
+          if(this.getVideoElement())
+            this.getVideoElement().play();
+        },2000);
+			},1);
+		}
+	}
 
   private updateStat() {
     var video = this.getVideoElement();

@@ -1,12 +1,67 @@
-<div >
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/@vime/core@^5/themes/default.css"
+/>
+
+<!-- <div >
   <video controls height="auto" autoplay  #videoElement (ended)="videoEnded()">
     <source src="{{videoURL}}" type="video/mp4"/>
   </video>
 
   <button (click)="skipVideo()">Следующее</button>
   <div>{{statStr}}</div>
-</div>
+</div> -->
 
+<!-- 
+<vm-player >
+  <vm-video cross-origin="true" >
+    <source data-src="{{videoURL}}" type="video/mp4" />
+  </vm-video>
+
+  <vm-default-ui></vm-default-ui>
+</vm-player>
+ -->
+
+<vm-player *ngIf="videoURL" (vmPlaybackEnded)="videoEnded()" #player >
+  <vm-video cross-origin="true" >
+    <source src="{{videoURL}}" type="video/mp4" />
+  </vm-video>
+<!-- 
+  <vm-ui >
+  </vm-ui> -->
+  <!-- <vm-default-ui></vm-default-ui> -->
+
+  <vm-ui>
+    <vm-click-to-play ></vm-click-to-play>
+    <vm-captions ></vm-captions>
+    <vm-poster ></vm-poster>
+    <vm-spinner></vm-spinner>
+    <vm-default-settings ></vm-default-settings>
+      
+    <vm-scrim></vm-scrim>
+    <vm-controls pin="bottomLeft"full-width>
+      <vm-control-group>
+        <vm-scrubber-control></vm-scrubber-control>
+      </vm-control-group>
+
+      <vm-control-group>
+        <!-- <vm-playback-control tooltip-direction="right" ></vm-playback-control> -->
+        <vm-control (click)="skipVideo()" label="Next" keys="n" pressed="false">
+          <vm-icon name="play"></vm-icon>
+          <vm-tooltip>Next (n)</vm-tooltip>
+        </vm-control>
+        <vm-volume-control ></vm-volume-control>
+        <vm-time-progress ></vm-time-progress>
+        <vm-control-spacer ></vm-control-spacer>
+        <vm-caption-control ></vm-caption-control>
+        <vm-pip-control keys="p" ></vm-pip-control>
+        <vm-settings-control ></vm-settings-control>
+        <vm-fullscreen-control keys="f" tooltip-direction="left" ></vm-fullscreen-control>
+      </vm-control-group>
+    </vm-controls>
+  </vm-ui> 
+
+</vm-player>
 <!-- https://openbase.com/js/@vime/angular
 https://openbase.com/js/@videogular/ngx-videogular
 https://openbase.com/js/videogular2

@@ -19,6 +19,7 @@ namespace FileStore.API.Controllers
     {
         private readonly IFileService _FileService;
         private readonly VideoCatalogDbContext _db;
+        private readonly static Dictionary<string, int> _randomFileDict = new Dictionary<string, int>();
         private readonly IMapper _mapper;
 
         public FilesController(IMapper mapper, IFileService FileService, VideoCatalogDbContext dbContext)
@@ -144,10 +145,20 @@ namespace FileStore.API.Controllers
 
         [HttpGet]
         [Route("getRandomFileBySeriesId")]
-        public async Task<FileResult> GetRandomFileBySeriesId(int seriesId)
+        public async Task<FileResult> GetRandomFileBySeriesId(int seriesId, string guid)
         {
-            var file = await _FileService.GetRandomFileBySeriesId(seriesId);
-            return PhysicalFile($"{file.Path}", "application/octet-stream", enableRangeProcessing: true);
+            //var file = await _FileService.GetById(1797);
+
+            if (!_randomFileDict.ContainsKey(guid))
+            {
+                var newFile = await _FileService.GetRandomFileBySeriesId(seriesId);
+                _randomFileDict.Add(guid, newFile.Id);
+            }
+
+            var fileId = _randomFileDict[guid];
+
+            return await GetVideoById(fileId);
+            //return PhysicalFile($"{file.Path}", "application/octet-stream", enableRangeProcessing: true);
         }
     }
 }
