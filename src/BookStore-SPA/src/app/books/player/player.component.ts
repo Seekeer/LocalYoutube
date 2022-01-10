@@ -55,6 +55,12 @@ export class PlayerComponent implements OnInit {
     //   return  (this.video.nativeElement as HTMLVideoElement);
   }
   
+  public ready() {
+    
+    // if(this.getVideoElement())
+    // this.getVideoElement().play();
+  }
+  
   public videoEnded() {
     console.log('ended');
     if(this.setNextVideo(true))

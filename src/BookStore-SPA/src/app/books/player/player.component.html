@@ -21,8 +21,12 @@
   <vm-default-ui></vm-default-ui>
 </vm-player>
  -->
+ <video controls height="auto" autoplay  #videoElement >
+  <source src="{{videoURL}}" type="video/mp4"/>
+</video>
 
-<vm-player *ngIf="videoURL" (vmPlaybackEnded)="videoEnded()" #player >
+
+<vm-player  *ngIf="videoURL" (vmPlaybackEnded)="videoEnded()" (vmPlaybackReady)="ready()" #player >
   <vm-video cross-origin="true" >
     <source src="{{videoURL}}" type="video/mp4" />
   </vm-video>
@@ -62,7 +66,5 @@
   </vm-ui> 
 
 </vm-player>
-<!-- https://openbase.com/js/@vime/angular
-https://openbase.com/js/@videogular/ngx-videogular
-https://openbase.com/js/videogular2
-https://pepe19000.github.io/Demo/menu/NgxVideoListPlayer -->
+
+<div>{{statStr}}</div>
