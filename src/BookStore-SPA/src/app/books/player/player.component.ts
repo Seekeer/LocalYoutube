@@ -53,7 +53,7 @@ export class PlayerComponent implements OnInit {
   public videoEnded() {
     console.log('ended');
     if(this.setNextVideo(true))
-      this.getVideoElement().play();
+      this.getVideoElement().load();
     // TODO - show end show screen
   }
   public skipVideo() {
@@ -62,15 +62,17 @@ export class PlayerComponent implements OnInit {
       this.videoURL ='';
       this.getVideoElement().load();
 
-      this.setNextVideo(false);
-      this.getVideoElement().load();
+      if(this.setNextVideo(false))
+        this.getVideoElement().load();
       // this.getVideoElement().play();
       // this.updateStat();
   }
 
   private setNextVideo(encreaseCounter:boolean) {
-    if(this.parameters.videosCount <= this.playedVideoCount)
+    if(this.parameters.videosCount <= this.playedVideoCount){
+      this.videoURL = null;
       return false;
+    }
 
       if(this.parameters.videoId != 0){
         this.videoURL = this.service.getVideoURLById(this.parameters.videoId);

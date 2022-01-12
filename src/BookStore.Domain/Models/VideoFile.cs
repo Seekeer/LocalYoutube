@@ -10,17 +10,20 @@ namespace FileStore.Domain.Models
         HD,
         SD,
     }
-    public enum Source
+    public enum Origin
     {
         Unknown,
         Soviet,
         Russian,
         Foreign
     }
-    public enum Type
+    public enum VideoType
     {
+        Unknown,
         Film,
-        Episode
+        Animation,
+        Episode,
+        FairyTale
     }
 
     public class VideoFileExtendedInfo : Entity
@@ -35,9 +38,16 @@ namespace FileStore.Domain.Models
     {
         public string Path { get; set; }
         public string Name { get; set; }
-        public Type Type { get; set; }
-        public Source Source { get; set; }
+        public VideoType Type { get; set; }
+        public Origin Origin { get; set; }
         public Quality Quality { get; set; }
+        public TimeSpan Duration { get; set; }
+
+        public double Rating { get; set; }
+
+        /// <summary>
+        /// Series properties
+        /// </summary>
         public int Number { get; set; }
         public int SeasonId { get; set; }
         public int SeriesId { get; set; }

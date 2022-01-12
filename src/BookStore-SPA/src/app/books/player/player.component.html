@@ -1,10 +1,15 @@
 <div >
-  <video controls height="auto" autoplay  #videoElement (ended)="videoEnded()">
-    <source src="{{videoURL}}" type="video/mp4"/>
-  </video>
+  <img *ngIf="!videoURL" alt="Finish!" src="./assets/img/finish.jpg">
 
-  <button (click)="skipVideo()">Следующее</button>
-  <div>{{statStr}}</div>
+  <div *ngIf="videoURL">
+      
+    <video  controls height="auto" autoplay  #videoElement (ended)="videoEnded()">
+      <source src="{{videoURL}}" type="video/mp4"/>
+    </video>
+
+    <button (click)="skipVideo()">Следующее</button>
+    <div>{{statStr}}</div>
+  </div>
 </div>
 
 <!-- https://openbase.com/js/@vime/angular

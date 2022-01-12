@@ -13,7 +13,8 @@ namespace Infrastructure.Migrations
                 {
                     Id = table.Column<int>(nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(nullable: true)
+                    Name = table.Column<string>(nullable: true),
+                    IntroDuration = table.Column<TimeSpan>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -28,6 +29,7 @@ namespace Infrastructure.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Number = table.Column<int>(nullable: false),
                     Name = table.Column<string>(nullable: true),
+                    IntroDuration = table.Column<TimeSpan>(nullable: false),
                     SeriesId = table.Column<int>(nullable: false)
                 },
                 constraints: table =>
@@ -50,8 +52,10 @@ namespace Infrastructure.Migrations
                     Path = table.Column<string>(nullable: true),
                     Name = table.Column<string>(nullable: false),
                     Type = table.Column<int>(nullable: false),
-                    Source = table.Column<int>(nullable: false),
+                    Origin = table.Column<int>(nullable: false),
                     Quality = table.Column<int>(nullable: false),
+                    Duration = table.Column<TimeSpan>(nullable: false),
+                    Rating = table.Column<double>(nullable: false),
                     Number = table.Column<int>(nullable: false),
                     SeasonId = table.Column<int>(nullable: false),
                     SeriesId = table.Column<int>(nullable: false)

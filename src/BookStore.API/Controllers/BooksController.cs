@@ -20,6 +20,7 @@ namespace FileStore.API.Controllers
         private readonly IFileService _FileService;
         private readonly VideoCatalogDbContext _db;
         private readonly IMapper _mapper;
+        private readonly static Dictionary<string, int> _randomFileDict = new Dictionary<string, int>();
 
         public FilesController(IMapper mapper, IFileService FileService, VideoCatalogDbContext dbContext)
         {
@@ -33,8 +34,12 @@ namespace FileStore.API.Controllers
         public async Task<IActionResult> GetAll()
         {
             var dbUpdater = new DbUpdateManager(_db);
-            dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Мультсериалы");
-            //dbUpdater.FillSeries(@"Z:\Smth\Bittorrent\Анюта\Сериалы");
+
+            dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Мультсериалы российские", Origin.Russian, VideoType.Episode);
+            //dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation);
+
+            //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Мультсериалы", Origin.Soviet, VideoType.Episode);
+            //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Фильмы-Сказки", Origin.Soviet, VideoType.FairyTale);
 
             var Files = await _FileService.GetAll();
 
@@ -144,10 +149,17 @@ namespace FileStore.API.Controllers
 
         [HttpGet]
         [Route("getRandomFileBySeriesId")]
-        public async Task<FileResult> GetRandomFileBySeriesId(int seriesId)
+        public async Task<FileResult> GetRandomFileBySeriesId(int seriesId, string guid)
         {
-            var file = await _FileService.GetRandomFileBySeriesId(seriesId);
-            return PhysicalFile($"{file.Path}", "application/octet-stream", enableRangeProcessing: true);
+            if (!_randomFileDict.ContainsKey(guid))
+            {
+                var newFile = await _FileService.GetRandomFileBySeriesId(seriesId);
+                _randomFileDict.Add(guid, newFile.Id);
+            }
+
+            var fileId = _randomFileDict[guid];
+
+            return await GetVideoById(fileId);
         }
     }
 }

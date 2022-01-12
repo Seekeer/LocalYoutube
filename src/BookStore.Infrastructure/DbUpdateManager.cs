@@ -18,25 +18,31 @@ namespace Infrastructure
     public class DbUpdateManager
     {
         private VideoCatalogDbContext _db;
+        private Origin _origin;
+        private VideoType _type;
 
         public DbUpdateManager(VideoCatalogDbContext db)
         {
             this._db = db;
             GlobalFFOptions.Configure(new FFOptions { BinaryFolder = @"C:\Dev\_Smth\BookStore-master\src\BookStore.API\bin\Debug\netcoreapp3.1\ffmpeg\" });
         }
-        public void FillFilms(string rootPath)
+        public void FillFilms(string rootPath, Origin origin, VideoType type )
         {
+            _origin = origin;
+            _type = type;
+
             var dirInfo = new DirectoryInfo(rootPath);
-            foreach (var dir in dirInfo.GetDirectories())
-            {
-                AddSeries(dir);
-            }
+            var series = AddOrUpdateSeries(dirInfo.Name);
+            AddSeason(series, dirInfo);
 
             _db.SaveChanges();
         }
 
-        public void FillSeries(string rootPath)
+        public void FillSeries(string rootPath, Origin origin, VideoType type)
         {
+            _origin = origin;
+            _type = type;
+
             var dirInfo = new DirectoryInfo(rootPath);
             foreach (var dir in dirInfo.GetDirectories())
             {
@@ -159,11 +165,16 @@ namespace Infrastructure
             {
                 Name = GetSeriesNameFromFilenName(file.Name),
                 Path = file.FullName,
-                Series = series,
-                Season = season,
-                Number = GetSeriesNumberFromName(file.Name),
-                Type = FileStore.Domain.Models.Type.Episode,
+                Type = _type,
+                Origin = _origin,
             };
+
+            if(_type == VideoType.Episode)
+            {
+                videoFile.Series = series;
+                videoFile.Season = season;
+                videoFile.Number = GetSeriesNumberFromName(file.Name);
+            }
 
             FillVideoProperties(videoFile);
 
@@ -172,19 +183,25 @@ namespace Infrastructure
 
         private void FillVideoProperties(VideoFile videoFile)
         {
-            var bitmap = FFMpeg.Snapshot(videoFile.Path, null, TimeSpan.FromMinutes(1));
-            videoFile.Quality = DetectQuality(bitmap);
-
-            using (MemoryStream memoryStream = new MemoryStream())
+            try
             {
-                bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Jpeg);
+                var bitmap = FFMpeg.Snapshot(videoFile.Path, null, TimeSpan.FromMinutes(1));
+                videoFile.Quality = DetectQuality(bitmap);
 
-                videoFile.VideoFileExtendedInfo = new VideoFileExtendedInfo();
-                videoFile.VideoFileExtendedInfo.Cover = memoryStream.ToArray();
+                using (MemoryStream memoryStream = new MemoryStream())
+                {
+                    bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Jpeg);
+
+                    videoFile.VideoFileExtendedInfo = new VideoFileExtendedInfo();
+                    videoFile.VideoFileExtendedInfo.Cover = memoryStream.ToArray();
+                }
+            }
+            catch (Exception ex)
+            {
             }
 
             var probe = FFProbe.Analyse(videoFile.Path);
-            //videoFile.Duration = probe.Duration;
+            videoFile.Duration = probe.Duration;
 
             //var objMediaInfo = new MediaInfo.MediaInfo();
 

@@ -26,6 +26,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
+                    b.Property<TimeSpan>("IntroDuration")
+                        .HasColumnType("time");
+
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
@@ -49,6 +52,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
+                    b.Property<TimeSpan>("IntroDuration")
+                        .HasColumnType("time");
+
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
@@ -64,11 +70,17 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
+                    b.Property<TimeSpan>("Duration")
+                        .HasColumnType("time");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Origin")
                         .HasColumnType("int");
 
                     b.Property<string>("Path")
@@ -77,13 +89,13 @@ namespace Infrastructure.Migrations
                     b.Property<int>("Quality")
                         .HasColumnType("int");
 
+                    b.Property<double>("Rating")
+                        .HasColumnType("float");
+
                     b.Property<int>("SeasonId")
                         .HasColumnType("int");
 
                     b.Property<int>("SeriesId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Source")
                         .HasColumnType("int");
 
                     b.Property<int>("Type")

@@ -12,6 +12,7 @@ namespace FileStore.Infrastructure.Context
 
             builder.Property(c => c.Name);
             builder.Property(c => c.Number);
+            builder.Property(c => c.IntroDuration);
 
             // 1 : N => Category : Books
             builder.HasMany(c => c.Files)
@@ -43,6 +44,7 @@ namespace FileStore.Infrastructure.Context
             builder.HasKey(c => c.Id);
 
             builder.Property(c => c.Name);
+            builder.Property(c => c.IntroDuration);
 
             // 1 : N => Category : Books
             builder.HasMany(c => c.Files)

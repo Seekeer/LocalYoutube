@@ -16,7 +16,7 @@ export class FileService {
         return this.baseUrl +'Files/getFileById?fileId=' + id;
     }
     public getRandomVideoBySeries(seriesId: number) {
-        return this.baseUrl +'Files/getRandomFileBySeriesId?seriesId=' + seriesId;
+        return this.baseUrl +`Files/getRandomFileBySeriesId?seriesId=${seriesId}&guid=${btoa(Math.random().toString()).substr(10, 15)}` ;
     }
 
     public addBook(book: Book) {

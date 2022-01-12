@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace FileStore.Domain.Models
 {
@@ -6,6 +7,7 @@ namespace FileStore.Domain.Models
     {
         public int Number{ get; set; }
         public string Name { get; set; }
+        public TimeSpan IntroDuration { get; set; }
 
         /* EF Relations */
         public IEnumerable<VideoFile> Files { get; set; }

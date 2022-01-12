@@ -1,10 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace FileStore.Domain.Models
 {
     public class Series : Entity
     {
         public string Name { get; set; }
+
+        public TimeSpan IntroDuration { get; set; }
 
         /* EF Relations */
         public IEnumerable<VideoFile> Files { get; set; }
