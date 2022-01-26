@@ -21,10 +21,14 @@ namespace Infrastructure
         private Origin _origin;
         private VideoType _type;
 
+        static DbUpdateManager()
+        {
+            GlobalFFOptions.Configure(new FFOptions { BinaryFolder = @"C:\Dev\_Smth\BookStore-master\src\BookStore.API\bin\Debug\netcoreapp3.1\ffmpeg\" });
+        }
+
         public DbUpdateManager(VideoCatalogDbContext db)
         {
             this._db = db;
-            GlobalFFOptions.Configure(new FFOptions { BinaryFolder = @"C:\Dev\_Smth\BookStore-master\src\BookStore.API\bin\Debug\netcoreapp3.1\ffmpeg\" });
         }
         public void FillFilms(string rootPath, Origin origin, VideoType type )
         {
@@ -50,7 +54,21 @@ namespace Infrastructure
             }
 
             _db.SaveChanges();
-        } 
+        }
+
+        public void Convert(VideoFile file)
+        {
+            var newFilePath = Encode(file.Path);
+
+            if (newFilePath == null)
+                return;
+
+            file.Path = newFilePath;
+            _db.Files.Update(file);
+            _db.SaveChanges();
+
+            var updatedFile = _db.Files.FirstOrDefault(x => x.Id == file.Id);
+        }
 
         private void AddSeries(DirectoryInfo dir)
         {
@@ -167,18 +185,38 @@ namespace Infrastructure
                 Path = file.FullName,
                 Type = _type,
                 Origin = _origin,
+                Series = series,
+                Season = season
             };
 
             if(_type == VideoType.Episode)
             {
-                videoFile.Series = series;
-                videoFile.Season = season;
                 videoFile.Number = GetSeriesNumberFromName(file.Name);
             }
 
             FillVideoProperties(videoFile);
 
             return videoFile;
+        }
+
+        public static string Encode(string path)
+        {
+            //return @"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Известные\06 - Мой Додыр 1954.mp4";
+            var fileInfo = new FileInfo(path);
+
+            if (fileInfo.Extension == ".mp4")
+                return null;
+
+            var resultPath = path.Replace(fileInfo.Extension, ".mp4");
+
+            if (File.Exists(resultPath))
+                return resultPath;
+
+            var format = FFMpeg.GetContainerFormat("mp4");
+            FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.Medium, 
+                FFMpegCore.Enums.VideoSize.Original, FFMpegCore.Enums.AudioQuality.Normal, true);
+
+            return resultPath;
         }
 
         private void FillVideoProperties(VideoFile videoFile)

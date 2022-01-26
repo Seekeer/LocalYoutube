@@ -30,21 +30,52 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("updateAll")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateAll()
+        {
+            var mp4Count = _db.Files.Count(x => !x.Path.EndsWith("mp4"));
+            var totalCount = _db.Files.Count();
+
+            var dbUpdater = new DbUpdateManager(_db);
+
+            var sovietToConvert = _db.Files.Where(x => x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
+            //var nonSovietToConvert = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
+            foreach (var file in sovietToConvert)
+            {
+                dbUpdater.Convert(file);
+            }
+
+            var nonSovietToConvertList = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
+            //var totalDuration = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList().Sum(x => x.Duration.TotalMinutes);
+
+
+            //dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Мультсериалы российские", Origin.Russian, VideoType.Episode);
+            dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation);
+
+            dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Мультсериалы", Origin.Soviet, VideoType.Episode);
+            dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Фильмы-Сказки", Origin.Soviet, VideoType.FairyTale);
+
+            return Ok();
+        }
+
+        [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll()
         {
-            var dbUpdater = new DbUpdateManager(_db);
-
-            dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Мультсериалы российские", Origin.Russian, VideoType.Episode);
-            //dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation);
-
-            //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Мультсериалы", Origin.Soviet, VideoType.Episode);
-            //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Фильмы-Сказки", Origin.Soviet, VideoType.FairyTale);
-
             var Files = await _FileService.GetAll();
 
             return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
         }
+
+        //[HttpGet("{seriesId:int}")]
+        //[ProducesResponseType(StatusCodes.Status200OK)]
+        //public async Task<IActionResult> GetBySeries(int seriesId, int count)
+        //{
+        //    var Files = await _FileService.GetAll();
+
+        //    return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
+        //}
 
         [HttpGet("{id:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -139,12 +170,26 @@ namespace FileStore.API.Controllers
             return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
         }
 
+        [HttpPut]
+        [Route("rate/{videoId}")]
+        public async Task<IActionResult> SetRating(int videoId, [FromBody]double value)
+        {
+            await _FileService.SetRating(videoId, value);
+            return Ok();
+        }
+
         [HttpGet]
         [Route("getFileById")]
         public async Task<FileResult> GetVideoById(int fileId)
         {
             var file = await _FileService.GetById(fileId);
-            return PhysicalFile($"{file.Path}", "application/octet-stream", enableRangeProcessing: true);
+
+            var path = file.Path;
+            if(file.Path.EndsWith("avi"))
+            {
+                path = DbUpdateManager.Encode(path);
+            }
+            return PhysicalFile($"{path}", "application/octet-stream", enableRangeProcessing: true);
         }
 
         [HttpGet]
@@ -160,6 +205,15 @@ namespace FileStore.API.Controllers
             var fileId = _randomFileDict[guid];
 
             return await GetVideoById(fileId);
+        }
+
+        [HttpGet]
+        [Route("getRandomFileIdBySeriesId")]
+        public async Task<IActionResult> GetRandomFileIdBySeriesId(int seriesId, string guid)
+        {
+            var newFile = await _FileService.GetRandomFileBySeriesId(seriesId);
+
+            return Ok(newFile.Id);
         }
     }
 }

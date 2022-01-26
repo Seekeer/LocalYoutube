@@ -1,6 +1,6 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { NgForm } from '@angular/forms';
+import { NgForm, NumberValueAccessor } from '@angular/forms';
 import { Book } from 'src/app/_models/Book';
 import { FileService } from 'src/app/_services/file.service';
 import { ToastrService } from 'ngx-toastr';
@@ -26,6 +26,10 @@ export class PlayerComponent implements OnInit {
   
   playedVideoCount: number = 0;
   parameters: PlayerParameters;
+  videoId: number;
+
+  videosList: number[] = [];
+  currentVideoIndex: number = -1;
 
   constructor(public service: FileService,
     private categoryService: SeriesService,
@@ -40,7 +44,18 @@ export class PlayerComponent implements OnInit {
 
     // this.parameters = <PlayerParameters>history.state;
 
+    this.videoId = this.parameters.videoId;
+    this.videosList.push(this.videoId);
     this.setNextVideo(true);
+
+    this.service.getVideosBySeries(this.parameters.seriesId, this.parameters.videosCount).subscribe((videos) => {
+      const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
+
+      this.videosList = this.videosList.concat(selectedIds);
+    },
+      err => {
+        console.log(`Cannot get video by series ${this.parameters.seriesId}`);
+      })
     
     setInterval(() => this.updateStat(), 1000);
   }
@@ -57,6 +72,7 @@ export class PlayerComponent implements OnInit {
     // TODO - show end show screen
   }
   public skipVideo() {
+      this.service.setRating(this.videoId, -1).subscribe();
       this.getVideoElement().pause();
       this.getVideoElement().currentTime = 0;
       this.videoURL ='';
@@ -74,12 +90,26 @@ export class PlayerComponent implements OnInit {
       return false;
     }
 
-      if(this.parameters.videoId != 0){
-        this.videoURL = this.service.getVideoURLById(this.parameters.videoId);
-        this.parameters.videoId = 0;
-      }
-      else
-        this.videoURL = this.service.getRandomVideoBySeries(this.parameters.seriesId);
+    let currentId = this.videosList[++this.currentVideoIndex];
+
+    this.videoURL = this.service.getVideoURLById(currentId);
+    var el = this.getVideoElement();
+    el?.load();
+
+      // if(this.parameters.videoId != 0){
+      //   this.videoURL = this.service.getVideoURLById(this.parameters.videoId);
+      //   this.parameters.videoId = 0;
+      // }
+      // else
+      // this.service.getRandomVideoIdBySeries(this.parameters.seriesId).subscribe((id) => {
+      //   this.videoId = id;
+      //   this.videoURL = this.service.getVideoURLById(id);
+      //   this.getVideoElement().load();
+      // },
+      //   err => {
+      //     console.log(`Cannot get video by series ${this.parameters.seriesId}`);
+      //   })
+      //   // this.videoURL = this.service.getRandomVideoBySeries(this.parameters.seriesId);
 
     if(encreaseCounter)
     {

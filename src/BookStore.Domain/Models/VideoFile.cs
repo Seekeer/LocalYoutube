@@ -61,7 +61,7 @@ namespace FileStore.Domain.Models
         public byte[] Cover { 
             get
             {
-                return VideoFileExtendedInfo.Cover;
+                return VideoFileExtendedInfo?.Cover;
             }
         }
 

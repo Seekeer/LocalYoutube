@@ -19,12 +19,28 @@ export class FileService {
         return this.baseUrl +`Files/getRandomFileBySeriesId?seriesId=${seriesId}&guid=${btoa(Math.random().toString()).substr(10, 15)}` ;
     }
 
+    public getRandomVideoIdBySeries(seriesId: number) {
+        return this.http.get<number>(this.baseUrl + `Files/getRandomFileIdBySeriesId?seriesId=${seriesId}`);
+
+        // return this.baseUrl +`Files/getRandomFileBySeriesId?seriesId=${seriesId}&guid=${btoa(Math.random().toString()).substr(10, 15)}` ;
+    }
+
+    public getVideosBySeries(seriesId: number, count: number): Observable<Book[]> {
+        return this.http.get<Book[]>( this.baseUrl +`Files/get-Files-by-Series/${seriesId}`);
+        // return this.http.get<Book[]>( this.baseUrl +`Files/getVideosBySeriesId?seriesId=${seriesId}&count=${count}`);
+    }
+
     public addBook(book: Book) {
         return this.http.post(this.baseUrl + 'files', book);
     }
 
     public updateBook(id: number, book: Book) {
         return this.http.put(this.baseUrl + 'files/' + id, book);
+    }
+
+    public setRating(id, rating) {
+        var url = this.baseUrl + `files/rate/${id}`;
+        return this.http.put(url, rating);
     }
 
     public getBooks(): Observable<Book[]> {
