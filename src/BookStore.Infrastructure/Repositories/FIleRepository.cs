@@ -22,9 +22,14 @@ namespace FileStore.Infrastructure.Repositories
 
         public override async Task<VideoFile> GetById(int id)
         {
-            return await Db.Files.AsNoTracking().Include(b => b.Season).Include(b => b.Series)
+            var info = await Db.Files.AsNoTracking().Include(b => b.Season).Include(b => b.Series)
+                .Include(file => file.VideoFileUserInfo).Include(file => file.VideoFileUserInfo)
                 .Where(b => b.Id == id)
                 .FirstOrDefaultAsync();
+
+            
+
+            return info;
         }
 
         public async Task<IEnumerable<VideoFile>> GetFilesBySeriesAsync(int seriesId)
@@ -53,6 +58,7 @@ namespace FileStore.Infrastructure.Repositories
                 x =>
                 {
                     Db.Entry(x).Reference(x => x.VideoFileExtendedInfo).Load();
+                    Db.Entry(x).Reference(x => x.VideoFileUserInfo).Load();
                     x.SeriesId = series.Id;
                 });
 

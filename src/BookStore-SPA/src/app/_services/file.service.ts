@@ -25,8 +25,9 @@ export class FileService {
         // return this.baseUrl +`Files/getRandomFileBySeriesId?seriesId=${seriesId}&guid=${btoa(Math.random().toString()).substr(10, 15)}` ;
     }
 
-    public getVideosBySeries(seriesId: number, count: number): Observable<Book[]> {
+    public getVideosBySeries(seriesId: number, count: number, isRandom: boolean): Observable<Book[]> {
         return this.http.get<Book[]>( this.baseUrl +`Files/get-Files-by-Series/${seriesId}`);
+        // return this.http.get<Book[]>( this.baseUrl +`Files/get-Files-by-Series?id=${seriesId}&count=${count}&isRadom=${isRandom}`);
         // return this.http.get<Book[]>( this.baseUrl +`Files/getVideosBySeriesId?seriesId=${seriesId}&count=${count}`);
     }
 
@@ -41,6 +42,11 @@ export class FileService {
     public setRating(id, rating) {
         var url = this.baseUrl + `files/rate/${id}`;
         return this.http.put(url, rating);
+    }
+
+    public setPosition(id, position) {
+        var url = this.baseUrl + `files/updatePosition/${id}`;
+        return this.http.put(url, position).subscribe();
     }
 
     public getBooks(): Observable<Book[]> {

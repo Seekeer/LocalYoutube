@@ -20,7 +20,6 @@ namespace FileStore.Infrastructure.Context
             builder.Property(b => b.Origin);
             builder.Property(b => b.Type);
             builder.Property(b => b.Number);
-            builder.Property(b => b.Rating);
             builder.Property(b => b.Duration);
 
             builder.ToTable("VideoFile");

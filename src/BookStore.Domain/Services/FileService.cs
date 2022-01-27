@@ -78,7 +78,15 @@ namespace FileStore.Domain.Services
         {
             var video = await _FileRepository.GetById(videoId);
 
-            video.Rating = value;
+            video.VideoFileUserInfo.Rating = value;
+            await _FileRepository.Update(video);
+        }
+
+        public async Task SetPosition(int videoId, double value)
+        {
+            var video = await _FileRepository.GetById(videoId);
+
+            video.VideoFileUserInfo.Position = value;
             await _FileRepository.Update(video);
         }
     }

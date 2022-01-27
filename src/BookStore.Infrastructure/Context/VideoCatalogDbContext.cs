@@ -22,6 +22,7 @@ namespace FileStore.Infrastructure.Context
         public DbSet<Season> Seasons { get; set; }
         public DbSet<VideoFile> Files { get; set; }
         public DbSet<VideoFileExtendedInfo> FilesInfo { get; set; }
+        public DbSet<VideoFileUserInfo> FilesUserInfo { get; set; }
         public DbSet<Series> Series { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

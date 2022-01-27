@@ -12,7 +12,9 @@
       <div class="input-group-prepend ml-2">
         Число серий
       </div>
-      <input class="ml-2" type="number" [(ngModel)]="episodeCount" type="number" />
+      <input class="ml-2" type="number" [(ngModel)]="episodeCount"  />
+      <input id="random" class="ml-2" type="checkbox" [(ngModel)]="isRandom"  >
+      <label for="random">Случайный порядок</label>
     </div>
   </div>
 
@@ -20,7 +22,7 @@
 
     <p class="h6">{{book.name}}</p>
 
-    <img src='data:image/jpg;base64,{{book.cover}}' (click)="openVideo(book.id)" />
+    <img src='data:image/jpg;base64,{{book.cover}}' (click)="openVideo(book)" />
 
   </div>
 </div>

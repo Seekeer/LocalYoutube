@@ -8,7 +8,7 @@ import { debounceTime } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import { SeriesService } from 'src/app/_services/series.service';
 import { Serie } from 'src/app/_models/Category';
-import { Book as VideoFile } from 'src/app/_models/Book';
+import { Book, Book as VideoFile } from 'src/app/_models/Book';
 
 
 @Component({
@@ -21,6 +21,7 @@ export class BookListComponent implements OnInit {
   
   public books: VideoFile[];
   public listComplet: any;
+  public isRandom: boolean;
   public searchTerm: string;
   public episodeCount: number = 1;
   public searchValueChanged: Subject<string> = new Subject<string>();
@@ -104,29 +105,17 @@ export class BookListComponent implements OnInit {
       this.service.getBooks().subscribe(books => this.books = books);
     }
   }
-
-  // openVideo(id: number) {
-  //   const queryParams: PlayerParameters = {
-  //     seriesId : this.books[0].seriesId,
-  //     videoId : id,
-  //     videosCount : this.episodeCount
-  //   };
-
-  //   const navigationExtras: NavigationExtras = {
-  //     state: queryParams
-  //  };
-
-  //  this.router.navigate(['/player'], navigationExtras);
-  // }
   
-  openVideo(id: number) {
+  openVideo(book: Book) {
+
     const queryParams: PlayerParameters = {
-      seriesId : this.books[0].seriesId,
-      videoId : id,
-      videosCount : this.episodeCount
+      seriesId : book.seriesId,
+      position : book.currentPosition,
+      videoId : book.id,
+      videosCount : this.episodeCount,
+      isRandom : this.isRandom
     };
 
-    var queryStr = JSON.stringify(queryParams);
     const navigationExtras: NavigationExtras = {
       queryParams
    };
@@ -139,4 +128,6 @@ export class PlayerParameters {
   videoId: number;
   seriesId: number;
   videosCount: number;
+  position: number;
+  isRandom: boolean;
 }

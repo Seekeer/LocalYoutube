@@ -20,6 +20,7 @@ namespace Infrastructure
         private VideoCatalogDbContext _db;
         private Origin _origin;
         private VideoType _type;
+        private int _episodeNumber;
 
         static DbUpdateManager()
         {
@@ -46,6 +47,8 @@ namespace Infrastructure
         {
             _origin = origin;
             _type = type;
+
+            _episodeNumber = 1;
 
             var dirInfo = new DirectoryInfo(rootPath);
             foreach (var dir in dirInfo.GetDirectories())
@@ -96,7 +99,8 @@ namespace Infrastructure
                 try
                 {
 
-                    if (file.Name.EndsWith("jpg") || file.Name.EndsWith("jpeg") || file.Name.EndsWith("nfo") || file.Name.EndsWith("mp3"))
+                    if (file.Name.EndsWith("jpg") || file.Name.EndsWith("jpeg") || file.Name.EndsWith("docx") || 
+                        file.Name.EndsWith("nfo") || file.Name.EndsWith("mp3"))
                         return;
 
                     // TODO - quality
@@ -141,22 +145,23 @@ namespace Infrastructure
 
         public static string GetSeriesNameFromFolder(string name)
         {
+            var result = "";
             var index =0;
             string pattern = @"\p{IsCyrillic}";
-            do
+            foreach (var ch in name)
             {
-                var ch = name[index];
                 if (!Regex.IsMatch(ch.ToString(), pattern))
                     if (ch != '-' && ch != '.' && ch != '!' && ch != ',' && !char.IsWhiteSpace(ch))
-                        break;
+                        continue;
 
                 index++;
-            } while (index < name.Length);
+                result += ch;
+            } 
 
-            return name.Substring(0, index).Trim().TrimEnd('.');
+            return result;
         }
 
-        public static string GetSeriesNameFromFilenName(string name)
+        public static string GetEpisodeNameFromFilenName(string name)
         {
             var result = "";
             string pattern = @"\p{IsCyrillic}";
@@ -174,19 +179,20 @@ namespace Infrastructure
 
         private static string TrimDots(string result)
         {
-            return result.Trim().Trim('.').Trim();
+            return result.Trim().Trim('.').Trim().Trim('-').Trim();
         }
 
         private VideoFile GetVideoInfo(Series series, Season season, FileInfo file)
         {
             var videoFile = new VideoFile
             {
-                Name = GetSeriesNameFromFilenName(file.Name),
+                Name = GetEpisodeNameFromFilenName(file.Name),
                 Path = file.FullName,
                 Type = _type,
                 Origin = _origin,
                 Series = series,
-                Season = season
+                Season = season,
+                Number = _episodeNumber++
             };
 
             if(_type == VideoType.Episode)
@@ -230,7 +236,6 @@ namespace Infrastructure
                 {
                     bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Jpeg);
 
-                    videoFile.VideoFileExtendedInfo = new VideoFileExtendedInfo();
                     videoFile.VideoFileExtendedInfo.Cover = memoryStream.ToArray();
                 }
             }

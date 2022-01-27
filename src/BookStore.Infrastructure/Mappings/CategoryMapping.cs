@@ -32,9 +32,27 @@ namespace FileStore.Infrastructure.Context
 
             builder.HasOne(video => video.VideoFile)
                 .WithOne(info => info.VideoFileExtendedInfo)
-                .HasForeignKey<VideoFileExtendedInfo>(info => info.VideoFileId);
+                .HasForeignKey<VideoFileExtendedInfo>(info => info.VideoFileId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.ToTable("VideoFileExtendedInfos");
+        }
+    }
+    public class VideoFileUserInfoMapping : IEntityTypeConfiguration<VideoFileUserInfo>
+    {
+        public void Configure(EntityTypeBuilder<VideoFileUserInfo> builder)
+        {
+            builder.HasKey(c => c.Id);
+
+            builder.Property(c => c.Rating);
+            builder.Property(c => c.Position);
+
+            builder.HasOne(video => video.VideoFile)
+                .WithOne(info => info.VideoFileUserInfo)
+                .HasForeignKey<VideoFileUserInfo>(info => info.VideoFileId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.ToTable("VideoFileUserInfos");
         }
     }
     public class SeriesMapping : IEntityTypeConfiguration<Series>

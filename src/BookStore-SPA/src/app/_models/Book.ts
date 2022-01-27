@@ -4,4 +4,5 @@ export class Book {
     name: string;
     cover: string;
     seriesName: string;
+    currentPosition:number;
 }

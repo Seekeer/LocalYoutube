@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using FileStore.API.Dtos.File;
@@ -10,6 +11,7 @@ using Infrastructure;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace FileStore.API.Controllers
 {
@@ -34,27 +36,47 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateAll()
         {
-            var mp4Count = _db.Files.Count(x => !x.Path.EndsWith("mp4"));
-            var totalCount = _db.Files.Count();
-
             var dbUpdater = new DbUpdateManager(_db);
 
-            var sovietToConvert = _db.Files.Where(x => x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //var nonSovietToConvert = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            foreach (var file in sovietToConvert)
-            {
-                dbUpdater.Convert(file);
-            }
+            //var films = _db.Files.Include(x => x.VideoFileExtendedInfo).Where(x => x.SeriesId == 11).ToList();
+            //_db.RemoveRange(films.Select(x => x.VideoFileExtendedInfo));
+            //_db.RemoveRange(films.Select(x => x.VideoFileUserInfo).Where(x => x != null));
+            //_db.RemoveRange(films);
+            //_db.SaveChanges();
+            //var series = _db.Series.Where(x => x.Id == 11);
+            //_db.RemoveRange(series);
+            //_db.SaveChanges();
 
-            var nonSovietToConvertList = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //var totalDuration = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList().Sum(x => x.Duration.TotalMinutes);
+            dbUpdater.FillSeries(@"C:\Users\Dim\YandexDisk\Not_mine\Montazh\Курсы\Съемка", Origin.Russian, VideoType.Lessons);
+
+            //var files = _db.Files.Where(x => x.Id > 0);
+            //foreach (var file in files)
+            //{
+            //    if (file.VideoFileUserInfo == null)
+            //        file.VideoFileUserInfo = new VideoFileUserInfo();
+            //}
+            //_db.SaveChanges();
+
+            //var mp4Count = _db.Files.Count(x => !x.Path.EndsWith("mp4"));
+            //var totalCount = _db.Files.Count();
 
 
-            //dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Мультсериалы российские", Origin.Russian, VideoType.Episode);
-            dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation);
+            //var sovietToConvert = _db.Files.Where(x => x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
+            ////var nonSovietToConvert = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
+            //foreach (var file in sovietToConvert)
+            //{
+            //    dbUpdater.Convert(file);
+            //}
 
-            dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Мультсериалы", Origin.Soviet, VideoType.Episode);
-            dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Фильмы-Сказки", Origin.Soviet, VideoType.FairyTale);
+            //var nonSovietToConvertList = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
+            ////var totalDuration = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList().Sum(x => x.Duration.TotalMinutes);
+
+
+            ////dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Мультсериалы российские", Origin.Russian, VideoType.Episode);
+            //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation);
+
+            //dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Мультсериалы", Origin.Soviet, VideoType.Episode);
+            //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Фильмы-Сказки", Origin.Soviet, VideoType.FairyTale);
 
             return Ok();
         }
@@ -67,15 +89,6 @@ namespace FileStore.API.Controllers
 
             return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
         }
-
-        //[HttpGet("{seriesId:int}")]
-        //[ProducesResponseType(StatusCodes.Status200OK)]
-        //public async Task<IActionResult> GetBySeries(int seriesId, int count)
-        //{
-        //    var Files = await _FileService.GetAll();
-
-        //    return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
-        //}
 
         [HttpGet("{id:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -172,9 +185,20 @@ namespace FileStore.API.Controllers
 
         [HttpPut]
         [Route("rate/{videoId}")]
-        public async Task<IActionResult> SetRating(int videoId, [FromBody]double value)
+        public async Task<IActionResult> SetRating(int videoId, [FromBody] double value)
         {
             await _FileService.SetRating(videoId, value);
+            return Ok();
+        }
+
+        private static object _ratingUpdateLock = new object();
+
+        [HttpPut]
+        [Route("updatePosition/{videoId}")]
+        public async Task<IActionResult> SetPosition(int videoId, [FromBody] double value)
+        {
+            await _FileService.SetPosition(videoId, value);
+
             return Ok();
         }
 

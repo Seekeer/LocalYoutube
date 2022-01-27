@@ -19,6 +19,8 @@ namespace FileStore.API.Dtos.File
 
         public double Value { get; set; }
 
+        public double? CurrentPosition { get; set; }
+
         public DateTime PublishDate { get; set; }
     }
 }

@@ -17,5 +17,6 @@ namespace FileStore.Domain.Interfaces
         Task<IEnumerable<VideoFile>> SearchFileWithSeries(string searchedValue);
         Task<VideoFile> GetRandomFileBySeriesId(int seriesId);
         Task SetRating(int videoId, double value);
+        Task SetPosition(int videoId, double value);
     }
 }

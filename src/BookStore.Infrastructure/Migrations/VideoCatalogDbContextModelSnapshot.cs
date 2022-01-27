@@ -89,9 +89,6 @@ namespace Infrastructure.Migrations
                     b.Property<int>("Quality")
                         .HasColumnType("int");
 
-                    b.Property<double>("Rating")
-                        .HasColumnType("float");
-
                     b.Property<int>("SeasonId")
                         .HasColumnType("int");
 
@@ -131,6 +128,30 @@ namespace Infrastructure.Migrations
                     b.ToTable("VideoFileExtendedInfos");
                 });
 
+            modelBuilder.Entity("FileStore.Domain.Models.VideoFileUserInfo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<double>("Position")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Rating")
+                        .HasColumnType("float");
+
+                    b.Property<int>("VideoFileId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VideoFileId")
+                        .IsUnique();
+
+                    b.ToTable("VideoFileUserInfos");
+                });
+
             modelBuilder.Entity("FileStore.Domain.Models.Season", b =>
                 {
                     b.HasOne("FileStore.Domain.Models.Series", "Series")
@@ -157,6 +178,14 @@ namespace Infrastructure.Migrations
                     b.HasOne("FileStore.Domain.Models.VideoFile", "VideoFile")
                         .WithOne("VideoFileExtendedInfo")
                         .HasForeignKey("FileStore.Domain.Models.VideoFileExtendedInfo", "VideoFileId")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FileStore.Domain.Models.VideoFileUserInfo", b =>
+                {
+                    b.HasOne("FileStore.Domain.Models.VideoFile", "VideoFile")
+                        .WithOne("VideoFileUserInfo")
+                        .HasForeignKey("FileStore.Domain.Models.VideoFileUserInfo", "VideoFileId")
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

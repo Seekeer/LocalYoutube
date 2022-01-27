@@ -23,7 +23,8 @@ namespace FileStore.Domain.Models
         Film,
         Animation,
         Episode,
-        FairyTale
+        FairyTale,
+        Lessons
     }
 
     public class VideoFileExtendedInfo : Entity
@@ -32,6 +33,14 @@ namespace FileStore.Domain.Models
         public int VideoFileId { get; set; }
 
         public byte[] Cover { get; set; }
+    }
+    public class VideoFileUserInfo : Entity
+    {
+        public VideoFile VideoFile { get; set; }
+        public int VideoFileId { get; set; }
+
+        public double Position { get; set; }
+        public double Rating { get; set; }
     }
 
     public class VideoFile : Entity
@@ -42,8 +51,6 @@ namespace FileStore.Domain.Models
         public Origin Origin { get; set; }
         public Quality Quality { get; set; }
         public TimeSpan Duration { get; set; }
-
-        public double Rating { get; set; }
 
         /// <summary>
         /// Series properties
@@ -56,12 +63,24 @@ namespace FileStore.Domain.Models
         public Season Season { get; set; }
         public Series Series { get; set; }
 
-        public VideoFileExtendedInfo VideoFileExtendedInfo { get; set; }
+        public VideoFileExtendedInfo VideoFileExtendedInfo { get; set; } = new VideoFileExtendedInfo();
+        public VideoFileUserInfo VideoFileUserInfo { get; set; } = new VideoFileUserInfo();
+
         [NotMapped]
-        public byte[] Cover { 
+        public byte[] Cover
+        {
             get
             {
                 return VideoFileExtendedInfo?.Cover;
+            }
+        }
+
+        [NotMapped]
+        public double? CurrentPosition
+        {
+            get
+            {
+                return VideoFileUserInfo?.Position;
             }
         }
 

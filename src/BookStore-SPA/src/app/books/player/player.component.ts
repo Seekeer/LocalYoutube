@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgForm, NumberValueAccessor } from '@angular/forms';
 import { Book } from 'src/app/_models/Book';
@@ -14,7 +14,7 @@ import * as moment from 'moment';
   templateUrl: './player.component.html',
   styleUrls: ['./player.component.css']
 })
-export class PlayerComponent implements OnInit {
+export class PlayerComponent implements OnInit, OnDestroy {
   
   @ViewChild('videoElement') video:ElementRef; 
 
@@ -30,6 +30,8 @@ export class PlayerComponent implements OnInit {
 
   videosList: number[] = [];
   currentVideoIndex: number = -1;
+  intervalId: any;
+  position: number;
 
   constructor(public service: FileService,
     private categoryService: SeriesService,
@@ -37,14 +39,16 @@ export class PlayerComponent implements OnInit {
     private route: ActivatedRoute,
     private toastr: ToastrService) { }
 
+  ngOnDestroy(): void {
+    clearInterval(this.intervalId);
+  }
+
   ngOnInit() {
 
     this.parameters = <PlayerParameters>(JSON.parse(JSON.stringify((<any>this.route.snapshot.queryParamMap).params)));
-    // this.parameters = <PlayerParameters>((<any>this.route.snapshot.queryParamMap).params);
-
-    // this.parameters = <PlayerParameters>history.state;
 
     this.videoId = this.parameters.videoId;
+    this.position = parseFloat(this.parameters.position.toString());
     this.videosList.push(this.videoId);
     this.setNextVideo(true);
 
@@ -56,8 +60,9 @@ export class PlayerComponent implements OnInit {
       err => {
         console.log(`Cannot get video by series ${this.parameters.seriesId}`);
       })
-    
-    setInterval(() => this.updateStat(), 1000);
+
+    // setTimeout(() => this.updateStat(), 1000);
+    this.intervalId = setInterval(() => this.updateStat(), 1000);
   }
   
   private getVideoElement(){
@@ -125,11 +130,23 @@ export class PlayerComponent implements OnInit {
 
   private updateStat() {
     var video = this.getVideoElement();
+
+    this.setPosition();
+    
     var totalDuration = moment(this.previousVideoTimePlayed);
     if(video)
       totalDuration = totalDuration.seconds(video.currentTime);
 
+      this.service.setPosition(this.videoId, video.currentTime);
+
     this.statStr = `Общее время просмотра ${totalDuration.format("mm:ss")} ${this.playedVideoCount}/${this.parameters.videosCount}`
+  }
+  setPosition() {
+    var video = this.getVideoElement();
+    if(this.position>0 && video){
+      video.currentTime = this.position;
+      this.position = -1;
+    }
   }
   
 }
