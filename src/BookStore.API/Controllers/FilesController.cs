@@ -103,14 +103,15 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
-        [Route("get-Files-by-Series/{SeriesId:int}")]
+        [Route("getFilesBySeries")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetFilesBySeries(int SeriesId)
+        public async Task<IActionResult> GetFilesBySeries(int id, int count, bool isRandom)
         {
-            var Files = await _FileService.GetFilesBySearies(SeriesId);
+            var Files = await _FileService.GetFilesBySearies(id, isRandom);
 
-            if (!Files.Any()) return NotFound();
+            if (!Files.Any()) 
+                return NotFound();
 
             return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
         }
@@ -171,14 +172,17 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
-        [Route("search-File-with-Series/{searchedValue}")]
+        [Route("search-File-with-Series/{searchedValue}/{isRandom}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<List<VideoFile>>> SearchFileWithSeries(string searchedValue)
+        public async Task<ActionResult<List<VideoFile>>> SearchFileWithSeries(string searchedValue, bool isRandom)
         {
-            var Files = _mapper.Map<List<VideoFile>>(await _FileService.SearchFileWithSeries(searchedValue));
+            var Files = _mapper.Map<List<VideoFile>>(await _FileService.SearchFileWithSeries(searchedValue, isRandom));
 
-            if (!Files.Any()) return NotFound("None File was founded");
+            Files.ForEach(x => x.Name = $"{x.Number} - {x.Name}");
+
+            if (!Files.Any())
+                return NotFound("None File was founded");
 
             return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
         }

@@ -29,7 +29,7 @@ namespace FileStore.Domain.Services
 
         public async Task<Series> Add(Series Series)
         {
-            if (_seriesRepository.Search(c => c.Name == Series.Name).Result.Any())
+            if (_seriesRepository.SearchRandom(c => c.Name == Series.Name).Result.Any())
                 return null;
 
             await _seriesRepository.Add(Series);
@@ -38,7 +38,7 @@ namespace FileStore.Domain.Services
 
         public async Task<Series> Update(Series Series)
         {
-            if (_seriesRepository.Search(c => c.Name == Series.Name && c.Id != Series.Id).Result.Any())
+            if (_seriesRepository.SearchRandom(c => c.Name == Series.Name && c.Id != Series.Id).Result.Any())
                 return null;
 
             await _seriesRepository.Update(Series);
@@ -47,8 +47,9 @@ namespace FileStore.Domain.Services
 
         public async Task<bool> Remove(Series series)
         {
-            var files = await _fileService.GetFilesBySearies(series.Id);
-            if (files.Any()) return false;
+            var files = await _fileService.GetFilesBySearies(series.Id, true);
+            if (files.Any()) 
+                return false;
 
             await _seriesRepository.Remove(series);
             return true;
@@ -56,7 +57,7 @@ namespace FileStore.Domain.Services
 
         public async Task<IEnumerable<Series>> Search(string SeriesName, int resultCount)
         {
-            return await _seriesRepository.Search(c => c.Name.Contains(SeriesName), resultCount);
+            return await _seriesRepository.SearchRandom(c => c.Name.Contains(SeriesName), resultCount);
         }
 
         public void Dispose()

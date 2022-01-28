@@ -19,10 +19,10 @@
   </div>
 
   <div *ngFor="let book of books">
-
-    <p class="h6">{{book.name}}</p>
-
+    
     <img src='data:image/jpg;base64,{{book.cover}}' (click)="openVideo(book)" />
+    
+    <p class="h6">{{book.name}}</p>
 
   </div>
 </div>

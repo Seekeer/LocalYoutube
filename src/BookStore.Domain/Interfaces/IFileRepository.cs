@@ -8,8 +8,8 @@ namespace FileStore.Domain.Interfaces
     {
         new Task<List<VideoFile>> GetAll();
         new Task<VideoFile> GetById(int id);
-        Task<IEnumerable<VideoFile>> GetFilesBySeriesAsync(int seriesId);
-        Task<IEnumerable<VideoFile>> SearchFileWithSeasonAsync(string searchedValue, int resultCount =10);
+        Task<IEnumerable<VideoFile>> GetFilesBySeriesAsync(int seriesId, bool isRandom);
+        Task<IEnumerable<VideoFile>> SearchFileWithSeasonAsync(string searchedValue, bool isRandom, int resultCount =10);
         Task<VideoFile> GetRandomFileBySeriesId(int seriesId);
     }
 }

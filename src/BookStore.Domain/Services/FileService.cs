@@ -27,7 +27,7 @@ namespace FileStore.Domain.Services
 
         public async Task<VideoFile> Add(VideoFile File)
         {
-            if (_FileRepository.Search(b => b.Name == File.Name).Result.Any())
+            if (_FileRepository.SearchRandom(b => b.Name == File.Name).Result.Any())
                 return null;
 
             await _FileRepository.Add(File);
@@ -36,7 +36,7 @@ namespace FileStore.Domain.Services
 
         public async Task<VideoFile> Update(VideoFile File)
         {
-            if (_FileRepository.Search(b => b.Name == File.Name && b.Id != File.Id).Result.Any())
+            if (_FileRepository.SearchRandom(b => b.Name == File.Name && b.Id != File.Id).Result.Any())
                 return null;
 
             await _FileRepository.Update(File);
@@ -49,19 +49,19 @@ namespace FileStore.Domain.Services
             return true;
         }
 
-        public async Task<IEnumerable<VideoFile>> GetFilesBySearies(int SeriesId)
+        public async Task<IEnumerable<VideoFile>> GetFilesBySearies(int SeriesId, bool isRandom)
         {
-            return await _FileRepository.GetFilesBySeriesAsync(SeriesId);
+            return await _FileRepository.GetFilesBySeriesAsync(SeriesId, isRandom);
         }
 
         public async Task<IEnumerable<VideoFile>> Search(string FileName)
         {
-            return await _FileRepository.Search(c => c.Name.Contains(FileName));
+            return await _FileRepository.SearchRandom(c => c.Name.Contains(FileName));
         }
 
-        public async Task<IEnumerable<VideoFile>> SearchFileWithSeries(string searchedValue)
+        public async Task<IEnumerable<VideoFile>> SearchFileWithSeries(string searchedValue, bool isRandom)
         {
-            return await _FileRepository.SearchFileWithSeasonAsync(searchedValue);
+            return await _FileRepository.SearchFileWithSeasonAsync(searchedValue, isRandom);
         }
 
         public void Dispose()

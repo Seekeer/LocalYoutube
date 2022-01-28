@@ -21,7 +21,7 @@ export class BookListComponent implements OnInit {
   
   public books: VideoFile[];
   public listComplet: any;
-  public isRandom: boolean;
+  public isRandom: boolean = true;
   public searchTerm: string;
   public episodeCount: number = 1;
   public searchValueChanged: Subject<string> = new Subject<string>();
@@ -36,7 +36,6 @@ export class BookListComponent implements OnInit {
 
   ngOnInit() {
     this.getSeries();
-    // this.getValues();
 
     this.searchValueChanged.pipe(debounceTime(1000))
     .subscribe(() => {
@@ -47,14 +46,6 @@ export class BookListComponent implements OnInit {
     
     this.seriesService.getAll().subscribe(series => {
       this.series =series;
-    });
-  }
-
-  private getValues() {
-
-    this.service.getBooks().subscribe(books => {
-      this.books = books;
-      this.listComplet = books;
     });
   }
 
@@ -71,7 +62,7 @@ export class BookListComponent implements OnInit {
       .then(() =>
         this.service.deleteBook(bookId).subscribe(() => {
           this.toastr.success('The book has been deleted');
-          this.getValues();
+          // this.getValues();
         },
           err => {
             this.toastr.error('Failed to delete the book.');
@@ -79,24 +70,13 @@ export class BookListComponent implements OnInit {
       .catch(() => '');
   }
 
-  // Use the code below if you want to filter only using the front end;
-  // public search() {
-  //   const value = this.searchTerm.toLowerCase();
-  //   this.books = this.listComplet.filter(
-  //     book => book.name.toLowerCase().startsWith(value, 0) ||
-  //       book.author.toLowerCase().startsWith(value, 0) ||
-  //       book.description.toString().startsWith(value, 0) ||
-  //       book.value.toString().startsWith(value, 0) ||
-  //       book.publishDate.toString().startsWith(value, 0));
-  // }
-
   public searchBooks() {
     this.searchValueChanged.next();
   }
 
   private search() {
     if (this.searchTerm !== '') {
-      this.service.searchFilesWithSeries(this.searchTerm).subscribe(book => {
+      this.service.searchFilesWithSeries(this.searchTerm, this.isRandom).subscribe(book => {
         this.books = book;
       }, error => {
         this.books = [];

@@ -23,37 +23,46 @@ namespace FileStore.Infrastructure.Repositories
         public override async Task<VideoFile> GetById(int id)
         {
             var info = await Db.Files.AsNoTracking().Include(b => b.Season).Include(b => b.Series)
-                .Include(file => file.VideoFileUserInfo).Include(file => file.VideoFileUserInfo)
+                .Include(file => file.VideoFileExtendedInfo).Include(file => file.VideoFileUserInfo)
                 .Where(b => b.Id == id)
                 .FirstOrDefaultAsync();
-
-            
 
             return info;
         }
 
-        public async Task<IEnumerable<VideoFile>> GetFilesBySeriesAsync(int seriesId)
+        public async Task<IEnumerable<VideoFile>> GetFilesBySeriesAsync(int seriesId, bool isRandom)
         {
-            return await Search(b => b.SeriesId == seriesId);
+            if(isRandom)
+                return await SearchRandom(b => b.SeriesId == seriesId);
+            else
+                return await Search(b => b.SeriesId == seriesId);
         }
 
         public async Task<VideoFile> GetRandomFileBySeriesId(int seriesId)
         {
-            var result = await Search(b => b.SeriesId == seriesId, 1);
+            var result = await SearchRandom(b => b.SeriesId == seriesId, 1);
 
             return result.FirstOrDefault();
         }
 
-        public async Task<IEnumerable<VideoFile>> SearchFileWithSeasonAsync(string searchedValue, int resultCount)
+        public async Task<IEnumerable<VideoFile>> SearchFileWithSeasonAsync(string searchedValue, bool isRandom, int resultCount)
         {
             var series = Db.Series.FirstOrDefault(x => EF.Functions.Like(x.Name, $"%{searchedValue.ToLower()}%"));
 
+            var result = new List<VideoFile>();
             if (series == null)
-                return new List<VideoFile>();
+                return result;
 
-            var rand = new Random();
             var files = (Db.Files.Where(f => f.SeriesId == series.Id).ToList());
-            var result = files.OrderBy(x => Guid.NewGuid()).Take(resultCount).ToList();
+
+            if (isRandom)
+            {
+                var rand = new Random();
+                result = files.OrderBy(x => Guid.NewGuid()).Take(resultCount).ToList();
+            }
+            else
+                result = files.ToList();
+
             result.ToList().ForEach(
                 x =>
                 {

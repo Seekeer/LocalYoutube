@@ -32,6 +32,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   currentVideoIndex: number = -1;
   intervalId: any;
   position: number;
+  isRandom: boolean;
 
   constructor(public service: FileService,
     private categoryService: SeriesService,
@@ -49,10 +50,12 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
     this.videoId = this.parameters.videoId;
     this.position = parseFloat(this.parameters.position.toString());
+
+    this.isRandom = String(this.parameters.isRandom) === 'true';
     this.videosList.push(this.videoId);
     this.setNextVideo(true);
 
-    this.service.getVideosBySeries(this.parameters.seriesId, this.parameters.videosCount).subscribe((videos) => {
+    this.service.getVideosBySeries(this.parameters.seriesId, this.parameters.videosCount, this.isRandom).subscribe((videos) => {
       const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
 
       this.videosList = this.videosList.concat(selectedIds);
@@ -141,6 +144,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
     this.statStr = `Общее время просмотра ${totalDuration.format("mm:ss")} ${this.playedVideoCount}/${this.parameters.videosCount}`
   }
+
   setPosition() {
     var video = this.getVideoElement();
     if(this.position>0 && video){

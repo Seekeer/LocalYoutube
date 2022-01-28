@@ -50,9 +50,14 @@ namespace FileStore.Infrastructure.Repositories
             await SaveChanges();
         }
 
-        public async Task<IEnumerable<TEntity>> Search(Expression<Func<TEntity, bool>> predicate, int resultCount = 10)
+        public async Task<IEnumerable<TEntity>> SearchRandom(Expression<Func<TEntity, bool>> predicate, int resultCount = 10)
         {
             return await Random(DbSet.AsNoTracking().Where(predicate), resultCount).ToListAsync();
+        }
+
+        public async Task<IEnumerable<TEntity>> Search(Expression<Func<TEntity, bool>> predicate, int resultCount = 10)
+        {
+            return await (DbSet.AsNoTracking().Where(predicate).Take(resultCount).ToListAsync());
         }
 
         public async Task<int> SaveChanges()

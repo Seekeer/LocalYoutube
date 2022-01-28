@@ -26,8 +26,8 @@ export class FileService {
     }
 
     public getVideosBySeries(seriesId: number, count: number, isRandom: boolean): Observable<Book[]> {
-        return this.http.get<Book[]>( this.baseUrl +`Files/get-Files-by-Series/${seriesId}`);
-        // return this.http.get<Book[]>( this.baseUrl +`Files/get-Files-by-Series?id=${seriesId}&count=${count}&isRadom=${isRandom}`);
+        // return this.http.get<Book[]>( this.baseUrl +`Files/get-Files-by-Series/${seriesId}`);
+        return this.http.get<Book[]>( this.baseUrl +`Files/getFilesBySeries?id=${seriesId}&count=${count}&isRandom=${isRandom}`);
         // return this.http.get<Book[]>( this.baseUrl +`Files/getVideosBySeriesId?seriesId=${seriesId}&count=${count}`);
     }
 
@@ -61,7 +61,7 @@ export class FileService {
         return this.http.get<Book>(this.baseUrl + 'files/' + id);
     }
 
-    public searchFilesWithSeries(searchedValue: string): Observable<Book[]> {
-        return this.http.get<Book[]>(`${this.baseUrl}files/search-file-with-series/${searchedValue}`);
+    public searchFilesWithSeries(searchedValue: string, isRandom: boolean): Observable<Book[]> {
+        return this.http.get<Book[]>(`${this.baseUrl}files/search-file-with-series/${searchedValue}/${isRandom}`);
     }
 }
