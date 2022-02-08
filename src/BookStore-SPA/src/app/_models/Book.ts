@@ -5,4 +5,5 @@ export class Book {
     cover: string;
     seriesName: string;
     currentPosition:number;
+    isFinished:boolean;
 }

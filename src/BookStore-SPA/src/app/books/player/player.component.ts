@@ -138,16 +138,19 @@ export class PlayerComponent implements OnInit, OnDestroy {
     
     var totalDuration = moment(this.previousVideoTimePlayed);
     if(video)
+    {
       totalDuration = totalDuration.seconds(video.currentTime);
 
-      this.service.setPosition(this.videoId, video.currentTime);
+      if(video.currentTime > 10)
+        this.service.setPosition(this.videoId, video.currentTime);
+    }
 
     this.statStr = `Общее время просмотра ${totalDuration.format("mm:ss")} ${this.playedVideoCount}/${this.parameters.videosCount}`
   }
 
   setPosition() {
     var video = this.getVideoElement();
-    if(this.position>0 && video){
+    if(this.position >0 && video){
       video.currentTime = this.position;
       this.position = -1;
     }

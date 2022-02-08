@@ -22,5 +22,6 @@ namespace FileStore.API.Dtos.File
         public double? CurrentPosition { get; set; }
 
         public DateTime PublishDate { get; set; }
+        public bool IsFinished { get; set; }
     }
 }

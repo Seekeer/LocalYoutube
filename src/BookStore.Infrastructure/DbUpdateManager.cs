@@ -94,7 +94,7 @@ namespace Infrastructure
             var season = AddOrUpdateSeason(series, dir.Name);
 
             //Parallel.ForEach(dir.EnumerateFiles(), file =>
-            foreach (var file in dir.EnumerateFiles())
+            foreach (var file in dir.EnumerateFiles("", SearchOption.AllDirectories))
             {
                 try
                 {

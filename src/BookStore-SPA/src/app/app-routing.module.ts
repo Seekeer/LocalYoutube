@@ -10,6 +10,7 @@ import { CategoryComponent } from './categories/category/category.component';
 const routes: Routes = [
   { path: 'home', component: HomeComponent },
   { path: 'books', component: BookListComponent },
+  // { path: 'books/:type', component: BookListComponent },
   { path: 'player', component: PlayerComponent },
   { path: 'player/:id', component: PlayerComponent },
   { path: 'categories', component: CategoryListComponent },

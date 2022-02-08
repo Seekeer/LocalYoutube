@@ -1,5 +1,5 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import { NavigationExtras, Router } from '@angular/router';
+import { ActivatedRoute, NavigationExtras, Router } from '@angular/router';
 import { FileService } from 'src/app/_services/file.service';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationDialogService } from 'src/app/_services/confirmation-dialog.service';
@@ -32,10 +32,15 @@ export class BookListComponent implements OnInit {
               private seriesService: SeriesService,
               private toastr: ToastrService,
               private http:HttpClient,
+              private activatedRoute: ActivatedRoute,
               private confirmationDialogService: ConfirmationDialogService) { }
 
   ngOnInit() {
-    this.getSeries();
+
+    // this.activatedRoute.queryParams.subscribe(params => {
+    //   this.getSeries(params['type']);
+    //   });  
+      this.getSeries();
 
     this.searchValueChanged.pipe(debounceTime(1000))
     .subscribe(() => {
@@ -85,7 +90,13 @@ export class BookListComponent implements OnInit {
       this.service.getBooks().subscribe(books => this.books = books);
     }
   }
-  
+
+  continueWatch(){
+    var film = this.books.find(x => !x.isFinished);
+
+    this.openVideo(film);
+  }
+
   openVideo(book: Book) {
 
     const queryParams: PlayerParameters = {

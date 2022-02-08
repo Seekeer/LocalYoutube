@@ -84,5 +84,20 @@ namespace FileStore.Domain.Models
             }
         }
 
+        [NotMapped]
+        public bool IsFinished
+        {
+            get
+            {
+                if (VideoFileUserInfo == null)
+                    return false;
+
+                var watchedTime = TimeSpan.FromSeconds(VideoFileUserInfo.Position);
+                var watchedPercent = (watchedTime) / Duration;
+
+                return watchedPercent > 0.9;
+            }
+        }
+
     }
 }

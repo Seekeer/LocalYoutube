@@ -26,7 +26,6 @@ export class FileService {
     }
 
     public getVideosBySeries(seriesId: number, count: number, isRandom: boolean): Observable<Book[]> {
-        // return this.http.get<Book[]>( this.baseUrl +`Files/get-Files-by-Series/${seriesId}`);
         return this.http.get<Book[]>( this.baseUrl +`Files/getFilesBySeries?id=${seriesId}&count=${count}&isRandom=${isRandom}`);
         // return this.http.get<Book[]>( this.baseUrl +`Files/getVideosBySeriesId?seriesId=${seriesId}&count=${count}`);
     }

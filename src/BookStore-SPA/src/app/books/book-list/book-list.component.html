@@ -18,9 +18,11 @@
     </div>
   </div>
 
+  <button *ngIf="!isRandom" (click)="continueWatch()">Продолжить воспроизведение</button>
+
   <div *ngFor="let book of books">
     
-    <img src='data:image/jpg;base64,{{book.cover}}' (click)="openVideo(book)" />
+    <img [ngClass]="{'shownFilm' : book.isFinished}" src='data:image/jpg;base64,{{book.cover}}' (click)="openVideo(book)" />
     
     <p class="h6">{{book.name}}</p>
 

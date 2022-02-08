@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,7 +48,15 @@ namespace FileStore.API.Controllers
             //_db.RemoveRange(series);
             //_db.SaveChanges();
 
-            dbUpdater.FillSeries(@"C:\Users\Dim\YandexDisk\Not_mine\Montazh\Курсы\Съемка", Origin.Russian, VideoType.Lessons);
+            //dbUpdater.FillSeries(@"D:\Анюта\Мульты\Мультсериалы российские", Origin.Russian, VideoType.Episode);
+
+            dbUpdater.FillFilms(@"D:\Анюта\Мульты\Советские мультфильмы\Солянка", Origin.Soviet, VideoType.Animation);
+            dbUpdater.FillFilms(@"D:\Анюта\Мульты\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation);
+            //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation);
+
+            dbUpdater.FillSeries(@"D:\Media\Обучалки\Съемка", Origin.Russian, VideoType.Lessons);
+
+            //dbUpdater.FillSeries(@"D:\Анюта\Мульты\Советские мультфильмы\Солянка", Origin.Soviet, VideoType.Animation);
 
             //var files = _db.Files.Where(x => x.Id > 0);
             //foreach (var file in files)
@@ -72,8 +81,6 @@ namespace FileStore.API.Controllers
             ////var totalDuration = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList().Sum(x => x.Duration.TotalMinutes);
 
 
-            ////dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Мультсериалы российские", Origin.Russian, VideoType.Episode);
-            //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation);
 
             //dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Мультсериалы", Origin.Soviet, VideoType.Episode);
             //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Фильмы-Сказки", Origin.Soviet, VideoType.FairyTale);
@@ -210,14 +217,29 @@ namespace FileStore.API.Controllers
         [Route("getFileById")]
         public async Task<FileResult> GetVideoById(int fileId)
         {
-            var file = await _FileService.GetById(fileId);
+            var logger = NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger();
 
-            var path = file.Path;
-            if(file.Path.EndsWith("avi"))
+            try
             {
-                path = DbUpdateManager.Encode(path);
+                var file = await _FileService.GetById(fileId);
+
+                var path = file.Path;
+
+                if (file.Path.EndsWith("avi"))
+                {
+                    path = DbUpdateManager.Encode(path);
+                }
+                logger.Debug($"getFileById 2 {file.Path}");
+
+                return PhysicalFile($"{path}", "application/octet-stream", enableRangeProcessing: true);
             }
-            return PhysicalFile($"{path}", "application/octet-stream", enableRangeProcessing: true);
+            catch (Exception ex)
+            {
+                logger.Debug("getFileById 5");
+                logger.Error(ex);
+
+                throw;
+            }
         }
 
         [HttpGet]
