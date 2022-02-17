@@ -47,7 +47,7 @@ namespace FileStore.Infrastructure.Repositories
 
         public async Task<IEnumerable<VideoFile>> SearchByName(string searchedValue)
         {
-            var files =  Db.VideoFiles.Where(x => EF.Functions.Like(x.Name, $"%{searchedValue.ToLower()}%"));
+            var files =  Db.VideoFiles.Where(x => EF.Functions.Like(x.Name, $"%{searchedValue.ToLower()}%")).Include(x => x.VideoFileExtendedInfo).Include(x =>x.VideoFileUserInfo);
 
             return files;
 

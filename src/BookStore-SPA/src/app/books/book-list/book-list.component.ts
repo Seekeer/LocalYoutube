@@ -9,6 +9,7 @@ import { HttpClient } from '@angular/common/http';
 import { SeriesService } from 'src/app/_services/series.service';
 import { Serie } from 'src/app/_models/Category';
 import { Book, Book as VideoFile } from 'src/app/_models/Book';
+import { NgxSpinnerService } from 'ngx-spinner';
 
 
 @Component({
@@ -22,8 +23,8 @@ export class BookListComponent implements OnInit {
   public books: VideoFile[];
   public listComplet: any;
   public isRandom: boolean = true;
-  public searchTerm: string;
-  public searchTitle: string;
+  public searchTerm: string = '';
+  public searchTitle: string = '';
   public episodeCount: number = 1;
   public searchValueChanged: Subject<string> = new Subject<string>();
   public series: Serie[];
@@ -33,11 +34,11 @@ export class BookListComponent implements OnInit {
               private seriesService: SeriesService,
               private toastr: ToastrService,
               private http:HttpClient,
+              private spinner: NgxSpinnerService,
               private activatedRoute: ActivatedRoute,
               private confirmationDialogService: ConfirmationDialogService) { }
 
   ngOnInit() {
-
     // this.activatedRoute.queryParams.subscribe(params => {
     //   this.getSeries(params['type']);
     //   });  
@@ -49,8 +50,10 @@ export class BookListComponent implements OnInit {
     });
   }
   getSeries() {
+    this.spinner.show();
     
     this.seriesService.getAll().subscribe(series => {
+      this.spinner.hide();
       this.series =series;
     });
   }
@@ -81,22 +84,30 @@ export class BookListComponent implements OnInit {
   }
 
   private search() {
+
     if(this.searchTitle !== ''){
+      this.spinner.show();
 
       this.service.searchFilesWithTitle(this.searchTitle).subscribe(book => {
         this.books = book;
+      this.spinner.hide();
+
       }, error => {
         this.books = [];
-      });
+      this.spinner.hide();
+  });
     }
     else if (this.searchTerm !== '') {
+      this.spinner.show();
       this.service.searchFilesWithSeries(this.searchTerm, this.isRandom).subscribe(book => {
         this.books = book;
-      }, error => {
-        this.books = [];
+      this.spinner.hide();
+    }, error => {
+      this.spinner.hide();
+      this.books = [];
       });
     } else {
-      this.service.getBooks().subscribe(books => this.books = books);
+            this.toastr.error('Выберите название файла или сериала');
     }
   }
 
