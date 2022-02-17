@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "publish": "ng build --prod",
+    "publish": "ng build --configuration production",
     "debug": "ng serve --port 4201",
     "build": "ng build",
     "test": "ng test",
@@ -31,7 +31,7 @@
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^13.2.3",
-    "@angular/cli": "~11.2.18",
+    "@angular/cli": "~12.2.16",
     "@angular/compiler-cli": "~12.2.16",
     "@angular/language-service": "~12.2.16",
     "@types/jasmine": "~3.5.0",
