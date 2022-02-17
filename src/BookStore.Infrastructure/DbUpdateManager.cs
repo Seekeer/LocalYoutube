@@ -61,16 +61,20 @@ namespace Infrastructure
 
         public void Convert(VideoFile file)
         {
+            var oldFile = file.Path;
             var newFilePath = Encode(file.Path);
 
             if (newFilePath == null)
                 return;
 
             file.Path = newFilePath;
-            _db.Files.Update(file);
+            _db.VideoFiles.Update(file);
             _db.SaveChanges();
 
-            var updatedFile = _db.Files.FirstOrDefault(x => x.Id == file.Id);
+            var updatedFile = _db.VideoFiles.FirstOrDefault(x => x.Id == file.Id);
+
+            if (updatedFile.Path == newFilePath)
+                File.Delete(oldFile);
         }
 
         private void AddSeries(DirectoryInfo dir)
@@ -105,7 +109,7 @@ namespace Infrastructure
 
                     // TODO - quality
                     VideoFile videoInfo = GetVideoInfo(series, season, file);
-                    _db.Files.Add(videoInfo);
+                    _db.VideoFiles.Add(videoInfo);
 
                     _db.SaveChanges();
                 }

@@ -7,8 +7,11 @@
       <source src="{{videoURL}}" type="video/mp4"/>
     </video>
 
-    <button (click)="skipVideo()">Следующее</button>
-    <div>{{statStr}}</div>
+    <div class="ml-2">
+      <button (click)="skipVideo()">Следующее</button>
+      <h4>{{name}}</h4>
+      <div>{{statStr}}</div>
+    </div>
   </div>
 </div>
 

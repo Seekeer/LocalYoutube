@@ -15,7 +15,7 @@ namespace FileStore.Infrastructure.Repositories
 
         public async Task<IEnumerable<VideoFile>> SearchFileWithSeries(string searchedValue, int resultCount)
         {
-            return await Random(Db.Files.AsNoTracking()
+            return await Random(Db.VideoFiles.AsNoTracking()
                     .Include(b => b.Season)
                     .Include(b => b.Series)
                     .Where(b => b.Name.Contains(searchedValue) ||

@@ -1,6 +1,12 @@
 <div class="col-md-12">
   <div class="form-group mt-3">
     <div class="input-group">
+
+      <div class="input-group-prepend">
+        Название 
+      </div>
+      <input class="ml-2" type="text" [(ngModel)]="searchTitle" (ngModelChange)="searchBooks()" >
+
       <div class="input-group-prepend">
         Сериал
       </div>
@@ -15,6 +21,8 @@
       <input class="ml-2" type="number" [(ngModel)]="episodeCount"  />
       <input id="random" class="ml-2" type="checkbox" [(ngModel)]="isRandom"  >
       <label for="random">Случайный порядок</label>
+
+      <button (click)="searchBooks()">Обновить</button>
     </div>
   </div>
 
@@ -24,7 +32,7 @@
     
     <img [ngClass]="{'shownFilm' : book.isFinished}" src='data:image/jpg;base64,{{book.cover}}' (click)="openVideo(book)" />
     
-    <p class="h6">{{book.name}}</p>
+    <p class="h6">{{book.displayName}}</p>
 
   </div>
 </div>

@@ -23,6 +23,7 @@ export class BookListComponent implements OnInit {
   public listComplet: any;
   public isRandom: boolean = true;
   public searchTerm: string;
+  public searchTitle: string;
   public episodeCount: number = 1;
   public searchValueChanged: Subject<string> = new Subject<string>();
   public series: Serie[];
@@ -80,7 +81,15 @@ export class BookListComponent implements OnInit {
   }
 
   private search() {
-    if (this.searchTerm !== '') {
+    if(this.searchTitle !== ''){
+
+      this.service.searchFilesWithTitle(this.searchTitle).subscribe(book => {
+        this.books = book;
+      }, error => {
+        this.books = [];
+      });
+    }
+    else if (this.searchTerm !== '') {
       this.service.searchFilesWithSeries(this.searchTerm, this.isRandom).subscribe(book => {
         this.books = book;
       }, error => {

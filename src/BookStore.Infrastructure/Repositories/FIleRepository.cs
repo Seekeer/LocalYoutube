@@ -15,14 +15,14 @@ namespace FileStore.Infrastructure.Repositories
 
         public override async Task<List<VideoFile>> GetAll()
         {
-            return await Db.Files.AsNoTracking().Include(b => b.Season).Include(b => b.Series)
+            return await Db.VideoFiles.AsNoTracking().Include(b => b.Season).Include(b => b.Series)
                 .OrderBy(b => b.Name)
                 .ToListAsync();
         }
 
         public override async Task<VideoFile> GetById(int id)
         {
-            var info = await Db.Files.AsNoTracking().Include(b => b.Season).Include(b => b.Series)
+            var info = await Db.VideoFiles.AsNoTracking().Include(b => b.Season).Include(b => b.Series)
                 .Include(file => file.VideoFileExtendedInfo).Include(file => file.VideoFileUserInfo)
                 .Where(b => b.Id == id)
                 .FirstOrDefaultAsync();
@@ -45,6 +45,15 @@ namespace FileStore.Infrastructure.Repositories
             return result.FirstOrDefault();
         }
 
+        public async Task<IEnumerable<VideoFile>> SearchByName(string searchedValue)
+        {
+            var files =  Db.VideoFiles.Where(x => EF.Functions.Like(x.Name, $"%{searchedValue.ToLower()}%"));
+
+            return files;
+
+            //_FileRepository.SearchRandom
+        }
+
         public async Task<IEnumerable<VideoFile>> SearchFileWithSeasonAsync(string searchedValue, bool isRandom, int resultCount)
         {
             var series = Db.Series.FirstOrDefault(x => EF.Functions.Like(x.Name, $"%{searchedValue.ToLower()}%"));
@@ -53,7 +62,7 @@ namespace FileStore.Infrastructure.Repositories
             if (series == null)
                 return result;
 
-            var files = (Db.Files.Where(f => f.SeriesId == series.Id).ToList());
+            var files = (Db.VideoFiles.Where(f => f.SeriesId == series.Id).ToList());
 
             if (isRandom)
             {

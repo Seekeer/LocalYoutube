@@ -63,4 +63,8 @@ export class FileService {
     public searchFilesWithSeries(searchedValue: string, isRandom: boolean): Observable<Book[]> {
         return this.http.get<Book[]>(`${this.baseUrl}files/search-file-with-series/${searchedValue}/${isRandom}`);
     }
+
+    public searchFilesWithTitle(searchedValue: string): Observable<Book[]> {
+        return this.http.get<Book[]>(`${this.baseUrl}files/search/${searchedValue}`);
+    }
 }

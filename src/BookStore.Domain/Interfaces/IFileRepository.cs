@@ -11,5 +11,6 @@ namespace FileStore.Domain.Interfaces
         Task<IEnumerable<VideoFile>> GetFilesBySeriesAsync(int seriesId, bool isRandom);
         Task<IEnumerable<VideoFile>> SearchFileWithSeasonAsync(string searchedValue, bool isRandom, int resultCount =10);
         Task<VideoFile> GetRandomFileBySeriesId(int seriesId);
+        Task<IEnumerable<VideoFile>> SearchByName(string fileName);
     }
 }

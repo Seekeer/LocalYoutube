@@ -10,7 +10,7 @@ namespace FileStore.Domain.Models
         public TimeSpan IntroDuration { get; set; }
 
         /* EF Relations */
-        public IEnumerable<VideoFile> Files { get; set; }
+        public IEnumerable<DbFile> Files { get; set; }
         public int SeriesId { get; set; }
         public Series Series { get; set; }
     }

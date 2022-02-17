@@ -27,29 +27,37 @@ namespace FileStore.Domain.Models
         Lessons
     }
 
-    public class VideoFileExtendedInfo : Entity
+    public enum AudioType
     {
-        public VideoFile VideoFile { get; set; }
+        Unknown,
+        Music,
+        Podcast,
+        EoT,
+        FairyTale,
+        Lessons
+    }
+
+    public class FileExtendedInfo : Entity
+    {
+        public DbFile DbFile { get; set; }
         public int VideoFileId { get; set; }
 
         public byte[] Cover { get; set; }
     }
-    public class VideoFileUserInfo : Entity
+    public class FileUserInfo : Entity
     {
-        public VideoFile VideoFile { get; set; }
+        public DbFile DbFile { get; set; }
         public int VideoFileId { get; set; }
 
         public double Position { get; set; }
         public double Rating { get; set; }
     }
 
-    public class VideoFile : Entity
+    public abstract class DbFile : Entity
     {
         public string Path { get; set; }
         public string Name { get; set; }
-        public VideoType Type { get; set; }
         public Origin Origin { get; set; }
-        public Quality Quality { get; set; }
         public TimeSpan Duration { get; set; }
 
         /// <summary>
@@ -58,13 +66,12 @@ namespace FileStore.Domain.Models
         public int Number { get; set; }
         public int SeasonId { get; set; }
         public int SeriesId { get; set; }
-
         /* EF Relation */
         public Season Season { get; set; }
         public Series Series { get; set; }
 
-        public VideoFileExtendedInfo VideoFileExtendedInfo { get; set; } = new VideoFileExtendedInfo();
-        public VideoFileUserInfo VideoFileUserInfo { get; set; } = new VideoFileUserInfo();
+        public FileUserInfo VideoFileUserInfo { get; set; } = new FileUserInfo();
+        public FileExtendedInfo VideoFileExtendedInfo { get; set; } = new FileExtendedInfo();
 
         [NotMapped]
         public byte[] Cover
@@ -98,6 +105,16 @@ namespace FileStore.Domain.Models
                 return watchedPercent > 0.9;
             }
         }
+    }
 
+    public class VideoFile : DbFile
+    {
+        public VideoType Type { get; set; }
+        public Quality Quality { get; set; }
+    }
+
+    public class AudioFile : DbFile
+    {
+        public AudioType Type { get; set; }
     }
 }

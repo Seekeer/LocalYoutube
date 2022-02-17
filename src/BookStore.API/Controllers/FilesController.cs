@@ -12,7 +12,6 @@ using Infrastructure;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace FileStore.API.Controllers
 {
@@ -48,13 +47,13 @@ namespace FileStore.API.Controllers
             //_db.RemoveRange(series);
             //_db.SaveChanges();
 
+            //Convert(dbUpdater);5
+
             //dbUpdater.FillSeries(@"D:\Анюта\Мульты\Мультсериалы российские", Origin.Russian, VideoType.Episode);
 
-            dbUpdater.FillFilms(@"D:\Анюта\Мульты\Советские мультфильмы\Солянка", Origin.Soviet, VideoType.Animation);
-            dbUpdater.FillFilms(@"D:\Анюта\Мульты\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation);
-            //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation);
-
-            dbUpdater.FillSeries(@"D:\Media\Обучалки\Съемка", Origin.Russian, VideoType.Lessons);
+            ////dbUpdater.FillFilms(@"D:\Анюта\Мульты\Советские мультфильмы\Солянка", Origin.Soviet, VideoType.Animation);
+            //dbUpdater.FillFilms(@"D:\Анюта\Мульты\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation);
+            //dbUpdater.FillSeries(@"D:\Media\Обучалки\Съемка", Origin.Russian, VideoType.Lessons);
 
             //dbUpdater.FillSeries(@"D:\Анюта\Мульты\Советские мультфильмы\Солянка", Origin.Soviet, VideoType.Animation);
 
@@ -66,26 +65,31 @@ namespace FileStore.API.Controllers
             //}
             //_db.SaveChanges();
 
-            //var mp4Count = _db.Files.Count(x => !x.Path.EndsWith("mp4"));
-            //var totalCount = _db.Files.Count();
-
-
-            //var sovietToConvert = _db.Files.Where(x => x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            ////var nonSovietToConvert = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //foreach (var file in sovietToConvert)
-            //{
-            //    dbUpdater.Convert(file);
-            //}
-
-            //var nonSovietToConvertList = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            ////var totalDuration = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList().Sum(x => x.Duration.TotalMinutes);
-
-
 
             //dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Мультсериалы", Origin.Soviet, VideoType.Episode);
             //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Фильмы-Сказки", Origin.Soviet, VideoType.FairyTale);
 
             return Ok();
+        }
+
+        private void Convert(DbUpdateManager dbUpdater)
+        {
+            var mp4Count = _db.VideoFiles.Count(x => !x.Path.EndsWith("mp4"));
+            var totalCount = _db.VideoFiles.Count();
+
+            var convert = _db.VideoFiles.Where(x => !x.Path.EndsWith("mp4")).ToList();
+            //var sovietToConvert = _db.Files.Where(x => x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
+            //var nonSovietToConvert = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
+            //Parallel.ForEach(convert, file =>
+            foreach (var file in convert)
+            {
+                dbUpdater.Convert(file);
+            }
+            //);
+
+            //var nonSovietToConvertList = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
+            //var totalDuration = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList().Sum(x => x.Duration.TotalMinutes);
+
         }
 
         [HttpGet]
@@ -175,7 +179,7 @@ namespace FileStore.API.Controllers
 
             if (Files == null || Files.Count == 0) return NotFound("None File was founded");
 
-            return Ok(Files);
+            return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
         }
 
         [HttpGet]
@@ -185,8 +189,6 @@ namespace FileStore.API.Controllers
         public async Task<ActionResult<List<VideoFile>>> SearchFileWithSeries(string searchedValue, bool isRandom)
         {
             var Files = _mapper.Map<List<VideoFile>>(await _FileService.SearchFileWithSeries(searchedValue, isRandom));
-
-            Files.ForEach(x => x.Name = $"{x.Number} - {x.Name}");
 
             if (!Files.Any())
                 return NotFound("None File was founded");

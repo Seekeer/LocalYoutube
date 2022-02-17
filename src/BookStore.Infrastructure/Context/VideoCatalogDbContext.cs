@@ -20,9 +20,10 @@ namespace FileStore.Infrastructure.Context
         public VideoCatalogDbContext(DbContextOptions options) : base(options) { }
 
         public DbSet<Season> Seasons { get; set; }
-        public DbSet<VideoFile> Files { get; set; }
-        public DbSet<VideoFileExtendedInfo> FilesInfo { get; set; }
-        public DbSet<VideoFileUserInfo> FilesUserInfo { get; set; }
+        public DbSet<AudioFile> AudioFiles { get; set; }
+        public DbSet<VideoFile> VideoFiles { get; set; }
+        public DbSet<FileExtendedInfo> FilesInfo { get; set; }
+        public DbSet<FileUserInfo> FilesUserInfo { get; set; }
         public DbSet<Series> Series { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

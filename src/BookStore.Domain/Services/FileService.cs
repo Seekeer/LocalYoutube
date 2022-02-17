@@ -56,7 +56,7 @@ namespace FileStore.Domain.Services
 
         public async Task<IEnumerable<VideoFile>> Search(string FileName)
         {
-            return await _FileRepository.SearchRandom(c => c.Name.Contains(FileName));
+            return await _FileRepository.SearchByName((FileName));
         }
 
         public async Task<IEnumerable<VideoFile>> SearchFileWithSeries(string searchedValue, bool isRandom)

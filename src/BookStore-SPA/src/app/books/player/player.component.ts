@@ -22,6 +22,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   public categories: any;
   public videoURL: string;
   public statStr: string;
+  public name: string;
   private previousVideoTimePlayed: Moment = moment.unix(0);
   
   playedVideoCount: number = 0;
@@ -127,6 +128,14 @@ export class PlayerComponent implements OnInit, OnDestroy {
       if(video)
         this.previousVideoTimePlayed.seconds(video.currentTime);
     }
+
+    this.service.getBookById(currentId).subscribe((videoInfo) => {
+      this.name = videoInfo.displayName;
+    },
+      err => {
+        console.log(`Cannot get video by series ${this.parameters.seriesId}`);
+      });
+
 
     return true;
   }

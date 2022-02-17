@@ -22,34 +22,34 @@ namespace FileStore.Infrastructure.Context
             builder.ToTable("Seasons");
         }
     }
-    public class VideoFileExtendedInfoMapping : IEntityTypeConfiguration<VideoFileExtendedInfo>
+    public class VideoFileExtendedInfoMapping : IEntityTypeConfiguration<FileExtendedInfo>
     {
-        public void Configure(EntityTypeBuilder<VideoFileExtendedInfo> builder)
+        public void Configure(EntityTypeBuilder<FileExtendedInfo> builder)
         {
             builder.HasKey(c => c.Id);
 
             builder.Property(c => c.Cover);
 
-            builder.HasOne(video => video.VideoFile)
+            builder.HasOne(video => video.DbFile)
                 .WithOne(info => info.VideoFileExtendedInfo)
-                .HasForeignKey<VideoFileExtendedInfo>(info => info.VideoFileId)
+                .HasForeignKey<FileExtendedInfo>(info => info.VideoFileId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.ToTable("VideoFileExtendedInfos");
         }
     }
-    public class VideoFileUserInfoMapping : IEntityTypeConfiguration<VideoFileUserInfo>
+    public class VideoFileUserInfoMapping : IEntityTypeConfiguration<FileUserInfo>
     {
-        public void Configure(EntityTypeBuilder<VideoFileUserInfo> builder)
+        public void Configure(EntityTypeBuilder<FileUserInfo> builder)
         {
             builder.HasKey(c => c.Id);
 
             builder.Property(c => c.Rating);
             builder.Property(c => c.Position);
 
-            builder.HasOne(video => video.VideoFile)
+            builder.HasOne(video => video.DbFile)
                 .WithOne(info => info.VideoFileUserInfo)
-                .HasForeignKey<VideoFileUserInfo>(info => info.VideoFileId)
+                .HasForeignKey<FileUserInfo>(info => info.VideoFileId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.ToTable("VideoFileUserInfos");
