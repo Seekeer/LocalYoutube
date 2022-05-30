@@ -1,5 +1,6 @@
 <div >
-  <img *ngIf="!videoURL" alt="Finish!" src="./assets/img/finish.jpg">
+  <img *ngIf="!videoURL && !isLoading" alt="Finish!" src="./assets/img/finish.jpg">
+  <img *ngIf="isLoading" alt="Loading!" src="./assets/img/loading.jpg">
 
   <div *ngIf="videoURL">
       

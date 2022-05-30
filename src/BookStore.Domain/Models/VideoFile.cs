@@ -24,7 +24,8 @@ namespace FileStore.Domain.Models
         Animation,
         Episode,
         FairyTale,
-        Lessons
+        Lessons, 
+        Balley
     }
 
     public enum AudioType

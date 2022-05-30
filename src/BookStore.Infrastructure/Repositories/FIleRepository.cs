@@ -54,6 +54,11 @@ namespace FileStore.Infrastructure.Repositories
             //_FileRepository.SearchRandom
         }
 
+        public async Task<IEnumerable<VideoFile>> SearchFileByType(VideoType type)
+        {
+            return Db.VideoFiles.Where(x => x.Type == type).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo);
+        }
+
         public async Task<IEnumerable<VideoFile>> SearchFileWithSeasonAsync(string searchedValue, bool isRandom, int resultCount)
         {
             var series = Db.Series.FirstOrDefault(x => EF.Functions.Like(x.Name, $"%{searchedValue.ToLower()}%"));

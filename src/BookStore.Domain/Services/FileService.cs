@@ -89,5 +89,10 @@ namespace FileStore.Domain.Services
             video.VideoFileUserInfo.Position = value;
             await _FileRepository.Update(video);
         }
+
+        public async Task<IEnumerable<VideoFile>> SearchFileByType(VideoType type)
+        {
+            return await _FileRepository.SearchFileByType(type);
+        }
     }
 }

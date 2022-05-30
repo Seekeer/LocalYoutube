@@ -1,39 +1,58 @@
 <div class="col-md-12">
-  <div class="form-group mt-3">
-    <div class="input-group">
+  
+  <div>
+        
+    
+    <mat-form-field class="example-full-width" appearance="fill">
+      <mat-label>Название</mat-label>
+      <input matInput  [(ngModel)]="searchTitle" (ngModelChange)="searchBooks()">
+    </mat-form-field>
 
-      <div class="input-group-prepend">
-        Название 
-      </div>
-      <input class="ml-2" type="text" [(ngModel)]="searchTitle" (ngModelChange)="searchBooks()" >
+    <mat-form-field appearance="fill"  *ngIf="isSelectSeries" >
+      <mat-label>Сериал</mat-label>
+      <mat-select [(ngModel)]="searchTerm" (ngModelChange)="searchBooks()">
+        <mat-option *ngFor="let data of series" value="{{data.name}}">
+          {{data.name}}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+    
+    <mat-form-field class="example-full-width"  *ngIf="isSelectSeries" appearance="fill">
+      <mat-label>Число серий</mat-label>
+      <input matInput type="number"  [(ngModel)]="episodeCount" >
+    </mat-form-field>
 
-      <div class="input-group-prepend">
-        Сериал
-      </div>
-      <input class="ml-2" type="text" [(ngModel)]="searchTerm" (ngModelChange)="searchBooks()" list="browsers">
-      <datalist id="browsers">
-        <option *ngFor="let data of series" value="{{data.name}}">
-      </datalist>
-      
-      <div class="input-group-prepend ml-2">
-        Число серий
-      </div>
-      <input class="ml-2" type="number" [(ngModel)]="episodeCount"  />
-      <input id="random" class="ml-2" type="checkbox" [(ngModel)]="isRandom"  >
-      <label for="random">Случайный порядок</label>
+    <mat-checkbox class="ml-2"  *ngIf="isSelectSeries"  [(ngModel)]="isRandom">Случайный порядок</mat-checkbox>
 
-      <button (click)="searchBooks()">Обновить</button>
-    </div>
+    <button mat-icon-button color="primary"  (click)="searchBooks()" >
+      <mat-icon>refresh</mat-icon>
+    </button>
+
   </div>
 
   <button *ngIf="!isRandom" (click)="continueWatch()">Продолжить воспроизведение</button>
 
   <div *ngFor="let book of books">
     
-    <img [ngClass]="{'shownFilm' : book.isFinished}" src='data:image/jpg;base64,{{book.cover}}' (click)="openVideo(book)" />
-    
-    <p class="h6">{{book.displayName}}</p>
-
+    <mat-card class="mt-2 example-card">
+      <mat-card-header>
+        <mat-card-title>{{book.displayName}}</mat-card-title>
+        <!-- <mat-card-subtitle>{{book.displayName}}</mat-card-subtitle> -->
+      </mat-card-header>
+      <img mat-card-image [ngClass]="{'shownFilm' : book.isFinished}" src='data:image/jpg;base64,{{book.cover}}' (click)="openVideo(book)" />
+<!-- 
+      <mat-card-content>
+        <p>
+          The Shiba Inu is the smallest of the six original and distinct spitz breeds of dog from Japan.
+          A small, agile dog that copes very well with mountainous terrain, the Shiba Inu was originally
+          bred for hunting.
+        </p>
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-button>LIKE</button>
+        <button mat-button>SHARE</button>
+      </mat-card-actions> -->
+    </mat-card>
   </div>
   <ngx-spinner></ngx-spinner>
 </div>

@@ -31,6 +31,7 @@ namespace Infrastructure
         {
             this._db = db;
         }
+
         public void FillFilms(string rootPath, Origin origin, VideoType type )
         {
             _origin = origin;
@@ -38,12 +39,13 @@ namespace Infrastructure
 
             var dirInfo = new DirectoryInfo(rootPath);
             var series = AddOrUpdateSeries(dirInfo.Name);
+
             AddSeason(series, dirInfo);
 
             _db.SaveChanges();
         }
 
-        public void FillSeries(string rootPath, Origin origin, VideoType type)
+        public void FillSeries(string rootPath, Origin origin, VideoType type, bool severalSeries = true)
         {
             _origin = origin;
             _type = type;
@@ -51,10 +53,14 @@ namespace Infrastructure
             _episodeNumber = 1;
 
             var dirInfo = new DirectoryInfo(rootPath);
-            foreach (var dir in dirInfo.GetDirectories())
+
+            if (severalSeries)
             {
-                AddSeries(dir);
+                foreach (var dir in dirInfo.GetDirectories())
+                    AddSeries(dir);
             }
+            else
+                AddSeries(dirInfo);
 
             _db.SaveChanges();
         }
@@ -62,7 +68,7 @@ namespace Infrastructure
         public void Convert(VideoFile file)
         {
             var oldFile = file.Path;
-            var newFilePath = Encode(file.Path);
+            var newFilePath = EncodeToMp4(file.Path);
 
             if (newFilePath == null)
                 return;
@@ -209,9 +215,8 @@ namespace Infrastructure
             return videoFile;
         }
 
-        public static string Encode(string path)
+        public static string EncodeToMp4(string path)
         {
-            //return @"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Известные\06 - Мой Додыр 1954.mp4";
             var fileInfo = new FileInfo(path);
 
             if (fileInfo.Extension == ".mp4")
@@ -223,13 +228,61 @@ namespace Infrastructure
                 return resultPath;
 
             var format = FFMpeg.GetContainerFormat("mp4");
-            FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.Medium, 
+            FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.Medium,
                 FFMpegCore.Enums.VideoSize.Original, FFMpegCore.Enums.AudioQuality.Normal, true);
 
             return resultPath;
         }
 
-        private void FillVideoProperties(VideoFile videoFile)
+        public static string EncodeFile(string path, string resultFolder, FFMpegCore.Enums.VideoSize size)
+        {
+            try
+            {
+
+                Directory.CreateDirectory(resultFolder);
+                var fileInfo = new FileInfo(path);
+                //var resultPath = Path.Combine(resultFolder, fileInfo.Name.Replace(fileInfo.Extension, ".mp4"));
+                //var format = FFMpeg.GetContainerFormat("mp4");
+                //FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.Medium,
+                //    size, FFMpegCore.Enums.AudioQuality.Normal, true);
+
+                var resultPath = Path.Combine(resultFolder, fileInfo.Name.Replace(fileInfo.Extension, ".mkv"));
+                FFMpegArguments
+                    .FromFileInput(path)
+                    .OutputToFile(resultPath, false, options => options
+                        .WithVideoCodec(FFMpegCore.Enums.VideoCodec.LibX264)
+                        .WithConstantRateFactor(28)
+                        .WithAudioCodec(FFMpegCore.Enums.AudioCodec.Aac)
+                        .WithVariableBitrate(4)
+                        .UsingMultithreading(true)
+                        .WithVideoFilters(filterOptions => filterOptions
+                            .Scale(FFMpegCore.Enums.VideoSize.Hd))
+                        .WithFastStart())
+                    .ProcessSynchronously();
+
+                //format = FFMpeg.GetContainerFormat("mkv");
+                //FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.Medium,
+                //    size, FFMpegCore.Enums.AudioQuality.Normal, true);
+
+                //resultPath = Path.Combine(resultFolder, fileInfo.Name.Replace(fileInfo.Extension, "sf.mp4"));
+                //format = FFMpeg.GetContainerFormat("mp4");
+                //FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.SuperFast,
+                //    size, FFMpegCore.Enums.AudioQuality.Normal, true);
+
+                //resultPath = Path.Combine(resultFolder, fileInfo.Name.Replace(fileInfo.Extension, "sf.mkv"));
+                //format = FFMpeg.GetContainerFormat("mkv");
+                //FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.SuperFast,
+                //    size, FFMpegCore.Enums.AudioQuality.Normal, true);
+
+                return resultPath;
+            }
+            catch (Exception ex)
+            {
+                return "";
+            }
+        }
+
+            private void FillVideoProperties(VideoFile videoFile)
         {
             try
             {

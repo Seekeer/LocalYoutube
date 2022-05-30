@@ -1,16 +1,31 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import { ActivatedRoute, NavigationExtras, Router } from '@angular/router';
-import { FileService } from 'src/app/_services/file.service';
+import { HttpClient } from '@angular/common/http';
+import {
+  Component,
+  ElementRef,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
+import {
+  ActivatedRoute,
+  NavigationExtras,
+  Router,
+} from '@angular/router';
+
+import { NgxSpinnerService } from 'ngx-spinner';
 import { ToastrService } from 'ngx-toastr';
-import { ConfirmationDialogService } from 'src/app/_services/confirmation-dialog.service';
 import { Subject } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
-import { HttpClient } from '@angular/common/http';
-import { SeriesService } from 'src/app/_services/series.service';
+import {
+  Book,
+  Book as VideoFile,
+  VideoType,
+} from 'src/app/_models/Book';
 import { Serie } from 'src/app/_models/Category';
-import { Book, Book as VideoFile } from 'src/app/_models/Book';
-import { NgxSpinnerService } from 'ngx-spinner';
-
+import {
+  ConfirmationDialogService,
+} from 'src/app/_services/confirmation-dialog.service';
+import { FileService } from 'src/app/_services/file.service';
+import { SeriesService } from 'src/app/_services/series.service';
 
 @Component({
   selector: 'app-book-list',
@@ -23,11 +38,13 @@ export class BookListComponent implements OnInit {
   public books: VideoFile[];
   public listComplet: any;
   public isRandom: boolean = true;
+  public isSelectSeries: boolean = false;
   public searchTerm: string = '';
   public searchTitle: string = '';
   public episodeCount: number = 1;
   public searchValueChanged: Subject<string> = new Subject<string>();
   public series: Serie[];
+  public selectedType: VideoType;
 
   constructor(private router: Router,
               private service: FileService,
@@ -36,18 +53,54 @@ export class BookListComponent implements OnInit {
               private http:HttpClient,
               private spinner: NgxSpinnerService,
               private activatedRoute: ActivatedRoute,
-              private confirmationDialogService: ConfirmationDialogService) { }
+              private confirmationDialogService: ConfirmationDialogService) 
+  { 
+    this.activatedRoute.queryParams.subscribe(params => {
+      console.log(params['type']);
+      // let value = params['type'];
+      // var color : VideoType = value as unknown as VideoType; 
+      }); 
+
+  }
 
   ngOnInit() {
-    // this.activatedRoute.queryParams.subscribe(params => {
-    //   this.getSeries(params['type']);
-    //   });  
-      this.getSeries();
+
+    const type = (this.activatedRoute.snapshot.paramMap.get('type'));
+    switch (type){
+      case 'series':{
+        this.isSelectSeries = true;
+        this.getSeries();
+        break;
+      }
+      case 'soviet':{
+        this.service.getSovietAnimation().subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        break;
+      }
+      case 'sovietfairytale':{
+        this.service.getFilmsByType(VideoType.FairyTale).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        break;
+      }
+      case 'animation':{
+        this.service.getBigAnimation().subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        break;
+      }
+      case 'balley':{
+        this.service.getFilmsByType(VideoType.Balley).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        break;
+      }
+      case 'film':{
+        this.service.getFilmsByType(VideoType.Film).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        break;
+      }
+    }
 
     this.searchValueChanged.pipe(debounceTime(1000))
     .subscribe(() => {
       this.search();
     });
+  }
+
+  displayByType() {
   }
   getSeries() {
     this.spinner.show();
@@ -88,27 +141,24 @@ export class BookListComponent implements OnInit {
     if(this.searchTitle !== ''){
       this.spinner.show();
 
-      this.service.searchFilesWithTitle(this.searchTitle).subscribe(book => {
-        this.books = book;
-      this.spinner.hide();
-
-      }, error => {
-        this.books = [];
-      this.spinner.hide();
-  });
+      this.service.searchFilesWithTitle(this.searchTitle).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     }
     else if (this.searchTerm !== '') {
       this.spinner.show();
-      this.service.searchFilesWithSeries(this.searchTerm, this.isRandom).subscribe(book => {
-        this.books = book;
-      this.spinner.hide();
-    }, error => {
-      this.spinner.hide();
-      this.books = [];
-      });
-    } else {
+      this.service.searchFilesWithSeries(this.searchTerm, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
+    } 
+    else {
             this.toastr.error('Выберите название файла или сериала');
     }
+  }
+
+  showBooks(books: Book[]) {
+    this.books = books;
+    this.spinner.hide();
+  }
+  getFilmsError(error) {
+    this.spinner.hide();
+    this.books = [];
   }
 
   continueWatch(){
@@ -142,3 +192,4 @@ export class PlayerParameters {
   position: number;
   isRandom: boolean;
 }
+

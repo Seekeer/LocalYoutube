@@ -1,13 +1,23 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { NgForm, NumberValueAccessor } from '@angular/forms';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
+import {
+  ActivatedRoute,
+  Router,
+} from '@angular/router';
+
+import * as moment from 'moment';
+import { Moment } from 'moment';
+import { ToastrService } from 'ngx-toastr';
 import { Book } from 'src/app/_models/Book';
 import { FileService } from 'src/app/_services/file.service';
-import { ToastrService } from 'ngx-toastr';
 import { SeriesService } from 'src/app/_services/series.service';
+
 import { PlayerParameters } from '../book-list/book-list.component';
-import { Moment } from 'moment';
-import * as moment from 'moment';
 
 @Component({
   selector: 'app-player',
@@ -34,6 +44,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   intervalId: any;
   position: number;
   isRandom: boolean;
+  isLoading: boolean;
 
   constructor(public service: FileService,
     private categoryService: SeriesService,
@@ -46,27 +57,31 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-
+    this.isLoading =true;
+    setTimeout(() => {
+    this.isLoading =false;
     this.parameters = <PlayerParameters>(JSON.parse(JSON.stringify((<any>this.route.snapshot.queryParamMap).params)));
 
-    this.videoId = this.parameters.videoId;
-    this.position = parseFloat(this.parameters.position.toString());
+      this.videoId = this.parameters.videoId;
+      this.position = parseFloat(this.parameters.position.toString());
 
-    this.isRandom = String(this.parameters.isRandom) === 'true';
-    this.videosList.push(this.videoId);
-    this.setNextVideo(true);
+      this.isRandom = String(this.parameters.isRandom) === 'true';
+      this.videosList.push(this.videoId);
+      this.setNextVideo(true);
 
-    this.service.getVideosBySeries(this.parameters.seriesId, this.parameters.videosCount, this.isRandom).subscribe((videos) => {
-      const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
+      this.service.getVideosBySeries(this.parameters.seriesId, this.parameters.videosCount, this.isRandom).subscribe((videos) => {
+        const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
 
-      this.videosList = this.videosList.concat(selectedIds);
-    },
-      err => {
-        console.log(`Cannot get video by series ${this.parameters.seriesId}`);
-      })
+        this.videosList = this.videosList.concat(selectedIds);
+      },
+        err => {
+          console.log(`Cannot get video by series ${this.parameters.seriesId}`);
+        })
 
-    // setTimeout(() => this.updateStat(), 1000);
-    this.intervalId = setInterval(() => this.updateStat(), 1000);
+      // setTimeout(() => this.updateStat(), 1000);
+      this.intervalId = setInterval(() => this.updateStat(), 1000);
+      
+    }, (3000));
   }
   
   private getVideoElement(){
@@ -104,6 +119,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.videoURL = this.service.getVideoURLById(currentId);
     var el = this.getVideoElement();
     el?.load();
+
 
       // if(this.parameters.videoId != 0){
       //   this.videoURL = this.service.getVideoURLById(this.parameters.videoId);

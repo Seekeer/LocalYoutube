@@ -1,8 +1,13 @@
 <div class="title-home container mt-5 text-center">
     <h1>LocalYoutube</h1>
     <p class="lead">Домашний видеосервис</p>
-    <div class="text-center">
-        <button class="btn btn-info btn-lg" [routerLink]="['/books']">Просмотр</button>
+    <div class="btn-group-vertical">
+        <button class="btn btn-info btn-lg" [routerLink]="['/books/series']"  >Мультсериалы</button>
+        <button class="btn btn-info btn-lg" [routerLink]="['/books/soviet']"  >Советские мультики</button>
+        <button class="btn btn-info btn-lg" [routerLink]="['/books/sovietfairytale']" >Советские сказки</button>
+        <button class="btn btn-info btn-lg" [routerLink]="['/books/animation']" >Зарубежные мультики</button>
+        <button class="btn btn-info btn-lg" [routerLink]="['/books/balley']" >Балет</button>
+        <button class="btn btn-info btn-lg" [routerLink]="['/books/film']" >Фильмы</button>
         <!-- <button class="btn btn-info btn-lg" [routerLink]="['/books/child']">Для детей</button>
         <button class="btn btn-info btn-lg" [routerLink]="['/books/grownUp']">Для взрослых</button> -->
     </div>

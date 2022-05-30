@@ -14,6 +14,7 @@ namespace FileStore.Domain.Interfaces
         Task<bool> Remove(VideoFile File);
         Task<IEnumerable<VideoFile>> GetFilesBySearies(int seriesId, bool isRandom);
         Task<IEnumerable<VideoFile>> Search(string FileName);
+        Task<IEnumerable<VideoFile>> SearchFileByType(VideoType type);
         Task<IEnumerable<VideoFile>> SearchFileWithSeries(string searchedValue, bool isRandom);
         Task<VideoFile> GetRandomFileBySeriesId(int seriesId);
         Task SetRating(int videoId, double value);

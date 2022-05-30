@@ -8,3 +8,13 @@ export class Book {
     currentPosition:number;
     isFinished:boolean;
 }
+
+export enum VideoType {
+    Unknown,
+    Film,
+    Animation,
+    Episode,
+    FairyTale,
+    Lessons, 
+    Balley
+  }

@@ -22,6 +22,7 @@ namespace FileStore.Infrastructure.Context
         public DbSet<Season> Seasons { get; set; }
         public DbSet<AudioFile> AudioFiles { get; set; }
         public DbSet<VideoFile> VideoFiles { get; set; }
+        public DbSet<DbFile> Files{ get; set; }
         public DbSet<FileExtendedInfo> FilesInfo { get; set; }
         public DbSet<FileUserInfo> FilesUserInfo { get; set; }
         public DbSet<Series> Series { get; set; }

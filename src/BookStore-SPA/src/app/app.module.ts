@@ -6,7 +6,6 @@ import { FormsModule } from '@angular/forms';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ToastrModule } from 'ngx-toastr';
-
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { FileService } from './_services/file.service';
@@ -21,6 +20,16 @@ import { ConfirmationDialogComponent } from './confirmation-dialog/confirmation-
 import { NgbdDatepickerPopup } from './datepicker/datepicker-popup';
 import { SeriesService } from './_services/series.service';
 import { NgxSpinnerModule } from 'ngx-spinner';
+
+import { MatSliderModule } from '@angular/material/slider';
+import {MatButtonModule} from '@angular/material/button';
+import {MatIconModule} from '@angular/material/icon';
+import {MatSlideToggleModule} from '@angular/material/slide-toggle';
+import {MatSelectModule} from '@angular/material/select';
+import {MatCheckboxModule} from '@angular/material/checkbox';
+import {MatInputModule} from '@angular/material/input';
+import {MatFormFieldModule} from '@angular/material/form-field';
+import {MatCardModule} from '@angular/material/card';
 
 @NgModule({
   declarations: [
@@ -41,6 +50,15 @@ import { NgxSpinnerModule } from 'ngx-spinner';
     FormsModule,
     NgbModule,
     NgxSpinnerModule,
+    MatSliderModule,
+    MatFormFieldModule,
+    MatButtonModule,
+    MatIconModule,
+    MatCardModule,
+    MatCheckboxModule,
+    MatSlideToggleModule,
+    MatSelectModule,
+    MatInputModule,
     BrowserAnimationsModule,
     ToastrModule.forRoot()
   ],

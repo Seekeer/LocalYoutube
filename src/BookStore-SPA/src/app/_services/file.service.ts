@@ -1,13 +1,27 @@
-import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Book } from '../_models/Book';
+import { Injectable } from '@angular/core';
+
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
+
+import {
+  Book,
+  VideoType,
+} from '../_models/Book';
 
 @Injectable({
     providedIn: 'root'
 })
 export class FileService {
+    public getFilmsByType(type: VideoType) {
+        return this.http.get<Book[]>(`${this.baseUrl}files/getFileByType/${type}`);
+    }
+    public getSovietAnimation() {
+        return this.http.get<Book[]>(`${this.baseUrl}files/getAnimation?isSoviet=true`);
+    }
+    getBigAnimation() {
+        return this.http.get<Book[]>(`${this.baseUrl}files/getAnimation?isSoviet=false`);
+    }
     private baseUrl: string = environment.baseUrl + 'api/';
 
     constructor(private http: HttpClient) { }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using Infrastructure;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace FileStore.API.Controllers
 {
@@ -38,7 +40,11 @@ namespace FileStore.API.Controllers
         {
             var dbUpdater = new DbUpdateManager(_db);
 
-            //var films = _db.Files.Include(x => x.VideoFileExtendedInfo).Where(x => x.SeriesId == 11).ToList();
+            // Fill balley
+            //dbUpdater.FillSeries(@"F:\Видео\Балет", Origin.Russian, VideoType.Balley, false);
+
+            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Царевны", Origin.Russian, VideoType.Episode, false);
+
             //_db.RemoveRange(films.Select(x => x.VideoFileExtendedInfo));
             //_db.RemoveRange(films.Select(x => x.VideoFileUserInfo).Where(x => x != null));
             //_db.RemoveRange(films);
@@ -60,14 +66,49 @@ namespace FileStore.API.Controllers
             //var files = _db.Files.Where(x => x.Id > 0);
             //foreach (var file in files)
             //{
-            //    if (file.VideoFileUserInfo == null)
-            //        file.VideoFileUserInfo = new VideoFileUserInfo();
+            //    file.Path = file.Path.Replace(@"D:\Анюта\Мульты", @"F:\Анюта\Мульты");
             //}
+            //_db.SaveChanges();
+
+            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Фиксики Сезоны 1-3 720p 4 1080p", Origin.Russian, VideoType.Episode, false);
             //_db.SaveChanges();
 
 
             //dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Мультсериалы", Origin.Soviet, VideoType.Episode);
             //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Фильмы-Сказки", Origin.Soviet, VideoType.FairyTale);
+
+            Convert(dbUpdater);
+
+            return Ok();
+        }
+        [HttpGet]
+        [Route("convertToLower")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> ConvertToLower()
+        {
+            var sourceRoot = @"F:\Анюта\Мульты\Мультсериалы российские";
+            var destinationRoot = @"F:\Анюта\Мульты\LowRes\Мультсериалы российские\";
+
+            var task = new List<string>();
+            task.Add(@"\Пластилинки\Пластилинки Азбука (А-Я) Никола-фильм");
+            task.Add(@"\Пластилинки\Пластилинки. Зверушки.2019.WEBRip 1080p");
+            task.Add(@"\Пластилинки\Пластилинки. Машинки.2019.WEBRip 1080p");
+            task.Add(@"\Пластилинки\Пластилинки. Музыкальные инструменты.2019.WEBRip 1080p");
+            task.Add(@"\Пластилинки\Пластилинки. Растения.2020.WEB-DL 1080p");
+            task.Add(@"\Пластилинки\Пластилинки. Музыкальные инструменты.2019.WEBRip 1080p");
+            task.Add(@"\Пластилинки\Пластилинки. Циферки.2018.WEBRip 1080p");
+            task.Add(@"\Бумажки 1-78 1080p");
+            task.Add(@"\Смешарики 1-218 1080p");
+
+            foreach (var dir in task)
+            {
+                var rootDir = (sourceRoot+ dir);
+                var newFolder =(destinationRoot+ dir);
+                foreach (var file in Directory.GetFiles(rootDir))
+                {
+                    DbUpdateManager.EncodeFile(file, newFolder, FFMpegCore.Enums.VideoSize.Hd);
+                }
+            }
 
             return Ok();
         }
@@ -196,6 +237,38 @@ namespace FileStore.API.Controllers
             return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
         }
 
+        [HttpGet]
+        [Route("getAnimation")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<List<VideoFile>>> GetAnimation(bool isSoviet)
+        {
+            var files = await _FileService.SearchFileByType(VideoType.Animation);
+            files = isSoviet ? files.Where(x => x.Origin == Origin.Soviet) : files.Where(x => x.Origin == Origin.Foreign);
+
+            var result= _mapper.Map<List<VideoFile>>(files);
+
+            if (!result.Any())
+                return NotFound("None File was founded");
+
+            return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(result));
+        }
+
+        [HttpGet]
+        [Route("getFileByType/{type}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<List<VideoFile>>> GetFileByType(VideoType type)
+        {
+            var result = await _FileService.SearchFileByType(type);
+            var Files = _mapper.Map<List<VideoFile>>(result);
+
+            if (!Files.Any())
+                return NotFound("None File was founded");
+
+            return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
+        }
+
         [HttpPut]
         [Route("rate/{videoId}")]
         public async Task<IActionResult> SetRating(int videoId, [FromBody] double value)
@@ -229,7 +302,7 @@ namespace FileStore.API.Controllers
 
                 if (file.Path.EndsWith("avi"))
                 {
-                    path = DbUpdateManager.Encode(path);
+                    path = DbUpdateManager.EncodeToMp4(path);
                 }
                 logger.Debug($"getFileById 2 {file.Path}");
 
