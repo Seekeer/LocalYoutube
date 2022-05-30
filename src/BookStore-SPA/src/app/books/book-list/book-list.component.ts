@@ -13,8 +13,6 @@ import {
 
 import { NgxSpinnerService } from 'ngx-spinner';
 import { ToastrService } from 'ngx-toastr';
-import { Subject } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
 import {
   Book,
   Book as VideoFile,
@@ -30,84 +28,89 @@ import { SeriesService } from 'src/app/_services/series.service';
 @Component({
   selector: 'app-book-list',
   templateUrl: './book-list.component.html',
-  styleUrls: ['./book-list.component.css']
+  styleUrls: ['./book-list.component.css'],
 })
 export class BookListComponent implements OnInit {
-  @ViewChild('videoElement') video:ElementRef; 
-  
+  @ViewChild('videoElement') video: ElementRef;
+
   public books: VideoFile[];
+  public booksServerResult: VideoFile[];
   public listComplet: any;
   public isRandom: boolean = true;
   public isSelectSeries: boolean = false;
   public searchTerm: string = '';
   public searchTitle: string = '';
   public episodeCount: number = 1;
-  public searchValueChanged: Subject<string> = new Subject<string>();
   public series: Serie[];
   public selectedType: VideoType;
 
-  constructor(private router: Router,
-              private service: FileService,
-              private seriesService: SeriesService,
-              private toastr: ToastrService,
-              private http:HttpClient,
-              private spinner: NgxSpinnerService,
-              private activatedRoute: ActivatedRoute,
-              private confirmationDialogService: ConfirmationDialogService) 
-  { 
-    this.activatedRoute.queryParams.subscribe(params => {
+  constructor(
+    private router: Router,
+    private service: FileService,
+    private seriesService: SeriesService,
+    private toastr: ToastrService,
+    private http: HttpClient,
+    private spinner: NgxSpinnerService,
+    private activatedRoute: ActivatedRoute,
+    private confirmationDialogService: ConfirmationDialogService
+  ) {
+    this.activatedRoute.queryParams.subscribe((params) => {
       console.log(params['type']);
       // let value = params['type'];
-      // var color : VideoType = value as unknown as VideoType; 
-      }); 
-
+      // var color : VideoType = value as unknown as VideoType;
+    });
   }
 
   ngOnInit() {
+    const type = this.activatedRoute.snapshot.paramMap.get('type');
 
-    const type = (this.activatedRoute.snapshot.paramMap.get('type'));
-    switch (type){
-      case 'series':{
+    this.spinner.show();
+
+    switch (type) {
+      case 'series': {
         this.isSelectSeries = true;
         this.getSeries();
         break;
       }
-      case 'soviet':{
-        this.service.getSovietAnimation().subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+      case 'soviet': {
+        this.service
+          .getSovietAnimation()
+          .subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
         break;
       }
-      case 'sovietfairytale':{
-        this.service.getFilmsByType(VideoType.FairyTale).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+      case 'sovietfairytale': {
+        this.service
+          .getFilmsByType(VideoType.FairyTale)
+          .subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
         break;
       }
-      case 'animation':{
-        this.service.getBigAnimation().subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+      case 'animation': {
+        this.service
+          .getBigAnimation()
+          .subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
         break;
       }
-      case 'balley':{
-        this.service.getFilmsByType(VideoType.Balley).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+      case 'balley': {
+        this.service
+          .getFilmsByType(VideoType.Balley)
+          .subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
         break;
       }
-      case 'film':{
-        this.service.getFilmsByType(VideoType.Film).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+      case 'film': {
+        this.service
+          .getFilmsByType(VideoType.Film)
+          .subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
         break;
       }
     }
-
-    this.searchValueChanged.pipe(debounceTime(1000))
-    .subscribe(() => {
-      this.search();
-    });
   }
 
-  displayByType() {
-  }
   getSeries() {
     this.spinner.show();
-    
-    this.seriesService.getAll().subscribe(series => {
+
+    this.seriesService.getAll().subscribe((series) => {
       this.spinner.hide();
-      this.series =series;
+      this.series = series;
     });
   }
 
@@ -120,68 +123,73 @@ export class BookListComponent implements OnInit {
   }
 
   public deleteBook(bookId: number) {
-    this.confirmationDialogService.confirm('Atention', 'Do you really want to delete this book?')
+    this.confirmationDialogService
+      .confirm('Atention', 'Do you really want to delete this book?')
       .then(() =>
-        this.service.deleteBook(bookId).subscribe(() => {
-          this.toastr.success('The book has been deleted');
-          // this.getValues();
-        },
-          err => {
+        this.service.deleteBook(bookId).subscribe(
+          () => {
+            this.toastr.success('The book has been deleted');
+            // this.getValues();
+          },
+          (err) => {
             this.toastr.error('Failed to delete the book.');
-          }))
+          }
+        )
+      )
       .catch(() => '');
   }
 
   public searchBooks() {
-    this.searchValueChanged.next();
+    if (this.booksServerResult)
+      this.books = this.booksServerResult.filter(
+        (x) =>
+          x.name.toLowerCase().indexOf(this.searchTitle.toLowerCase()) != -1
+      );
+    else {
+      this.spinner.show();
+      this.service
+        .searchFilesWithTitle(this.searchTitle)
+        .subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
+    }
   }
 
-  private search() {
-
-    if(this.searchTitle !== ''){
-      this.spinner.show();
-
-      this.service.searchFilesWithTitle(this.searchTitle).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
-    }
-    else if (this.searchTerm !== '') {
-      this.spinner.show();
-      this.service.searchFilesWithSeries(this.searchTerm, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
-    } 
-    else {
-            this.toastr.error('Выберите название файла или сериала');
-    }
+  public searchBooksByTitle() {
+    this.spinner.show();
+    this.service
+      .searchFilesWithSeries(this.searchTerm, this.isRandom)
+      .subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
   }
 
   showBooks(books: Book[]) {
-    this.books = books;
+    this.booksServerResult = books;
+    this.searchBooks();
     this.spinner.hide();
   }
+
   getFilmsError(error) {
     this.spinner.hide();
-    this.books = [];
+    this.booksServerResult = [];
   }
 
-  continueWatch(){
-    var film = this.books.find(x => !x.isFinished);
-
+  continueWatch() {
+    var film = this.books.find((x) => !x.isFinished);
     this.openVideo(film);
   }
 
   openVideo(book: Book) {
-
     const queryParams: PlayerParameters = {
-      seriesId : book.seriesId,
-      position : book.currentPosition,
-      videoId : book.id,
-      videosCount : this.episodeCount,
-      isRandom : this.isRandom
+      seriesId: book.seriesId,
+      position: book.currentPosition,
+      videoId: book.id,
+      videosCount: this.episodeCount,
+      isRandom: this.isRandom,
     };
 
     const navigationExtras: NavigationExtras = {
-      queryParams
-   };
+      queryParams,
+    };
 
-   this.router.navigate(['/player'], navigationExtras);
+    this.router.navigate(['/player'], navigationExtras);
   }
 }
 
@@ -192,4 +200,3 @@ export class PlayerParameters {
   position: number;
   isRandom: boolean;
 }
-
