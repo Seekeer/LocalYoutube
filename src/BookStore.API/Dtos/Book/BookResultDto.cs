@@ -27,7 +27,8 @@ namespace FileStore.API.Dtos.File
 
         public string DisplayName { get
             {
-                return $"{Number} - {Name}";
+                return $"{Name}";
+                //return $"{Number} - {Name}";
             } 
         }
     }
