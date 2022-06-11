@@ -17,15 +17,18 @@ namespace FileStore.Domain.Models
         Russian,
         Foreign
     }
+
     public enum VideoType
     {
         Unknown,
         Film,
         Animation,
-        Episode,
+        ChildEpisode,
         FairyTale,
         Lessons, 
-        Balley
+        Balley,
+        AdultEpisode,
+        Courses
     }
 
     public enum AudioType
@@ -45,6 +48,7 @@ namespace FileStore.Domain.Models
 
         public byte[] Cover { get; set; }
     }
+
     public class FileUserInfo : Entity
     {
         public DbFile DbFile { get; set; }

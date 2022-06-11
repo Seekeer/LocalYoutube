@@ -8,7 +8,6 @@ using AutoMapper;
 using FileStore.API.Dtos.File;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
-using FileStore.Infrastructure.Context;
 using Infrastructure;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
@@ -17,120 +16,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FileStore.API.Controllers
 {
+
     [EnableCors()]
     [Route("api/[controller]")]
     public class FilesController : MainController
     {
         private readonly IFileService _FileService;
-        private readonly VideoCatalogDbContext _db;
         private readonly IMapper _mapper;
         private readonly static Dictionary<string, int> _randomFileDict = new Dictionary<string, int>();
 
-        public FilesController(IMapper mapper, IFileService FileService, VideoCatalogDbContext dbContext)
+        public FilesController(IMapper mapper, IFileService FileService)
         {
             _mapper = mapper;
             _FileService = FileService;
-            _db = dbContext;
-        }
-
-        [HttpGet]
-        [Route("updateAll")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> UpdateAll()
-        {
-            var dbUpdater = new DbUpdateManager(_db);
-
-            // Fill balley
-            //dbUpdater.FillSeries(@"F:\Видео\Балет", Origin.Russian, VideoType.Balley, false);
-
-            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Царевны", Origin.Russian, VideoType.Episode, false);
-
-            //_db.RemoveRange(films.Select(x => x.VideoFileExtendedInfo));
-            //_db.RemoveRange(films.Select(x => x.VideoFileUserInfo).Where(x => x != null));
-            //_db.RemoveRange(films);
-            //_db.SaveChanges();
-            //var series = _db.Series.Where(x => x.Id == 11);
-            //_db.RemoveRange(series);
-            //_db.SaveChanges();
-
-            //Convert(dbUpdater);5
-
-            //dbUpdater.FillSeries(@"D:\Анюта\Мульты\Мультсериалы российские", Origin.Russian, VideoType.Episode);
-
-            ////dbUpdater.FillFilms(@"D:\Анюта\Мульты\Советские мультфильмы\Солянка", Origin.Soviet, VideoType.Animation);
-            //dbUpdater.FillFilms(@"D:\Анюта\Мульты\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation);
-            //dbUpdater.FillSeries(@"D:\Media\Обучалки\Съемка", Origin.Russian, VideoType.Lessons);
-
-            //dbUpdater.FillSeries(@"D:\Анюта\Мульты\Советские мультфильмы\Солянка", Origin.Soviet, VideoType.Animation);
-
-            //var files = _db.Files.Where(x => x.Id > 0);
-            //foreach (var file in files)
-            //{
-            //    file.Path = file.Path.Replace(@"D:\Анюта\Мульты", @"F:\Анюта\Мульты");
-            //}
-            //_db.SaveChanges();
-
-            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Фиксики Сезоны 1-3 720p 4 1080p", Origin.Russian, VideoType.Episode, false);
-            //_db.SaveChanges();
-
-
-            //dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Мультсериалы", Origin.Soviet, VideoType.Episode);
-            //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Фильмы-Сказки", Origin.Soviet, VideoType.FairyTale);
-
-            Convert(dbUpdater);
-
-            return Ok();
-        }
-        [HttpGet]
-        [Route("convertToLower")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> ConvertToLower()
-        {
-            var sourceRoot = @"F:\Анюта\Мульты\Мультсериалы российские";
-            var destinationRoot = @"F:\Анюта\Мульты\LowRes\Мультсериалы российские\";
-
-            var task = new List<string>();
-            task.Add(@"\Пластилинки\Пластилинки Азбука (А-Я) Никола-фильм");
-            task.Add(@"\Пластилинки\Пластилинки. Зверушки.2019.WEBRip 1080p");
-            task.Add(@"\Пластилинки\Пластилинки. Машинки.2019.WEBRip 1080p");
-            task.Add(@"\Пластилинки\Пластилинки. Музыкальные инструменты.2019.WEBRip 1080p");
-            task.Add(@"\Пластилинки\Пластилинки. Растения.2020.WEB-DL 1080p");
-            task.Add(@"\Пластилинки\Пластилинки. Музыкальные инструменты.2019.WEBRip 1080p");
-            task.Add(@"\Пластилинки\Пластилинки. Циферки.2018.WEBRip 1080p");
-            task.Add(@"\Бумажки 1-78 1080p");
-            task.Add(@"\Смешарики 1-218 1080p");
-
-            foreach (var dir in task)
-            {
-                var rootDir = (sourceRoot+ dir);
-                var newFolder =(destinationRoot+ dir);
-                foreach (var file in Directory.GetFiles(rootDir))
-                {
-                    DbUpdateManager.EncodeFile(file, newFolder, FFMpegCore.Enums.VideoSize.Hd);
-                }
-            }
-
-            return Ok();
-        }
-
-        private void Convert(DbUpdateManager dbUpdater)
-        {
-            var mp4Count = _db.VideoFiles.Count(x => !x.Path.EndsWith("mp4"));
-            var totalCount = _db.VideoFiles.Count();
-
-            var convert = _db.VideoFiles.Where(x => !x.Path.EndsWith("mp4")).ToList();
-            //var sovietToConvert = _db.Files.Where(x => x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //var nonSovietToConvert = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //Parallel.ForEach(convert, file =>
-            foreach (var file in convert)
-            {
-                dbUpdater.Convert(file);
-            }
-            //);
-
-            //var nonSovietToConvertList = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //var totalDuration = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList().Sum(x => x.Duration.TotalMinutes);
-
         }
 
         [HttpGet]

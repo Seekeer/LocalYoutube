@@ -8,10 +8,6 @@ using FileStore.Domain.Models;
 using System.Text.RegularExpressions;
 using FFMpegCore;
 using System.Drawing;
-using System.Threading.Tasks;
-//using MediaToolkit.Model;
-//using MediaToolkit;
-//using MediaToolkit.Options;
 
 namespace Infrastructure
 {
@@ -88,15 +84,15 @@ namespace Infrastructure
             var series = AddOrUpdateSeries(dir.Name);
 
             var folders = dir.GetDirectories();
-            //if (!folders.Any())
-            //    AddSeason(series, dir);
-            //else
-            //{
+            if (!folders.Any())
+                AddSeason(series, dir);
+            else
+            {
                 foreach (var season in folders)
                     AddSeason(series, season);
 
                 AddSeason(series, dir);
-            //}
+            }
         }
 
         private void AddSeason(Series series, DirectoryInfo dir)
@@ -112,6 +108,10 @@ namespace Infrastructure
                     if (file.Name.EndsWith("jpg") || file.Name.EndsWith("jpeg") || file.Name.EndsWith("docx") || 
                         file.Name.EndsWith("nfo") || file.Name.EndsWith("mp3"))
                         return;
+
+                    var existingInfo = _db.VideoFiles.FirstOrDefault(x => x.Path == file.FullName);
+                    if (existingInfo != null)
+                        continue;
 
                     // TODO - quality
                     VideoFile videoInfo = GetVideoInfo(series, season, file);
@@ -145,7 +145,7 @@ namespace Infrastructure
             var series = _db.Series.FirstOrDefault(x => x.Name == name);
             if (series == null)
             {
-                series = new Series { Name = name };
+                series = new Series { Name = name, Origin = _origin, Type = _type };
                 _db.Series.Add(series);
                 _db.SaveChanges();
             }
@@ -168,7 +168,7 @@ namespace Infrastructure
                 result += ch;
             } 
 
-            return result;
+            return result.ClearSerieName();
         }
 
         public static string GetEpisodeNameFromFilenName(string name)
@@ -205,7 +205,7 @@ namespace Infrastructure
                 Number = _episodeNumber++
             };
 
-            if(_type == VideoType.Episode)
+            if(_type == VideoType.ChildEpisode)
             {
                 videoFile.Number = GetSeriesNumberFromName(file.Name);
             }

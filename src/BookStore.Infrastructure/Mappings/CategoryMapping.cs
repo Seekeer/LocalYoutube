@@ -63,6 +63,9 @@ namespace FileStore.Infrastructure.Context
 
             builder.Property(c => c.Name);
             builder.Property(c => c.IntroDuration);
+            builder.Property(c => c.Origin);
+            builder.Property(c => c.IsChild);
+            builder.Property(c => c.Type);
 
             // 1 : N => Category : Books
             builder.HasMany(c => c.Files)

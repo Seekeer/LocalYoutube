@@ -4,9 +4,10 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "publish": "ng build --configuration production",
     "debug": "ng serve --port 4201",
     "build": "ng build",
+    "publish": "ng build --configuration production && npm run postbuild",
+    "postbuild":"xcopy /s \".\/dist\\BookStore-SPA\" \"C:\\inetpub\\LocalYoutube\" \/Y",
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e"

@@ -1,8 +1,11 @@
-import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Serie } from '../_models/Category';
+import { Injectable } from '@angular/core';
+
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
+
+import { VideoType } from '../_models/Book';
+import { Serie } from '../_models/Category';
 
 @Injectable({
     providedIn: 'root'
@@ -12,8 +15,8 @@ export class SeriesService {
 
     constructor(private http: HttpClient) { }
 
-    public getAll(): Observable<Serie[]> {
-        return this.http.get<Serie[]>(this.baseUrl + `series`);
+    public getAll(type:VideoType): Observable<Serie[]> {
+        return this.http.get<Serie[]>(this.baseUrl + `series?type=` + <number>type);
     }
 
     public getCategories(): Observable<Serie[]> {

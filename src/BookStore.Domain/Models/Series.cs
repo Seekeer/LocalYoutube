@@ -7,6 +7,10 @@ namespace FileStore.Domain.Models
     {
         public string Name { get; set; }
 
+        public Origin Origin { get; set; }
+        public VideoType Type { get; set; }
+        public bool IsChild{ get; set; }
+
         public TimeSpan IntroDuration { get; set; }
 
         /* EF Relations */

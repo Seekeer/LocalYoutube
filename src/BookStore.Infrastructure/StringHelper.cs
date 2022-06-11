@@ -267,5 +267,10 @@ namespace Infrastructure
             return includeStartString ? text.Substring(indexStart) : text.Substring(indexStart + start.Length);
         }
 
+        public static string ClearSerieName(this string name)
+        {
+            return name.Trim().Trim('.').Trim('.').Trim('-').Trim();
+        }
+
     }
 }

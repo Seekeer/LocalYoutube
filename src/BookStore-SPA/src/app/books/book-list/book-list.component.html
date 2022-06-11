@@ -32,7 +32,7 @@
 
   <button *ngIf="!isRandom" (click)="continueWatch()">Продолжить воспроизведение</button>
 
-  <div fxLayout="row wrap" fxLayoutGap="16px">
+  <div *ngIf="!showKPINfo" fxLayout="row wrap" fxLayoutGap="16px">
     <div
       fxFlex="48%"
       fxFlex.xs="100%"
@@ -48,20 +48,28 @@
           src="data:image/jpg;base64,{{ book.cover }}"
           (click)="openVideo(book)"
         />
-        <!-- 
-      <mat-card-content>
-        <p>
-          The Shiba Inu is the smallest of the six original and distinct spitz breeds of dog from Japan.
-          A small, agile dog that copes very well with mountainous terrain, the Shiba Inu was originally
-          bred for hunting.
-        </p>
-      </mat-card-content>
-      <mat-card-actions>
-        <button mat-button>LIKE</button>
-        <button mat-button>SHARE</button>
-      </mat-card-actions> -->
       </mat-card>
     </div>
   </div>
+
+  <div *ngIf="showKPINfo" fxLayout="row wrap" fxLayoutGap="16px">
+    <div
+      *ngFor="let book of books"
+    >
+      <mat-card class="mat-elevation-z4 mt-2">
+        <mat-card-header>
+          <mat-card-title>{{ book.displayName }}</mat-card-title>
+          <!-- <mat-card-subtitle>{{book.displayName}}</mat-card-subtitle> -->
+        </mat-card-header>
+        <iframe  src="https://yandex.ru/search/?text=%D0%9F%D0%B0%D0%B2%D0%BB%D0%B0+%D0%A1%D1%83%D0%B4%D0%BE%D0%BF%D0%BB%D0%B0%D1%82%D0%BE%D0%B2%D0%B0&lr=238"></iframe>
+        <img
+          [ngClass]="{ shownFilm: book.isFinished }"
+          src="data:image/jpg;base64,{{ book.cover }}"
+          (click)="openVideo(book)"
+        />
+      </mat-card>
+    </div>
+  </div>
+
   <ngx-spinner></ngx-spinner>
 </div>

@@ -95,6 +95,26 @@ export class PlayerComponent implements OnInit, OnDestroy {
       this.getVideoElement().load();
     // TODO - show end show screen
   }
+
+  public download() {
+    // this.name;
+    // videoURL
+  }
+  
+  public copyLink() {
+    this.copyToClipboard(this.videoURL);
+    // navigator.clipboard.writeText(this.videoURL).then().catch(e => console.error(e));
+  }
+  
+  private copyToClipboard(text) {
+    if(navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    else{
+      alert(text);
+    }
+  }
+
   public skipVideo() {
       this.service.setRating(this.videoId, -1).subscribe();
       this.getVideoElement().pause();

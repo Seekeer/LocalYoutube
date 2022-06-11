@@ -15,6 +15,8 @@ namespace FileStore.Infrastructure.Context
             return new VideoCatalogDbContext(optionsBuilder.Options);
         }
     }
+    
+    // dotnet ef migrations add InitialCreate2
     public class VideoCatalogDbContext : DbContext
     {
         public VideoCatalogDbContext(DbContextOptions options) : base(options) { }

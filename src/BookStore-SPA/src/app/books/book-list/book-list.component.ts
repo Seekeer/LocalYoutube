@@ -39,6 +39,7 @@ export class BookListComponent implements OnInit {
   public listComplet: any;
   public isRandom: boolean = true;
   public isSelectSeries: boolean = false;
+  public showKPINfo: boolean = false;
   public searchTerm: string = '';
   public searchTitle: string = '';
   public episodeCount: number = 1;
@@ -64,12 +65,13 @@ export class BookListComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.spinner.show();
 
     const type = (this.activatedRoute.snapshot.paramMap.get('type'));
     switch (type){
       case 'series':{
         this.isSelectSeries = true;
-        this.getSeries();
+        this.getSeries(VideoType.ChildEpisode);
         break;
       }
       case 'soviet':{
@@ -89,7 +91,10 @@ export class BookListComponent implements OnInit {
         break;
       }
       case 'film':{
-        this.service.getFilmsByType(VideoType.Film).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        this.isSelectSeries = true;
+        this.getSeries(VideoType.Film);
+        this.service.getFilmsByType(VideoType.Film).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
+        this.showKPINfo = true;
         break;
       }
     }
@@ -102,12 +107,12 @@ export class BookListComponent implements OnInit {
 
   displayByType() {
   }
-  getSeries() {
+  getSeries(type:VideoType) {
     this.spinner.show();
     
-    this.seriesService.getAll().subscribe(series => {
+    this.seriesService.getAll(type).subscribe(series => {
       this.spinner.hide();
-      this.series =series;
+      this.series = series;
     });
   }
 

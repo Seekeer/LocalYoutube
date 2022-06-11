@@ -13,8 +13,10 @@ export enum VideoType {
     Unknown,
     Film,
     Animation,
-    Episode,
+    ChildEpisode,
     FairyTale,
     Lessons, 
-    Balley
+    Balley,
+    AdultEpisode,
+    Courses
   }

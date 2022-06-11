@@ -24,9 +24,9 @@ namespace FileStore.API.Controllers
 
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(VideoType? type = null)
         {
-            var Series = await _SeriesService.GetAll();
+            var Series = await _SeriesService.GetAll(type);
 
             return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(Series));
         }
