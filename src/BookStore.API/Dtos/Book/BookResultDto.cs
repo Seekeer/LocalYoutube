@@ -16,6 +16,8 @@ namespace FileStore.API.Dtos.File
         public string Author { get; set; }
 
         public string Description { get; set; }
+        public int Year { get; set; }
+        public string Genres { get; set; }
 
         public double Value { get; set; }
 

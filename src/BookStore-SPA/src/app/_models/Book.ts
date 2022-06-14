@@ -7,6 +7,10 @@ export class Book {
     seriesName: string;
     currentPosition:number;
     isFinished:boolean;
+    
+    description: string;
+    year: string;
+    genres: string;
 }
 
 export enum VideoType {

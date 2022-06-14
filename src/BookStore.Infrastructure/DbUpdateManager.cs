@@ -8,6 +8,8 @@ using FileStore.Domain.Models;
 using System.Text.RegularExpressions;
 using FFMpegCore;
 using System.Drawing;
+using System.Threading.Tasks;
+using Xabe.FFmpeg;
 
 namespace Infrastructure
 {
@@ -20,12 +22,39 @@ namespace Infrastructure
 
         static DbUpdateManager()
         {
-            GlobalFFOptions.Configure(new FFOptions { BinaryFolder = @"C:\Dev\_Smth\BookStore-master\src\BookStore.API\bin\Debug\netcoreapp3.1\ffmpeg\" });
+            //FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official);
+            GlobalFFOptions.Configure(new FFOptions { BinaryFolder = @"C:\Dev\_Smth\BookStore-master\lib\ffmpeg\" });
+                FFmpeg.SetExecutablesPath(@"C:\Dev\_Smth\BookStore-master\lib\ffmpeg\");
         }
 
         public DbUpdateManager(VideoCatalogDbContext db)
         {
             this._db = db;
+        }
+
+        public bool RemoveFilm(string name = null, int id = 0)
+        {
+            var info = (string.IsNullOrEmpty(name)) ?
+                    _db.Files.FirstOrDefault(x => x.Id == id) :
+                    _db.Files.FirstOrDefault(x => x.Name == name);
+
+            if (info == null)
+            {
+                return false;
+            }
+
+            var exinfo = new FileExtendedInfo { Id = info.VideoFileExtendedInfo.Id };
+            _db.FilesInfo.Attach(exinfo);
+            _db.FilesInfo.Remove(exinfo);
+
+            var exinfo2 = new FileUserInfo { Id = info.VideoFileUserInfo.Id };
+            _db.FilesUserInfo.Attach(exinfo2);
+            _db.FilesUserInfo.Remove(exinfo2);
+
+            _db.VideoFiles.Remove(info as VideoFile);
+            _db.Files.Remove(info);
+            _db.SaveChanges();
+            return true;
         }
 
         public void FillFilms(string rootPath, Origin origin, VideoType type )
@@ -41,7 +70,7 @@ namespace Infrastructure
             _db.SaveChanges();
         }
 
-        public void FillSeries(string rootPath, Origin origin, VideoType type, bool severalSeries = true)
+        public void FillSeries(string rootPath, Origin origin, VideoType type, bool severalSeries = true, string seriesName = null)
         {
             _origin = origin;
             _type = type;
@@ -53,10 +82,10 @@ namespace Infrastructure
             if (severalSeries)
             {
                 foreach (var dir in dirInfo.GetDirectories())
-                    AddSeries(dir);
+                    AddSeries(dir, seriesName);
             }
             else
-                AddSeries(dirInfo);
+                AddSeries(dirInfo, seriesName);
 
             _db.SaveChanges();
         }
@@ -79,9 +108,9 @@ namespace Infrastructure
                 File.Delete(oldFile);
         }
 
-        private void AddSeries(DirectoryInfo dir)
+        private void AddSeries(DirectoryInfo dir, string seriesName = null)
         {
-            var series = AddOrUpdateSeries(dir.Name);
+            var series = AddOrUpdateSeries(seriesName ?? dir.Name);
 
             var folders = dir.GetDirectories();
             if (!folders.Any())
@@ -104,7 +133,6 @@ namespace Infrastructure
             {
                 try
                 {
-
                     if (file.Name.EndsWith("jpg") || file.Name.EndsWith("jpeg") || file.Name.EndsWith("docx") || 
                         file.Name.EndsWith("nfo") || file.Name.EndsWith("mp3"))
                         return;
@@ -124,6 +152,38 @@ namespace Infrastructure
                 }
             }
             //);
+        }
+
+        public void MoveDownloadedToAnotherSeries(VideoType type)
+        {
+            //var files = _db.VideoFiles.Where(x => x.Type == VideoType.Film).OrderByDescending(x =>x.Id).ToList();
+            var files = _db.VideoFiles.Where(x => x.Type == VideoType.Downloaded && !x.IsDownloading ).ToList();
+            foreach (var file in files)
+            {
+                MoveToAnotherSeries(file, type);
+                if (type == VideoType.Film)
+                {
+                    var info = new FileInfo(file.Path);
+                    var newFilePath = Path.Combine(@"F:\Видео\Фильмы\Загрузки", info.Name);
+                    var oldDirectory = info.DirectoryName;
+                    info.MoveTo(newFilePath);
+                    file.Path = newFilePath;
+                    _db.SaveChanges();
+                    Directory.Delete(oldDirectory, true);
+                }
+            }
+        }
+
+        public void MoveToAnotherSeries(VideoFile file, VideoType type)
+        {
+            var series = _db.Series.FirstOrDefault(x => x.Type == type);
+            var season = _db.Seasons.FirstOrDefault(x => x.SeriesId == series.Id);
+
+            file.SeriesId = series.Id;
+            file.SeasonId = season.Id;
+            file.Type = type;
+
+            _db.SaveChanges();
         }
 
         private Season AddOrUpdateSeason(Series series, string name)
@@ -146,6 +206,7 @@ namespace Infrastructure
             if (series == null)
             {
                 series = new Series { Name = name, Origin = _origin, Type = _type };
+                series.IsChild = _type == VideoType.ChildEpisode || _type == VideoType.FairyTale || _type == VideoType.Animation;
                 _db.Series.Add(series);
                 _db.SaveChanges();
             }
@@ -234,11 +295,63 @@ namespace Infrastructure
             return resultPath;
         }
 
+        public static async Task CombineStreams(string path)
+        {
+            var dir = new DirectoryInfo(path);
+            var files = dir.EnumerateFiles("*", SearchOption.AllDirectories);
+
+            if (files.Count() > 10)
+                return;
+
+            var biggest = files.OrderByDescending(x => x.Length).First();
+
+            if (biggest.Length < 1024 * 1024 * 100)
+                return;
+
+            var pathOriginal = biggest.FullName;
+            var index = 0;
+            var path22 = Path.Combine(biggest.DirectoryName, index++.ToString(), biggest.Name);
+
+            IMediaInfo fullMediaInfo = await FFmpeg.GetMediaInfo(pathOriginal);
+            var subtitles = files.Where(x => x.Extension == ".srt");
+            if (subtitles.Any())
+            {
+                var conversionSrt = await FFmpeg.Conversions.FromSnippet.AddSubtitle(pathOriginal, path22, subtitles.FirstOrDefault().FullName, DetectLanguage(subtitles.FirstOrDefault()));
+                foreach (var subtitle in subtitles.Skip(1))
+                {
+                    IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(subtitle.FullName);
+
+                    IStream videoStream = mediaInfo.SubtitleStreams.FirstOrDefault();
+                    conversionSrt.AddStream(videoStream);
+                }
+                conversionSrt.SetVideoBitrate(fullMediaInfo.VideoStreams.FirstOrDefault().Bitrate);
+                await conversionSrt.Start();
+            }
+            IEnumerable<FileInfo> audioFiles = files.Where(x => x.Extension == ".dts" || x.Extension == ".ac3" || x.Extension == ".mp3");
+            if (audioFiles.Any())
+            {
+                var path23 = Path.Combine(biggest.DirectoryName, index++.ToString() + biggest.Name);
+                var conversion = await FFmpeg.Conversions.FromSnippet.AddAudio(path22, audioFiles.First().FullName, path23);
+                foreach (var audio in audioFiles.Skip(1))
+                {
+                    IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(audio.FullName);
+
+                    IStream videoStream = mediaInfo.AudioStreams.FirstOrDefault();
+                    conversion.AddStream(videoStream);
+                }
+                await conversion.Start();
+            }
+        }
+
+        private static string DetectLanguage(FileInfo fileInfo)
+        {
+            throw new NotImplementedException();
+        }
+
         public static string EncodeFile(string path, string resultFolder, FFMpegCore.Enums.VideoSize size)
         {
             try
             {
-
                 Directory.CreateDirectory(resultFolder);
                 var fileInfo = new FileInfo(path);
                 //var resultPath = Path.Combine(resultFolder, fileInfo.Name.Replace(fileInfo.Extension, ".mp4"));
@@ -256,9 +369,9 @@ namespace Infrastructure
                         .WithVariableBitrate(4)
                         .UsingMultithreading(true)
                         .WithVideoFilters(filterOptions => filterOptions
-                            .Scale(FFMpegCore.Enums.VideoSize.Hd))
+                        .Scale(FFMpegCore.Enums.VideoSize.Hd))
                         .WithFastStart())
-                    .ProcessSynchronously();
+                        .ProcessSynchronously();
 
                 //format = FFMpeg.GetContainerFormat("mkv");
                 //FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.Medium,

@@ -1,8 +1,13 @@
-﻿using FileStore.Domain.Interfaces;
+﻿using API.FilmDownload;
+using FileStore.Domain.Interfaces;
 using FileStore.Domain.Services;
 using FileStore.Infrastructure.Context;
 using FileStore.Infrastructure.Repositories;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace FileStore.API.Configuration
 {
@@ -18,7 +23,33 @@ namespace FileStore.API.Configuration
             services.AddScoped<ISeriesService, SeriesService>();
             services.AddScoped<IFileService, FileService>();
 
+            services.AddScoped<TgBot, TgBot>();
+
+            services.AddHostedService<StartupService>();
+
             return services;
+        }
+    }
+
+    public class StartupService : IHostedService
+    {
+        private IServiceProvider services;
+        public StartupService(IServiceProvider services)
+        {
+            this.services = services;
+        }
+
+        public async Task StartAsync(CancellationToken cancellationToken)
+        {
+            using var scope = services.CreateScope();
+            var tg = scope.ServiceProvider.GetRequiredService<TgBot>();
+
+            await tg.Start();
+        }
+
+        public async Task StopAsync(CancellationToken cancellationToken)
+        {
+            //Cleanup logic here
         }
     }
 }

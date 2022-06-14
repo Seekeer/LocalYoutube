@@ -28,7 +28,8 @@ namespace FileStore.Domain.Models
         Lessons, 
         Balley,
         AdultEpisode,
-        Courses
+        Courses,
+        Downloaded
     }
 
     public enum AudioType
@@ -47,6 +48,10 @@ namespace FileStore.Domain.Models
         public int VideoFileId { get; set; }
 
         public byte[] Cover { get; set; }
+        public string Genres { get; set; }
+        public int Year { get; set; }
+        public string Description { get; set; }
+        public int RutrackerId { get; set; }
     }
 
     public class FileUserInfo : Entity
@@ -88,6 +93,33 @@ namespace FileStore.Domain.Models
         }
 
         [NotMapped]
+        public string Description
+        {
+            get
+            {
+                return VideoFileExtendedInfo.Description;
+            }
+        }
+
+        [NotMapped]
+        public int Year
+        {
+            get
+            {
+                return VideoFileExtendedInfo.Year;
+            }
+        }
+
+        [NotMapped]
+        public string Genres
+        {
+            get
+            {
+                return VideoFileExtendedInfo.Genres;
+            }
+        }
+
+        [NotMapped]
         public double? CurrentPosition
         {
             get
@@ -116,6 +148,7 @@ namespace FileStore.Domain.Models
     {
         public VideoType Type { get; set; }
         public Quality Quality { get; set; }
+        public bool IsDownloading { get; set; }
     }
 
     public class AudioFile : DbFile

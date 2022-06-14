@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using API.Controllers;
 using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using Infrastructure;
@@ -24,11 +25,64 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("updateDownloaded")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> CheckDownloaded()
+        {
+            var files = _db.VideoFiles.Where(x => x.IsDownloading).ToList();
+            foreach (var info in files)
+            {
+                try
+                {
+                    var dir = new DirectoryInfo(info.Path);
+
+                    var dirFiles = dir.EnumerateFiles("*", SearchOption.AllDirectories);
+
+                    // Delete file if not exist
+                    if(!dirFiles.Any() )
+                    {
+                        _db.Files.Remove(info);
+                        _db.FilesInfo.Remove(new FileExtendedInfo { Id = info.VideoFileExtendedInfo.Id});
+                        _db.FilesUserInfo.Remove(new FileUserInfo { Id = info.VideoFileUserInfo.Id });
+                        dir.Delete();
+                        continue;
+                    }
+
+                    if (!dirFiles.Any() || dirFiles.Any(x => x.FullName.EndsWith(".!qB")))
+                        continue;
+
+                    //if(info.VideoFileExtendedInfo.RutrackerId == 0)
+                    //{
+                    //    var year = info.Year > 0 ? info.Year.ToString() : "";
+
+                    //    var theme = (await _ruTracker.FindTheme($"{info.Name} {year}")).First();
+
+                    //}
+
+                    var dbUpdater = new DbUpdateManager(_db);
+                    var biggestFile = dirFiles.OrderByDescending(x => x.Length).First();
+
+                    info.Path = biggestFile.FullName;
+                    info.IsDownloading = false;
+                }
+                catch (System.Exception ex)
+                {
+                }
+            }
+
+            _db.SaveChanges();
+
+            new DbUpdateManager(_db).MoveDownloadedToAnotherSeries(VideoType.Film);
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("convertToLower")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> ConvertToLower()
         {
-            var sourceRoot = @"F:\Анюта\Мульты\Мультсериалы российские";
+                var sourceRoot = @"F:\Анюта\Мульты\Мультсериалы российские";
             var destinationRoot = @"F:\Анюта\Мульты\LowRes\Мультсериалы российские\";
 
             var task = new List<string>();
@@ -56,14 +110,54 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("clearAll")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public void ClearFiles()
+        {
+            var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).ToList();
+
+            foreach (var file in files)
+            {
+                if ((!System.IO.File.Exists(file.Path) && !file.IsDownloading)|| 
+                    file.Path.EndsWith(".srt") || file.Path.EndsWith(".mp3") || file.Path.EndsWith(".ac3") || file.Path.EndsWith(".dts") || file.Name == "[THORAnime] Howls Moving Castle [BDRip x264 FLAC] [1080p].mkv")
+                    Remove(file);
+            }
+
+            var groupd = files.GroupBy(x => x.Path);
+            foreach (var group in groupd.Where(x => x.Count() > 1))
+            {
+                var list = group.ToList();
+                if (list[0].SeasonId == list[1].SeasonId && list[0].SeriesId == list[1].SeriesId)
+                    Remove(list[1]);
+            }
+
+            _db.SaveChanges();
+        }
+
+        [HttpGet]
         [Route("updateAll")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateAll()
         {
             var dbUpdater = new DbUpdateManager(_db);
+
+            //await DbUpdateManager.CombineStreams(@"F:\Видео\Фильмы\Мульт\Howls Moving Castle [BDRip THORA AC3 FLAC DTS] [1080p]");
+
+            //var contr = new RuTrackerUpdater();
+
+            //await contr.Init("abriabir", "qweasd");
+            //var file = await contr.FindTheme("Batman 2022");
+            //await contr.FillInfo(file.First());
+
+            //dbUpdater.RemoveFilm("За двумя зайцами");
+            //dbUpdater.RemoveFilm(null, 5042);
             GiveNameForEmpty(dbUpdater);
 
-            ClearSerie(dbUpdater, 1025);
+            //RemoveSeries(dbUpdater, 1025);
+
+            dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Три кота.2015.WEBRip 1080p\04", Origin.Russian, VideoType.ChildEpisode, false, "Три кота - 4 сезон");
+            dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Фиксики Сезоны 1-3 720p 4 1080p\04 сезон", Origin.Russian, VideoType.ChildEpisode, false, "Фиксики - 4 сезон");
+
             dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Три кота.2015.WEBRip 1080p", Origin.Russian, VideoType.ChildEpisode, false);
             dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Фиксики Сезоны 1-3 720p 4 1080p", Origin.Russian, VideoType.ChildEpisode, false);
 
@@ -73,7 +167,6 @@ namespace FileStore.API.Controllers
 
             UpdateSeries(dbUpdater);
 
-            //ClearLinks(dbUpdater);
 
             //_db.RemoveRange(films.Select(x => x.VideoFileExtendedInfo));
             //_db.RemoveRange(films.Select(x => x.VideoFileUserInfo).Where(x => x != null));
@@ -154,7 +247,6 @@ namespace FileStore.API.Controllers
                 serie.Origin = film.Origin;
                 serie.Type = film.Type;
                 serie.Name = serie.Name.ClearSerieName();
-                serie.IsChild = true;
             }
 
             _db.SaveChanges();
@@ -164,23 +256,15 @@ namespace FileStore.API.Controllers
         }
 
 
-        private void ClearLinks(DbUpdateManager dbUpdater)
+
+        private void Remove(DbFile file)
         {
-            var files = _db.Files.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).ToList();
-
-            foreach (var file in files)
-            {
-                if (!System.IO.File.Exists(file.Path))
-                {
-                    _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
-                    _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
-                    _db.Files.Remove(file);
-                }
-            }
-
-            _db.SaveChanges();
+            _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
+            _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
+            _db.Files.Remove(file);
         }
-        private void ClearSerie(DbUpdateManager dbUpdater, int serieId)
+
+        private void RemoveSeries(DbUpdateManager dbUpdater, int serieId)
         {
             var files = _db.Files.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeriesId == serieId).ToList();
 

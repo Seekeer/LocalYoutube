@@ -67,7 +67,19 @@ namespace Infrastructure.Migrations
                     b.Property<byte[]>("Cover")
                         .HasColumnType("varbinary(max)");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Genres")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("RutrackerId")
+                        .HasColumnType("int");
+
                     b.Property<int>("VideoFileId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Year")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -168,6 +180,9 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("FileStore.Domain.Models.VideoFile", b =>
                 {
                     b.HasBaseType("FileStore.Domain.Models.DbFile");
+
+                    b.Property<bool>("IsDownloading")
+                        .HasColumnType("bit");
 
                     b.Property<int>("Quality")
                         .HasColumnType("int");

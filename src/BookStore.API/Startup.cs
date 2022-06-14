@@ -1,3 +1,4 @@
+using API.FilmDownload;
 using AutoMapper;
 using FileStore.API.Configuration;
 using FileStore.Infrastructure.Context;
@@ -11,6 +12,7 @@ using Microsoft.OpenApi.Models;
 
 namespace FileStore.API
 {
+
     public class Startup
     {
         public Startup(IConfiguration configuration)
@@ -53,7 +55,11 @@ namespace FileStore.API
 
             //services.AddCors();
 
+            var cfg = Configuration.Get<AppConfig>();
+            services.AddSingleton<AppConfig>(cfg);
+
             services.ResolveDependencies();
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -83,6 +89,8 @@ namespace FileStore.API
             {
                 endpoints.MapControllers();
             });
+
+
         }
     }
 }

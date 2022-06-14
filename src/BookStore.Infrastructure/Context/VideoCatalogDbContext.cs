@@ -15,8 +15,10 @@ namespace FileStore.Infrastructure.Context
             return new VideoCatalogDbContext(optionsBuilder.Options);
         }
     }
-    
-    // dotnet ef migrations add InitialCreate2
+
+    // cd .\BookStore.Infrastructure\
+    // dotnet ef migrations add InitialCreate4
+    //  dotnet ef database update
     public class VideoCatalogDbContext : DbContext
     {
         public VideoCatalogDbContext(DbContextOptions options) : base(options) { }
@@ -41,7 +43,7 @@ namespace FileStore.Infrastructure.Context
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(VideoCatalogDbContext).Assembly);
 
             foreach (var relationship in modelBuilder.Model.GetEntityTypes()
-                .SelectMany(e => e.GetForeignKeys())) relationship.DeleteBehavior = DeleteBehavior.ClientSetNull;
+                .SelectMany(e => e.GetForeignKeys())) relationship.DeleteBehavior = DeleteBehavior.Cascade;
 
             base.OnModelCreating(modelBuilder);
         }

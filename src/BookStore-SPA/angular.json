@@ -129,5 +129,8 @@
         }
       }
     }},
-  "defaultProject": "BookStore-SPA"
+  "defaultProject": "BookStore-SPA",
+  "cli": {
+    "analytics": false
+  }
 }

@@ -141,6 +141,19 @@ export class BookListComponent implements OnInit {
     this.searchValueChanged.next();
   }
 
+  public copyLink(file: Book) {
+    this.copyToClipboard(this.service.getVideoURLById(file.id));
+  }
+  
+  private copyToClipboard(text) {
+    if(navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    else{
+      alert(text);
+    }
+  }
+
   private search() {
 
     if(this.searchTitle !== ''){
@@ -158,7 +171,7 @@ export class BookListComponent implements OnInit {
   }
 
   showBooks(books: Book[]) {
-    this.books = books;
+    this.books = books.reverse();
     this.spinner.hide();
   }
   getFilmsError(error) {
