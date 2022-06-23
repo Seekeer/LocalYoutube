@@ -78,6 +78,10 @@ export class BookListComponent implements OnInit {
         this.service.getSovietAnimation().subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
         break;
       }
+      case 'other':{
+        this.service.getFilmsByType(VideoType.Unknown).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        break;
+      }
       case 'sovietfairytale':{
         this.service.getFilmsByType(VideoType.FairyTale).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
         break;

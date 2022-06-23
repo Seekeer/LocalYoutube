@@ -3,6 +3,7 @@ using FileStore.API;
 using HtmlAgilityPack;
 using HtmlAgilityPack.CssSelectors.NetCore;
 using Infrastructure;
+using QBittorrent.Client;
 using RuTracker.Client;
 using RuTracker.Client.Model.SearchTopics.Request;
 using RuTracker.Client.Model.SearchTopics.Response;
@@ -13,8 +14,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace API.Controllers
 {
@@ -27,11 +30,15 @@ namespace API.Controllers
         public string Genres { get; set; }
         public string Description { get; set; }
         public int Year { get; set; }
+        public string KinopoiskLink { get; set; }
+        public string Director { get; set; }
+        public string Artist { get; set; }
     }
 
     public class RuTrackerUpdater
     {
         private RuTrackerClient _client;
+        private QBittorrentClient _qclient;
         private WebProxy _proxy;
         private HttpClient _httpClient;
         private readonly AppConfig _config;
@@ -43,6 +50,8 @@ namespace API.Controllers
 
         public async Task Init ()
         {
+            _qclient = new QBittorrentClient(new Uri("http://localhost:124"));
+
             _proxy = new WebProxy
             {
                 Address = new Uri($"http://serv.bitterman.ru:3128"),
@@ -70,18 +79,26 @@ namespace API.Controllers
             await _client.Login(_config.RP_Login, _config.RP_Pass);
         }
 
-        public async Task<VideoInfo> FillInfo(SearchTopicInfo topic)
+        public async Task<VideoInfo> FillInfo(int topicId)
         {
-            var url = $"https://rutracker.org/forum/viewtopic.php?t={topic.Id}";
-            var response = await _httpClient.GetStringAsync(url);
+            //topicId = 4385232;
+            var url = $"https://rutracker.org/forum/viewtopic.php?t={topicId}";
+
+            //HttpResponseMessage response = await _httpClient.GetAsync(url);
+            //var  buffer = await response.Content.ReadAsByteArrayAsync();
+            //byte[] bytes = buffer.ToArray();
+            //Encoding encoding = Encoding.GetEncoding("windows-1251");
+            //string responseString = encoding.GetString(bytes, 0, bytes.Length);
+
+            var responseString = await _httpClient.GetStringAsync(url);
 
             var info = new VideoInfo();
-            ParseInfo(response, info);
+            await ParseInfo(responseString, info);
 
             return info;
         }
 
-        private void ParseInfo(string html, VideoInfo info)
+        private async Task  ParseInfo(string html, VideoInfo info)
         {
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
@@ -93,18 +110,40 @@ namespace API.Controllers
             {
                 try
                 {
-                    byte[] imageAsByteArray;
-                    using (var webClient = new WebClient())
-                    {
-                        imageAsByteArray = webClient.DownloadData(url);
-                    }
-                    info.Cover = imageAsByteArray;
+                    SetCoverByLink(info, url);
                 }
                 catch (Exception ex)
                 {
+                    try
+                    {
+                        if (string.IsNullOrEmpty(info.KinopoiskLink))
+                            return;
 
+                         doc = new HtmlDocument();
+
+                        var response = await _httpClient.GetStringAsync(info.KinopoiskLink);
+                        doc.LoadHtml(html);
+
+                        var poster = doc.QuerySelector(".film-poster");
+                        url = poster.GetAttributeValue("src", "");
+                        SetCoverByLink(info, url);
+                    }
+                    catch (Exception ex1)
+                    {
+
+                    }
                 }
             }
+        }
+
+        private static void SetCoverByLink(VideoInfo info, string url)
+        {
+            byte[] imageAsByteArray;
+            using (var webClient = new WebClient())
+            {
+                imageAsByteArray = webClient.DownloadData(url);
+            }
+            info.Cover = imageAsByteArray;
         }
 
         private string ParseByText(HtmlDocument doc, VideoInfo info)
@@ -116,15 +155,35 @@ namespace API.Controllers
                 if(!string.IsNullOrEmpty(child.InnerText) && child.InnerText != "\n" && child.InnerText != "&#10;")
                     text += child.InnerText + Environment.NewLine;
             }
+            //"Страна"
 
             info.Name = text.SplitByNewLine().First();
+
             info.Description = GetProperty("Описание", text);
             if (string.IsNullOrEmpty(info.Description))
                 info.Description = GetProperty("О фильме", text);
+            else if (string.IsNullOrEmpty(info.Description))
+                info.Description = GetProperty("Сюжет", text);
+            else if (string.IsNullOrEmpty(info.Description))
+                info.Description = GetProperty("Описание фильма", text);
+
+            info.Director = GetProperty("Режиссер", text);
+            if (string.IsNullOrEmpty(info.Director))
+                info.Director = GetProperty("Режиссёр", text);
+
+            info.Artist = GetProperty("В ролях", text);
             info.Genres = GetProperty("Жанр", text);
             if (int.TryParse(GetProperty("Год выпуска", text), out int year))
                 info.Year = year;
             var url = doc.QuerySelector(".postImg")?.GetAttributeValue("title", null);
+
+            var links = doc.QuerySelectorAll("a");
+            var kinopoiskLink = links.Select(x => x.GetAttributeValue("href", "")).FirstOrDefault(x => x.Contains("kinopoisk"));
+            if(kinopoiskLink != null)
+            {
+                var kpUrl = HttpUtility.HtmlDecode(kinopoiskLink).Replace("out.php?url=", "");
+                info.KinopoiskLink = kpUrl;
+            }
 
             return url;
         }
@@ -211,17 +270,21 @@ namespace API.Controllers
 
         public async Task StartDownload(SearchTopicInfo videoInfo, string rootDownloadFolder)
         {
+            NLog.LogManager.GetCurrentClassLogger().Info($"Start download to {rootDownloadFolder}");
+
             var torrent = await _client.GetTopicTorrentFile(videoInfo.Id);
 
-            var temp = Path.GetTempFileName();
+            var temp = Path.Combine(rootDownloadFolder,$"{rootDownloadFolder}.torrent");
             File.WriteAllBytes( temp, torrent);
 
-            var args = $"--save-path=\"{rootDownloadFolder}\" --skip-dialog=true {temp}";
+            var request = new AddTorrentFilesRequest();
+            request.TorrentFiles.Add(temp);
+            request.DownloadFolder = rootDownloadFolder;
+            await _qclient.AddTorrentsAsync(request);
 
-            Process.Start(@"C:\Program Files\qBittorrent\qbittorrent.exe", args);
+            //var args = $"--save-path=\"{rootDownloadFolder}\" --skip-dialog=true {temp}";
 
-            Thread.Sleep(TimeSpan.FromSeconds(10));
-            File.Delete(temp);
+            //var process = Process.Start(@"C:\Program Files\qBittorrent\qbittorrent.exe", args);
         }
     }
 }

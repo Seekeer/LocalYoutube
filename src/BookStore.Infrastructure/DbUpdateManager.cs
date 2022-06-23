@@ -32,31 +32,6 @@ namespace Infrastructure
             this._db = db;
         }
 
-        public bool RemoveFilm(string name = null, int id = 0)
-        {
-            var info = (string.IsNullOrEmpty(name)) ?
-                    _db.Files.FirstOrDefault(x => x.Id == id) :
-                    _db.Files.FirstOrDefault(x => x.Name == name);
-
-            if (info == null)
-            {
-                return false;
-            }
-
-            var exinfo = new FileExtendedInfo { Id = info.VideoFileExtendedInfo.Id };
-            _db.FilesInfo.Attach(exinfo);
-            _db.FilesInfo.Remove(exinfo);
-
-            var exinfo2 = new FileUserInfo { Id = info.VideoFileUserInfo.Id };
-            _db.FilesUserInfo.Attach(exinfo2);
-            _db.FilesUserInfo.Remove(exinfo2);
-
-            _db.VideoFiles.Remove(info as VideoFile);
-            _db.Files.Remove(info);
-            _db.SaveChanges();
-            return true;
-        }
-
         public void FillFilms(string rootPath, Origin origin, VideoType type )
         {
             _origin = origin;
@@ -138,7 +113,7 @@ namespace Infrastructure
                         return;
 
                     var existingInfo = _db.VideoFiles.FirstOrDefault(x => x.Path == file.FullName);
-                    if (existingInfo != null)
+                    if (existingInfo != null && existingInfo.SeriesId == series.Id)
                         continue;
 
                     // TODO - quality
@@ -154,30 +129,37 @@ namespace Infrastructure
             //);
         }
 
-        public void MoveDownloadedToAnotherSeries(VideoType type)
+        public void MoveDownloadedToAnotherSeries(VideoType type, string seriesName)
         {
             //var files = _db.VideoFiles.Where(x => x.Type == VideoType.Film).OrderByDescending(x =>x.Id).ToList();
             var files = _db.VideoFiles.Where(x => x.Type == VideoType.Downloaded && !x.IsDownloading ).ToList();
             foreach (var file in files)
             {
-                MoveToAnotherSeries(file, type);
-                if (type == VideoType.Film)
-                {
-                    var info = new FileInfo(file.Path);
-                    var newFilePath = Path.Combine(@"F:\Видео\Фильмы\Загрузки", info.Name);
-                    var oldDirectory = info.DirectoryName;
-                    info.MoveTo(newFilePath);
-                    file.Path = newFilePath;
-                    _db.SaveChanges();
-                    Directory.Delete(oldDirectory, true);
-                }
+                MoveToAnotherSeries(file, type, seriesName);
             }
         }
 
-        public void MoveToAnotherSeries(VideoFile file, VideoType type)
+        public void MoveToFolder(VideoFile file)
         {
-            var series = _db.Series.FirstOrDefault(x => x.Type == type);
-            var season = _db.Seasons.FirstOrDefault(x => x.SeriesId == series.Id);
+            {
+                var info = new FileInfo(file.Path);
+                var newFilePath = Path.Combine(@"F:\Видео\Фильмы\Загрузки", info.Name);
+                var oldDirectory = info.DirectoryName;
+                info.MoveTo(newFilePath);
+                file.Path = newFilePath;
+                _db.SaveChanges();
+                Directory.Delete(oldDirectory, true);
+            }
+        }
+
+        public void MoveToAnotherSeries(VideoFile file, VideoType type, string seriesName)
+        {
+            _type = type;
+
+            var series = AddOrUpdateSeries(seriesName);
+            var season = AddOrUpdateSeason(series, seriesName);
+            //var series = _db.Series.FirstOrDefault(x => x.Type == type);
+            //var season = _db.Seasons.FirstOrDefault(x => x.SeriesId == series.Id);
 
             file.SeriesId = series.Id;
             file.SeasonId = season.Id;
@@ -202,6 +184,7 @@ namespace Infrastructure
         private Series AddOrUpdateSeries(string folderName)
         {
             var name = GetSeriesNameFromFolder(folderName);
+
             var series = _db.Series.FirstOrDefault(x => x.Name == name);
             if (series == null)
             {
@@ -276,7 +259,7 @@ namespace Infrastructure
             return videoFile;
         }
 
-        public static string EncodeToMp4(string path)
+        private static string EncodeToMp4(string path)
         {
             var fileInfo = new FileInfo(path);
 

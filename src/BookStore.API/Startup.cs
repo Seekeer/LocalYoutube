@@ -2,13 +2,18 @@ using API.FilmDownload;
 using AutoMapper;
 using FileStore.API.Configuration;
 using FileStore.Infrastructure.Context;
+using Hangfire;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using System;
+using System.Net.Http;
+using System.Timers;
 
 namespace FileStore.API
 {
@@ -23,6 +28,8 @@ namespace FileStore.API
         public IConfiguration Configuration { get; }
 
         private readonly string _policyName = "CorsPolicy";
+        private Timer _aTimer;
+
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
@@ -65,6 +72,25 @@ namespace FileStore.API
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.Use((context, next) =>
+            {
+                var url = context.Request.GetDisplayUrl();
+                var uri = new Uri(url);
+                var builder = new UriBuilder(uri);
+                builder.Path = "api/update/stub";
+
+                if(_aTimer == null)
+                {
+                    _aTimer = new System.Timers.Timer();
+                    _aTimer.Elapsed += (_, __) => { new HttpClient().GetAsync(builder.ToString()); };
+                    _aTimer.Interval = TimeSpan.FromSeconds(30).TotalMilliseconds;
+                    _aTimer.Enabled = true;
+                }
+                //RecurringJob.AddOrUpdate(() => new HttpClient().GetAsync(builder.ToString()), " */4 * * * *");
+
+                return next.Invoke();
+            });
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -89,7 +115,6 @@ namespace FileStore.API
             {
                 endpoints.MapControllers();
             });
-
 
         }
     }

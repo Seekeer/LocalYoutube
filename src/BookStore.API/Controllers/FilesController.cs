@@ -198,10 +198,10 @@ namespace FileStore.API.Controllers
 
                 var path = file.Path;
 
-                if (file.Path.EndsWith("avi"))
-                {
-                    path = DbUpdateManager.EncodeToMp4(path);
-                }
+                //if (file.Path.EndsWith("avi"))
+                //{
+                //    path = DbUpdateManager.EncodeToMp4(path);
+                //}
                 logger.Debug($"getFileById 2 {file.Path}");
 
                 return PhysicalFile($"{path}", "application/octet-stream", enableRangeProcessing: true);

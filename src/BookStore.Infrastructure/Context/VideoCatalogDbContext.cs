@@ -43,7 +43,7 @@ namespace FileStore.Infrastructure.Context
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(VideoCatalogDbContext).Assembly);
 
             foreach (var relationship in modelBuilder.Model.GetEntityTypes()
-                .SelectMany(e => e.GetForeignKeys())) relationship.DeleteBehavior = DeleteBehavior.Cascade;
+                .SelectMany(e => e.GetForeignKeys())) relationship.DeleteBehavior = DeleteBehavior.ClientSetNull;
 
             base.OnModelCreating(modelBuilder);
         }

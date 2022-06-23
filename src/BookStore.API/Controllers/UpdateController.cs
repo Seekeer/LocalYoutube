@@ -18,32 +18,39 @@ namespace FileStore.API.Controllers
     public class UpdateController : MainController
     {
         private readonly VideoCatalogDbContext _db;
+        private readonly AppConfig _config;
 
-        public UpdateController(VideoCatalogDbContext dbContext)
+        public UpdateController(VideoCatalogDbContext dbContext, AppConfig config)
         {
             _db = dbContext;
+            _config = config;
         }
 
         [HttpGet]
         [Route("updateDownloaded")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> CheckDownloaded()
+        public async Task<IActionResult> CheckDownloaded(string seriesName)
         {
-            var files = _db.VideoFiles.Where(x => x.IsDownloading).ToList();
+            var files = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
+                .Where(x => x.IsDownloading).ToList();
             foreach (var info in files)
             {
                 try
                 {
                     var dir = new DirectoryInfo(info.Path);
 
+                    if (!dir.Exists)
+                    {
+                        Remove(info);
+                        continue;
+                    }
+
                     var dirFiles = dir.EnumerateFiles("*", SearchOption.AllDirectories);
 
                     // Delete file if not exist
-                    if(!dirFiles.Any() )
+                    if (!dirFiles.Any())
                     {
-                        _db.Files.Remove(info);
-                        _db.FilesInfo.Remove(new FileExtendedInfo { Id = info.VideoFileExtendedInfo.Id});
-                        _db.FilesUserInfo.Remove(new FileUserInfo { Id = info.VideoFileUserInfo.Id });
+                        Remove(info);
                         dir.Delete();
                         continue;
                     }
@@ -59,6 +66,7 @@ namespace FileStore.API.Controllers
 
                     //}
 
+
                     var dbUpdater = new DbUpdateManager(_db);
                     var biggestFile = dirFiles.OrderByDescending(x => x.Length).First();
 
@@ -72,9 +80,52 @@ namespace FileStore.API.Controllers
 
             _db.SaveChanges();
 
-            new DbUpdateManager(_db).MoveDownloadedToAnotherSeries(VideoType.Film);
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("changeDownloadedType")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> ChangeDownloadedType(string seriesName)
+        {
+            new DbUpdateManager(_db).MoveDownloadedToAnotherSeries(VideoType.Film, seriesName ?? "Добавленные фильмы");
 
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("test")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task Test()
+        {
+            var _rutracker = new RuTrackerUpdater(_config);
+            await _rutracker.Init();
+            var info = await _rutracker.FillInfo(1351022);
+        }
+
+        [HttpGet]
+        [Route("convertChild")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public void Convert()
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+            var childMovies = _db.VideoFiles.Where(x => x.Type == VideoType.ChildEpisode || x.Type == VideoType.Animation || x.Type == VideoType.FairyTale);
+            var childMovies2 = _db.VideoFiles.Where(x => x.Type == VideoType.FairyTale);
+
+            var convert = childMovies.Where(x => !x.Path.EndsWith("mp4") && !x.Path.EndsWith(".mkv") && !x.Path.EndsWith(".m4v")).ToList();
+
+            //var sovietToConvert = _db.Files.Where(x => x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
+            //var nonSovietToConvert = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
+            //Parallel.ForEach(convert, file =>
+            foreach (var file in convert)
+            {
+                dbUpdater.Convert(file);
+            }
+            //);
+
+            //var nonSovietToConvertList = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
+            //var totalDuration = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList().Sum(x => x.Duration.TotalMinutes);
+
         }
 
         [HttpGet]
@@ -116,10 +167,15 @@ namespace FileStore.API.Controllers
         {
             var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).ToList();
 
+            foreach (var file in files.Where(x => x.Id > 5071))
+            {
+                Remove(file);
+            }
+
             foreach (var file in files)
             {
                 if ((!System.IO.File.Exists(file.Path) && !file.IsDownloading)|| 
-                    file.Path.EndsWith(".srt") || file.Path.EndsWith(".mp3") || file.Path.EndsWith(".ac3") || file.Path.EndsWith(".dts") || file.Name == "[THORAnime] Howls Moving Castle [BDRip x264 FLAC] [1080p].mkv")
+                    file.Path.EndsWith(".srt") || file.Path.EndsWith(".mp3") || file.Path.EndsWith(".ac3") || file.Path.EndsWith(".dts") )
                     Remove(file);
             }
 
@@ -151,15 +207,27 @@ namespace FileStore.API.Controllers
 
             //dbUpdater.RemoveFilm("За двумя зайцами");
             //dbUpdater.RemoveFilm(null, 5042);
-            GiveNameForEmpty(dbUpdater);
+            //GiveNameForEmpty(dbUpdater);
 
-            //RemoveSeries(dbUpdater, 1025);
+            RemoveSeries(dbUpdater, 18);
 
-            dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Три кота.2015.WEBRip 1080p\04", Origin.Russian, VideoType.ChildEpisode, false, "Три кота - 4 сезон");
-            dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Фиксики Сезоны 1-3 720p 4 1080p\04 сезон", Origin.Russian, VideoType.ChildEpisode, false, "Фиксики - 4 сезон");
+            dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Мимимишки.2015.WEBRip 720p\s08-1080", Origin.Russian, VideoType.ChildEpisode, false, "Мимимишки восемь");
+            dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Мимимишки.2015.WEBRip 720p", Origin.Russian, VideoType.ChildEpisode, false);
 
-            dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Три кота.2015.WEBRip 1080p", Origin.Russian, VideoType.ChildEpisode, false);
-            dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Фиксики Сезоны 1-3 720p 4 1080p", Origin.Russian, VideoType.ChildEpisode, false);
+
+
+            //dbUpdater.FillSeries(@"F:\Видео\Разное", Origin.Unknown, VideoType.Unknown, false);
+            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Три кота.2015.WEBRip 1080p\04", Origin.Russian, VideoType.ChildEpisode, false, "Три кота - 4 сезон");
+            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Фиксики Сезоны 1-3 720p 4 1080p\04 сезон", Origin.Russian, VideoType.ChildEpisode, false, "Фиксики - 4 сезон");
+
+            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Три кота.2015.WEBRip 1080p", Origin.Russian, VideoType.ChildEpisode, false);
+            var filesToRemove = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).Where(x => x.SeasonId == 1089 && x.SeriesId == 4);
+            foreach (var file in filesToRemove)
+            {
+                Remove(file);
+            }
+            _db.SaveChanges();
+            dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Ну, погоди!", Origin.Russian, VideoType.ChildEpisode, false);
 
             UpdateSeriesStructure(dbUpdater);
 
@@ -202,6 +270,14 @@ namespace FileStore.API.Controllers
 
 
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("stub")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task Stub()
+        {
+            // To prevent server shutdown;
         }
 
         private void GiveNameForEmpty(DbUpdateManager dbUpdater)
@@ -295,24 +371,5 @@ namespace FileStore.API.Controllers
             }
         }
 
-        private void Convert(DbUpdateManager dbUpdater)
-        {
-            var mp4Count = _db.VideoFiles.Count(x => !x.Path.EndsWith("mp4"));
-            var totalCount = _db.VideoFiles.Count();
-
-            var convert = _db.VideoFiles.Where(x => !x.Path.EndsWith("mp4") && !x.Path.EndsWith(".mkv")).ToList();
-            //var sovietToConvert = _db.Files.Where(x => x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //var nonSovietToConvert = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //Parallel.ForEach(convert, file =>
-            foreach (var file in convert)
-            {
-                dbUpdater.Convert(file);
-            }
-            //);
-
-            //var nonSovietToConvertList = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //var totalDuration = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList().Sum(x => x.Duration.TotalMinutes);
-
-        }
     }
 }

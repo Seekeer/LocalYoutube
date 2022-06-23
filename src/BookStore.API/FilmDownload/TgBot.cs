@@ -17,13 +17,20 @@ using Tg = Telegram.Bot.Types.Enums;
 
 namespace API.FilmDownload
 {
+    public struct SearchRecord
+    {
+        public SearchTopicInfo Topic { get; set; }
+        public int MessageId { get; set; }
+        public string SearchSctring { get; set; }
+    }
+
     public class TgBot
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly AppConfig _config;
         private readonly TelegramBotClient _botClient;
         private readonly RuTrackerUpdater _rutracker;
-        private readonly List<SearchTopicInfo> _infos = new List<SearchTopicInfo>();
+        private readonly List<SearchRecord> _infos = new List<SearchRecord>();
 
         public TgBot(AppConfig config, IServiceScopeFactory serviceScopeFactory)
         {
@@ -119,10 +126,13 @@ namespace API.FilmDownload
             if (!int.TryParse(update.CallbackQuery.Data, out var id))
                 return;
 
-            var searchInfo = _infos[id];
+            var record = _infos.FirstOrDefault(x => x.Topic.Id == id);
+            var searchInfo = record.Topic;
 
-            var info = await _rutracker.FillInfo(searchInfo);
-            var downloadPath = Path.Combine(_config.RootDownloadFolder,  Guid.NewGuid().ToString().Substring(0,5));
+            var info = await _rutracker.FillInfo(searchInfo.Id);
+            NLog.LogManager.GetCurrentClassLogger().Info($"Got info for thread:{searchInfo.Id}|{searchInfo.Title}");
+
+            var downloadPath = Path.Combine(_config.RootDownloadFolder, searchInfo.Id.ToString());
             await _rutracker.StartDownload(searchInfo, downloadPath);
             var file = new FileStore.Domain.Models.VideoFile
             {
@@ -133,33 +143,43 @@ namespace API.FilmDownload
             file.VideoFileExtendedInfo.Cover = info.Cover;
             file.VideoFileExtendedInfo.Genres = info.Genres;
             file.VideoFileExtendedInfo.Year = info.Year;
-            file.VideoFileExtendedInfo.RutrackerId = info.Id;
+            file.VideoFileExtendedInfo.RutrackerId = searchInfo.Id;
             file.Name = info.Name;
             file.IsDownloading = true;
             file.Path = downloadPath;
             file.Type = FileStore.Domain.Models.VideoType.Downloaded;
+            file.VideoFileExtendedInfo.RutrackerId = id;
 
             using var scope = _serviceScopeFactory.CreateScope();
             var fileService = scope.ServiceProvider.GetRequiredService<IFileRepository>();
             await fileService.Add(file);
 
             await _botClient.SendTextMessageAsync(new ChatId(_config.TelegramSettings.ChatId), $"Начата закачка {file.Name}");
+
+            foreach (var item in _infos.Where(x => x.SearchSctring == record.SearchSctring).ToList())
+            {
+                _infos.Remove(item);
+                await _botClient.DeleteMessageAsync(_config.TelegramSettings.ChatId, item.MessageId);
+            }
         }
 
         private async Task _botClient_OnMessage(ITelegramBotClient botClient, Message message)
         {
             var infos = await _rutracker.FindTheme(message.Text);
 
+            if(!infos.Any())
+                await _botClient.SendTextMessageAsync(new ChatId(_config.TelegramSettings.ChatId), $"Ничего не найдено");
+
             foreach (var info in infos.OrderByDescending(x => x.SizeInBytes).Take(10))
             {
-                _infos.Add(info);
-
                 var keyboard = new List<InlineKeyboardButton>();
-                keyboard.Add(new InlineKeyboardButton("Добавить фильм") { CallbackData = (_infos.Count -1).ToString() });
+                keyboard.Add(new InlineKeyboardButton("Добавить фильм") { CallbackData = (info.Id).ToString() });
                 var size = decimal.Round(info.SizeInBytes / 1024 / 1024 / 1024, 2, MidpointRounding.AwayFromZero);
                 var messageText = $"{size} GB | {info.DownloadsCount} | {info.CreatedAt.ToString("MM-yy")} | {info.Title}";
-                await _botClient.SendTextMessageAsync(new ChatId(_config.TelegramSettings.ChatId), 
+                var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(_config.TelegramSettings.ChatId), 
                     messageText, replyMarkup: new InlineKeyboardMarkup(keyboard));
+
+                _infos.Add(new SearchRecord { Topic = info, MessageId = tgMessage.MessageId, SearchSctring = message.Text });
             }
         }
     }
