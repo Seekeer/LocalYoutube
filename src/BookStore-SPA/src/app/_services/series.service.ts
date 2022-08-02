@@ -35,7 +35,7 @@ export class SeriesService {
         return this.http.delete(this.baseUrl + 'series/' + id);
     }
 
-    public getCategoryById(id): Observable<Serie> {
+    public getSerieById(id): Observable<Serie> {
         return this.http.get<Serie>(this.baseUrl + 'series/' + id);
     }
 

@@ -10,6 +10,7 @@ using FFMpegCore;
 using System.Drawing;
 using System.Threading.Tasks;
 using Xabe.FFmpeg;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure
 {
@@ -43,6 +44,22 @@ namespace Infrastructure
             AddSeason(series, dirInfo);
 
             _db.SaveChanges();
+        }
+
+        public void OperaBalley(string operaPath, string balleyPath, Origin origin, VideoType type)
+        {
+            _origin = origin;
+            _type = type;
+
+            var series = AddOrUpdateSeries("Опера и балет");
+
+            var dir = new DirectoryInfo(operaPath);
+            var season = AddOrUpdateSeason(series, "Опера");
+            AddSeason(series, season, dir);
+
+            dir = new DirectoryInfo(balleyPath);
+            season = AddOrUpdateSeason(series, "Балет");
+            AddSeason(series, season, dir);
         }
 
         public void FillSeries(string rootPath, Origin origin, VideoType type, bool severalSeries = true, string seriesName = null)
@@ -98,11 +115,15 @@ namespace Infrastructure
                 AddSeason(series, dir);
             }
         }
-
         private void AddSeason(Series series, DirectoryInfo dir)
         {
             var season = AddOrUpdateSeason(series, dir.Name);
 
+            AddSeason(series, season, dir);
+        }
+
+        private void AddSeason(Series series, Season season, DirectoryInfo dir)
+        {
             //Parallel.ForEach(dir.EnumerateFiles(), file =>
             foreach (var file in dir.EnumerateFiles("", SearchOption.AllDirectories))
             {
@@ -171,7 +192,7 @@ namespace Infrastructure
         private Season AddOrUpdateSeason(Series series, string name)
         {
             var season = _db.Seasons.FirstOrDefault(x => x.Name == name);
-            if (season == null)
+            if (season == null || season.SeriesId != series.Id)
             {
                 season = new Season { Name = name, Series = series };
                 _db.Seasons.Add(season);
@@ -229,6 +250,19 @@ namespace Infrastructure
             }
 
             return TrimDots(result);
+        }
+
+        public void AddFromYoutube(VideoFile file, string seasonName)
+        {
+            var series = AddOrUpdateSeries("Youtube");
+            series.Type = VideoType.Youtube;
+            var season = AddOrUpdateSeason(series, seasonName);
+
+            file.Season = season;
+            file.Series = series;
+            file.Type = VideoType.Youtube;
+
+            _db.SaveChanges();
         }
 
         private static string TrimDots(string result)
@@ -442,6 +476,63 @@ namespace Infrastructure
                 return 0;
             else
                 return int.Parse(TrimDots(numberStr));
+        }
+
+        public IEnumerable<VideoFile> UpdateSeason(int newId, Func<VideoFile, bool> selectFiles)
+        {
+            var result = new List<VideoFile>();
+            var files = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
+                .Where(selectFiles).ToList();
+
+            foreach (var info in files)
+            {
+                try
+                {
+                    var dir = new DirectoryInfo(info.Path);
+
+                    if (!dir.Exists)
+                    {
+                        RemoveCompletely(info);
+                        continue;
+                    }
+
+                    var dirFiles = dir.EnumerateFiles("*", SearchOption.AllDirectories);
+
+                    // Delete file if not exist
+                    if (!dirFiles.Any())
+                    {
+                        RemoveCompletely(info);
+                        dir.Delete();
+                        continue;
+                    }
+
+                    if (!dirFiles.Any() || dirFiles.Any(x => x.FullName.EndsWith(".!qB")))
+                        continue;
+
+                    var biggestFile = dirFiles.OrderByDescending(x => x.Length).First();
+
+                    info.Path = biggestFile.FullName;
+                    info.IsDownloading = false;
+
+                    result.Add(info);
+
+                    if(newId != 0)
+                        info.SeasonId = newId;
+                }
+                catch (System.Exception ex)
+                {
+                }
+            }
+
+            _db.SaveChanges();
+
+            return result;
+        }
+        public void RemoveCompletely(DbFile file)
+        {
+           _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
+           _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
+            _db.Files.Remove(file);
         }
     }
 }

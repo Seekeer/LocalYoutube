@@ -13,6 +13,9 @@ import {
     providedIn: 'root'
 })
 export class FileService {
+    public updateDownloaded() {
+        return this.http.get<string>(`${this.baseUrl}update/updateDownloaded`);
+    }
     public getFilmsByType(type: VideoType) {
         return this.http.get<Book[]>(`${this.baseUrl}files/getFileByType/${type}`);
     }
@@ -67,7 +70,7 @@ export class FileService {
     }
 
     public deleteBook(id: number) {
-        return this.http.delete(this.baseUrl + 'files/' + id);
+        return this.http.delete(this.baseUrl + 'update/removeFile/?fileId=' + id);
     }
 
     public getBookById(id): Observable<Book> {
@@ -76,6 +79,10 @@ export class FileService {
 
     public searchFilesWithSeries(searchedValue: string, isRandom: boolean): Observable<Book[]> {
         return this.http.get<Book[]>(`${this.baseUrl}files/search-file-with-series/${searchedValue}/${isRandom}`);
+    }
+
+    public searchFilesWithSeason(seasonId: number, isRandom: boolean): Observable<Book[]> {
+        return this.http.get<Book[]>(`${this.baseUrl}files/search-file-with-season/${seasonId}/${isRandom}`);
     }
 
     public searchFilesWithTitle(searchedValue: string): Observable<Book[]> {

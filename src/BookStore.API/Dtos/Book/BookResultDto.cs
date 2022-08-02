@@ -17,6 +17,15 @@ namespace FileStore.API.Dtos.File
 
         public string Description { get; set; }
         public int Year { get; set; }
+        public TimeSpan Duration { get; set; }
+
+        public int DurationMinutes
+        {
+            get
+            {
+                return (int)Duration.TotalMinutes;
+            }
+        }
         public string Genres { get; set; }
 
         public double Value { get; set; }
@@ -34,4 +43,5 @@ namespace FileStore.API.Dtos.File
             } 
         }
     }
+
 }

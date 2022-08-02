@@ -19,12 +19,13 @@ namespace FileStore.Domain.Services
 
         public async Task<IEnumerable<Series>> GetAll(VideoType? type)
         {
-            var allTypes = await _seriesRepository.GetAll();
+            return await _seriesRepository.GetAll(type);
+            //var allTypes = await _seriesRepository.GetAll();
 
-            if (type == null)
-                return allTypes;
-            else
-                return allTypes.Where(x => x.Type == type);
+            //if (type == null)
+            //    return allTypes;
+            //else
+            //    return allTypes.Where(x => x.Type == type);
         }
 
         public async Task<Series> GetById(int id)

@@ -3,6 +3,7 @@ using FileStore.Domain.Interfaces;
 using FileStore.Domain.Services;
 using FileStore.Infrastructure.Context;
 using FileStore.Infrastructure.Repositories;
+using Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -24,7 +25,8 @@ namespace FileStore.API.Configuration
             services.AddScoped<IFileService, FileService>();
 
             services.AddScoped<TgBot, TgBot>();
-
+            services.AddScoped<DbUpdateManager, DbUpdateManager>();
+            
             services.AddHostedService<StartupService>();
 
             return services;

@@ -136,13 +136,27 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("search-File-with-Season/{seasonId}/{isRandom}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<List<VideoFile>>> SearchFileWithSeason(int seasonId, bool isRandom)
+        {
+            var Files = _mapper.Map<List<VideoFile>>(await _FileService.GetFilesBySeason(seasonId, isRandom, 0));
+
+            if (!Files.Any())
+                return NotFound("None File was founded");
+
+            return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
+        }
+
+        [HttpGet]
         [Route("getAnimation")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<List<VideoFile>>> GetAnimation(bool isSoviet)
         {
             var files = await _FileService.SearchFileByType(VideoType.Animation);
-            files = isSoviet ? files.Where(x => x.Origin == Origin.Soviet) : files.Where(x => x.Origin == Origin.Foreign);
+            files = isSoviet ? files.Where(x => x.Origin == Origin.Soviet) : files.Where(x => x.Origin != Origin.Soviet);
 
             var result= _mapper.Map<List<VideoFile>>(files);
 
@@ -238,5 +252,6 @@ namespace FileStore.API.Controllers
 
             return Ok(newFile.Id);
         }
+
     }
 }

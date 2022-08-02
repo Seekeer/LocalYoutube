@@ -4,6 +4,7 @@ import {
   ElementRef,
   OnInit,
   ViewChild,
+  ViewEncapsulation,
 } from '@angular/core';
 import {
   ActivatedRoute,
@@ -21,16 +22,32 @@ import {
   VideoType,
 } from 'src/app/_models/Book';
 import { Serie } from 'src/app/_models/Category';
+import { Seasons } from 'src/app/_models/Seasons';
 import {
   ConfirmationDialogService,
 } from 'src/app/_services/confirmation-dialog.service';
 import { FileService } from 'src/app/_services/file.service';
 import { SeriesService } from 'src/app/_services/series.service';
 
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+
 @Component({
   selector: 'app-book-list',
   templateUrl: './book-list.component.html',
-  styleUrls: ['./book-list.component.css']
+  styleUrls: ['./book-list.component.css'],
+  styles: [`
+    .dark-modal .modal-content {
+      background-color: #292b2c;
+      color: white;
+    }
+    .dark-modal .close {
+      color: white;
+    }
+    .light-blue-backdrop {
+      background-color: #5cb3fd;
+    }
+  `],
+  encapsulation: ViewEncapsulation.None, //<--this line
 })
 export class BookListComponent implements OnInit {
   @ViewChild('videoElement') video:ElementRef; 
@@ -40,18 +57,22 @@ export class BookListComponent implements OnInit {
   public isRandom: boolean = true;
   public isSelectSeries: boolean = false;
   public showKPINfo: boolean = false;
-  public searchTerm: string = '';
+  public serieId: number = 0;
+  public seasonId: number = 0;
   public searchTitle: string = '';
   public episodeCount: number = 1;
   public searchValueChanged: Subject<string> = new Subject<string>();
   public series: Serie[];
   public selectedType: VideoType;
+  public seasons: Seasons[];
+  type: string;
 
   constructor(private router: Router,
               private service: FileService,
               private seriesService: SeriesService,
               private toastr: ToastrService,
               private http:HttpClient,
+              private modalService: NgbModal,
               private spinner: NgxSpinnerService,
               private activatedRoute: ActivatedRoute,
               private confirmationDialogService: ConfirmationDialogService) 
@@ -67,41 +88,9 @@ export class BookListComponent implements OnInit {
   ngOnInit() {
     this.spinner.show();
 
-    const type = (this.activatedRoute.snapshot.paramMap.get('type'));
-    switch (type){
-      case 'series':{
-        this.isSelectSeries = true;
-        this.getSeries(VideoType.ChildEpisode);
-        break;
-      }
-      case 'soviet':{
-        this.service.getSovietAnimation().subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
-        break;
-      }
-      case 'other':{
-        this.service.getFilmsByType(VideoType.Unknown).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
-        break;
-      }
-      case 'sovietfairytale':{
-        this.service.getFilmsByType(VideoType.FairyTale).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
-        break;
-      }
-      case 'animation':{
-        this.service.getBigAnimation().subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
-        break;
-      }
-      case 'balley':{
-        this.service.getFilmsByType(VideoType.Balley).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
-        break;
-      }
-      case 'film':{
-        this.isSelectSeries = true;
-        this.getSeries(VideoType.Film);
-        this.service.getFilmsByType(VideoType.Film).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
-        this.showKPINfo = true;
-        break;
-      }
-    }
+    this.type = (this.activatedRoute.snapshot.paramMap.get('type'));
+
+    this.displayListForType();
 
     this.searchValueChanged.pipe(debounceTime(1000))
     .subscribe(() => {
@@ -165,17 +154,88 @@ export class BookListComponent implements OnInit {
 
       this.service.searchFilesWithTitle(this.searchTitle).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     }
-    else if (this.searchTerm !== '') {
+    else if (this.seasonId != 0) {
+      this.service.searchFilesWithSeason(this.seasonId, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
+    }
+    else if (this.serieId != 0) {
+      let serie = this.series.filter(x => x.id == this.serieId)[0];
+      this.seasons = serie.seasons;
       this.spinner.show();
-      this.service.searchFilesWithSeries(this.searchTerm, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
+      this.service.searchFilesWithSeries(serie.name, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     } 
     else {
             this.toastr.error('Выберите название файла или сериала');
     }
   }
 
+  public udateDownloaded(){
+    this.service.updateDownloaded().subscribe(x => this.displayListForType(), this.getFilmsError.bind(this));
+  }
+
+displayListForType() {
+    switch (this.type){
+      case 'series':{
+        this.isSelectSeries = true;
+        this.getSeries(VideoType.ChildEpisode);
+        break;
+      }
+      case 'soviet':{
+        this.isSelectSeries = true;
+        this.series = [];
+        this.series.push( {id : 9, name : 'Известные', seasons: []});
+        this.series.push( {id : 1, name : 'Разные', seasons: []});
+
+        this.service.getSovietAnimation().subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        break;
+      }
+      case 'other':{
+        this.service.getFilmsByType(VideoType.Unknown).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        break;
+      }
+      case 'sovietfairytale':{
+        this.service.getFilmsByType(VideoType.FairyTale).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        break;
+      }
+      case 'animation':{
+        this.service.getBigAnimation().subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        break;
+      }
+      case 'balley':{
+        this.service.getFilmsByType(VideoType.Balley).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        break;
+      }
+      case 'film':{
+        this.isSelectSeries = true;
+        this.getSeries(VideoType.Film);
+
+        this.service.getFilmsByType(VideoType.Film).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
+        this.showKPINfo = true;
+        break;
+      }
+    }
+}
+  public deleteFilm(content,film: Book){
+    let that = this;
+    if (window.confirm("Фильм будет удален из базы и с диска?")) {
+        this.service.deleteBook(film.id).subscribe(x => that.displayListForType());
+    }
+
+    // this.modalService.open(content, { centered: true });
+    // this.toastr.warning('Выберите название файла или сериала');
+}
+
   showBooks(books: Book[]) {
-    this.books = books.reverse();
+    if(this.type != 'film')
+      this.books = books.reverse();
+    else  
+      this.books = books.sort((a,b) => {
+      if(a.year > b.year) 
+        return -1 ;
+      else if(a.year == b.year) 
+        return 0 ;
+      else
+        return 1;
+    });
     this.spinner.hide();
   }
   getFilmsError(error) {
@@ -214,4 +274,5 @@ export class PlayerParameters {
   position: number;
   isRandom: boolean;
 }
+
 

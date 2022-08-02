@@ -72,7 +72,10 @@ namespace FileStore.Infrastructure.Repositories
 
         protected IQueryable<T> Random<T>(IQueryable<T> query, int resultCount) 
         {
-            return query.OrderBy(o => Guid.NewGuid()).Take(resultCount);
+            if (resultCount > 0)
+                return query.OrderBy(o => Guid.NewGuid()).Take(resultCount);
+            else
+                return query.OrderBy(o => Guid.NewGuid());
         }
     }
 }

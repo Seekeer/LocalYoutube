@@ -272,5 +272,13 @@ namespace Infrastructure
             return name.Trim().Trim('.').Trim('.').Trim('-').Trim();
         }
 
+        public static string EndingBefore(this string text, string endStr)
+        {
+            var qualityStart = text.IndexOf(endStr);
+            if (qualityStart != -1)
+                text = text.Substring(0, qualityStart);
+
+            return text;
+        }
     }
 }

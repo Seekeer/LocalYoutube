@@ -1,6 +1,5 @@
 ﻿using AngleSharp.Html.Parser;
 using FileStore.API;
-using FileStore.Domain.Models;
 using HtmlAgilityPack;
 using HtmlAgilityPack.CssSelectors.NetCore;
 using Infrastructure;
@@ -11,7 +10,6 @@ using RuTracker.Client.Model.SearchTopics.Response;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -29,7 +27,6 @@ namespace API.Controllers
         public string Url { get; set; }
         public string Name { get; set; }
         public byte[] Cover { get; set; }
-        public TimeSpan Duration { get; set; }
         public string Genres { get; set; }
         public string Description { get; set; }
         public int Year { get; set; }
@@ -106,11 +103,13 @@ namespace API.Controllers
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
 
-           var urls = ParseByText(doc, info);
+           var url = ParseByText(doc, info);
+           //var url = ParseByHTML(doc, info);
+
 
             if (urls != null)
             {
-                foreach (var url in urls.Take(4))
+                foreach (var url in urls)
                 {
                     if (SetCoverByImageLink(info, url))
                         break;
@@ -142,10 +141,6 @@ namespace API.Controllers
                 }
 
                 var NameRoot = doc.QuerySelector("[data-test-id=encyclopedic-table]");
-
-                if (NameRoot == null)
-                    return;
-
                 var text = "";
                 foreach (var child in NameRoot.ChildNodes)
                 {
@@ -207,16 +202,9 @@ namespace API.Controllers
             file.VideoFileExtendedInfo.Genres = info.Genres;
             file.VideoFileExtendedInfo.Year = info.Year;
             file.Duration = info.Duration;
-
-            //file.Director = ClearFromForeignOption(info.Director);
         }
 
-        public string ClearFromForeignOption(string text)
-        {
-            return text.EndingBefore(@"/").EndingBefore(@"\");
-        }
-
-        private IEnumerable<string> ParseByText(HtmlDocument doc, VideoInfo info)
+        private string ParseByText(HtmlDocument doc, VideoInfo info)
         {
             var NameRoot = doc.QuerySelector(".post_body");
             var text = "";
@@ -237,12 +225,9 @@ namespace API.Controllers
             else if (string.IsNullOrEmpty(info.Description))
                 info.Description = GetProperty("Описание фильма", text);
 
-            var director = GetProperty("Режиссер", text);
-            if (string.IsNullOrEmpty(director))
-                director = GetProperty("Режиссёр", text);
-            director = director?.EndingBefore("Роли озвучивали");
-            director = director?.EndingBefore("В ролях");
-            info.Director = director;
+            info.Director = GetProperty("Режиссер", text);
+            if (string.IsNullOrEmpty(info.Director))
+                info.Director = GetProperty("Режиссёр", text);
 
             info.Artist = GetProperty("В ролях", text);
             info.Genres = GetProperty("Жанр", text);
@@ -254,9 +239,7 @@ namespace API.Controllers
             }
 
             var yearStr = GetProperty("Год выпуска", text);
-            if(string.IsNullOrEmpty(yearStr))
-                yearStr = GetProperty("Год", text);
-            var yearStrDigits = yearStr.Length > 6 ? yearStr.Substring(0, 6).OnlyDigits() : yearStr.OnlyDigits();
+            var yearStrDigits = yearStr?.OnlyDigits();
             if (int.TryParse(yearStrDigits, out int year))
             {
                 if(year > 1900 && year <2030)
@@ -287,10 +270,6 @@ namespace API.Controllers
                 result = new TimeSpan(0, minutes, 0);
                 return true;
             }
-            if(str.Length > 10)
-            {
-                str = str.Substring(0, 8);
-            }
 
             return TimeSpan.TryParse(str, out result);
         }
@@ -303,30 +282,19 @@ namespace API.Controllers
                 var line = lines[i];
                 if (line.Contains(title))
                 {
-                    var result = "";
                     if (line == title || line.EndsWith(title) || line.EndsWith(title+":"))
                     {
-                        result = lines[i + 1].Trim(':').Trim();
+                        var result = lines[i + 1].Trim(':').Trim();
                         if (string.IsNullOrEmpty(result))
                             result = lines[i + 2];
-                        result = result.Trim(':').Trim(); 
+                        return result.Trim(':').Trim(); ;
                     }
                     else if(line.Length > title.Length + 3)
                     {
                         var subline = line.StartingFrom(title);
-                        result = subline.Trim(':').Trim(); 
+                        return subline.Trim(':').Trim(); ;
                     }
-                    else
-                    {
-                        continue;
-                    }
-
-                    result = result.EndingBefore("Качество видео");
-                    result = result.EndingBefore("Качество исходника");
-                    result = result.EndingBefore("Релиз");
-                    result = result.EndingBefore("Доп. информация");
-
-                    return result;
+                     
                 }
             }
 
@@ -344,12 +312,9 @@ namespace API.Controllers
             long maxLimit = (long)12 * 1024 * 1024 * 1024;
             long minLimit = (long)2 * 1024 * 1024 * 1024;
 
-            var topics = res.Topics.Where(x => x.SizeInBytes < maxLimit && x.SizeInBytes > minLimit && !x.Title.Contains("DVD9") && !x.Title.Contains("DVD5"));
+            var topics = res.Topics.Where(x => x.SizeInBytes < maxLimit && x.SizeInBytes > minLimit);
 
-            if (topics.Count() < 3)
-                topics = res.Topics;
-
-            return topics.OrderByDescending(x => x.SizeInBytes).Take(10);
+            return topics;
         }
 
         public async Task StartDownload(SearchTopicInfo videoInfo, string rootDownloadFolder)

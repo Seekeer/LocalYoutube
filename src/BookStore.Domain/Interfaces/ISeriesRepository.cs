@@ -8,5 +8,6 @@ namespace FileStore.Domain.Interfaces
     {
 
         Task<IEnumerable<VideoFile>> SearchFileWithSeries(string searchedValue, int resultCount);
+        Task<List<Series>> GetAll(VideoType? type);
     }
 }

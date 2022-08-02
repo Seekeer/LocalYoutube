@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FileStore.Domain.Interfaces;
@@ -28,6 +29,15 @@ namespace FileStore.Infrastructure.Repositories
                 .FirstOrDefaultAsync();
 
             return info;
+        }
+
+
+        public async Task<IEnumerable<VideoFile>> GetFilesBySeason(int seriesId, bool isRandom, int count)
+        {
+            if (isRandom)
+                return await SearchRandom(b => b.SeasonId == seriesId, count);
+            else
+                return await Search(b => b.SeasonId == seriesId, count);
         }
 
         public async Task<IEnumerable<VideoFile>> GetFilesBySeriesAsync(int seriesId, bool isRandom)

@@ -1,8 +1,15 @@
-import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import {
+  Component,
+  OnInit,
+} from '@angular/core';
 import { NgForm } from '@angular/forms';
-import { Serie } from 'src/app/_models/Category';
+import {
+  ActivatedRoute,
+  Router,
+} from '@angular/router';
+
 import { ToastrService } from 'ngx-toastr';
+import { Serie } from 'src/app/_models/Category';
 import { SeriesService } from 'src/app/_services/series.service';
 
 @Component({
@@ -27,7 +34,7 @@ export class CategoryComponent implements OnInit {
     });
 
     if (id != null) {
-      this.service.getCategoryById(id).subscribe(category => {
+      this.service.getSerieById(id).subscribe(category => {
         this.formData = category;
       }, error => {
         this.toastr.error('An error occurred on get the record.');
@@ -42,10 +49,10 @@ export class CategoryComponent implements OnInit {
       form.form.reset();
     }
 
-    this.formData = {
-      id: 0,
-      name: ''
-    };
+    // this.formData = {
+    //   id: 0,
+    //   name: ''
+    // };
   }
 
   public onSubmit(form: NgForm) {

@@ -11,6 +11,14 @@ namespace FileStore.API
         public string RP_Login { get; set; }
         public string RootFolder { get; set; }
         public string RootDownloadFolder { get; set; }
+
+        public static string FFmpegPath
+        {
+            get
+            {
+                return @"C:\Dev\_Smth\BookStore-master\lib\ffmpeg\";
+            }
+        }
     }
 
     public class TelegramSettings

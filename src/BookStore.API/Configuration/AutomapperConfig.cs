@@ -10,11 +10,13 @@ namespace FileStore.API.Configuration
         public AutomapperConfig()
         {
             CreateMap<byte[], string>().ConvertUsing(new Base64Converter());
+            CreateMap<Season, SeasonResultDto>().ReverseMap();
             CreateMap<Series, SeriesAddDto>().ReverseMap();
             CreateMap<Series, SeriesEditDto>().ReverseMap();
             CreateMap<Series, SeriesResultDto>().ReverseMap();
             CreateMap<VideoFile, FileAddDto>().ReverseMap();
             CreateMap<VideoFile, FileEditDto>().ReverseMap();
+            CreateMap<VideoFile, VideoFileResultDto>().ReverseMap();
             CreateMap<VideoFile, VideoFileResultDto>().ReverseMap();
         }
     }

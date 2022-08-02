@@ -10,8 +10,17 @@
 
     <mat-form-field appearance="fill"  *ngIf="isSelectSeries" >
       <mat-label>Сериал</mat-label>
-      <mat-select [(ngModel)]="searchTerm" (ngModelChange)="searchBooks()">
-        <mat-option *ngFor="let data of series" value="{{data.name}}">
+      <mat-select [(ngModel)]="serieId" (ngModelChange)="searchBooks()">
+        <mat-option *ngFor="let data of series" value="{{data.id}}">
+          {{data.name}}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill"  *ngIf="isSelectSeries" >
+      <mat-label>Сезон</mat-label>
+      <mat-select [(ngModel)]="seasonId" (ngModelChange)="searchBooks()">
+        <mat-option *ngFor="let data of seasons" value="{{data.id}}">
           {{data.name}}
         </mat-option>
       </mat-select>
@@ -28,6 +37,9 @@
       <mat-icon>refresh</mat-icon>
     </button>
 
+    <button   mat-icon-button color="primary" (click)="udateDownloaded()" >
+      Обновить загрузки
+    </button>
   </div>
 
   <button *ngIf="!isRandom" (click)="continueWatch()">Продолжить воспроизведение</button>
@@ -72,14 +84,20 @@
                 (click)="openVideo(book)"
               />
             </div>
-            <div class="col-sm">
-              <div>{{book.description}}</div>
+            <div class="col-sm"> 
+              <button class="btn btn-outline-primary btn-sm" (click)="copyLink(book)">Скопировать ссылку</button>
+              <button class="btn btn-outline-danger btn-sm mt-2" (click)="deleteFilm(content, book)">Удалить фильм</button>
+              <br>
+              <br>
+
+              <div>{{book.description| slice:0:300}}</div>
               <br>
               <div>{{book.year}}</div>
               <br>
               <div>{{book.genres}}</div>
               <br>
-              <button (click)="copyLink(book)">Скопировать ссылку</button>
+              <div>{{book.durationMinutes}} минут</div>
+              <br>
             </div>
           </div>
         </div>
@@ -88,5 +106,18 @@
     </div>
   </div>
 
-  <ngx-spinner></ngx-spinner>
+<ng-template #content let-modal>
+  <div class="modal-header">
+    <h4 class="modal-title">Modal title</h4>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    <p>One fine body&hellip;</p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-light" (click)="modal.close('Close click')">Close</button>
+  </div>
+</ng-template>
+
+  <!-- <ngx-spinner></ngx-spinner> -->
 </div>

@@ -6,6 +6,7 @@ export class Book {
     cover: string;
     seriesName: string;
     currentPosition:number;
+    durationMinutes:number;
     isFinished:boolean;
     
     description: string;

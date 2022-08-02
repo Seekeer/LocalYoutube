@@ -26,10 +26,11 @@ namespace FileStore.Domain.Models
         ChildEpisode,
         FairyTale,
         Lessons, 
-        Balley,
+        Art,
         AdultEpisode,
         Courses,
-        Downloaded
+        Downloaded,
+        Youtube
     }
 
     public enum AudioType

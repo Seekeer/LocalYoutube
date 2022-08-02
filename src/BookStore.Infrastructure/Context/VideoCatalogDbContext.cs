@@ -21,7 +21,9 @@ namespace FileStore.Infrastructure.Context
     //  dotnet ef database update
     public class VideoCatalogDbContext : DbContext
     {
-        public VideoCatalogDbContext(DbContextOptions options) : base(options) { }
+        public VideoCatalogDbContext(DbContextOptions options) : base(options) {
+            this.ChangeTracker.LazyLoadingEnabled = false;
+        }
 
         public DbSet<Season> Seasons { get; set; }
         public DbSet<AudioFile> AudioFiles { get; set; }
@@ -39,6 +41,9 @@ namespace FileStore.Infrastructure.Context
             //        .WithOne(info => info.VideoFile)
             //        .HasForeignKey<VideoFileExtendedInfo>(info => info.VideoFileId);
             //});
+
+            modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileExtendedInfo).AutoInclude();
+            modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileUserInfo).AutoInclude();
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(VideoCatalogDbContext).Assembly);
 
