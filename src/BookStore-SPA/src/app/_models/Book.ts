@@ -12,6 +12,7 @@ export class Book {
     description: string;
     year: string;
     genres: string;
+    director: string;
 }
 
 export enum VideoType {

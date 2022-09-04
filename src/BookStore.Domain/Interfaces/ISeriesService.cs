@@ -7,7 +7,7 @@ namespace FileStore.Domain.Interfaces
 {
     public interface ISeriesService : IDisposable
     {
-        Task<IEnumerable<Series>> GetAll(VideoType? type);
+        Task<IEnumerable<Series>> GetAllByType(VideoType? type);
         Task<Series> GetById(int id);
         Task<Series> Add(Series Series);
         Task<Series> Update(Series Series);

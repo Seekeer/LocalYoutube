@@ -15,7 +15,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "API", "src\BookStore.API\AP
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Infrastructure", "src\BookStore.Infrastructure\Infrastructure.csproj", "{F054748F-C6A0-4A98-ABEF-7E26E9B50A18}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.Tests", "src\Core.Tests\Core.Tests.csproj", "{A20AFD01-B28E-4ABC-BAEB-C59498F8A298}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core.Tests", "src\Core.Tests\Core.Tests.csproj", "{A20AFD01-B28E-4ABC-BAEB-C59498F8A298}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -28,11 +28,9 @@ Global
 		{84A309D2-F63D-4EF0-8746-C2F648652A00}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{84A309D2-F63D-4EF0-8746-C2F648652A00}.Release|Any CPU.Build.0 = Release|Any CPU
 		{61209E2E-0DB5-40C0-9E7C-BC87E02CE642}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{61209E2E-0DB5-40C0-9E7C-BC87E02CE642}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{61209E2E-0DB5-40C0-9E7C-BC87E02CE642}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{61209E2E-0DB5-40C0-9E7C-BC87E02CE642}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A2248ECC-B85A-4CAF-BAD9-54CDAB9E4EB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A2248ECC-B85A-4CAF-BAD9-54CDAB9E4EB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A2248ECC-B85A-4CAF-BAD9-54CDAB9E4EB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A2248ECC-B85A-4CAF-BAD9-54CDAB9E4EB2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{65186DFB-70B0-4E35-8A17-C10BBCE27699}.Debug|Any CPU.ActiveCfg = Debug|Any CPU

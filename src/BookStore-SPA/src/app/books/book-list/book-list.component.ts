@@ -55,6 +55,8 @@ export class BookListComponent implements OnInit {
   public books: VideoFile[];
   public listComplet: any;
   public isRandom: boolean = true;
+  public showWatched: boolean = true;
+
   public isSelectSeries: boolean = false;
   public showKPINfo: boolean = false;
   public serieId: number = 0;
@@ -66,6 +68,7 @@ export class BookListComponent implements OnInit {
   public selectedType: VideoType;
   public seasons: Seasons[];
   type: string;
+  apibooks: Book[];
 
   constructor(private router: Router,
               private service: FileService,
@@ -86,26 +89,22 @@ export class BookListComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.spinner.show();
+    setTimeout(() => this.showSpinner(), 5);
 
     this.type = (this.activatedRoute.snapshot.paramMap.get('type'));
 
     this.displayListForType();
 
     this.searchValueChanged.pipe(debounceTime(1000))
-    .subscribe(() => {
-      this.search();
-    });
+      .subscribe(() => {
+        this.search();
+      });
   }
 
-  displayByType() {
-  }
   getSeries(type:VideoType) {
-    this.spinner.show();
-    
     this.seriesService.getAll(type).subscribe(series => {
-      this.spinner.hide();
       this.series = series;
+      this.hideSpinner(); 
     });
   }
 
@@ -115,6 +114,16 @@ export class BookListComponent implements OnInit {
 
   public editBook(bookId: number) {
     this.router.navigate(['/book/' + bookId]);
+  }
+
+  public filmWatched(film: Book) {
+
+      // this.service.filmWatched(film.id).subscribe(
+      //   () => {},
+      //   err => {
+      //     this.toastr.error('Ошибка.');
+      //   });
+      this.service.setPosition(film.id, 100000);
   }
 
   public deleteBook(bookId: number) {
@@ -149,8 +158,8 @@ export class BookListComponent implements OnInit {
 
   private search() {
 
+      this.showSpinner();
     if(this.searchTitle !== ''){
-      this.spinner.show();
 
       this.service.searchFilesWithTitle(this.searchTitle).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     }
@@ -160,7 +169,6 @@ export class BookListComponent implements OnInit {
     else if (this.serieId != 0) {
       let serie = this.series.filter(x => x.id == this.serieId)[0];
       this.seasons = serie.seasons;
-      this.spinner.show();
       this.service.searchFilesWithSeries(serie.name, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     } 
     else {
@@ -173,6 +181,7 @@ export class BookListComponent implements OnInit {
   }
 
 displayListForType() {
+
     switch (this.type){
       case 'series':{
         this.isSelectSeries = true;
@@ -182,14 +191,21 @@ displayListForType() {
       case 'soviet':{
         this.isSelectSeries = true;
         this.series = [];
-        this.series.push( {id : 9, name : 'Известные', seasons: []});
-        this.series.push( {id : 1, name : 'Разные', seasons: []});
+        this.series.push( {id : 13, name : 'Известные', seasons: []});
+        this.series.push( {id : 14, name : 'Разные', seasons: []});
+        this.series.push( {id : 16, name : 'Мультсериалы', seasons: []});
 
         this.service.getSovietAnimation().subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
         break;
       }
       case 'other':{
-        this.service.getFilmsByType(VideoType.Unknown).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+          this.seriesService.getOther().subscribe(series => {
+            this.series = series;
+            this.isSelectSeries = true;
+            this.hideSpinner(); 
+            this.isRandom = false;
+            this.episodeCount = 10;
+          });
         break;
       }
       case 'sovietfairytale':{
@@ -205,7 +221,9 @@ displayListForType() {
         break;
       }
       case 'film':{
+        this.showSpinner();
         this.isSelectSeries = true;
+        this.showWatched  = false;
         this.getSeries(VideoType.Film);
 
         this.service.getFilmsByType(VideoType.Film).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
@@ -213,6 +231,10 @@ displayListForType() {
         break;
       }
     }
+}
+watchedChanged(event){
+
+  this.showFilteredBooks();
 }
   public deleteFilm(content,film: Book){
     let that = this;
@@ -225,8 +247,18 @@ displayListForType() {
 }
 
   showBooks(books: Book[]) {
+    this.apibooks = books;
+    this.showFilteredBooks();
+  }
+
+  showFilteredBooks() {
+    let books = this.apibooks;
+
+    if(!this.showWatched)
+      books = books.filter(x => !x.isFinished);
+
     if(this.type != 'film')
-      this.books = books.reverse();
+      this.books = books;
     else  
       this.books = books.sort((a,b) => {
       if(a.year > b.year) 
@@ -236,13 +268,32 @@ displayListForType() {
       else
         return 1;
     });
-    this.spinner.hide();
+
+    this.hideSpinner(); 
   }
   getFilmsError(error) {
-    this.spinner.hide();
+    this.hideSpinner(); 
     this.books = [];
   }
 
+  hideSpinner(){
+
+      setTimeout(() => {
+        this.counter--;
+        if(this.counter == 0)
+            this.spinner.hide()
+      }, 5);
+
+  // this.spinner.hide();
+}
+
+counter : number =0 ;
+
+  public showSpinner(){    
+    this.counter++;
+
+    this.spinner.show();
+  }
   continueWatch(){
     var film = this.books.find(x => !x.isFinished);
 

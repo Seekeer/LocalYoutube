@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
 
 namespace FileStore.Domain.Models
 {
@@ -22,15 +24,55 @@ namespace FileStore.Domain.Models
     {
         Unknown,
         Film,
+        [IsOnlineVideoAttribute]
         Animation,
+        [IsOnlineVideoAttribute]
         ChildEpisode,
+        [IsOnlineVideoAttribute]
         FairyTale,
         Lessons, 
         Art,
+        [IsOnlineVideoAttribute]
         AdultEpisode,
+        [IsOnlineVideoAttribute]
         Courses,
         Downloaded,
         Youtube
+    }
+    [System.AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
+    public sealed class IsOnlineVideoAttribute : Attribute
+    {
+        public IsOnlineVideoAttribute()
+        {
+        }
+
+        public static bool HasAttribute<T>(T value)
+            where T : System.Enum
+        {
+            var valuesWithAttribute = GetValuesWithAttribute<T>();
+
+            return valuesWithAttribute.Any(x => EqualityComparer<T>.Default.Equals(x, value));
+        }
+
+        public static IEnumerable<T> GetValuesWithAttribute<T>()
+        {
+            var values = (T[])Enum.GetValues(typeof(T));
+
+            var result = new List<T>();
+            foreach (var value in (T[])Enum.GetValues(typeof(T)))
+            {
+                var memberInfos = typeof(T).GetMember(value.ToString());
+                var enumValueMemberInfo = memberInfos.FirstOrDefault(m => m.DeclaringType == typeof(T));
+                var valueAttributes = enumValueMemberInfo.GetCustomAttributes(typeof(IsOnlineVideoAttribute), false);
+
+                if (!valueAttributes.Any())
+                    continue;
+
+                result.Add(value);
+            }
+
+            return result;
+        }
     }
 
     public enum AudioType
@@ -53,6 +95,7 @@ namespace FileStore.Domain.Models
         public int Year { get; set; }
         public string Description { get; set; }
         public int RutrackerId { get; set; }
+        public string Director { get; set; }
     }
 
     public class FileUserInfo : Entity
@@ -112,6 +155,15 @@ namespace FileStore.Domain.Models
         }
 
         [NotMapped]
+        public string Director
+        {
+            get
+            {
+                return VideoFileExtendedInfo.Director;
+            }
+        }
+
+        [NotMapped]
         public string Genres
         {
             get
@@ -134,13 +186,18 @@ namespace FileStore.Domain.Models
         {
             get
             {
-                if (VideoFileUserInfo == null)
+                if (VideoFileUserInfo == null || Duration > TimeSpan.Zero)
                     return false;
-
+                //return true;
                 var watchedTime = TimeSpan.FromSeconds(VideoFileUserInfo.Position);
+
+                if ((this as VideoFile)?.Type == VideoType.Courses)
+                    return (Duration - watchedTime) < TimeSpan.FromSeconds(10);
+
                 var watchedPercent = (watchedTime) / Duration;
 
                 return watchedPercent > 0.9;
+
             }
         }
     }

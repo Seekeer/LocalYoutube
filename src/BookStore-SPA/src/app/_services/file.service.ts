@@ -69,6 +69,11 @@ export class FileService {
         return this.http.get<Book[]>(this.baseUrl + `files`);
     }
 
+    public filmWatched(id) {
+        var url = this.baseUrl + `files/filmWatched/${id}`;
+        return this.http.put(url, null);
+    }
+
     public deleteBook(id: number) {
         return this.http.delete(this.baseUrl + 'update/removeFile/?fileId=' + id);
     }

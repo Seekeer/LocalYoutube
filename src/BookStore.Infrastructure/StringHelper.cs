@@ -6,7 +6,27 @@ using System.Text.RegularExpressions;
 
 namespace Infrastructure
 {
-    public static class StringHelper
+
+    public static class CollectionHelper
+    {
+        public static bool TryGetKey<K, V>(this IDictionary<K, V> instance, V value, out K key)
+        {
+            foreach (var entry in instance)
+            {
+                if (!entry.Value.Equals(value))
+                {
+                    continue;
+                }
+                key = entry.Key;
+                return true;
+            }
+
+            key = default(K);
+            return false;
+        }
+    }
+
+        public static class StringHelper
     {
         /// <summary>
         /// Compute the distance between two strings.
@@ -274,6 +294,9 @@ namespace Infrastructure
 
         public static string EndingBefore(this string text, string endStr)
         {
+            if (string.IsNullOrEmpty(text))
+                return text;
+
             var qualityStart = text.IndexOf(endStr);
             if (qualityStart != -1)
                 text = text.Substring(0, qualityStart);

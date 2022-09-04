@@ -17,7 +17,7 @@ namespace FileStore.Infrastructure.Context
     }
 
     // cd .\BookStore.Infrastructure\
-    // dotnet ef migrations add InitialCreate4
+    // dotnet ef migrations add InitialCreate7
     //  dotnet ef database update
     public class VideoCatalogDbContext : DbContext
     {
