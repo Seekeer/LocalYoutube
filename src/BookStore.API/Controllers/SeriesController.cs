@@ -26,9 +26,21 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll(VideoType? type = null)
         {
-            var Series = await _SeriesService.GetAll(type);
+            var Series = await _SeriesService.GetAllByType(type);
 
             return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(Series));
+        }
+
+        [HttpGet]
+        [Route("other")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> SeriesOther()
+        {
+            var series = new List<Series>();
+            series.AddRange(await _SeriesService.GetAllByType(VideoType.Courses));
+            series.AddRange(await _SeriesService.GetAllByType(VideoType.Youtube));
+
+            return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(series));
         }
 
         [HttpGet("{id:int}")]

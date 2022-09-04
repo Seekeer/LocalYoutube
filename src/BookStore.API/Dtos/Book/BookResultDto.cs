@@ -16,6 +16,7 @@ namespace FileStore.API.Dtos.File
         public string Author { get; set; }
 
         public string Description { get; set; }
+        public string Director { get; set; }
         public int Year { get; set; }
         public TimeSpan Duration { get; set; }
 

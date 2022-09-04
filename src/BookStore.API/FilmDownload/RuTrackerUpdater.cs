@@ -82,6 +82,16 @@ namespace API.Controllers
             await _client.Login(_config.RP_Login, _config.RP_Pass);
         }
 
+        internal async Task<IEnumerable<TorrentInfo>> Get()
+        {
+            _qclient = new QBittorrentClient(new Uri("http://localhost:124"));
+
+            var list = await _qclient.GetTorrentListAsync();
+            var goodList = list.Where(x => x.AddedOn > new DateTime(2022, 08, 01, 18, 31, 00)).OrderBy(x => x.AddedOn).ToList();
+
+            return goodList.Skip(1).SkipLast(1);
+        }
+
         public async Task<VideoInfo> FillInfo(int topicId)
         {
             //topicId = 4385232;
@@ -122,6 +132,7 @@ namespace API.Controllers
 
         private async Task SetCoverByKinopoisk(VideoInfo info)
         {
+            return;
             try
             {
                 if (string.IsNullOrEmpty(info.KinopoiskLink))
@@ -201,14 +212,14 @@ namespace API.Controllers
         {
             file.VideoFileExtendedInfo.Description = info.Description;
 
-            if(info.Cover!=null)
+            if(info.Cover!=null && info.Cover.Length > 30 * 1024)
             //if(file.VideoFileExtendedInfo.Cover.Length < info.Cover?.Length)
                 file.VideoFileExtendedInfo.Cover = info.Cover;
             file.VideoFileExtendedInfo.Genres = info.Genres;
             file.VideoFileExtendedInfo.Year = info.Year;
             file.Duration = info.Duration;
 
-            //file.Director = ClearFromForeignOption(info.Director);
+            file.VideoFileExtendedInfo.Director = ClearFromForeignOption(info.Director);
         }
 
         public string ClearFromForeignOption(string text)
@@ -222,12 +233,32 @@ namespace API.Controllers
             var text = "";
             foreach (var child in NameRoot.ChildNodes)
             {
-                if(!string.IsNullOrEmpty(child.InnerText) && child.InnerText != "\n" && child.InnerText != "&#10;")
+                if (!string.IsNullOrEmpty(child.InnerText) && child.InnerText != "\n" && child.InnerText != "&#10;")
                     text += child.InnerText + Environment.NewLine;
             }
+
             text = HttpUtility.HtmlDecode(text);
 
             info.Name = text.SplitByNewLine().First();
+            if (info.Name.Contains("||") || info.Name.Contains("все релизы") || info.Name.Contains("Rip"))
+            {
+                var prev = "";
+                foreach (var str in text.SplitByNewLine())
+                {
+                    if (str.Contains("Год выпуска"))
+                    {
+                        info.Name = prev;
+                        break;
+                    }
+                    else if (prev == "P R E S E N T S")
+                    {
+                        info.Name = str;
+                        break;
+                    }
+
+                    prev = str;
+                }
+            }
 
             info.Description = GetProperty("Описание", text);
             if (string.IsNullOrEmpty(info.Description))
@@ -237,9 +268,13 @@ namespace API.Controllers
             else if (string.IsNullOrEmpty(info.Description))
                 info.Description = GetProperty("Описание фильма", text);
 
-            var director = GetProperty("Режиссер", text);
+            var director = GetProperty("Режиссер:", text);
+            if (string.IsNullOrEmpty(director))
+                director = GetProperty("Режиссёр:", text);
             if (string.IsNullOrEmpty(director))
                 director = GetProperty("Режиссёр", text);
+            if (string.IsNullOrEmpty(director))
+                director = GetProperty("Режиссер", text);
             director = director?.EndingBefore("Роли озвучивали");
             director = director?.EndingBefore("В ролях");
             info.Director = director;
@@ -247,6 +282,8 @@ namespace API.Controllers
             info.Artist = GetProperty("В ролях", text);
             info.Genres = GetProperty("Жанр", text);
             var duration = GetProperty("Продолжительность", text);
+            if (string.IsNullOrEmpty(duration))
+                duration = GetProperty("Время", text); 
             if (!string.IsNullOrEmpty(duration))
             {
                 if ( TryParse(duration, out var durationTs))
@@ -325,6 +362,7 @@ namespace API.Controllers
                     result = result.EndingBefore("Качество исходника");
                     result = result.EndingBefore("Релиз");
                     result = result.EndingBefore("Доп. информация");
+                    result = result.EndingBefore("Время");
 
                     return result;
                 }
@@ -344,19 +382,23 @@ namespace API.Controllers
             long maxLimit = (long)12 * 1024 * 1024 * 1024;
             long minLimit = (long)2 * 1024 * 1024 * 1024;
 
+            if (res.Topics.Count() < 5)
+                return res.Topics;
+
             var topics = res.Topics.Where(x => x.SizeInBytes < maxLimit && x.SizeInBytes > minLimit && !x.Title.Contains("DVD9") && !x.Title.Contains("DVD5"));
 
             if (topics.Count() < 3)
                 topics = res.Topics;
 
             return topics.OrderByDescending(x => x.SizeInBytes).Take(10);
+            //return topics.OrderByDescending(x => x.SizeInBytes).Take(10);
         }
 
-        public async Task StartDownload(SearchTopicInfo videoInfo, string rootDownloadFolder)
+        public async Task StartDownload(int id, string rootDownloadFolder)
         {
             NLog.LogManager.GetCurrentClassLogger().Info($"Start download to {rootDownloadFolder}");
 
-            var torrent = await _client.GetTopicTorrentFile(videoInfo.Id);
+            var torrent = await _client.GetTopicTorrentFile(id);
 
             var temp = Path.Combine(rootDownloadFolder, $"{rootDownloadFolder}.torrent");
 

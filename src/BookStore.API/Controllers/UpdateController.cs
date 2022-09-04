@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using API.Controllers;
+using API.FilmDownload;
 using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using Infrastructure;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FileStore.API.Controllers
 {
@@ -19,17 +21,19 @@ namespace FileStore.API.Controllers
     {
         private readonly VideoCatalogDbContext _db;
         private readonly AppConfig _config;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
 
-        public UpdateController(VideoCatalogDbContext dbContext, AppConfig config)
+        public UpdateController(VideoCatalogDbContext dbContext, AppConfig config, IServiceScopeFactory serviceScopeFactory)
         {
             _db = dbContext;
             _config = config;
+            _serviceScopeFactory = serviceScopeFactory;
         }
 
         [HttpGet]
         [Route("updateDownloaded")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> CheckDownloaded(string seriesName)
+        public async Task<IActionResult> CheckDownloaded()
         {
             var files = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
                 .Where(x => x.IsDownloading).ToList();
@@ -74,15 +78,12 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
-        //[HttpGet]
-        //[Route("removeFile")]
-        //[ProducesResponseType(StatusCodes.Status200OK)]
-        //[ProducesResponseType(StatusCodes.Status404NotFound)]
         [HttpDelete]
         [Route("removeFile")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> Remove(int fileId, bool removeFile = true)
         {
+
             //var file = _db.Files.FirstOrDefault(x => x.Id == fileId);
             var file = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).FirstOrDefault(x => x.Id == fileId);
 
@@ -106,9 +107,44 @@ namespace FileStore.API.Controllers
         [HttpGet]
         [Route("changeDownloadedType")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> ChangeDownloadedType(string seriesName)
+        public async Task<IActionResult> ChangeDownloadedType(string seriesName, VideoType videoType)
         {
-            new DbUpdateManager(_db).MoveDownloadedToAnotherSeries(VideoType.Film, seriesName ?? "Добавленные фильмы");
+            new DbUpdateManager(_db).MoveDownloadedToAnotherSeries(videoType, seriesName ?? "Добавленные фильмы");
+
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("addFolder")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> AddFolder(string path, VideoType? type = null, bool severalSeriesInFolder = false, string seriesName = null)
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            if (type == VideoType.ChildEpisode || type == VideoType.Courses)
+            {
+                dbUpdater.FillSeries(path, Origin.Russian, type.Value, severalSeriesInFolder, seriesName);
+                return Ok();
+            }
+
+            return NotFound();
+        }
+
+        [HttpGet]
+        [Route("convrtAllOnline")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateAllPlayInBrowser(int minId = 7321)
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            var onlineFiles = _db.VideoFiles.Where(x => x.Id > minId).ToList();
+            var onlineTypes = IsOnlineVideoAttribute.GetValuesWithAttribute<VideoType>().ToList();
+            onlineFiles = onlineFiles.Where(x => onlineTypes.Any(value => value == x.Type)).ToList();
+
+            foreach (var file in onlineFiles)
+            {
+                dbUpdater.Convert(file);
+            }
 
             return Ok();
         }
@@ -116,11 +152,17 @@ namespace FileStore.API.Controllers
         [HttpGet]
         [Route("moveToSeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> MoveToSeason(int startId, int finishId, int seasonId)
+        public async Task<IActionResult> MoveToSeason(int startId, int finishId, int seasonId, int seriesId = 0, VideoType? type = null)
         {
             var files = _db.VideoFiles.Where(x => x.Id >= startId && x.Id <= finishId).ToList();
             foreach (var file in files)
+            {
                 file.SeasonId = seasonId;
+                if (seriesId != 0)
+                    file.SeriesId = seriesId;
+                if (type != null)
+                    file.Type = type.Value;
+            }
 
             _db.SaveChanges();
 
@@ -128,25 +170,34 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
-        [Route("updateByExistingRutracker")]
+        [Route("updateAllByExistingRutracker")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> UpdateByExistingRutracker()
+        public async Task<IActionResult> UpdateAllByExistingRutracker(bool updateCover)
         {
             var _rutracker = new RuTrackerUpdater(_config);
             await _rutracker.Init();
 
-            var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.Id == 3852).ToList();
-            //var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.VideoFileExtendedInfo.RutrackerId != 0).ToList();
+            //var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.Id == 3852).ToList();
+            var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.VideoFileExtendedInfo.RutrackerId != 0).ToList();
 
-            foreach (var file in files.OrderBy(x => x.Id))
+            foreach (var file in files.OrderBy(x => x.Duration))
             {
                 try
                 {
                     var info = await _rutracker.FillInfo(file.VideoFileExtendedInfo.RutrackerId);
 
                     file.Duration = info.Duration;
-                    file.Name = info.Name;
+                    file.Name = _rutracker.ClearFromForeignOption(info.Name);
+                    file.VideoFileExtendedInfo.Director = _rutracker.ClearFromForeignOption(info.Director);
                     file.VideoFileExtendedInfo.Year = info.Year;
+                    file.VideoFileExtendedInfo.Genres = info.Genres;
+                    file.VideoFileExtendedInfo.Description = info.Description;
+
+                    if (file.Duration == System.TimeSpan.Zero)
+                        file.Duration = DbUpdateManager.GetDuration(file.Path);
+
+                    if (updateCover)
+                        file.VideoFileExtendedInfo.Cover = info.Cover;
 
                     _db.SaveChanges();
                 }
@@ -159,97 +210,21 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
-        [Route("updateByRutracker")]
+        [Route("updateByRutrackerId")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> UpdateByRutracker(string filenames)
+        public async Task<IActionResult> UpdateByRutrackerId(int fileId)
         {
-            filenames = @"Его девушка Пятница        ___https://kinopoisk-ru.clstorage.net/1z4G6O223/1cbe98RE-zCm/PX9DNh72cZjg3OOWux-YFcI8y-WhRRu8p7pCyqvBO9fN8GBhCGuIJL9qseD9LQ3quyhA0aLY23TXBsbA5S_0g0kaVscPg9TdAb0Tpk4v6fE37N-EFcB__XaPl39ZMjlU72dCAvrpiuKrXvWRKPiYHrodwGDyLB8A4CUn8kGpUbevTRA3CtSx-3cMYxRozLnREswr4MGm6_gXy4DqGBLLdm-2MqGb-WgB2I7FpytI28zJTUJC4ltssYLk88BQSbOnrTwRJfl2sMlkXfGUCs-60eBfmrNjt7m6FGpCydmCyYVs1gKw2hjK0-g9FWU6mMg_y60SQ-EarDNRpLEBknuAV2yd8HeJNOP5VX5ABPtvmDHC_Rvh8fY4yfVKQhvKYNp3nnfTUwrLGtB4Xfalaoi7vomd8eKh2H5jgSRxkpDbAtUMD-L1-VTxeKSM8ybb_ssj8r7aQFEW2NikWqK7K4Gb9W4F4CJZeKjwaQ0EtFkbC195fHHRc6rvc4MWoFJCSIFUbR3CZjlGwnuHvNIHWx8rIfB-uGARZno6F9qy2wmBGSStxoAA23tIoWkcJnUIOBpsGg-yAyO4TgHhNLLRIMlg5v7_o7ULJmM7Vqzzlws_6ONBjTgBIhUJ-NY64GsaErlWr9WiIwqKekB63yVnq-hYbwvdgCJQO2wRQMZxgbC5E_dvX8NEOQTzSpafsyZ6XmrhUm5qQ8EkGDiV2FJoGIPZ9C02Q2N62ZkzSS00dKiaGEw7zqCj8BjMg8CHgqHCSoFmXo7DRliFkZumrNOmydypU2P-KaJT1Cir1yiACTiAS2TNV9KxuPupIQhdpeVqahoOmD1xgrI6HOGB5JDwwnhzRt2-cXQZlNN497_gx3n9O8GCngmzQ5dq6Lca8ogq4xkF7_TD8qgYyvLpH5WnCihbXwpfcHKTCk8BcEaDI4A4AVS8D9GEazQAyeUM43Yr3Qjxgu5ZM_EVKAg2CcNIyENZtC0VsnLKq2lzahzXxGpZOF3Z_LCT8qguQxHFgsIjmAE0DB2jJ2tUsvjkvDL3y66709O9qsJDJNuqlkpiafmTaFR_NGLhG0rK0MqfBeVKC1mfy79iIPCp7WIwl4CzEhoxNO8NYbVbt6HpZh0jxUpuWIIzXfgjEpU6KdZaoVv44as2vYWj8JsamDHaXfYkSskp71odQ7FD-gxTwyQDkaC5UwR9n7AFqqSDuPRe4Lc6_-gwgc-agSBWWuk2anGKS2D79k3EYlF6CFgDGM4VtIhZCmw7nbPhA8oMchNGILGw6XDHDP3C9Dsl40lUndAHCf8Z4KH_6GMSZHnKVDvCiUpRazTOJMHTm2p4g-m8lra56yhumF-Bg2EZ30EC54KRw4gARgyOMOV4xmN7lO4TNrl-i4BgHvshMwcJyRXIAMj7kup2zeRQo7ga6mLY7-WEiWqYjGpsQDNiOi8TIHWiwkGJoNR8HeKGWTcjaIW9Qzc5vYqyQa3r4ZOV-ihHaDJJCiN45gwX8qGJO7gSyoyFRkoZKmxqbKDCkYtdctN0w2OiKZNHvb3RVRuEkfk23lFGy7048nGP2TJgp6p6R4jguwtBO1Z8ZCGjaMlIUOp9JgWYOUqteD3DU-MIf6DhBCExwHgDpB2sACe7ZvEY1x8DRMjcasJRrxoR8pTZmNaLcXvKAQnH_STwo3soikC6_OYVGdk7_vveAMDTCmxy05WyoCLKMbSNPNAGORRQSOZvwTV7nKnTkr5a0WFViFpXGUEryLHp1__HgnGI2MlQOV_n1Mhq28yJ7yHzI-gdE5HkooCBe2Nk7Q-SBjp086uVH2EG-SyYw3Cs66MBh4iJJamAyLgzufZMJ7BjyAlZcOjsFcWrKtmPGw5i4NCKjEGRZuBjg4njBJ-uQ7U5V5Lo1t_AhLvMicBgfrrwEYeZWNSqUohr4GlUP6SQg5qpCNC6vtaXCisqXtguUMMxyK9hIoWCwdA7weesfwCUCgfSiQZdA3fI36vjYv2qYXNne9gWWbJJGBHrBd3kYcMrKXig-z3WtZkbOJyKfnAgQQre4rCUUVIDK5DGD62RZRgnALtEnhPEOU_owLDPyzGDV5gZd5viqXmT2SfvVKCSqPjawKqvRKXaWUmuWr-gM2OYnSCjFbKCk4vD5Qx9QjRKBFErlt8iBCtsi8CzrcvzsfVYWfe6kylpwdrkjtagU5j6mDEabdRHCehabwvekgLh6Xzjo7XicHGL0EZ9nMGUG4eAuSTvwuaazljSQcyKkMBl2-q3-uCbeeMp9N4G4APrO7tx2I-2pRlpSh8YbSKxYItu44KlwOPgG-P2T2xi9UrW8flGHUMXaU0psbOt2PJBZ1t4tblxqSqx6sbMBEDBqei5MRrslFaLC6t9CY-S0mBafVKil-Ly8GtB9g0dk5dq1hF6x11S5qocyeNwv_jz0CTayFfrg7qrgJo33BaR4lrL6BBZjOSW-JspXOmcQfBDif7zIqYxkoMJY5Uev7KXqCUBqWSv4AVLzNtxMo-78nGnOHoHyYJ6evNYFk424FCqy3lR2vzGhys5Kj0KLQGDMkpeUYNnwnDwilN1Tm_Rd6kl8WsEbBMFaB9LI8GfqFMjd5o4V_jjShgg-bVcVmOQ-tkoYFgOt7WJWSrOWExR0ZPL_VAzd8EjwEoR9m5_sWZbhzM45k2wpHpuyxGiLrgAYWR42fZpQOja8soHXHYAQev6yDDZTaZm6jrb7BhvcOLxCiyBU2fjI9K4IYcsvDD0OFaSWFW_spaLLyoDwl7L0HGla8hWaMFquJFJBd_UUmFbWMsSml0EJEsY2dx6bHKxIbosk0CkoHIg-6NnTJ5i9Ao2cLvkrwMGac1qohOPigIAlXtrRdjDOHnzSAYtVIBA6Br48Llf5GdrCPoOen0R4OIYLoOA9AEjkmixha6v4gc5NDEaRE9g9onNmBBiT4oDghdo2wSIwGtI0LmWzhUSsUjIaxHaDfW2mxh4PIieQHDyKuyjc#DSD
-Last.Year.at.Marienbad.1961.720p.BluRay.Rus.French.HDCLUB.mkv ___http://media7.veleto.ru/media/files/s2/ru/lp/v-proshlom-godu-v-marienbade.jpg";
-            var lines = filenames.SplitByNewLine();
-
             var _rutracker = new RuTrackerUpdater(_config);
             await _rutracker.Init();
 
-            foreach (var line in lines)
-            {
-                try
-                 {
-                    var parts = line.Split("___", System.StringSplitOptions.RemoveEmptyEntries);
+            var file = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).First(x => x.Id == fileId);
 
-                    var name = parts[0].Trim();
+            var info = await _rutracker.FillInfo(file.VideoFileExtendedInfo.RutrackerId);
+            _rutracker.FillFileInfo(file, info);
 
-                    var file = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).First(x => x.Name == name);
-
-                    file.VideoFileExtendedInfo.Cover = RuTrackerUpdater.GetCoverByUrl(parts[1].Trim());
-
-                    //var id = parts.Length > 1 ? int.Parse(parts[1]) : file.VideoFileExtendedInfo.RutrackerId;
-
-                    //if (id == 0)
-                    //    continue;
-
-                    //file.VideoFileExtendedInfo.RutrackerId = id;
-                    //var info = await _rutracker.FillInfo(id);
-                    //_rutracker.FillFileInfo(file, info);
-
-                    _db.SaveChanges();
-                }
-                catch (System.Exception ex)
-                {
-                }
-            }
+            _db.SaveChanges();
 
             return Ok();
-        }
-
-        [HttpGet]
-        [Route("test")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task Test()
-        {
-            //var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.VideoFileExtendedInfo.RutrackerId != 0);
-            //foreach (var file in files)
-            //{
-            //    await UpdateByRutracker(file.Name);
-            //}
-
-            //var series = _db.Series.Where(x => x.Id == 1030 || x.Id == 1031 || x.Id == 1032 || x.Id == 1036).Include(x => x.Seasons).Include(x => x.Files).ToList();
-            //foreach (var serie in series)
-            //{
-            //    foreach (var file in serie.Files)
-            //        Remove(file);
-
-            //    foreach (var season in serie.Seasons)
-            //        _db.Seasons.Remove(season);
-
-            //    _db.Series.Remove(serie);
-            //}
-
-            //_db.SaveChanges();
-        }
-
-        [HttpGet]
-        [Route("convertChild")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public void Convert()
-        {
-            var dbUpdater = new DbUpdateManager(_db);
-            var childMovies = _db.VideoFiles.Where(x => x.Type == VideoType.ChildEpisode || x.Type == VideoType.Animation || x.Type == VideoType.FairyTale);
-            var childMovies2 = _db.VideoFiles.Where(x => x.Type == VideoType.FairyTale);
-
-            var convert = childMovies.Where(x => !x.Path.EndsWith("mp4") && !x.Path.EndsWith(".mkv") && !x.Path.EndsWith(".m4v")).ToList();
-
-            //var sovietToConvert = _db.Files.Where(x => x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //var nonSovietToConvert = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //Parallel.ForEach(convert, file =>
-            foreach (var file in convert)
-            {
-                dbUpdater.Convert(file);
-            }
-            //);
-
-            //var nonSovietToConvertList = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //var totalDuration = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList().Sum(x => x.Duration.TotalMinutes);
-
         }
 
         [HttpGet]
@@ -257,7 +232,7 @@ Last.Year.at.Marienbad.1961.720p.BluRay.Rus.French.HDCLUB.mkv ___http://media7.v
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> ConvertToLower()
         {
-                var sourceRoot = @"F:\Анюта\Мульты\Мультсериалы российские";
+            var sourceRoot = @"F:\Анюта\Мульты\Мультсериалы российские";
             var destinationRoot = @"F:\Анюта\Мульты\LowRes\Мультсериалы российские\";
 
             var task = new List<string>();
@@ -336,79 +311,94 @@ Last.Year.at.Marienbad.1961.720p.BluRay.Rus.French.HDCLUB.mkv ___http://media7.v
         {
             var dbUpdater = new DbUpdateManager(_db);
 
-            //await DbUpdateManager.CombineStreams(@"F:\Видео\Фильмы\Мульт\Howls Moving Castle [BDRip THORA AC3 FLAC DTS] [1080p]");
 
-            //var contr = new RuTrackerUpdater();
+            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские", Origin.Russian, VideoType.ChildEpisode, true);
+            //dbUpdater.FillSeries(@"F:\Анюта\Фильмы\В гостях у сказки", Origin.Soviet, VideoType.FairyTale, false);
 
-            //await contr.Init("abriabir", "qweasd");
-            //var file = await contr.FindTheme("Batman 2022");
-            //await contr.FillInfo(file.First());
+            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Советские мультфильмы\Солянка", Origin.Soviet, VideoType.Animation, false);
+            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation, false);
+            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Советские мультфильмы\Мультсериалы", Origin.Soviet, VideoType.ChildEpisode, true, "Мультсериалы");
 
-            //dbUpdater.RemoveFilm("За двумя зайцами");
-            //dbUpdater.RemoveFilm(null, 5042);
-            //GiveNameForEmpty(dbUpdater);
+            //dbUpdater.FillByRutrackerDownload(@"F:\Видео\Фильмы\Загрузки");
+            //await UpdateByExistingRutracker(false);
+            //dbUpdater.UpdateChildRutracker(@"F:\Видео\Фильмы\Загрузки");
 
-            //RemoveSeries(dbUpdater, 18);
+            //// Courses
+            //RemoveSeries(dbUpdater, 23);
+            //dbUpdater.FillSeries(@"F:\Видео\Курсы\Видео", Origin.Russian, VideoType.Courses, false, "Видео");
+            //dbUpdater.FillSeries(@"F:\Видео\Курсы\IT", Origin.Foreign, VideoType.Courses, false, "IT");
 
-            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Мимимишки.2015.WEBRip 720p\s08-1080", Origin.Russian, VideoType.ChildEpisode, false, "Мимимишки восемь");
-            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Мимимишки.2015.WEBRip 720p", Origin.Russian, VideoType.ChildEpisode, false);
+            // Get cover from Tg 
+            //var tg = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TgBot>();
+            //var filesToUpdateCoverByTg = _db.VideoFiles.Where(x => x.Type == VideoType.Animation && x.Origin != Origin.Soviet)
+            //    .Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).OrderByDescending(x => x.Id).ToList();
+            //filesToUpdateCoverByTg = filesToUpdateCoverByTg.Where(x => x.Cover == null || x.Cover.Length < 10 * 1024).ToList();
+            //foreach (var file in filesToUpdateCoverByTg.Take(10))
+            //    await tg.SearchImageForFile(file, 176280269);
 
-            //dbUpdater.FillSeries(@"F:\Видео\Разное", Origin.Unknown, VideoType.Unknown, false);
-            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Три кота.2015.WEBRip 1080p\04", Origin.Russian, VideoType.ChildEpisode, false, "Три кота - 4 сезон");
-            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Фиксики Сезоны 1-3 720p 4 1080p\04 сезон", Origin.Russian, VideoType.ChildEpisode, false, "Фиксики - 4 сезон");
+            //Get cover from file
+            var filesToUpdateCover = _db.VideoFiles.Where(x => x.Type == VideoType.Courses)
+               .Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).ToList();
+            //var filesToUpdateCover = _db.VideoFiles.Where(x => x.Type == VideoType.ChildEpisode || x.Type == VideoType.Courses || x.Origin == Origin.Soviet)
+            //.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).ToList();
+            filesToUpdateCover = filesToUpdateCover.Where(x => x.Cover == null).ToList();
+            foreach (var file in filesToUpdateCover)
+                DbUpdateManager.FillVideoProperties(file);
+            //Parallel.ForEach(filesToUpdateCover, file => DbUpdateManager.FillVideoProperties(file));
+            _db.SaveChanges();
 
-            dbUpdater.FillSeries(@"F:\Анюта\Мульты\Полный метр зарубежные", Origin.Foreign, VideoType.Animation, false);
-            dbUpdater.OperaBalley(@"F:\Видео\Опера", @"F:\Видео\Балет", Origin.Russian, VideoType.Art);
-            //dbUpdater.FillSeries(@"F:\Видео\Фильмы\Ликбез", Origin.Unknown, VideoType.Film, false);
+            // Convert 
+            //var cartoons = _db.VideoFiles.Where(x => x.Type == VideoType.Animation && x.Origin != Origin.Soviet);
+            //foreach (var file in cartoons)
+            //    dbUpdater.Convert(file);
 
-            //var filesToRemove = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).Where(x => x.SeasonId == 1089 && x.SeriesId == 4);
-            //foreach (var file in filesToRemove)
-            //{
-            //    Remove(file);
-            //}
-            //_db.SaveChanges();
-            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Ну, погоди!", Origin.Russian, VideoType.ChildEpisode, false);
-
-            //UpdateSeriesStructure(dbUpdater);
-
-            //Convert(dbUpdater);
-
-            //UpdateSeries(dbUpdater);
-
-            //_db.RemoveRange(films.Select(x => x.VideoFileExtendedInfo));
-            //_db.RemoveRange(films.Select(x => x.VideoFileUserInfo).Where(x => x != null));
-            //_db.RemoveRange(films);
-            //_db.SaveChanges();
-            //var series = _db.Series.Where(x => x.Id == 11);
-            //_db.RemoveRange(series);
-            //_db.SaveChanges();
-
-            //Convert(dbUpdater);5
-
-            //dbUpdater.FillSeries(@"D:\Анюта\Мульты\Мультсериалы российские", Origin.Russian, VideoType.Episode);
-
-            ////dbUpdater.FillFilms(@"D:\Анюта\Мульты\Советские мультфильмы\Солянка", Origin.Soviet, VideoType.Animation);
-            //dbUpdater.FillFilms(@"D:\Анюта\Мульты\Советские мультфильмы\Известные", Origin.Soviet, VideoType.Animation);
-            //dbUpdater.FillSeries(@"D:\Media\Обучалки\Съемка", Origin.Russian, VideoType.Lessons);
-
-            //dbUpdater.FillSeries(@"D:\Анюта\Мульты\Советские мультфильмы\Солянка", Origin.Soviet, VideoType.Animation);
-
-            //var files = _db.Files.Where(x => x.Id > 0);
-            //foreach (var file in files)
-            //{
-            //    file.Path = file.Path.Replace(@"D:\Анюта\Мульты", @"F:\Анюта\Мульты");
-            //}
-            //_db.SaveChanges();
-
-            //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские\Фиксики Сезоны 1-3 720p 4 1080p", Origin.Russian, VideoType.Episode, false);
-            //_db.SaveChanges();
-
-
-            //dbUpdater.FillSeries(@"D:\Мульты\YandexDisk\Анюта\Советские мультфильмы\Мультсериалы", Origin.Soviet, VideoType.Episode);
-            //dbUpdater.FillFilms(@"D:\Мульты\YandexDisk\Анюта\Фильмы-Сказки", Origin.Soviet, VideoType.FairyTale);
-
+            var courseFiles = _db.VideoFiles.Where(x => x.Type == VideoType.Courses).ToList();
+            var files = courseFiles.Where(x => x.Path.EndsWith("htm")).ToList();
+            foreach (var file in files)
+            {
+                Remove(file);
+            }
+            var toEncode = courseFiles.Where(x => !DbUpdateManager.IsEncoded(x.Path)).ToList();
+            foreach (var file in toEncode)
+                dbUpdater.Convert(file);
 
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("test")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task Test()
+        {
+            //var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.VideoFileExtendedInfo.RutrackerId != 0);
+            //foreach (var file in files)
+            //{
+            //    await UpdateByRutracker(file.Name);
+            //}
+
+            var films = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.Id >= 11433 || x.Id <= 11437);
+            foreach (var film in films)
+            {
+                Remove(film);
+            }
+
+            //var series = _db.Series.Where(x => x.Id == 1040 || x.Id == 2042).Include(x => x.Seasons).Include(x => x.Files).ToList();
+            //foreach (var serie in series)
+            {
+                //foreach (var file in serie.Files)
+                //{
+                //    Remove(file);
+                //    System.IO.File.Delete(file.Path);
+
+                //}
+
+                //foreach (var season in serie.Seasons)
+                //    _db.Seasons.Remove(season);
+
+                //_db.Series.Remove(serie);
+            }
+
+            _db.SaveChanges();
         }
 
         [HttpGet]
@@ -417,6 +407,49 @@ Last.Year.at.Marienbad.1961.720p.BluRay.Rus.French.HDCLUB.mkv ___http://media7.v
         public async Task Stub()
         {
             // To prevent server shutdown;
+        }
+
+        [HttpGet]
+        [Route("updateByRutrackerMass")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateByRutracker(string filenames)
+        {
+            //            filenames = @"Его девушка Пятница        ___https://kinopoisk-ru.clstorage.net/1z4G6O223/1cbe98RE-zCm/PX9DNh72cZjg3OOWux-YFcI8y-WhRRu8p7pCyqvBO9fN8GBhCGuIJL9qseD9LQ3quyhA0aLY23TXBsbA5S_0g0kaVscPg9TdAb0Tpk4v6fE37N-EFcB__XaPl39ZMjlU72dCAvrpiuKrXvWRKPiYHrodwGDyLB8A4CUn8kGpUbevTRA3CtSx-3cMYxRozLnREswr4MGm6_gXy4DqGBLLdm-2MqGb-WgB2I7FpytI28zJTUJC4ltssYLk88BQSbOnrTwRJfl2sMlkXfGUCs-60eBfmrNjt7m6FGpCydmCyYVs1gKw2hjK0-g9FWU6mMg_y60SQ-EarDNRpLEBknuAV2yd8HeJNOP5VX5ABPtvmDHC_Rvh8fY4yfVKQhvKYNp3nnfTUwrLGtB4Xfalaoi7vomd8eKh2H5jgSRxkpDbAtUMD-L1-VTxeKSM8ybb_ssj8r7aQFEW2NikWqK7K4Gb9W4F4CJZeKjwaQ0EtFkbC195fHHRc6rvc4MWoFJCSIFUbR3CZjlGwnuHvNIHWx8rIfB-uGARZno6F9qy2wmBGSStxoAA23tIoWkcJnUIOBpsGg-yAyO4TgHhNLLRIMlg5v7_o7ULJmM7Vqzzlws_6ONBjTgBIhUJ-NY64GsaErlWr9WiIwqKekB63yVnq-hYbwvdgCJQO2wRQMZxgbC5E_dvX8NEOQTzSpafsyZ6XmrhUm5qQ8EkGDiV2FJoGIPZ9C02Q2N62ZkzSS00dKiaGEw7zqCj8BjMg8CHgqHCSoFmXo7DRliFkZumrNOmydypU2P-KaJT1Cir1yiACTiAS2TNV9KxuPupIQhdpeVqahoOmD1xgrI6HOGB5JDwwnhzRt2-cXQZlNN497_gx3n9O8GCngmzQ5dq6Lca8ogq4xkF7_TD8qgYyvLpH5WnCihbXwpfcHKTCk8BcEaDI4A4AVS8D9GEazQAyeUM43Yr3Qjxgu5ZM_EVKAg2CcNIyENZtC0VsnLKq2lzahzXxGpZOF3Z_LCT8qguQxHFgsIjmAE0DB2jJ2tUsvjkvDL3y66709O9qsJDJNuqlkpiafmTaFR_NGLhG0rK0MqfBeVKC1mfy79iIPCp7WIwl4CzEhoxNO8NYbVbt6HpZh0jxUpuWIIzXfgjEpU6KdZaoVv44as2vYWj8JsamDHaXfYkSskp71odQ7FD-gxTwyQDkaC5UwR9n7AFqqSDuPRe4Lc6_-gwgc-agSBWWuk2anGKS2D79k3EYlF6CFgDGM4VtIhZCmw7nbPhA8oMchNGILGw6XDHDP3C9Dsl40lUndAHCf8Z4KH_6GMSZHnKVDvCiUpRazTOJMHTm2p4g-m8lra56yhumF-Bg2EZ30EC54KRw4gARgyOMOV4xmN7lO4TNrl-i4BgHvshMwcJyRXIAMj7kup2zeRQo7ga6mLY7-WEiWqYjGpsQDNiOi8TIHWiwkGJoNR8HeKGWTcjaIW9Qzc5vYqyQa3r4ZOV-ihHaDJJCiN45gwX8qGJO7gSyoyFRkoZKmxqbKDCkYtdctN0w2OiKZNHvb3RVRuEkfk23lFGy7048nGP2TJgp6p6R4jguwtBO1Z8ZCGjaMlIUOp9JgWYOUqteD3DU-MIf6DhBCExwHgDpB2sACe7ZvEY1x8DRMjcasJRrxoR8pTZmNaLcXvKAQnH_STwo3soikC6_OYVGdk7_vveAMDTCmxy05WyoCLKMbSNPNAGORRQSOZvwTV7nKnTkr5a0WFViFpXGUEryLHp1__HgnGI2MlQOV_n1Mhq28yJ7yHzI-gdE5HkooCBe2Nk7Q-SBjp086uVH2EG-SyYw3Cs66MBh4iJJamAyLgzufZMJ7BjyAlZcOjsFcWrKtmPGw5i4NCKjEGRZuBjg4njBJ-uQ7U5V5Lo1t_AhLvMicBgfrrwEYeZWNSqUohr4GlUP6SQg5qpCNC6vtaXCisqXtguUMMxyK9hIoWCwdA7weesfwCUCgfSiQZdA3fI36vjYv2qYXNne9gWWbJJGBHrBd3kYcMrKXig-z3WtZkbOJyKfnAgQQre4rCUUVIDK5DGD62RZRgnALtEnhPEOU_owLDPyzGDV5gZd5viqXmT2SfvVKCSqPjawKqvRKXaWUmuWr-gM2OYnSCjFbKCk4vD5Qx9QjRKBFErlt8iBCtsi8CzrcvzsfVYWfe6kylpwdrkjtagU5j6mDEabdRHCehabwvekgLh6Xzjo7XicHGL0EZ9nMGUG4eAuSTvwuaazljSQcyKkMBl2-q3-uCbeeMp9N4G4APrO7tx2I-2pRlpSh8YbSKxYItu44KlwOPgG-P2T2xi9UrW8flGHUMXaU0psbOt2PJBZ1t4tblxqSqx6sbMBEDBqei5MRrslFaLC6t9CY-S0mBafVKil-Ly8GtB9g0dk5dq1hF6x11S5qocyeNwv_jz0CTayFfrg7qrgJo33BaR4lrL6BBZjOSW-JspXOmcQfBDif7zIqYxkoMJY5Uev7KXqCUBqWSv4AVLzNtxMo-78nGnOHoHyYJ6evNYFk424FCqy3lR2vzGhys5Kj0KLQGDMkpeUYNnwnDwilN1Tm_Rd6kl8WsEbBMFaB9LI8GfqFMjd5o4V_jjShgg-bVcVmOQ-tkoYFgOt7WJWSrOWExR0ZPL_VAzd8EjwEoR9m5_sWZbhzM45k2wpHpuyxGiLrgAYWR42fZpQOja8soHXHYAQev6yDDZTaZm6jrb7BhvcOLxCiyBU2fjI9K4IYcsvDD0OFaSWFW_spaLLyoDwl7L0HGla8hWaMFquJFJBd_UUmFbWMsSml0EJEsY2dx6bHKxIbosk0CkoHIg-6NnTJ5i9Ao2cLvkrwMGac1qohOPigIAlXtrRdjDOHnzSAYtVIBA6Br48Llf5GdrCPoOen0R4OIYLoOA9AEjkmixha6v4gc5NDEaRE9g9onNmBBiT4oDghdo2wSIwGtI0LmWzhUSsUjIaxHaDfW2mxh4PIieQHDyKuyjc#DSD
+            //Last.Year.at.Marienbad.1961.720p.BluRay.Rus.French.HDCLUB.mkv ___http://media7.veleto.ru/media/files/s2/ru/lp/v-proshlom-godu-v-marienbade.jpg";
+            var lines = filenames.SplitByNewLine();
+
+            var _rutracker = new RuTrackerUpdater(_config);
+            await _rutracker.Init();
+
+            foreach (var line in lines)
+            {
+                try
+                {
+                    var parts = line.Split("___", System.StringSplitOptions.RemoveEmptyEntries);
+
+                    var name = parts[0].Trim();
+
+                    var file = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).First(x => x.Name == name);
+
+                    //file.VideoFileExtendedInfo.Cover = RuTrackerUpdater.GetCoverByUrl(parts[1].Trim());
+
+                    var id = parts.Length > 1 ? int.Parse(parts[1]) : file.VideoFileExtendedInfo.RutrackerId;
+
+                    if (id == 0)
+                        continue;
+
+                    //file.VideoFileExtendedInfo.RutrackerId = id;
+                    var info = await _rutracker.FillInfo(id);
+                    _rutracker.FillFileInfo(file, info);
+
+                    _db.SaveChanges();
+                }
+                catch (System.Exception ex)
+                {
+                }
+            }
+
+            return Ok();
         }
 
         private void GiveNameForEmpty(DbUpdateManager dbUpdater)
@@ -469,8 +502,6 @@ Last.Year.at.Marienbad.1961.720p.BluRay.Rus.French.HDCLUB.mkv ___http://media7.v
             //_db.Series.Add(new Series { Name = "Просто фильмы", Type = VideoType.Film });
             //_db.Series.Add(new Series { Name = "Ликбез", Type = VideoType.Film });
         }
-
-
 
         private void RemoveSeries(DbUpdateManager dbUpdater, int serieId)
         {

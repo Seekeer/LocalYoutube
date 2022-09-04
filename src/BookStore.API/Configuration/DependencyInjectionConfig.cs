@@ -24,7 +24,7 @@ namespace FileStore.API.Configuration
             services.AddScoped<ISeriesService, SeriesService>();
             services.AddScoped<IFileService, FileService>();
 
-            services.AddScoped<TgBot, TgBot>();
+            services.AddSingleton<TgBot, TgBot>();
             services.AddScoped<DbUpdateManager, DbUpdateManager>();
             
             services.AddHostedService<StartupService>();
