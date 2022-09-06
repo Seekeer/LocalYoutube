@@ -107,6 +107,36 @@ namespace API.Controllers.Tests
             Assert.AreEqual("Холодное сердце / Frozen", videoInfo.Name);
         }
 
+
+        [Test()]
+        public async Task ParseInfo_Witch1_2()
+        {
+            var updater = new RuTrackerUpdater(null);
+
+            var videoInfo = new VideoInfo();
+
+            string page = GetPage(@"Resources\Witch1-2.html");
+
+            await updater.ParseInfo(page, videoInfo);
+
+            Assert.AreEqual("Сезон: 1-2", videoInfo.SeasonName);
+        }
+
+
+        [Test()]
+        public async Task ParseInfo_Witch1()
+        {
+            var updater = new RuTrackerUpdater(null);
+
+            var videoInfo = new VideoInfo();
+
+            string page = GetPage(@"Resources\Witch1.html");
+
+            await updater.ParseInfo(page, videoInfo);
+
+            Assert.AreEqual("Сезон: 1", videoInfo.SeasonName);
+        }
+
         [Test()]
         public async Task ParseInfo_Aviator()
         {

@@ -20,6 +20,7 @@ namespace Infrastructure
         private Origin _origin;
         private VideoType _type;
         private int _episodeNumber;
+        private bool _ignoreNonCyrillic = true;
 
         static DbUpdateManager()
         {
@@ -84,20 +85,25 @@ namespace Infrastructure
 
         public void Convert(VideoFile file)
         {
-            var oldFile = file.Path;
-            var newFilePath = EncodeToMp4(file.Path);
+            try
+            {
+                var oldFile = file.Path;
+                var newFilePath = EncodeToMp4(file.Path);
 
-            if (newFilePath == null)
-                return;
+                if (newFilePath == null)
+                    return;
 
-            file.Path = newFilePath;
-            _db.VideoFiles.Update(file);
-            _db.SaveChanges();
+                file.Path = newFilePath;
+                _db.VideoFiles.Update(file);
+                _db.SaveChanges();
 
-            var updatedFile = _db.VideoFiles.FirstOrDefault(x => x.Id == file.Id);
+                var updatedFile = _db.VideoFiles.FirstOrDefault(x => x.Id == file.Id);
 
-            if (updatedFile.Path == newFilePath)
                 File.Delete(oldFile);
+            }
+            catch (Exception ex)
+            {
+            }
         }
 
         private void AddSeries(DirectoryInfo dir, string seriesName = null)
@@ -133,33 +139,41 @@ namespace Infrastructure
 
         private void AddSeason(Series series, Season season, DirectoryInfo dir)
         {
-            //Parallel.ForEach(dir.EnumerateFiles(), file =>
             foreach (var file in dir.EnumerateFiles("", SearchOption.AllDirectories))
             {
-                try
-                {
-                    if (file.Name.EndsWith("jpg") || file.Name.EndsWith("jpeg") || file.Name.EndsWith("docx") || file.Name.EndsWith("png") || 
-                        file.Name.EndsWith("nfo") || file.Name.EndsWith("mp3") || file.Name.EndsWith("txt") || file.Name.EndsWith("pdf") ||
-                        file.Name.EndsWith("xlsx") || file.Name.EndsWith("pdf") || file.Name.EndsWith("zip") || file.Name.EndsWith("vtt") ||
-                        file.Name.EndsWith("srt") || file.Name.EndsWith("rar") || file.Name.EndsWith("zip") || file.Name.EndsWith("vtt") ||
-                        file.Name.EndsWith("pptx") || file.Name.EndsWith("html") || file.FullName.Contains("Конспект") && _type == VideoType.Courses)
-                        continue;
-
-                    var existingInfo = _db.VideoFiles.FirstOrDefault(x => x.Path == file.FullName);
-                    if (existingInfo != null && existingInfo.SeriesId == series.Id)
-                        continue;
-
-                    // TODO - quality
-                    VideoFile videoInfo = GetVideoInfo(series, season, file);
-                    _db.VideoFiles.Add(videoInfo);
-
-                    _db.SaveChanges();
-                }
-                catch (Exception ex)
-                {
-                }
+                AddFile(file, series, season);
             }
-            //);
+        }
+
+        private VideoFile AddFile(FileInfo file, Series series, Season season)
+        {
+            try
+            {
+                if (file.Name.EndsWith("jpg") || file.Name.EndsWith("jpeg") || file.Name.EndsWith("docx") || file.Name.EndsWith("png") ||
+                    file.Name.EndsWith("nfo") || file.Name.EndsWith("mp3") || file.Name.EndsWith("txt") || file.Name.EndsWith("pdf") ||
+                    file.Name.EndsWith("xlsx") || file.Name.EndsWith("pdf") || file.Name.EndsWith("zip") || file.Name.EndsWith("vtt") ||
+                    file.Name.EndsWith("srt") || file.Name.EndsWith("rar") || file.Name.EndsWith("zip") || file.Name.EndsWith("vtt") ||
+                    file.Name.EndsWith("pptx") || file.Name.EndsWith("html") || file.Name.EndsWith("qB") || 
+                    file.FullName.Contains("Конспект") && _type == VideoType.Courses)
+                    return null;
+
+                var existingInfo = _db.VideoFiles.FirstOrDefault(x => x.Path == file.FullName);
+                if (existingInfo != null && existingInfo.SeriesId == series.Id)
+                    return existingInfo;
+
+                // TODO - quality
+                VideoFile videoInfo = GetVideoInfo(series, season, file);
+                _db.VideoFiles.Add(videoInfo);
+
+                _db.SaveChanges();
+
+                return videoInfo;
+            }
+            catch (Exception ex)
+            {
+            }
+
+            return null;
         }
 
         public void MoveDownloadedToAnotherSeries(VideoType type, string seriesName)
@@ -198,7 +212,7 @@ namespace Infrastructure
             file.SeasonId = season.Id;
             file.Type = type;
 
-            if (IsOnlineVideoAttribute.HasAttribute(type))
+            if ((new IsOnlineVideoAttribute()).HasAttribute(type))
                 Convert(file);
 
             _db.SaveChanges();
@@ -226,14 +240,20 @@ namespace Infrastructure
             return season;
         }
 
-        private Series AddOrUpdateSeries(string folderName, bool analyzeFolderName = true)
+        public Series GetDownloadSeries()
+        {
+            return AddOrUpdateSeries("Загрузки", false);
+        }
+
+        public Series AddOrUpdateSeries(string folderName, bool analyzeFolderName = true, VideoType? type = null)
         {
             var name = analyzeFolderName ? GetSeriesNameFromFolder(folderName) : folderName;
 
             var series = _db.Series.FirstOrDefault(x => x.Name == name);
             if (series == null)
             {
-                series = new Series { Name = name, Origin = _origin, Type = _type };
+                series = new Series { Name = name, Origin = _origin };
+                series.Type = type ?? _type;
                 series.IsChild = _type == VideoType.ChildEpisode || _type == VideoType.FairyTale || _type == VideoType.Animation;
                 _db.Series.Add(series);
                 _db.SaveChanges();
@@ -260,8 +280,9 @@ namespace Infrastructure
             return result.ClearSerieName();
         }
 
-        public  string GetEpisodeNameFromFilenName(string name)
+        public string GetEpisodeNameFromFilenName(string name)
         {
+            _ignoreNonCyrillic = false;
             if(_type == VideoType.Courses)
             {
                 name = name.Replace("_", " ");
@@ -273,7 +294,7 @@ namespace Infrastructure
             string pattern = @"\p{IsCyrillic}";
             foreach (var ch in name)
             {
-                if (!Regex.IsMatch(ch.ToString(), pattern))
+                if (_ignoreNonCyrillic &&!Regex.IsMatch(ch.ToString(), pattern))
                     if (ch != '-' && ch != '.' && ch != '!' && ch != ',' && !char.IsWhiteSpace(ch))
                         continue;
 
@@ -334,7 +355,7 @@ namespace Infrastructure
         {
             var fileInfo = new FileInfo(path);
 
-            return (fileInfo.Extension == ".mp4");
+            return (fileInfo.Extension == ".mp4" || fileInfo.Extension == ".webm");
         }
 
         private static string EncodeToMp4(string path)
@@ -496,7 +517,7 @@ namespace Infrastructure
                 var probe = FFProbe.Analyse(videoFile.Path);
                 videoFile.Duration = probe.Duration;
 
-                var bitmap = videoFile.Duration.TotalSeconds > 60 ?
+                var bitmap = videoFile.Duration.TotalSeconds > 65 ?
                     videoFile.Duration.TotalMinutes > 10 ? 
                         FFMpeg.Snapshot(videoFile.Path, null, TimeSpan.FromMinutes(4)) :
                         FFMpeg.Snapshot(videoFile.Path, null, TimeSpan.FromMinutes(1)) :
@@ -565,6 +586,58 @@ namespace Infrastructure
             var files = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
                 .Where(selectFiles).ToList();
 
+            _ignoreNonCyrillic = false;
+            result.AddRange(UpdateFiles(files));
+            result.AddRange(UpdateEpisodes(files, VideoType.AdultEpisode));
+            _ignoreNonCyrillic = true;
+            result.AddRange(UpdateEpisodes(files, VideoType.ChildEpisode));
+
+            var online = result.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type));
+            foreach (var item in online)
+                Convert(item);
+
+            return result;
+        }
+
+        private IEnumerable<VideoFile> UpdateEpisodes(List<VideoFile> files, VideoType type)
+        {
+            var result = new List<VideoFile>();
+
+            var episodes = files.Where(x => x.Type == type);
+            foreach (var info in episodes)
+            {
+                var dir = new DirectoryInfo(info.Path);
+
+                if (!dir.Exists)
+                {
+                    RemoveFileCompletely(info);
+                    continue;
+                }
+                var series = _db.Series.First(x => x.Id == info.SeriesId);
+                var season = _db.Seasons.First(x => x.Id == info.SeasonId);
+
+                var dirFiles = dir.EnumerateFiles("*", SearchOption.AllDirectories);
+                foreach (var file in dirFiles)
+                {
+                    var addedFile = AddFile(file, series, season);
+
+                    if (addedFile == null)
+                        continue;
+
+                    addedFile.Type = type;
+                    addedFile.IsDownloading = false;
+                    FillVideoProperties(addedFile);
+                }
+
+            }
+
+            return result;
+        }
+
+        private IEnumerable<VideoFile> UpdateFiles(List<VideoFile> files, int? newSeasonId = null)
+        {
+            var result = new List<VideoFile>();
+
             foreach (var info in files.Where(x => x.Type != VideoType.Youtube))
             {
                 try
@@ -597,7 +670,7 @@ namespace Infrastructure
 
                     result.Add(info);
 
-                    if(newSeasonId != null)
+                    if (newSeasonId != null)
                         info.SeasonId = newSeasonId.Value;
                 }
                 catch (System.Exception ex)
@@ -615,7 +688,7 @@ namespace Infrastructure
             var dir = new DirectoryInfo(path);
             var folders = dir.EnumerateDirectories().OrderBy(x => x.CreationTime);
 
-            var series = AddOrUpdateSeries("Загрузки", false);
+            var series = GetDownloadSeries();
             var season = AddOrUpdateSeason(series, "Rutracker");
 
             foreach (var folder in folders)
@@ -651,7 +724,7 @@ namespace Infrastructure
 
         public void UpdateChildRutracker(string path)
         {
-            var series = AddOrUpdateSeries("Загрузки", false);
+            var series = GetDownloadSeries();
 
             var childDownloaded = AddOrUpdateSeason(series, "Детские мультики");
             var child = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.Id >= 3533 && x.Id <= 3553).ToList();

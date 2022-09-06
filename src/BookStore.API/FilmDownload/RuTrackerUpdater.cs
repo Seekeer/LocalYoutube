@@ -28,6 +28,7 @@ namespace API.Controllers
         public int Id { get; init; }
         public string Url { get; set; }
         public string Name { get; set; }
+        public string SeasonName { get; set; }
         public byte[] Cover { get; set; }
         public TimeSpan Duration { get; set; }
         public string Genres { get; set; }
@@ -239,6 +240,9 @@ namespace API.Controllers
 
             text = HttpUtility.HtmlDecode(text);
 
+            var title = doc.QuerySelector("#topic-title").InnerText;
+            info.SeasonName = title.StartingFrom("Сезон", true)?.EndingBefore("/")?.Trim();
+
             info.Name = text.SplitByNewLine().First();
             if (info.Name.Contains("||") || info.Name.Contains("все релизы") || info.Name.Contains("Rip"))
             {
@@ -379,7 +383,7 @@ namespace API.Controllers
                SortDirection: SearchTopicsSortDirection.Descending
            ));
 
-            long maxLimit = (long)12 * 1024 * 1024 * 1024;
+            long maxLimit = (long)20 * 1024 * 1024 * 1024;
             long minLimit = (long)2 * 1024 * 1024 * 1024;
 
             if (res.Topics.Count() < 5)
@@ -390,7 +394,7 @@ namespace API.Controllers
             if (topics.Count() < 3)
                 topics = res.Topics;
 
-            return topics.OrderByDescending(x => x.SizeInBytes).Take(10);
+            return topics.OrderByDescending(x => x.SizeInBytes).Take(15);
             //return topics.OrderByDescending(x => x.SizeInBytes).Take(10);
         }
 

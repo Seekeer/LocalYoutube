@@ -64,6 +64,12 @@
     <None Update="Resources\trud.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Resources\witch1-2.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\Witch1.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Resources\yazik.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

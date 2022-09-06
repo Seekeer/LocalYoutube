@@ -46,33 +46,6 @@ namespace FileStore.Domain.Models
         {
         }
 
-        public static bool HasAttribute<T>(T value)
-            where T : System.Enum
-        {
-            var valuesWithAttribute = GetValuesWithAttribute<T>();
-
-            return valuesWithAttribute.Any(x => EqualityComparer<T>.Default.Equals(x, value));
-        }
-
-        public static IEnumerable<T> GetValuesWithAttribute<T>()
-        {
-            var values = (T[])Enum.GetValues(typeof(T));
-
-            var result = new List<T>();
-            foreach (var value in (T[])Enum.GetValues(typeof(T)))
-            {
-                var memberInfos = typeof(T).GetMember(value.ToString());
-                var enumValueMemberInfo = memberInfos.FirstOrDefault(m => m.DeclaringType == typeof(T));
-                var valueAttributes = enumValueMemberInfo.GetCustomAttributes(typeof(IsOnlineVideoAttribute), false);
-
-                if (!valueAttributes.Any())
-                    continue;
-
-                result.Add(value);
-            }
-
-            return result;
-        }
     }
 
     public enum AudioType

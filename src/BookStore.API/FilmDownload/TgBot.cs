@@ -18,6 +18,8 @@ using Tg = Telegram.Bot.Types.Enums;
 using Infrastructure;
 using FileStore.Domain.Models;
 using System.Drawing;
+using API.TG;
+using System.Diagnostics;
 
 namespace API.FilmDownload
 {
@@ -28,6 +30,13 @@ namespace API.FilmDownload
         public string SearchSctring { get; set; }
     }
 
+    public class TgLink
+    {
+        public long TgId { get; set; }
+        public int AdultEpisodeSeriesId { get; set; }
+        public int FilmSeasonId { get; set; }
+    }
+
     public class TgBot
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -36,8 +45,8 @@ namespace API.FilmDownload
         private readonly RuTrackerUpdater _rutracker;
         private readonly List<SearchRecord> _infos = new List<SearchRecord>();
         private readonly Dictionary<string, SearchResult> _images = new Dictionary<string, SearchResult>();
-        private readonly Dictionary<long, int> _tgSeasonDict = new Dictionary<long, int>(); 
-        private readonly int _adminId = 176280269;
+        private readonly List<TgLink> _tgSeasonDict = new List<TgLink>(); 
+        private readonly long _adminId = 176280269;
         public const string UPDATECOVER_MESSAGE = "Обновить обложку";
         private Timer _timer;
 
@@ -57,14 +66,17 @@ namespace API.FilmDownload
 
         private void CreateTGDict()
         {
-            //var seriesDownload = db.Series.First(x => x.Id == 18);
+            var seriesDownload = _GetDb().Series.First(x => x.Id == 18);
             //var seasonA = manager.AddOrUpdateSeason(seriesDownload, "Алена");
             //var seasonD = manager.AddOrUpdateSeason(seriesDownload, "Дима");
+            var manager = new DbUpdateManager(_GetDb());
+            //var adultEpisodesnA = manager.AddOrUpdateSeries("Алена", false, VideoType.AdultEpisode);
+            //var adultEpisodesnD = manager.AddOrUpdateSeries("Дима", false, VideoType.AdultEpisode);
 
             // Helen
-            _tgSeasonDict.Add(360495063, 200);
+            _tgSeasonDict.Add(new TgLink { TgId = 360495063, FilmSeasonId = 200, AdultEpisodeSeriesId = 1 });
             // DIMA
-            _tgSeasonDict.Add(176280269, 201);
+            _tgSeasonDict.Add(new TgLink { TgId = 176280269, FilmSeasonId = 201, AdultEpisodeSeriesId = 12 });
         }
 
         private async Task SendAdminMessage(string message)
@@ -128,7 +140,7 @@ namespace API.FilmDownload
                     var dir = new DirectoryInfo(item.SavePath);
                     var folder = dir.Name;
                     var id = int.Parse(folder);
-                    await FillVideoFileId(id, 111, null, item.SavePath);
+                    await FillVideoFileId(id, 111, null, VideoType.Film, item.SavePath);
                 }
                 catch (Exception ex)
                 {
@@ -136,10 +148,13 @@ namespace API.FilmDownload
             }
         }
 
-        private  void TimerCallback(Object o)
+        private void TimerCallback(Object o)
         {
             // Discard the result
-            _ = DoAsyncPing();
+            lock (_botClient)
+            {
+                _ = DoAsyncPing();
+            }
         }
 
         private async Task DoAsyncPing()
@@ -154,8 +169,11 @@ namespace API.FilmDownload
 
             foreach (var item in updated)
             {
-                if (!_tgSeasonDict.TryGetKey(item.SeasonId, out var telegramId))
-                    telegramId = _adminId;
+                var telegramId = _adminId;
+                var telegramLink = _tgSeasonDict.FirstOrDefault(x => x.FilmSeasonId == item.SeriesId || 
+                x.AdultEpisodeSeriesId == item.SeriesId);
+                if (telegramLink != null)
+                    telegramId = telegramLink.TgId;
 
                 await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} http://192.168.1.55:51951/api/Files/getFileById?fileId={item.Id}");
             }
@@ -180,7 +198,7 @@ namespace API.FilmDownload
                 {
                     var keyboard = new List<InlineKeyboardButton>();
                     var guid = Guid.NewGuid().ToString();
-                    keyboard.Add(new InlineKeyboardButton($"Использовать эту обложку") { CallbackData = guid });
+                    keyboard.Add(new InlineKeyboardButton($"Использовать эту обложку") { CallbackData = CommandParser.GetMessageFromData(CommandType.FixCover, guid.ToString()) });
                     var tgMessage = await _botClient.SendPhotoAsync(new ChatId(tgAccountId),
                         new Telegram.Bot.Types.InputFiles.InputOnlineFile(image.Url),
                         caption: $"{file.Name} {file.VideoFileExtendedInfo.Year} высота {image.Bitmap.Height} px", replyMarkup: new InlineKeyboardMarkup(keyboard));
@@ -227,7 +245,7 @@ namespace API.FilmDownload
             }
         }
 
-        private async Task AddTorrent(string data, long fromId)
+        private async Task AddTorrent(string data, long fromId, VideoType type)
         {
             if (!int.TryParse(data, out var id))
                 return;
@@ -237,7 +255,7 @@ namespace API.FilmDownload
             var searchInfo = record.Topic;
 
             NLog.LogManager.GetCurrentClassLogger().Info($"Got info for thread:{searchInfo.Id}|{searchInfo.Title}");
-            IServiceScope scope = await FillVideoFileId(id, fromId, record);
+            await FillVideoFileId(id, fromId, record, type);
         }
 
         public static async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -267,10 +285,30 @@ namespace API.FilmDownload
                     case Tg.UpdateType.ChosenInlineResult:
                         break;
                     case Tg.UpdateType.CallbackQuery:
-                        if (_images.ContainsKey(update.CallbackQuery.Data))
-                            await UpdateFile(_images[update.CallbackQuery.Data]);
-                        else
-                            await AddTorrent(update.CallbackQuery.Data, update.CallbackQuery.From.Id);
+                        var command = CommandParser.GetDataFromMessage(update.CallbackQuery.Data);
+
+                        switch (command.Type)
+                        {
+                            case CommandType.FixCover:
+                                await UpdateFile(_images[command.Data]);
+                                break;
+                            case CommandType.Series:
+                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.AdultEpisode);
+                                break;
+                            case CommandType.Film:
+                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Film);
+                                break;
+                            case CommandType.ChildSeries:
+                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.ChildEpisode);
+                                break;
+                            case CommandType.Animation:
+                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Animation);
+                                break;
+                            case CommandType.Unknown:
+                                break;
+                            default:
+                                break;
+                        }
                         break;
                     case Tg.UpdateType.EditedMessage:
                         break;
@@ -303,12 +341,19 @@ namespace API.FilmDownload
                 var messageId = update.Message != null ? update.Message.MessageId : update.CallbackQuery.Message.MessageId;
                 var userId = update.Message != null ? update.Message.From.Id : update.CallbackQuery.Message.From.Id;
 
-                await _botClient.SendTextMessageAsync(new ChatId(userId), $"Ошибка при обработке торрента",
-                    null, null, null, null, messageId);
+                try
+                {
+                    await _botClient.SendTextMessageAsync(new ChatId(userId), $"Ошибка при обработке торрента",
+                        null, null, null, null, messageId);
+                }
+                catch (Exception)
+                {
+                }
             }
         }
 
-        private async Task<IServiceScope> FillVideoFileId(int rutrackerId, long tgFromId, SearchRecord record, string downloadPath = null)
+        private async Task FillVideoFileId(int rutrackerId, long tgFromId, SearchRecord record, 
+            VideoType type, string downloadPath = null)
         {
             var info = await _rutracker.FillInfo(rutrackerId);
 
@@ -323,23 +368,61 @@ namespace API.FilmDownload
                 SeriesId = 18,
                 SeasonId = 91
             };
-
-            if (_tgSeasonDict.TryGetValue(tgFromId, out var seasonId))
-                file.SeasonId = seasonId;
-
             FillData(rutrackerId, info, downloadPath, file);
 
-            var result =@$"Название: {file.Name}
+            FillFilePropertiesByType(tgFromId, type, info, file);
+
+            await _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IFileRepository>().Add(file);
+
+            await ProcessTelegram(file, tgFromId, info, record);
+
+            if (file.Cover == null || file.Cover?.Length < 20 * 1024)
+                await SearchCoverForFile(file, tgFromId);
+        }
+
+        private void FillFilePropertiesByType(long tgFromId, VideoType type, VideoInfo info, VideoFile file)
+        {
+            var db = _GetDb();
+            var manager = new DbUpdateManager(db);
+
+            var tgRecord = _tgSeasonDict.FirstOrDefault(x => x.TgId == tgFromId);
+            var downloadSeries = manager.GetDownloadSeries();
+            if (type == VideoType.AdultEpisode)
+            {
+                var series = manager.AddOrUpdateSeries(info.Name, false, VideoType.AdultEpisode);
+                file.SeriesId = series.Id;
+                var season = manager.AddOrUpdateSeason(series, info.SeasonName);
+                file.SeasonId = season.Id;
+            }
+            else if (type == VideoType.ChildEpisode)
+            {
+                var series = manager.AddOrUpdateSeries(info.Name, false, VideoType.ChildEpisode);
+                file.SeriesId = series.Id;
+                var season = manager.AddOrUpdateSeason(series, info.SeasonName);
+                file.SeasonId = season.Id;
+            }
+            else if (type == VideoType.Film && tgRecord != null)
+            {
+                file.SeasonId = tgRecord.FilmSeasonId;
+            }
+            else if (type == VideoType.Animation && tgRecord != null)
+            {
+                var childDownloaded = manager.AddOrUpdateSeason(downloadSeries, "Детские мультики");
+                file.SeasonId = childDownloaded.Id;
+            }
+            else
+                Debug.Assert(false);
+            file.Type = type;
+        }
+
+        private async Task ProcessTelegram(VideoFile file, long tgFromId, VideoInfo info, SearchRecord record)
+        {
+            var result = @$"Название: {file.Name}
 Year: {file.Year}
 Director: {info.Director}
 Duration: {file.Duration}
 Id: {info.Id}
 Description: {file.Description}";
-
-            var scope = _serviceScopeFactory.CreateScope();
-            var fileService = scope.ServiceProvider.GetRequiredService<IFileRepository>();
-            await fileService.Add(file);
-
             await _botClient.SendTextMessageAsync(new ChatId(tgFromId), $"{result}");
 
             foreach (var item in _infos.Where(x => x.SearchSctring == record?.SearchSctring).ToList())
@@ -347,11 +430,6 @@ Description: {file.Description}";
                 _infos.Remove(item);
                 await _botClient.DeleteMessageAsync(_config.TelegramSettings.ChatId, item.MessageId);
             }
-
-            if(file.Cover?.Length < 20 * 1024)
-                await SearchCoverForFile(file, tgFromId);
-
-            return scope;
         }
 
         private void FillData(int id, VideoInfo info, 
@@ -375,42 +453,29 @@ Description: {file.Description}";
 
         private async Task _botClient_OnMessage(ITelegramBotClient botClient, Message message)
         {
-            //using var scope1 = _serviceScopeFactory.CreateScope();
-            //var db = scope1.ServiceProvider.GetRequiredService<FileStore.Infrastructure.Context.VideoCatalogDbContext>();
-            //var files = db.Files.Include(x => x.VideoFileExtendedInfo).Where(x => x.VideoFileExtendedInfo.Cover.Length > 0 && x.VideoFileExtendedInfo.RutrackerId > 0).ToList();
-            //foreach (var file in files)
-            //{
-            //    var info = await _rutracker.FillInfo(file.VideoFileExtendedInfo.RutrackerId);
-            //    file.VideoFileExtendedInfo.Cover = info.Cover;
-            //    file.Name = info.Name;
-            //    file.Duration = info.Duration;
-            //}
+            var command = CommandParser.ParseCommand(message.Text);
 
-            //db.SaveChanges();
-
-            //return;
-
-            //db.SaveChanges();
-
-            //if(int.TryParse(message.Text, out var id))
-            //{
-            //    IServiceScope scope = await FillVideoFileId(id, record, searchInfo);
-
-            //    var info = await _rutracker.(message.Text);
-
-            //}
-            //else 
-
-            //await ReAddExistingTopics();
-
-            //var res = await _rutracker.FillInfo(3399749);
-            if (message.Text.Contains(UPDATECOVER_MESSAGE))
+            switch (command)
             {
-                await UpdateCover(3, message.From.Id);
-
-                return;
+                case CommandType.FixCover:
+                    await UpdateCover(1, message.From.Id);
+                    break;
+                case CommandType.Series:
+                    break;
+                case CommandType.Film:
+                    break;
+                case CommandType.Unknown:
+                    await ProcessUserInput(message);
+                    break;
+                default:
+                    break;
             }
-            else if (message.Text.Contains("youtube"))
+
+        }
+
+        private async Task ProcessUserInput(Message message)
+        {
+            if (message.Text.Contains("youtube"))
             {
                 var file = await YoutubeDownloader.GetInfo(message.Text, Path.Combine(_config.RootDownloadFolder, "Youtube"));
 
@@ -433,16 +498,19 @@ Description: {file.Description}";
 
             var infos = await _rutracker.FindTheme(message.Text);
 
-            if(!infos.Any())
+            if (!infos.Any())
                 await _botClient.SendTextMessageAsync(new ChatId(message.From.Id), $"Ничего не найдено");
 
             foreach (var info in infos)
             {
                 var keyboard = new List<InlineKeyboardButton>();
-                keyboard.Add(new InlineKeyboardButton("Добавить фильм") { CallbackData = (info.Id).ToString() });
+                keyboard.Add(new InlineKeyboardButton("+фильм") { CallbackData = CommandParser.GetMessageFromData(CommandType.Film, info.Id.ToString()) });
+                keyboard.Add(new InlineKeyboardButton("+сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.Series, info.Id.ToString()) });
+                keyboard.Add(new InlineKeyboardButton("+мультфильм") { CallbackData = CommandParser.GetMessageFromData(CommandType.Animation, info.Id.ToString()) });
+                keyboard.Add(new InlineKeyboardButton("+детский сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.ChildSeries, info.Id.ToString()) });
                 var size = decimal.Round(info.SizeInBytes / 1024 / 1024 / 1024, 2, MidpointRounding.AwayFromZero);
                 var messageText = $"{size} GB | {info.DownloadsCount} | {info.CreatedAt.ToString("MM-yy")} | {info.Title}";
-                var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(message.From.Id), 
+                var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(message.From.Id),
                     messageText, replyMarkup: new InlineKeyboardMarkup(keyboard));
 
                 _infos.Add(new SearchRecord { Topic = info, MessageId = tgMessage.MessageId, SearchSctring = message.Text });

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using Infrastructure;
 using System.Linq;
 using System.Threading.Tasks;
 using API.Controllers;
@@ -97,6 +98,51 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
+        [HttpDelete]
+        [Route("removeSeries")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+
+        public void RemoveSeries(int serieId)
+        {
+            var files = _db.Files.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeriesId == serieId).ToList();
+
+            foreach (var file in files)
+            {
+                _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
+                _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
+                _db.Files.Remove(file);
+            }
+
+            foreach (var season in _db.Seasons.Where(x => x.SeriesId == serieId).ToList())
+                _db.Seasons.Remove(season);
+
+            foreach (var item in _db.Series.Where(x => x.Id == serieId).ToList())
+                _db.Series.Remove(item);
+
+            _db.SaveChanges();
+        }
+
+        [HttpDelete]
+        [Route("removeSeason")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+
+        public void RemoveSeason( int seasonId)
+        {
+            var files = _db.Files.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeasonId == seasonId).ToList();
+
+            foreach (var file in files)
+            {
+                _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
+                _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
+                _db.Files.Remove(file);
+            }
+
+            foreach (var item in _db.Seasons.Where(x => x.Id == seasonId).ToList())
+                _db.Seasons.Remove(item);
+
+            _db.SaveChanges();
+        }
+
         private void Remove(DbFile file)
         {
             _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
@@ -138,7 +184,7 @@ namespace FileStore.API.Controllers
             var dbUpdater = new DbUpdateManager(_db);
 
             var onlineFiles = _db.VideoFiles.Where(x => x.Id > minId).ToList();
-            var onlineTypes = IsOnlineVideoAttribute.GetValuesWithAttribute<VideoType>().ToList();
+            var onlineTypes = (new IsOnlineVideoAttribute()).GetValuesWithAttribute<VideoType>().ToList();
             onlineFiles = onlineFiles.Where(x => onlineTypes.Any(value => value == x.Type)).ToList();
 
             foreach (var file in onlineFiles)
@@ -305,12 +351,50 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("updateAllOnline")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateAllOnline(bool updateCover, bool convert)
+        {
+            var manager = new DbUpdateManager(_db);
+
+            //Get cover from file
+            var onlineTypes = (new IsOnlineVideoAttribute()).GetValuesWithAttribute<VideoType>();
+            foreach (var onlineType in onlineTypes)
+            {
+                var onlineFiles = _db.VideoFiles.Where(x => x.Type == onlineType)
+                   .Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).ToList();
+
+                if (updateCover)
+                {
+                    foreach (var file in onlineFiles.Where(x => x.Cover == null))
+                        DbUpdateManager.FillVideoProperties(file);
+                }
+                if (convert)
+                {
+                    foreach (var file in onlineFiles)
+                        manager.Convert(file);
+                }
+            }
+
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+            [HttpGet]
         [Route("updateAll")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateAll()
         {
             var dbUpdater = new DbUpdateManager(_db);
 
+            var newFiles = _db.VideoFiles.Where(x => x.Id > 8252).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).ToList();
+            var online = newFiles.Where(x => 
+            (new IsOnlineVideoAttribute()).HasAttribute(x.Type) && !DbUpdateManager.IsEncoded(x.Path)).ToList();
+            foreach (var item in online)
+                dbUpdater.Convert(item);
+
+            await UpdateAllOnline(true, true);
 
             //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские", Origin.Russian, VideoType.ChildEpisode, true);
             //dbUpdater.FillSeries(@"F:\Анюта\Фильмы\В гостях у сказки", Origin.Soviet, VideoType.FairyTale, false);
@@ -336,16 +420,16 @@ namespace FileStore.API.Controllers
             //foreach (var file in filesToUpdateCoverByTg.Take(10))
             //    await tg.SearchImageForFile(file, 176280269);
 
-            //Get cover from file
-            var filesToUpdateCover = _db.VideoFiles.Where(x => x.Type == VideoType.Courses)
-               .Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).ToList();
-            //var filesToUpdateCover = _db.VideoFiles.Where(x => x.Type == VideoType.ChildEpisode || x.Type == VideoType.Courses || x.Origin == Origin.Soviet)
-            //.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).ToList();
-            filesToUpdateCover = filesToUpdateCover.Where(x => x.Cover == null).ToList();
-            foreach (var file in filesToUpdateCover)
-                DbUpdateManager.FillVideoProperties(file);
-            //Parallel.ForEach(filesToUpdateCover, file => DbUpdateManager.FillVideoProperties(file));
-            _db.SaveChanges();
+            ////Get cover from file
+            //var filesToUpdateCover = _db.VideoFiles.Where(x => x.Type == VideoType.Courses)
+            //   .Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).ToList();
+            ////var filesToUpdateCover = _db.VideoFiles.Where(x => x.Type == VideoType.ChildEpisode || x.Type == VideoType.Courses || x.Origin == Origin.Soviet)
+            ////.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).ToList();
+            //filesToUpdateCover = filesToUpdateCover.Where(x => x.Cover == null).ToList();
+            //foreach (var file in filesToUpdateCover)
+            //    DbUpdateManager.FillVideoProperties(file);
+            ////Parallel.ForEach(filesToUpdateCover, file => DbUpdateManager.FillVideoProperties(file));
+            //_db.SaveChanges();
 
             // Convert 
             //var cartoons = _db.VideoFiles.Where(x => x.Type == VideoType.Animation && x.Origin != Origin.Soviet);
@@ -353,11 +437,11 @@ namespace FileStore.API.Controllers
             //    dbUpdater.Convert(file);
 
             var courseFiles = _db.VideoFiles.Where(x => x.Type == VideoType.Courses).ToList();
-            var files = courseFiles.Where(x => x.Path.EndsWith("htm")).ToList();
-            foreach (var file in files)
-            {
-                Remove(file);
-            }
+            //var files = courseFiles.Where(x => x.Path.EndsWith("htm")).ToList();
+            //foreach (var file in files)
+            //{
+            //    Remove(file);
+            //}
             var toEncode = courseFiles.Where(x => !DbUpdateManager.IsEncoded(x.Path)).ToList();
             foreach (var file in toEncode)
                 dbUpdater.Convert(file);
@@ -370,6 +454,14 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task Test()
         {
+            //var witchFiles = _db.Files.Where(x => x.Id > 8250);
+            //foreach (var item in witchFiles)
+            //{
+            //    var finfo = new FileInfo(item.Path);
+            //    item.Name = dbUpdater.GetEpisodeNameFromFilenName(finfo.Name);
+            //}
+            //_db.SaveChanges();
+
             //var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.VideoFileExtendedInfo.RutrackerId != 0);
             //foreach (var file in files)
             //{

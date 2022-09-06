@@ -86,7 +86,7 @@ namespace FileStore.Infrastructure.Repositories
                 result = files.OrderBy(x => Guid.NewGuid()).Take(resultCount).ToList();
             }
             else
-                result = files.OrderByDescending(x => x.Id).Take(resultCount).ToList();
+                result = files.OrderBy(x => x.Id).Take(resultCount).ToList();
 
             result.ToList().ForEach(
                 x =>

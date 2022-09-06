@@ -67,7 +67,7 @@ export class BookListComponent implements OnInit {
   public series: Serie[];
   public selectedType: VideoType;
   public seasons: Seasons[];
-  type: string;
+  public type: string;
   apibooks: Book[];
 
   constructor(private router: Router,
@@ -186,6 +186,12 @@ displayListForType() {
       case 'series':{
         this.isSelectSeries = true;
         this.getSeries(VideoType.ChildEpisode);
+        break;
+      }
+      case 'adultSeries':{
+        this.isRandom = false;
+        this.isSelectSeries = true;
+        this.getSeries(VideoType.AdultEpisode);
         break;
       }
       case 'soviet':{
