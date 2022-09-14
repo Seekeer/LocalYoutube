@@ -33,7 +33,6 @@ namespace API.FilmDownload
     public class TgLink
     {
         public long TgId { get; set; }
-        public int AdultEpisodeSeriesId { get; set; }
         public int FilmSeasonId { get; set; }
     }
 
@@ -66,17 +65,16 @@ namespace API.FilmDownload
 
         private void CreateTGDict()
         {
-            var seriesDownload = _GetDb().Series.First(x => x.Id == 18);
-            //var seasonA = manager.AddOrUpdateSeason(seriesDownload, "Алена");
-            //var seasonD = manager.AddOrUpdateSeason(seriesDownload, "Дима");
-            var manager = new DbUpdateManager(_GetDb());
-            //var adultEpisodesnA = manager.AddOrUpdateSeries("Алена", false, VideoType.AdultEpisode);
-            //var adultEpisodesnD = manager.AddOrUpdateSeries("Дима", false, VideoType.AdultEpisode);
+            var db = _GetDb();
+            var manager = new DbUpdateManager(db);
+            var seriesDownload = db.Series.First(x => x.Id == 18);
+            var seasonA = manager.AddOrUpdateSeason(seriesDownload, "Алена");
+            var seasonD = manager.AddOrUpdateSeason(seriesDownload, "Дима");
 
             // Helen
-            _tgSeasonDict.Add(new TgLink { TgId = 360495063, FilmSeasonId = 200, AdultEpisodeSeriesId = 1 });
+            _tgSeasonDict.Add(new TgLink { TgId = 360495063, FilmSeasonId = seasonA.Id});
             // DIMA
-            _tgSeasonDict.Add(new TgLink { TgId = 176280269, FilmSeasonId = 201, AdultEpisodeSeriesId = 12 });
+            _tgSeasonDict.Add(new TgLink { TgId = 176280269, FilmSeasonId = seasonD.Id });
         }
 
         private async Task SendAdminMessage(string message)
@@ -170,8 +168,7 @@ namespace API.FilmDownload
             foreach (var item in updated)
             {
                 var telegramId = _adminId;
-                var telegramLink = _tgSeasonDict.FirstOrDefault(x => x.FilmSeasonId == item.SeriesId || 
-                x.AdultEpisodeSeriesId == item.SeriesId);
+                var telegramLink = _tgSeasonDict.FirstOrDefault(x => x.FilmSeasonId == item.SeriesId);
                 if (telegramLink != null)
                     telegramId = telegramLink.TgId;
 
@@ -418,11 +415,10 @@ namespace API.FilmDownload
         private async Task ProcessTelegram(VideoFile file, long tgFromId, VideoInfo info, SearchRecord record)
         {
             var result = @$"Название: {file.Name}
-Year: {file.Year}
-Director: {info.Director}
-Duration: {file.Duration}
-Id: {info.Id}
-Description: {file.Description}";
+Длительность: {file.Duration}
+Год: {file.Year}
+Режиссер: {info.Director}
+Описание: {file.Description}";
             await _botClient.SendTextMessageAsync(new ChatId(tgFromId), $"{result}");
 
             foreach (var item in _infos.Where(x => x.SearchSctring == record?.SearchSctring).ToList())
@@ -458,7 +454,7 @@ Description: {file.Description}";
             switch (command)
             {
                 case CommandType.FixCover:
-                    await UpdateCover(1, message.From.Id);
+                    await UpdateCover(3, message.From.Id);
                     break;
                 case CommandType.Series:
                     break;
@@ -520,10 +516,24 @@ Description: {file.Description}";
         private async Task UpdateCover(int count, long tgId)
         {
             var db = _GetDb();
-            var filesToUpdateCoverByTg = db.VideoFiles.Where(x => x.Type == VideoType.FairyTale)
+            var filesToUpdateCoverByTg = db.VideoFiles
+                .Where(x => x.Type != VideoType.Courses)
             //var filesToUpdateCoverByTg = db.VideoFiles.Where(x => x.Type == VideoType.Animation)
                 .Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).OrderByDescending(x => x.Id).ToList();
             filesToUpdateCoverByTg = filesToUpdateCoverByTg.Where(x => x.Cover == null || x.Cover.Length < 20 * 1024).ToList();
+
+            //var files = db.VideoFiles.Where(x => x.SeasonId == 202);
+            //foreach (var file in files)
+            //{
+            //    file.Type = VideoType.Courses;
+            //}
+            //db.SaveChanges();
+
+            if (!filesToUpdateCoverByTg.Any())
+            {
+                _botClient.SendTextMessageAsync(new ChatId(tgId), "Нечего обновлять");
+            }
+
             foreach (var file in filesToUpdateCoverByTg.Take(count))
             {
                 await SearchCoverForFile(file, tgId);

@@ -102,7 +102,7 @@ namespace FileStore.API.Controllers
         [Route("removeSeries")]
         [ProducesResponseType(StatusCodes.Status200OK)]
 
-        public void RemoveSeries(int serieId)
+        public void RemoveSeries(int serieId, bool removeFileFromDisc)
         {
             var files = _db.Files.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeriesId == serieId).ToList();
 
@@ -111,6 +111,15 @@ namespace FileStore.API.Controllers
                 _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
                 _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
                 _db.Files.Remove(file);
+
+                try
+                {
+                    if(removeFileFromDisc)
+                        System.IO.File.Delete(file.Path);
+                }
+                catch (System.Exception ex)
+                {
+                }
             }
 
             foreach (var season in _db.Seasons.Where(x => x.SeriesId == serieId).ToList())
@@ -186,8 +195,8 @@ namespace FileStore.API.Controllers
             var onlineFiles = _db.VideoFiles.Where(x => x.Id > minId).ToList();
             var onlineTypes = (new IsOnlineVideoAttribute()).GetValuesWithAttribute<VideoType>().ToList();
             onlineFiles = onlineFiles.Where(x => onlineTypes.Any(value => value == x.Type)).ToList();
-
-            foreach (var file in onlineFiles)
+            var onlineFilesToConvert = onlineFiles.Where(x => !DbUpdateManager.IsEncoded(x.Path)).ToList();
+            foreach (var file in onlineFilesToConvert)
             {
                 dbUpdater.Convert(file);
             }
