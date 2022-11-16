@@ -43,10 +43,17 @@ namespace FileStore.API.Configuration
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            using var scope = services.CreateScope();
-            var tg = scope.ServiceProvider.GetRequiredService<TgBot>();
+            try
+            {
+                using var scope = services.CreateScope();
+                var tg = scope.ServiceProvider.GetRequiredService<TgBot>();
 
-            await tg.Start();
+                await tg.Start();
+            }
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+            }
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)

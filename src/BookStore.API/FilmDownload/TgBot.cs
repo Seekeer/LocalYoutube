@@ -117,7 +117,6 @@ namespace API.FilmDownload
             };
 
             _botClient.StartReceiving(
-
                 this.HandleUpdateAsync,
                 HandleErrorAsync,
                 receiverOptions,
