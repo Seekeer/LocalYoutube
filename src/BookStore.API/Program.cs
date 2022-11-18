@@ -37,6 +37,8 @@ namespace FileStore.API
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
+                    webBuilder.ConfigureKestrel(options => { });
+                    webBuilder.UseUrls($"http://192.168.1.55:2022");
                 })
                 .ConfigureLogging(logging =>
                 {

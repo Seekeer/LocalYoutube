@@ -82,18 +82,19 @@ namespace FileStore.API.Controllers
         [HttpDelete]
         [Route("removeFile")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> Remove(int fileId, bool removeFile = true)
+        public async Task<IActionResult> Remove(int startId, int endId, bool removeFile = true)
         {
+            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).Where(x => x.Id >= startId && x.Id <= endId).ToList();
 
-            //var file = _db.Files.FirstOrDefault(x => x.Id == fileId);
-            var file = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).FirstOrDefault(x => x.Id == fileId);
+            foreach (var file in files)
+            {
+                if (removeFile)
+                    System.IO.File.Delete(file.Path);
 
-            if(removeFile)
-                System.IO.File.Delete(file.Path);
+                Remove(file);
 
-            Remove(file);
-
-            _db.SaveChanges();
+                _db.SaveChanges();
+            }
 
             return Ok();
         }
@@ -329,35 +330,6 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
-        [HttpGet]
-        [Route("clearAll")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public void ClearFiles()
-        {
-            var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).ToList();
-
-            foreach (var file in files.Where(x => x.Id > 5071))
-            {
-                Remove(file);
-            }
-
-            foreach (var file in files)
-            {
-                if ((!System.IO.File.Exists(file.Path) && !file.IsDownloading)|| 
-                    file.Path.EndsWith(".srt") || file.Path.EndsWith(".mp3") || file.Path.EndsWith(".ac3") || file.Path.EndsWith(".dts") )
-                    Remove(file);
-            }
-
-            var groupd = files.GroupBy(x => x.Path);
-            foreach (var group in groupd.Where(x => x.Count() > 1))
-            {
-                var list = group.ToList();
-                if (list[0].SeasonId == list[1].SeasonId && list[0].SeriesId == list[1].SeriesId)
-                    Remove(list[1]);
-            }
-
-            _db.SaveChanges();
-        }
 
         [HttpGet]
         [Route("updateAllOnline")]

@@ -172,7 +172,7 @@ namespace API.FilmDownload
                 if (telegramLink != null)
                     telegramId = telegramLink.TgId;
 
-                await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} http://192.168.1.55:51951/api/Files/getFileById?fileId={item.Id}");
+                await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Открыть в VLC: http://192.168.1.55:51951/api/Files/getFileById?fileId={item.Id}");
             }
         }
 
