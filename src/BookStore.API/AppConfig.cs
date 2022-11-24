@@ -24,6 +24,7 @@ namespace FileStore.API
     public class TelegramSettings
     {
         public string ApiKey { get; set; }
-        public long ChatId { get; set; }
+        public long InfoGroupId { get; set; }
+        public long AdminId { get; set; }
     }
 }

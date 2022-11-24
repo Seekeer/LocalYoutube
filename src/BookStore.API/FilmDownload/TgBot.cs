@@ -45,7 +45,6 @@ namespace API.FilmDownload
         private readonly List<SearchRecord> _infos = new List<SearchRecord>();
         private readonly Dictionary<string, SearchResult> _images = new Dictionary<string, SearchResult>();
         private readonly List<TgLink> _tgSeasonDict = new List<TgLink>(); 
-        private readonly long _adminId = 176280269;
         public const string UPDATECOVER_MESSAGE = "Обновить обложку";
         private Timer _timer;
 
@@ -80,7 +79,8 @@ namespace API.FilmDownload
         private async Task SendAdminMessage(string message)
         {
             await _botClient.SendTextMessageAsync(
-                            chatId: _adminId,
+
+                            chatId: _config.TelegramSettings.AdminId,
                             text: message,
                             disableWebPagePreview: true,
                             replyMarkup: GetKeyboard(true)
@@ -167,12 +167,12 @@ namespace API.FilmDownload
 
             foreach (var item in updated)
             {
-                var telegramId = _adminId;
+                var telegramId = _config.TelegramSettings.InfoGroupId;
                 var telegramLink = _tgSeasonDict.FirstOrDefault(x => x.FilmSeasonId == item.SeriesId);
                 if (telegramLink != null)
                     telegramId = telegramLink.TgId;
 
-                await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Открыть в VLC: http://192.168.1.55:51951/api/Files/getFileById?fileId={item.Id}");
+                await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Открыть в VLC: http://192.168.1.55:2022/api/Files/getFileById?fileId={item.Id}");
             }
         }
 
@@ -419,12 +419,12 @@ namespace API.FilmDownload
 Год: {file.Year}
 Режиссер: {info.Director}
 Описание: {file.Description}";
-            await _botClient.SendTextMessageAsync(new ChatId(tgFromId), $"{result}");
+            await _botClient.SendTextMessageAsync((tgFromId), $"{result}");
 
             foreach (var item in _infos.Where(x => x.SearchSctring == record?.SearchSctring).ToList())
             {
                 _infos.Remove(item);
-                await _botClient.DeleteMessageAsync(_config.TelegramSettings.ChatId, item.MessageId);
+                await _botClient.DeleteMessageAsync(tgFromId, item.MessageId);
             }
         }
 
