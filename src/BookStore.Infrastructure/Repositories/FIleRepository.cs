@@ -37,7 +37,7 @@ namespace FileStore.Infrastructure.Repositories
             if (isRandom)
                 return await SearchRandom(b => b.SeasonId == seriesId, count);
             else
-                return await Search(b => b.SeasonId == seriesId, 100);
+                return await Search(b => b.SeasonId == seriesId);
         }
 
         public async Task<IEnumerable<VideoFile>> GetFilesBySeriesAsync(int seriesId, bool isRandom)

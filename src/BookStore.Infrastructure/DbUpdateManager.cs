@@ -130,9 +130,9 @@ namespace Infrastructure
             AddSeason(serie, new DirectoryInfo(directory));
         }
 
-        public void AddSeason(Series series, DirectoryInfo dir)
+        public void AddSeason(Series series, DirectoryInfo dir, string seasonName = null)
         {
-            var season = AddOrUpdateSeason(series, dir.Name);
+            var season = AddOrUpdateSeason(series, seasonName ?? dir.Name);
 
             AddSeason(series, season, dir);
         }
@@ -174,7 +174,7 @@ namespace Infrastructure
                                 file.Name.EndsWith("nfo") || file.Name.EndsWith("mp3") || file.Name.EndsWith("txt") || file.Name.EndsWith("pdf") ||
                                 file.Name.EndsWith("xlsx") || file.Name.EndsWith("pdf") || file.Name.EndsWith("zip") || file.Name.EndsWith("vtt") ||
                                 file.Name.EndsWith("srt") || file.Name.EndsWith("rar") || file.Name.EndsWith("zip") || file.Name.EndsWith("vtt") ||
-                                file.Name.EndsWith("pptx") || file.Name.EndsWith("html") || file.Name.EndsWith("qB") ||
+                                file.Name.EndsWith("pptx") || file.Name.EndsWith("html") || file.Name.EndsWith("qB") || file.Name.EndsWith("lnk") ||
                                 file.FullName.Contains("Конспект") && _type == VideoType.Courses;
         }
 
@@ -291,6 +291,7 @@ namespace Infrastructure
 
                 return name;
             }
+            name = name.Replace("_", " ").Replace("1080p.m4v", " ").Replace("HD", " ").Replace("720p", " ");
 
             var result = "";
             string pattern = @"\p{IsCyrillic}";
@@ -686,6 +687,30 @@ namespace Infrastructure
 
                     if (!dirFiles.Any() || dirFiles.Any(x => x.FullName.EndsWith(".!qB")))
                         continue;
+
+                    var dirDirectories = dir.EnumerateDirectories();
+                    if (dirDirectories.Any(x => x.Name == "VIDEO_TS"))
+                        continue;
+
+                    if(dirFiles.Count() > 1)
+                    {
+                        var twoBiggest = dirFiles.OrderByDescending(x => x.Length).Take(2);
+
+                        // Check that files ~ same size => they are series.
+                        if(twoBiggest.First().Length / twoBiggest.Last().Length > 0.7)
+                        {
+                            var series = AddOrUpdateSeries("Многосерийные фильмы");
+                            AddSeason(series, dir, info.Name);
+                            result.Add(info);
+
+                            _db.FilesUserInfo.Remove(info.VideoFileUserInfo);
+                            _db.FilesInfo.Remove(info.VideoFileExtendedInfo);
+                            _db.Files.Remove(info);
+                            _db.SaveChanges();
+
+                            continue;
+                        }
+                    }
 
                     var biggestFile = dirFiles.OrderByDescending(x => x.Length).First();
 

@@ -88,7 +88,7 @@ namespace FileStore.API.Controllers
 
             foreach (var file in files)
             {
-                if (removeFile)
+                if (removeFile && System.IO.File.Exists(file.Path))
                     System.IO.File.Delete(file.Path);
 
                 Remove(file);

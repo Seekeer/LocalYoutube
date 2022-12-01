@@ -504,7 +504,11 @@ namespace API.FilmDownload
                 keyboard.Add(new InlineKeyboardButton("+мультфильм") { CallbackData = CommandParser.GetMessageFromData(CommandType.Animation, info.Id.ToString()) });
                 keyboard.Add(new InlineKeyboardButton("+детский сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.ChildSeries, info.Id.ToString()) });
                 var size = decimal.Round(info.SizeInBytes / 1024 / 1024 / 1024, 2, MidpointRounding.AwayFromZero);
-                var messageText = $"{size} GB | {info.DownloadsCount} | {info.CreatedAt.ToString("MM-yy")} | {info.Title}";
+                var title = info.Title;
+                if(title.Contains("DVD9") && !title.Contains("DVD5"))
+                    title = $"КОПИЯ ДИСКА {title}";
+
+                var messageText = $"{size} GB | {info.DownloadsCount} | {info.CreatedAt.ToString("MM-yy")} | {title}";
                 var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(message.From.Id),
                     messageText, replyMarkup: new InlineKeyboardMarkup(keyboard));
 
