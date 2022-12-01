@@ -37,8 +37,13 @@ namespace FileStore.API
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
+
+#if DEBUG
+#else
+                    // DT launchsettings doesnt work in prod for some reason
                     webBuilder.ConfigureKestrel(options => { });
                     webBuilder.UseUrls($"http://192.168.1.55:2022");
+#endif
                 })
                 .ConfigureLogging(logging =>
                 {
