@@ -55,9 +55,9 @@ namespace FileStore.Infrastructure.Repositories
             return await Random(DbSet.AsNoTracking().Where(predicate), resultCount).ToListAsync();
         }
 
-        public async Task<IEnumerable<TEntity>> Search(Expression<Func<TEntity, bool>> predicate, int resultCount = 10)
+        public async Task<IEnumerable<TEntity>> Search(Expression<Func<TEntity, bool>> predicate)
         {
-            return await (DbSet.AsNoTracking().Where(predicate).Take(resultCount).ToListAsync());
+            return await (DbSet.AsNoTracking().Where(predicate).OrderBy(x => x.Id).ToListAsync());
         }
 
         public async Task<int> SaveChanges()

@@ -37,6 +37,7 @@ namespace FileStore.API.Controllers
         public async Task<IActionResult> SeriesOther()
         {
             var series = new List<Series>();
+            series.AddRange(await _SeriesService.GetAllByType(VideoType.AdultEpisode));
             series.AddRange(await _SeriesService.GetAllByType(VideoType.Courses));
             series.AddRange(await _SeriesService.GetAllByType(VideoType.Youtube));
 

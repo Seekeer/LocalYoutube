@@ -85,11 +85,13 @@ namespace FileStore.API.Controllers
         [HttpDelete]
         [Route("removeFile")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> Remove(int fileId, bool removeFile = true)
         {
+            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).Where(x => x.Id >= startId && x.Id <= endId).ToList();
 
-            //var file = _db.Files.FirstOrDefault(x => x.Id == fileId);
-            var file = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).FirstOrDefault(x => x.Id == fileId);
+            foreach (var file in files)
+            {
+                if (removeFile && System.IO.File.Exists(file.Path))
+                    System.IO.File.Delete(file.Path);
 
             if(removeFile)
                 System.IO.File.Delete(file.Path);
