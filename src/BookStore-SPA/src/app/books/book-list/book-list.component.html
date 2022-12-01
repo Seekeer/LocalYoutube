@@ -1,4 +1,6 @@
 <div class="col-md-12">
+
+  <ngx-spinner type="ball-scale-multiple"></ngx-spinner>
   
   <div>
         
@@ -31,18 +33,16 @@
       <input matInput type="number"  [(ngModel)]="episodeCount" >
     </mat-form-field>
 
-    <mat-checkbox class="ml-2"  *ngIf="isSelectSeries"  [(ngModel)]="isRandom">Случайный порядок</mat-checkbox>
+    <mat-checkbox class="ml-2"  *ngIf="isSelectSeries && !showKPINfo"  [(ngModel)]="isRandom" >Случайный порядок</mat-checkbox>
+    <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showWatched"  (change)="watchedChanged($event)">Показывать просмотренное</mat-checkbox>
 
     <button mat-icon-button color="primary"  (click)="searchBooks()" >
       <mat-icon>refresh</mat-icon>
     </button>
 
-    <button   mat-icon-button color="primary" (click)="udateDownloaded()" >
-      Обновить загрузки
-    </button>
   </div>
 
-  <button *ngIf="!isRandom" (click)="continueWatch()">Продолжить воспроизведение</button>
+    <button class="btn btn-outline-primary btn-sm"*ngIf="!isRandom" (click)="continueWatch()">Продолжить воспроизведение</button>
 
   <div *ngIf="!showKPINfo" fxLayout="row wrap" fxLayoutGap="16px">
     <div
@@ -87,6 +87,7 @@
             <div class="col-sm"> 
               <button class="btn btn-outline-primary btn-sm" (click)="copyLink(book)">Скопировать ссылку</button>
               <button class="btn btn-outline-danger btn-sm mt-2" (click)="deleteFilm(content, book)">Удалить фильм</button>
+              <button class="btn btn-outline-success btn-sm mt-2" (click)="filmWatched( book)">Фильм просмотрен</button>
               <br>
               <br>
 
@@ -95,6 +96,8 @@
               <div>{{book.year}}</div>
               <br>
               <div>{{book.genres}}</div>
+              <br>
+              <div>{{book.director}}</div>
               <br>
               <div>{{book.durationMinutes}} минут</div>
               <br>
@@ -119,5 +122,5 @@
   </div>
 </ng-template>
 
-  <!-- <ngx-spinner></ngx-spinner> -->
+<!-- <ngx-spinner bdColor = "rgba(0, 0, 0, 0.8)" size = "medium" color = "#fff" type = "square-jelly-box" [fullScreen] = "true"><p style="color: white" > Loading... </p></ngx-spinner> -->
 </div>

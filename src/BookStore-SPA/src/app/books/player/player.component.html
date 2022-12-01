@@ -1,7 +1,5 @@
-<div >
-  <img *ngIf="!videoURL && !isLoading" alt="Finish!" src="./assets/img/finish.jpg">
-  <img *ngIf="isLoading" alt="Loading!" src="./assets/img/loading.jpg">
-
+<div>
+  <img *ngIf="!videoURL " alt="Finish!" src="./assets/img/finish.jpg" >
   <div *ngIf="videoURL">
       
     <video  controls height="auto" autoplay  #videoElement (ended)="videoEnded()">
@@ -12,8 +10,24 @@
       <button (click)="skipVideo()">Следующее</button>
       <!-- <button (click)="download()">Скачать</button> -->
       <button (click)="copyLink()">Скопировать ссылку</button>
+
       <h4>{{name}}</h4>
+
       <div>{{statStr}}</div>
+      <div> 
+
+    </div>
+        
+        <mat-form-field class="example-full-width" appearance="fill">
+          <mat-label>Выключить через </mat-label>
+          <input matInput type="number"  [(ngModel)]="timerMinutes" >
+        </mat-form-field>
+
+        <button mat-icon-button color="primary"  (click)="setTimer()" >
+          <mat-icon>alarm_on</mat-icon>
+        </button>
+
+        <div>Осталось: <div>{{ timeLeft * 1000 | date:'mm:ss' }} </div></div>
     </div>
   </div>
 </div>

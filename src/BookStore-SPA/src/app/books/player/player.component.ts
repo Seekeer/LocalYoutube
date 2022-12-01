@@ -44,7 +44,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
   intervalId: any;
   position: number;
   isRandom: boolean;
-  isLoading: boolean;
+  timerMinutes: number;
+  timerStr: string;
 
   constructor(public service: FileService,
     private categoryService: SeriesService,
@@ -57,9 +58,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.isLoading =true;
-    setTimeout(() => {
-    this.isLoading =false;
     this.parameters = <PlayerParameters>(JSON.parse(JSON.stringify((<any>this.route.snapshot.queryParamMap).params)));
 
       this.videoId = this.parameters.videoId;
@@ -78,10 +76,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
           console.log(`Cannot get video by series ${this.parameters.seriesId}`);
         })
 
-      // setTimeout(() => this.updateStat(), 1000);
+      setTimeout(() => this.switchToFullscreen(), 2000);
       this.intervalId = setInterval(() => this.updateStat(), 1000);
-      
-    }, (3000));
   }
   
   private getVideoElement(){
@@ -127,6 +123,31 @@ export class PlayerComponent implements OnInit, OnDestroy {
       // this.getVideoElement().play();
       // this.updateStat();
   }
+    
+   setTimer(){
+    if(this.interval) 
+        clearInterval(this.interval);
+
+    this.timeLeft = this.timerMinutes * 1;
+
+    this.interval =Number( setInterval(() => {
+      if(this.timeLeft > 0) {
+        this.timeLeft--;
+      }
+      else
+        this.setNextVideo(true);
+    },1000))
+  }
+
+ timeLeft:number;
+private interval:number;
+
+private switchToFullscreen(){
+    var el = this.getVideoElement();
+
+    if(el && el.requestFullscreen) 
+          el.requestFullscreen();
+}
 
   private setNextVideo(encreaseCounter:boolean) {
     if(this.parameters.videosCount <= this.playedVideoCount){
@@ -139,8 +160,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.videoURL = this.service.getVideoURLById(currentId);
     var el = this.getVideoElement();
     el?.load();
-
-
+    // else if (el.webkitRequestFullscreen) 
+    //     el.webkitRequestFullscreen();
+    // else if (el.msRequestFullScreen) 
+    //   el.msRequestFullScreen();
       // if(this.parameters.videoId != 0){
       //   this.videoURL = this.service.getVideoURLById(this.parameters.videoId);
       //   this.parameters.videoId = 0;

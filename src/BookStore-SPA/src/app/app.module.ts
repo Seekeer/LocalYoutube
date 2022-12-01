@@ -1,3 +1,7 @@
+import {
+  HashLocationStrategy,
+  LocationStrategy,
+} from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { FlexLayoutModule } from '@angular/flex-layout';
@@ -74,7 +78,8 @@ import { NavComponent } from './nav/nav.component';
   providers: [
     FileService,
     SeriesService,
-    ConfirmationDialogService
+    ConfirmationDialogService,
+    {provide: LocationStrategy, useClass: HashLocationStrategy}
   ],
   bootstrap: [AppComponent]
 })

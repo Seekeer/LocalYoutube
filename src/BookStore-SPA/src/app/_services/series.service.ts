@@ -18,6 +18,9 @@ export class SeriesService {
     public getAll(type:VideoType): Observable<Serie[]> {
         return this.http.get<Serie[]>(this.baseUrl + `series?type=` + <number>type);
     }
+    getOther(): Observable<Serie[]> {
+        return this.http.get<Serie[]>(this.baseUrl + `series/other`);
+    }
 
     public getCategories(): Observable<Serie[]> {
         return this.http.get<Serie[]>(this.baseUrl + `series`);
