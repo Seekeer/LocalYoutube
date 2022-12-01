@@ -53,6 +53,7 @@ namespace FileStore.Domain.Models
         public int Year { get; set; }
         public string Description { get; set; }
         public int RutrackerId { get; set; }
+        public string Director { get; set; }
     }
 
     public class FileUserInfo : Entity
@@ -112,6 +113,15 @@ namespace FileStore.Domain.Models
         }
 
         [NotMapped]
+        public string Director
+        {
+            get
+            {
+                return VideoFileExtendedInfo.Director;
+            }
+        }
+
+        [NotMapped]
         public string Genres
         {
             get
@@ -134,13 +144,18 @@ namespace FileStore.Domain.Models
         {
             get
             {
-                if (VideoFileUserInfo == null)
+                if (VideoFileUserInfo == null || Duration > TimeSpan.Zero)
                     return false;
-
+                //return true;
                 var watchedTime = TimeSpan.FromSeconds(VideoFileUserInfo.Position);
+
+                if ((this as VideoFile)?.Type == VideoType.Courses)
+                    return (Duration - watchedTime) < TimeSpan.FromSeconds(10);
+
                 var watchedPercent = (watchedTime) / Duration;
 
                 return watchedPercent > 0.9;
+
             }
         }
     }

@@ -39,7 +39,7 @@ namespace API.FilmDownload
             byte[] imageAsByteArray;
             using (var webClient = new WebClient())
             {
-                imageAsByteArray = webClient.DownloadData(video.Thumbnails.First().Url);
+                imageAsByteArray = webClient.DownloadData(video.Thumbnails.Last().Url);
             }
             result.File.VideoFileExtendedInfo.Cover = imageAsByteArray;
 
@@ -49,26 +49,35 @@ namespace API.FilmDownload
 
             var path = Path.Combine(rootDownloadFolder, result.ChannelName);
             Directory.CreateDirectory(path);
-            path = Path.Combine(path, video.Id);
+
+            var validFilename = new string(video.Title.Where(ch => !Path.GetInvalidFileNameChars().Contains(ch)).ToArray());
+
+            path = Path.Combine(path, validFilename);
             result.File.Path = $"{path}.{streamInfo.Container}";
 
             return result;
         }
 
-        internal async static void Download(string url, string path)
+        internal async static Task Download(string url, string path)
         {
             var youtube = new YoutubeClient();
 
-            await youtube.Videos.DownloadAsync(url, path, o => o
-                .SetContainer("webm") // override format
-                .SetPreset(ConversionPreset.Fast) // change preset
-                .SetFFmpegPath(@"C:\Dev\_Smth\BookStore-master\lib\ffmpeg\ffmpeg.exe")); // custom FFmpeg location
+            // Low Quality
 
-            //            var streamManifest = await youtube.Videos.Streams.GetManifestAsync(url);
-            //// Get highest quality muxed stream
-            //var streamInfo = streamManifest.GetMuxedStreams().GetWithHighestVideoQuality();
-            //// Download the stream to a file
-            //await youtube.Videos.Streams.DownloadAsync(streamInfo, path);
+            //await youtube.Videos.DownloadAsync(url, path, o => o
+            //    .SetContainer("webm") // override format
+            //    .SetPreset(ConversionPreset.Fast) // change preset
+            //    .SetFFmpegPath(@"C:\Dev\_Smth\BookStore-master\lib\ffmpeg\ffmpeg.exe")); // custom FFmpeg location
+
+            // Get stream manifest
+            var streamManifest = await youtube.Videos.Streams.GetManifestAsync(url);
+
+            // Select streams (1080p60 / highest bitrate audio)
+            var audioStreamInfo = streamManifest.GetAudioStreams().GetWithHighestBitrate();
+            var videoStreamInfo = streamManifest.GetVideoStreams().First(s => s.VideoQuality.MaxHeight == 1080);
+            var streamInfos = new IStreamInfo[] { audioStreamInfo, videoStreamInfo };
+
+            await youtube.Videos.DownloadAsync(streamInfos, new ConversionRequest(@"C:\Dev\_Smth\BookStore-master\lib\ffmpeg\ffmpeg.exe", path, new Container("webm"), ConversionPreset.UltraFast));
         }
     }
 }

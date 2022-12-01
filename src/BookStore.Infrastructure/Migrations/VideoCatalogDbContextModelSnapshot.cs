@@ -70,6 +70,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Director")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Genres")
                         .HasColumnType("nvarchar(max)");
 

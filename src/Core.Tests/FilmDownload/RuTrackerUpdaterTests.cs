@@ -51,6 +51,79 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
+        public async Task ParseInfo_Las()
+        {
+            var updater = new RuTrackerUpdater(null);
+
+            var videoInfo = new VideoInfo();
+
+            string page = GetPage(@"Resources\las.html");
+
+            await updater.ParseInfo(page, videoInfo);
+
+            Assert.AreEqual("Покидая Лас-Вегас / Leaving Las Vegas", videoInfo.Name);
+            Assert.IsNotNull(videoInfo.Cover);
+        }
+
+        [Test()]
+        public async Task ParseInfo_Jfk()
+        {
+            var updater = new RuTrackerUpdater(null);
+
+            var videoInfo = new VideoInfo();
+
+            string page = GetPage(@"Resources\jfk.html");
+
+            await updater.ParseInfo(page, videoInfo);
+
+            Assert.AreEqual("Оливер Стоун", videoInfo.Director);
+        }
+
+        [Test()]
+        public async Task ParseInfo_Rapun()
+        {
+            var updater = new RuTrackerUpdater(null);
+
+            var videoInfo = new VideoInfo();
+
+            string page = GetPage(@"Resources\Rapun.html");
+
+            await updater.ParseInfo(page, videoInfo);
+
+            Assert.AreEqual("Рапунцель: Запутанная история / Tangled", videoInfo.Name);
+        }
+
+        [Test()]
+        public async Task ParseInfo_Frozen()
+        {
+            var updater = new RuTrackerUpdater(null);
+
+            var videoInfo = new VideoInfo();
+
+            string page = GetPage(@"Resources\Frozen.html");
+
+            await updater.ParseInfo(page, videoInfo);
+
+            Assert.AreEqual("Холодное сердце / Frozen", videoInfo.Name);
+        }
+
+        [Test()]
+        public async Task ParseInfo_Aviator()
+        {
+            var updater = new RuTrackerUpdater(null);
+
+            var videoInfo = new VideoInfo();
+
+            string page = GetPage(@"Resources\aviator.html");
+
+            await updater.ParseInfo(page, videoInfo);
+
+            Assert.AreEqual("Авиатор", videoInfo.Name);
+            Assert.AreEqual("драма, биография", videoInfo.Genres);
+            //Assert.AreEqual("Мартин Скорсезе", videoInfo.Director);
+        }
+
+        [Test()]
         public async Task ParseInfo_Fox()
         {
             var updater = new RuTrackerUpdater(null);

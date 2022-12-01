@@ -118,7 +118,8 @@ namespace FileStore.API.Controllers
 
             if (Files == null || Files.Count == 0) return NotFound("None File was founded");
 
-            return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
+            var resultDTO = _mapper.Map<IEnumerable<VideoFileResultDto>>(Files);
+            return Ok(resultDTO);
         }
 
         [HttpGet]
@@ -156,9 +157,13 @@ namespace FileStore.API.Controllers
         public async Task<ActionResult<List<VideoFile>>> GetAnimation(bool isSoviet)
         {
             var files = await _FileService.SearchFileByType(VideoType.Animation);
-            files = isSoviet ? files.Where(x => x.Origin == Origin.Soviet) : files.Where(x => x.Origin != Origin.Soviet);
 
-            var result= _mapper.Map<List<VideoFile>>(files);
+            if (isSoviet)
+                files = files.Where(x => x.Origin == Origin.Soviet).Take(30);
+            else 
+                files = files.Where(x => x.Origin != Origin.Soviet);
+
+            var result= _mapper.Map<List<VideoFile>>(files).OrderByDescending(x => x.Name);
 
             if (!result.Any())
                 return NotFound("None File was founded");
@@ -178,7 +183,8 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound("None File was founded");
 
-            return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
+            var filesDTO = _mapper.Map<IEnumerable<VideoFileResultDto>>(Files).OrderByDescending(x=> x.Year);
+            return Ok(filesDTO);
         }
 
         [HttpPut]

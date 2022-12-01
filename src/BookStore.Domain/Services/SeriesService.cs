@@ -17,7 +17,7 @@ namespace FileStore.Domain.Services
             _fileService = fileService;
         }
 
-        public async Task<IEnumerable<Series>> GetAll(VideoType? type)
+        public async Task<IEnumerable<Series>> GetAllByType(VideoType? type)
         {
             return await _seriesRepository.GetAll(type);
             //var allTypes = await _seriesRepository.GetAll();

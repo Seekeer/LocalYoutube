@@ -1,4 +1,5 @@
-﻿using API.FilmDownload;
+﻿using API.Controllers;
+using API.FilmDownload;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Services;
 using FileStore.Infrastructure.Context;
@@ -24,7 +25,7 @@ namespace FileStore.API.Configuration
             services.AddScoped<ISeriesService, SeriesService>();
             services.AddScoped<IFileService, FileService>();
 
-            services.AddScoped<TgBot, TgBot>();
+            services.AddSingleton<TgBot, TgBot>();
             services.AddScoped<DbUpdateManager, DbUpdateManager>();
             
             services.AddHostedService<StartupService>();

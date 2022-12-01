@@ -274,6 +274,9 @@ namespace Infrastructure
 
         public static string EndingBefore(this string text, string endStr)
         {
+            if (string.IsNullOrEmpty(text))
+                return text;
+
             var qualityStart = text.IndexOf(endStr);
             if (qualityStart != -1)
                 text = text.Substring(0, qualityStart);

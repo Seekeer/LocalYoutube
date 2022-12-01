@@ -11,8 +11,26 @@
       "sslPort": 0
     }
   },
+  "Kestrel": {
+    "Endpoints": {
+      "Http": {
+        "Url": "http://localhost:51951"
+      },
+      "Https": {
+        "Url": "https://localhost:5001"
+      }
+    }
+  },
   "$schema": "http://json.schemastore.org/launchsettings.json",
   "profiles": {
+    "My.Api": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "LogStorageAccountConnectionString": "UseDevelopmentStorage=true",
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        //"Urls": "https://localhost:7001;http://localhost:7000;http://192.168.1.55:2022"
+      }
+    },
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
@@ -28,7 +46,7 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "https://192.168.1.55:5001;http://192.168.1.55:5000"
+      "applicationUrl": "http://192.168.1.55:2022"
     },
     "Docker": {
       "commandName": "Docker",
