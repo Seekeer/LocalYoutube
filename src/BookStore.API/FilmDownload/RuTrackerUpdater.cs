@@ -267,9 +267,11 @@ namespace API.Controllers
             info.Description = GetProperty("Описание", text);
             if (string.IsNullOrEmpty(info.Description))
                 info.Description = GetProperty("О фильме", text);
-            else if (string.IsNullOrEmpty(info.Description))
+            if (string.IsNullOrEmpty(info.Description))
+                info.Description = GetProperty("Сюжет фильма", text);
+            if (string.IsNullOrEmpty(info.Description))
                 info.Description = GetProperty("Сюжет", text);
-            else if (string.IsNullOrEmpty(info.Description))
+            if (string.IsNullOrEmpty(info.Description))
                 info.Description = GetProperty("Описание фильма", text);
 
             var director = GetProperty("Режиссер:", text);
@@ -295,7 +297,9 @@ namespace API.Controllers
             }
 
             var yearStr = GetProperty("Год выпуска", text);
-            if(string.IsNullOrEmpty(yearStr))
+            if (string.IsNullOrEmpty(yearStr))
+                yearStr = GetProperty("Год выхода", text);
+            if (string.IsNullOrEmpty(yearStr))
                 yearStr = GetProperty("Год", text);
             var yearStrDigits = yearStr.Length > 6 ? yearStr.Substring(0, 6).OnlyDigits() : yearStr.OnlyDigits();
             if (int.TryParse(yearStrDigits, out int year))
@@ -389,10 +393,11 @@ namespace API.Controllers
             if (res.Topics.Count() < 5)
                 return res.Topics;
 
-            var topics = res.Topics.Where(x => x.SizeInBytes < maxLimit && x.SizeInBytes > minLimit && !x.Title.Contains("DVD9") && !x.Title.Contains("DVD5"));
-
+            var topics = res.Topics.Where(x => x.SizeInBytes < maxLimit && x.SizeInBytes > minLimit);
             if (topics.Count() < 3)
                 topics = res.Topics;
+
+            topics = topics.Where(x => !x.Title.Contains("DVD9") && !x.Title.Contains("DVD5"));
 
             return topics.OrderByDescending(x => x.SizeInBytes).Take(15);
             //return topics.OrderByDescending(x => x.SizeInBytes).Take(10);

@@ -82,6 +82,26 @@ namespace FileStore.API.Controllers
         [HttpDelete]
         [Route("removeFile")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> Remove(int fileId, bool removeFile = true)
+        {
+            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).Where(x => x.Id == fileId).ToList();
+
+            foreach (var file in files)
+            {
+                if (removeFile && System.IO.File.Exists(file.Path))
+                    System.IO.File.Delete(file.Path);
+
+                Remove(file);
+
+                _db.SaveChanges();
+            }
+
+            return Ok();
+        }
+
+        [HttpDelete]
+        [Route("removeFiles")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> Remove(int startId, int endId, bool removeFile = true)
         {
             var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).Where(x => x.Id >= startId && x.Id <= endId).ToList();
@@ -277,6 +297,21 @@ namespace FileStore.API.Controllers
 
             var info = await _rutracker.FillInfo(file.VideoFileExtendedInfo.RutrackerId);
             _rutracker.FillFileInfo(file, info);
+
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("updateVideoInfo")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateVideoInfo(int seasonId)
+        {
+            var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeasonId == seasonId);
+
+            foreach (var file in files)
+                DbUpdateManager.FillVideoProperties(file);
 
             _db.SaveChanges();
 

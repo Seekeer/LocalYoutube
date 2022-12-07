@@ -54,9 +54,9 @@ namespace FileStore.Domain.Services
             return await _FileRepository.GetFilesBySeriesAsync(SeriesId, isRandom);
         }
 
-        public async Task<IEnumerable<VideoFile>> GetFilesBySeason(int seriesId, bool isRandom, int count)
+        public async Task<IEnumerable<VideoFile>> GetFilesBySeason(int seasonId, bool isRandom, int count)
         {
-            return await _FileRepository.GetFilesBySeason(seriesId, isRandom,  count);
+            return await _FileRepository.GetFilesBySeason(seasonId, isRandom,  count);
         }
 
         public async Task<IEnumerable<VideoFile>> Search(string FileName)

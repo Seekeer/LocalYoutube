@@ -51,6 +51,23 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
+        public async Task ParseInfo_Bugsy()
+        {
+            var updater = new RuTrackerUpdater(null);
+
+            var videoInfo = new VideoInfo();
+
+            string page = GetPage(@"Resources\Bugsy.html");
+
+            await updater.ParseInfo(page, videoInfo);
+
+            Assert.AreEqual("Барри Левинсон / Barry Levinson", videoInfo.Director);
+            Assert.AreEqual(1991, videoInfo.Year);
+            Assert.IsTrue(videoInfo.Description.Contains("Он мог войти в мировую историю, но занял почетное место лишь в кровавой истории организованной преступности. Его имя не попало на страницы школьных учебников, но зато красовалось в заголовках криминальной хроники. Бенджамин Сигал по кличке «Багси» — знаменитый гангстер"));
+            Assert.IsNotNull(videoInfo.Cover);
+        }
+
+        [Test()]
         public async Task ParseInfo_Las()
         {
             var updater = new RuTrackerUpdater(null);

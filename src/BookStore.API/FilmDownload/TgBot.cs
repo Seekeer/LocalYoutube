@@ -156,13 +156,10 @@ namespace API.FilmDownload
 
         private async Task DoAsyncPing()
         {
-            NLog.LogManager.GetCurrentClassLogger().Info("DoAsyncPing");
             var db = _GetDb();
             var manager = new DbUpdateManager(db);
 
             var updated = manager.UpdateDownloading((info) => info.IsDownloading);
-
-            NLog.LogManager.GetCurrentClassLogger().Info($"updated count: {updated.Count()}");
 
             foreach (var item in updated)
             {

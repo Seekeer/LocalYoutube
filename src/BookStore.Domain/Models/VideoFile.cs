@@ -159,9 +159,12 @@ namespace FileStore.Domain.Models
         {
             get
             {
-                if (VideoFileUserInfo == null || Duration > TimeSpan.Zero)
+                if (VideoFileUserInfo == null)
                     return false;
                 //return true;
+                if (VideoFileUserInfo.Position > 0 && Duration == TimeSpan.Zero)
+                    return true;
+
                 var watchedTime = TimeSpan.FromSeconds(VideoFileUserInfo.Position);
 
                 if ((this as VideoFile)?.Type == VideoType.Courses)

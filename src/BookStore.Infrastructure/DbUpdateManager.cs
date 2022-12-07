@@ -149,7 +149,7 @@ namespace Infrastructure
         {
             try
             {
-                if (BadExtension(file))
+                if (IsBadExtension(file))
                     return null;
 
                 var existingInfo = _db.VideoFiles.FirstOrDefault(x => x.Path == file.FullName && x.SeriesId == series.Id);
@@ -168,13 +168,24 @@ namespace Infrastructure
             return null;
         }
 
-        private bool BadExtension(FileInfo file)
+        private bool IsBadExtension(FileInfo file)
         {
+            //try
+            //{
+            //    var extension = MimeTypeMap.GetExtension(document.mime_type);
+
+            //}
+            //catch (Exception ex)
+            //{
+            //}
+
             return file.Name.EndsWith("jpg") || file.Name.EndsWith("jpeg") || file.Name.EndsWith("docx") || file.Name.EndsWith("png") ||
                                 file.Name.EndsWith("nfo") || file.Name.EndsWith("mp3") || file.Name.EndsWith("txt") || file.Name.EndsWith("pdf") ||
                                 file.Name.EndsWith("xlsx") || file.Name.EndsWith("pdf") || file.Name.EndsWith("zip") || file.Name.EndsWith("vtt") ||
                                 file.Name.EndsWith("srt") || file.Name.EndsWith("rar") || file.Name.EndsWith("zip") || file.Name.EndsWith("vtt") ||
                                 file.Name.EndsWith("pptx") || file.Name.EndsWith("html") || file.Name.EndsWith("qB") || file.Name.EndsWith("lnk") ||
+                                file.Name.EndsWith("mka") || file.Name.EndsWith("ass") || file.Name.EndsWith("tff") || file.Name.EndsWith("ac3") ||
+                                file.Name.EndsWith("ogg") ||
                                 file.FullName.Contains("Конспект") && _type == VideoType.Courses;
         }
 
@@ -634,7 +645,7 @@ namespace Infrastructure
 
                 foreach (var file in dirFiles)
                 {
-                    if (info.IsDownloading && !BadExtension(file))
+                    if (info.IsDownloading && !IsBadExtension(file))
                     { 
                         info.Path = file.FullName;
                         //info.IsDownloading = false;
@@ -676,21 +687,23 @@ namespace Infrastructure
                     }
 
                     var dirFiles = dir.EnumerateFiles("*", SearchOption.AllDirectories);
-
-                    // Delete file if not exist
                     if (!dirFiles.Any())
                     {
+                        //// Delete db file if not exist
                         //RemoveFileCompletely(info);
                         //dir.Delete();
                         continue;
                     }
 
+                    var dirDirectories = dir.EnumerateDirectories();
+                    if (dirDirectories.Any(x => x.Name == "VIDEO_TS") || dirFiles.Any(x => x.Name.Contains("VIDEO_TS")))
+                        // TODO - message about wrong format
+                        continue;
+
                     if (!dirFiles.Any() || dirFiles.Any(x => x.FullName.EndsWith(".!qB")))
                         continue;
 
-                    var dirDirectories = dir.EnumerateDirectories();
-                    if (dirDirectories.Any(x => x.Name == "VIDEO_TS"))
-                        continue;
+                    dirFiles = dirFiles.Where(x => !IsBadExtension(x));
 
                     if(dirFiles.Count() > 1)
                     {
