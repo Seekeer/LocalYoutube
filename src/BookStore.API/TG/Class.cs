@@ -18,6 +18,8 @@ namespace API.TG
         Animation,
         [CommandName("Детский сериал")]
         ChildSeries,
+        [CommandName("Удалить")]
+        Delete,
         Unknown,
     }
 

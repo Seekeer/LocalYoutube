@@ -84,17 +84,8 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> Remove(int fileId, bool removeFile = true)
         {
-            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).Where(x => x.Id == fileId).ToList();
-
-            foreach (var file in files)
-            {
-                if (removeFile && System.IO.File.Exists(file.Path))
-                    System.IO.File.Delete(file.Path);
-
-                Remove(file);
-
-                _db.SaveChanges();
-            }
+            var updater = new DbUpdateManager(_db);
+            updater.DeleteFiles(fileId, fileId, removeFile);
 
             return Ok();
         }
@@ -104,17 +95,8 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> Remove(int startId, int endId, bool removeFile = true)
         {
-            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).Where(x => x.Id >= startId && x.Id <= endId).ToList();
-
-            foreach (var file in files)
-            {
-                if (removeFile && System.IO.File.Exists(file.Path))
-                    System.IO.File.Delete(file.Path);
-
-                Remove(file);
-
-                _db.SaveChanges();
-            }
+            var updater = new DbUpdateManager(_db);
+            updater.DeleteFiles(startId, endId, removeFile);
 
             return Ok();
         }

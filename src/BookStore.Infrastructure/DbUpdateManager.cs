@@ -834,5 +834,32 @@ namespace Infrastructure
             _db.Series.Remove(serie);
             _db.SaveChanges();
         }
+
+        public void DeleteFiles(int startId, int endId, bool removeFile = true)
+        {
+            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).Where(x => x.Id >= startId && x.Id <= endId).ToList();
+
+            foreach (var file in files)
+            {
+                DeleteFile(removeFile, file);
+            }
+        }
+
+        public void DeleteFile(bool removeFile, DbFile file)
+        {
+            if (removeFile && System.IO.File.Exists(file.Path))
+                System.IO.File.Delete(file.Path);
+
+            Remove(file);
+
+            _db.SaveChanges();
+        }
+
+        private void Remove(DbFile file)
+        {
+            _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
+            _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
+            _db.Files.Remove(file);
+        }
     }
 }

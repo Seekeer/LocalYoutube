@@ -20,6 +20,8 @@ using FileStore.Domain.Models;
 using System.Drawing;
 using API.TG;
 using System.Diagnostics;
+using static System.Net.WebRequestMethods;
+using AngleSharp.Dom;
 
 namespace API.FilmDownload
 {
@@ -297,6 +299,9 @@ namespace API.FilmDownload
                             case CommandType.Animation:
                                 await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Animation);
                                 break;
+                            case CommandType.Delete:
+                                await DeleteFile(update.CallbackQuery.Id, command.Data);
+                                break;
                             case CommandType.Unknown:
                                 break;
                             default:
@@ -342,6 +347,31 @@ namespace API.FilmDownload
                 catch (Exception)
                 {
                 }
+            }
+        }
+
+        private async Task DeleteFile(string callbackId, string data)
+        {
+            try
+            {
+                await _rutracker.DeleteTorrent(data);
+
+                var db = _GetDb();
+                var updater = new DbUpdateManager(db);
+                var id = int.Parse(data);
+                var file = db.FilesInfo.FirstOrDefault(x => x.RutrackerId == id);
+                if (file != null)
+                { 
+                    db.Entry(file).State = EntityState.Detached;
+                    updater.DeleteFiles(file.VideoFileId, file.VideoFileId, true);
+                }
+
+                await _botClient.AnswerCallbackQueryAsync(callbackId, "Видео удалено");
+            }
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                await _botClient.AnswerCallbackQueryAsync(callbackId, "Ошибка при удалении");
             }
         }
 
@@ -415,7 +445,13 @@ namespace API.FilmDownload
 Год: {file.Year}
 Режиссер: {info.Director}
 Описание: {file.Description}";
-            await _botClient.SendTextMessageAsync((tgFromId), $"{result}");
+
+            var keyboard = new List<InlineKeyboardButton>
+                {
+                    new InlineKeyboardButton("Неправильный фильм! Удалить.") { CallbackData = CommandParser.GetMessageFromData(CommandType.Delete, record.Topic.Id.ToString()) },
+                };
+
+            await _botClient.SendTextMessageAsync(tgFromId, $"{result}", replyMarkup: new InlineKeyboardMarkup(keyboard));
 
             foreach (var item in _infos.Where(x => x.SearchSctring == record?.SearchSctring).ToList())
             {
@@ -495,11 +531,13 @@ namespace API.FilmDownload
 
             foreach (var info in infos)
             {
-                var keyboard = new List<InlineKeyboardButton>();
-                keyboard.Add(new InlineKeyboardButton("+фильм") { CallbackData = CommandParser.GetMessageFromData(CommandType.Film, info.Id.ToString()) });
-                keyboard.Add(new InlineKeyboardButton("+сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.Series, info.Id.ToString()) });
-                keyboard.Add(new InlineKeyboardButton("+мультфильм") { CallbackData = CommandParser.GetMessageFromData(CommandType.Animation, info.Id.ToString()) });
-                keyboard.Add(new InlineKeyboardButton("+детский сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.ChildSeries, info.Id.ToString()) });
+                var keyboard = new List<InlineKeyboardButton>
+                {
+                    new InlineKeyboardButton("+фильм") { CallbackData = CommandParser.GetMessageFromData(CommandType.Film, info.Id.ToString()) },
+                    new InlineKeyboardButton("+сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.Series, info.Id.ToString()) },
+                    new InlineKeyboardButton("+мультфильм") { CallbackData = CommandParser.GetMessageFromData(CommandType.Animation, info.Id.ToString()) },
+                    new InlineKeyboardButton("+детский сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.ChildSeries, info.Id.ToString()) }
+                };
                 var size = decimal.Round(info.SizeInBytes / 1024 / 1024 / 1024, 2, MidpointRounding.AwayFromZero);
                 var title = info.Title;
                 if(title.Contains("DVD9") && !title.Contains("DVD5"))

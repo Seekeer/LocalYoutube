@@ -1,4 +1,5 @@
 ﻿using AngleSharp.Html.Parser;
+using AngleSharp.Io;
 using FileStore.API;
 using FileStore.Domain.Models;
 using HtmlAgilityPack;
@@ -52,7 +53,7 @@ namespace API.Controllers
             _config = config;
         }
 
-        public async Task Init ()
+        public async Task Init()
         {
             _qclient = new QBittorrentClient(new Uri("http://localhost:124"));
 
@@ -117,7 +118,7 @@ namespace API.Controllers
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
 
-           var urls = ParseByText(doc, info);
+            var urls = ParseByText(doc, info);
 
             if (urls != null)
             {
@@ -145,7 +146,7 @@ namespace API.Controllers
                 var response = await _httpClient.GetStringAsync(link);
                 doc.LoadHtml(response);
 
-                if(info.Cover?.Length < 8 * 1024)
+                if (info.Cover?.Length < 8 * 1024)
                 {
                     var poster = doc.QuerySelector(".film-poster");
                     var url = poster.GetAttributeValue("src", "");
@@ -187,18 +188,18 @@ namespace API.Controllers
         {
             try
             {
-                byte[] imageAsByteArray = GetCoverByUrl( url);
+                byte[] imageAsByteArray = GetCoverByUrl(url);
                 info.Cover = imageAsByteArray;
 
                 return imageAsByteArray.Length > 15 * 1024;
             }
             catch (Exception ex)
             {
-                return false; 
+                return false;
             }
         }
 
-        public static byte[] GetCoverByUrl( string url)
+        public static byte[] GetCoverByUrl(string url)
         {
             byte[] imageAsByteArray;
             using (var webClient = new WebClient())
@@ -213,8 +214,8 @@ namespace API.Controllers
         {
             file.VideoFileExtendedInfo.Description = info.Description;
 
-            if(info.Cover!=null && info.Cover.Length > 30 * 1024)
-            //if(file.VideoFileExtendedInfo.Cover.Length < info.Cover?.Length)
+            if (info.Cover != null && info.Cover.Length > 30 * 1024)
+                //if(file.VideoFileExtendedInfo.Cover.Length < info.Cover?.Length)
                 file.VideoFileExtendedInfo.Cover = info.Cover;
             file.VideoFileExtendedInfo.Genres = info.Genres;
             file.VideoFileExtendedInfo.Year = info.Year;
@@ -289,10 +290,10 @@ namespace API.Controllers
             info.Genres = GetProperty("Жанр", text);
             var duration = GetProperty("Продолжительность", text);
             if (string.IsNullOrEmpty(duration))
-                duration = GetProperty("Время", text); 
+                duration = GetProperty("Время", text);
             if (!string.IsNullOrEmpty(duration))
             {
-                if ( TryParse(duration, out var durationTs))
+                if (TryParse(duration, out var durationTs))
                     info.Duration = durationTs;
             }
 
@@ -304,14 +305,14 @@ namespace API.Controllers
             var yearStrDigits = yearStr.Length > 6 ? yearStr.Substring(0, 6).OnlyDigits() : yearStr.OnlyDigits();
             if (int.TryParse(yearStrDigits, out int year))
             {
-                if(year > 1900 && year <2030)
+                if (year > 1900 && year < 2030)
                     info.Year = year;
             }
             var urls = doc.QuerySelectorAll(".postImg").Select(x => x.GetAttributeValue("title", null));
 
             var links = doc.QuerySelectorAll("a");
             var kinopoiskLink = links.Select(x => x.GetAttributeValue("href", "")).FirstOrDefault(x => x.Contains("kinopoisk"));
-            if(kinopoiskLink != null)
+            if (kinopoiskLink != null)
             {
                 var kpUrl = HttpUtility.HtmlDecode(kinopoiskLink).Replace("out.php?url=", "");
                 info.KinopoiskLink = kpUrl.Replace(@"/votes", "").Replace("level/1", "");
@@ -332,7 +333,7 @@ namespace API.Controllers
                 result = new TimeSpan(0, minutes, 0);
                 return true;
             }
-            if(str.Length > 10)
+            if (str.Length > 10)
             {
                 str = str.Substring(0, 8);
             }
@@ -349,17 +350,17 @@ namespace API.Controllers
                 if (line.Contains(title))
                 {
                     var result = "";
-                    if (line == title || line.EndsWith(title) || line.EndsWith(title+":"))
+                    if (line == title || line.EndsWith(title) || line.EndsWith(title + ":"))
                     {
                         result = lines[i + 1].Trim(':').Trim();
                         if (string.IsNullOrEmpty(result))
                             result = lines[i + 2];
-                        result = result.Trim(':').Trim(); 
+                        result = result.Trim(':').Trim();
                     }
-                    else if(line.Length > title.Length + 3)
+                    else if (line.Length > title.Length + 3)
                     {
                         var subline = line.StartingFrom(title);
-                        result = subline.Trim(':').Trim(); 
+                        result = subline.Trim(':').Trim();
                     }
                     else
                     {
@@ -411,11 +412,12 @@ namespace API.Controllers
 
             var temp = Path.Combine(rootDownloadFolder, $"{rootDownloadFolder}.torrent");
 
-            File.WriteAllBytes( temp, torrent);
+            File.WriteAllBytes(temp, torrent);
 
             var request = new AddTorrentFilesRequest();
             request.TorrentFiles.Add(temp);
             request.DownloadFolder = rootDownloadFolder;
+            request.Tags = new List<string> { id.ToString() };
             await _qclient.AddTorrentsAsync(request);
 
             //var args = $"--save-path=\"{rootDownloadFolder}\" --skip-dialog=true {temp}";
@@ -423,5 +425,14 @@ namespace API.Controllers
             //var process = Process.Start(@"C:\Program Files\qBittorrent\qbittorrent.exe", args);
         }
 
+        public async Task DeleteTorrent(string id)
+        {
+           var torrents = await _qclient.GetTorrentListAsync();
+
+            var torrent = torrents.FirstOrDefault(x => x.Tags.Contains(id));
+
+            if (torrent != null)
+                await _qclient.DeleteAsync(torrent.Hash, true);
+        }
     }
 }
