@@ -4,12 +4,14 @@ using AutoMapper;
 using FileStore.API.Dtos.Series;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FileStore.API.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize]
     public class SeriesController : MainController
     {
         private readonly ISeriesService _SeriesService;

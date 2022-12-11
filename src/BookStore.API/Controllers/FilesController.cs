@@ -9,6 +9,7 @@ using FileStore.API.Dtos.File;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -17,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 namespace FileStore.API.Controllers
 {
 
+    [Authorize]
     [EnableCors()]
     [Route("api/[controller]")]
     public class FilesController : MainController
@@ -207,6 +209,7 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         [Route("getFileById")]
         public async Task<FileResult> GetVideoById(int fileId)
         {

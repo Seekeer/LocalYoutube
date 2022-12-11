@@ -12,10 +12,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FileStore.API.Controllers
 {
     [EnableCors()]
+    [Authorize]
     [Route("api/[controller]")]
     public class UpdateController : MainController
     {
