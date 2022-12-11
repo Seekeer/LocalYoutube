@@ -85,6 +85,7 @@ namespace FileStore.API.Controllers
         [HttpDelete]
         [Route("removeFile")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> RemoveFile(int startId, int endId, bool removeFile)
         {
             var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).Where(x => x.Id >= startId && x.Id <= endId).ToList();
 
@@ -92,11 +93,9 @@ namespace FileStore.API.Controllers
             {
                 if (removeFile && System.IO.File.Exists(file.Path))
                     System.IO.File.Delete(file.Path);
-
-            if(removeFile)
-                System.IO.File.Delete(file.Path);
-
-            Remove(file);
+                
+                Remove(file);
+            }
 
             _db.SaveChanges();
 
