@@ -69,7 +69,6 @@ export class BookListComponent implements OnInit {
   public seasons: Seasons[];
   public type: string;
   apibooks: Book[];
-  apibooks: Book[];
 
   constructor(private router: Router,
               private service: FileService,
