@@ -2,8 +2,14 @@ import {
   HashLocationStrategy,
   LocationStrategy,
 } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
-import { NgModule } from '@angular/core';
+import {
+  HTTP_INTERCEPTORS,
+  HttpClientModule,
+} from '@angular/common/http';
+import {
+  APP_INITIALIZER,
+  NgModule,
+} from '@angular/core';
 import { FlexLayoutModule } from '@angular/flex-layout';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -23,6 +29,7 @@ import { ToastrModule } from 'ngx-toastr';
 
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
+import { AuthService } from './_services/auth.service';
 import {
   ConfirmationDialogService,
 } from './_services/confirmation-dialog.service';
@@ -30,6 +37,9 @@ import { FileService } from './_services/file.service';
 import { SeriesService } from './_services/series.service';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { appInitializer } from './auth/app-initializer';
+import { JwtInterceptor } from './auth/jwt.interceptor';
+import { UnauthorizedInterceptor } from './auth/unauthorized.interceptor';
 import { BookListComponent } from './books/book-list/book-list.component';
 import { PlayerComponent } from './books/player/player.component';
 import {
@@ -41,11 +51,13 @@ import {
 } from './confirmation-dialog/confirmation-dialog.component';
 import { NgbdDatepickerPopup } from './datepicker/datepicker-popup';
 import { HomeComponent } from './home/home.component';
+import { LoginComponent } from './login/login.component';
 import { NavComponent } from './nav/nav.component';
 
 @NgModule({
   declarations: [
     AppComponent,
+    LoginComponent,
     CategoryComponent,
     CategoryListComponent,
     PlayerComponent,
@@ -79,7 +91,19 @@ import { NavComponent } from './nav/nav.component';
     FileService,
     SeriesService,
     ConfirmationDialogService,
-    {provide: LocationStrategy, useClass: HashLocationStrategy}
+    {provide: LocationStrategy, useClass: HashLocationStrategy},
+    {
+      provide: APP_INITIALIZER,
+      useFactory: appInitializer,
+      multi: true,
+      deps: [AuthService],
+    },
+    { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true },
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: UnauthorizedInterceptor,
+      multi: true,
+    },
   ],
   bootstrap: [AppComponent]
 })
