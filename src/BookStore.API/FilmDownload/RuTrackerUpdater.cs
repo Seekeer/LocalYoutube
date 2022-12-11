@@ -40,7 +40,18 @@ namespace API.Controllers
         public string Artist { get; set; }
     }
 
-    public class RuTrackerUpdater
+    public interface IRuTrackerUpdater
+    {
+        string ClearFromForeignOption(string text);
+        Task<VideoInfo> FillInfo(int topicId);
+        Task<IEnumerable<SearchTopicInfo>> FindTheme(string name);
+        Task Init();
+        Task ParseInfo(string html, VideoInfo info);
+        Task StartDownload(int id, string rootDownloadFolder);
+        Task UpdateVideoFile(bool updateCover, VideoFile file);
+    }
+
+    public class RuTrackerUpdater : IRuTrackerUpdater
     {
         private RuTrackerClient _client;
         private QBittorrentClient _qclient;
@@ -82,6 +93,25 @@ namespace API.Controllers
 
             _client = new RuTrackerClient(env);
             await _client.Login(_config.RP_Login, _config.RP_Pass);
+        }
+
+
+        public async Task UpdateVideoFile(bool updateCover, VideoFile file)
+        {
+            var info = await FillInfo(file.VideoFileExtendedInfo.RutrackerId);
+
+            file.Duration = info.Duration;
+            file.Name = ClearFromForeignOption(info.Name);
+            file.VideoFileExtendedInfo.Director = ClearFromForeignOption(info.Director);
+            file.VideoFileExtendedInfo.Year = info.Year;
+            file.VideoFileExtendedInfo.Genres = info.Genres;
+            file.VideoFileExtendedInfo.Description = info.Description;
+
+            if (file.Duration == System.TimeSpan.Zero)
+                file.Duration = DbUpdateManager.GetDuration(file.Path);
+
+            if (updateCover)
+                file.VideoFileExtendedInfo.Cover = info.Cover;
         }
 
         internal async Task<IEnumerable<TorrentInfo>> Get()
@@ -401,6 +431,7 @@ namespace API.Controllers
             topics = topics.Where(x => !x.Title.Contains("DVD9") && !x.Title.Contains("DVD5"));
 
             return topics.OrderByDescending(x => x.SizeInBytes).Take(15);
+            //return topics.OrderByDescending(x => x.SizeInBytes).Take(10);
             //return topics.OrderByDescending(x => x.SizeInBytes).Take(10);
         }
 

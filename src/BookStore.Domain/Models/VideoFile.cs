@@ -159,7 +159,7 @@ namespace FileStore.Domain.Models
         {
             get
             {
-                if (VideoFileUserInfo == null)
+                if (VideoFileUserInfo == null || Duration > TimeSpan.Zero)
                     return false;
                 //return true;
                 if (VideoFileUserInfo.Position > 0 && Duration == TimeSpan.Zero)
