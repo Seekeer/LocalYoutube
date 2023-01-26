@@ -103,7 +103,11 @@ export class BookListComponent implements OnInit {
 
   getSeries(type:VideoType) {
     this.seriesService.getAll(type).subscribe(series => {
-      this.series = series;
+      this.series = series.sort((a, b) => {  
+        return a.name >= b.name
+          ? 1
+          : -1
+      });
       this.hideSpinner(); 
     });
   }
