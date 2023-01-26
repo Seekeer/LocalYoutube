@@ -46,6 +46,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   isRandom: boolean;
   timerMinutes: number;
   timerStr: string;
+  totalDuration: moment.Moment;
 
   constructor(public service: FileService,
     private categoryService: SeriesService,
@@ -128,7 +129,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     if(this.interval) 
         clearInterval(this.interval);
 
-    this.timeLeft = this.timerMinutes * 1;
+    this.timeLeft = this.timerMinutes * 60;
 
     this.interval =Number( setInterval(() => {
       if(this.timeLeft > 0) {
@@ -185,7 +186,7 @@ private switchToFullscreen(){
 
       var video = this.getVideoElement();
       if(video)
-        this.previousVideoTimePlayed.seconds(video.currentTime);
+        this.previousVideoTimePlayed = this.totalDuration.clone();
     }
 
     this.service.getBookById(currentId).subscribe((videoInfo) => {
@@ -204,16 +205,17 @@ private switchToFullscreen(){
 
     this.setPosition();
     
-    var totalDuration = moment(this.previousVideoTimePlayed);
+    this.totalDuration = moment(this.previousVideoTimePlayed);
     if(video)
     {
-      totalDuration = totalDuration.seconds(video.currentTime);
+      this.totalDuration = this.totalDuration.add(video.currentTime, 'seconds');
 
       if(video.currentTime > 10)
         this.service.setPosition(this.videoId, video.currentTime);
     }
 
-    this.statStr = `Общее время просмотра ${totalDuration.format("mm:ss")} ${this.playedVideoCount}/${this.parameters.videosCount}`
+    if(this.totalDuration.seconds() - video.currentTime>  2)
+    this.statStr = `Общее время просмотра всех серий ${this.totalDuration.format("mm:ss")} ${this.playedVideoCount}/${this.parameters.videosCount}`
   }
 
   setPosition() {
