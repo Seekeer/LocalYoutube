@@ -26,7 +26,7 @@ namespace Infrastructure
         }
     }
 
-        public static class StringHelper
+    public static class StringHelper
     {
         public static string ClearEnd(this string text, string end, bool includeEndString = false)
         {

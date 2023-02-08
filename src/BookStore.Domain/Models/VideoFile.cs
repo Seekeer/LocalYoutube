@@ -155,7 +155,7 @@ namespace FileStore.Domain.Models
         }
 
         [NotMapped]
-        public bool IsFinished
+        public virtual bool IsFinished
         {
             get
             {
@@ -183,6 +183,28 @@ namespace FileStore.Domain.Models
         public VideoType Type { get; set; }
         public Quality Quality { get; set; }
         public bool IsDownloading { get; set; }
+
+        [NotMapped]
+        public override bool IsFinished
+        {
+            get
+            {
+                if (VideoFileUserInfo == null || Duration > TimeSpan.Zero)
+                    return false;
+
+                if (VideoFileUserInfo.Position > 0 && Duration == TimeSpan.Zero && Type == VideoType.Lessons)
+                    return true;
+
+                var watchedTime = TimeSpan.FromSeconds(VideoFileUserInfo.Position);
+
+                if ((this as VideoFile)?.Type == VideoType.Courses)
+                    return (Duration - watchedTime) < TimeSpan.FromSeconds(10);
+
+                var watchedPercent = (watchedTime) / Duration;
+
+                return watchedPercent > 0.9;
+            }
+        }
     }
 
     public class AudioFile : DbFile

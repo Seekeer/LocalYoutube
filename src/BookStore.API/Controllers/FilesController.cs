@@ -16,8 +16,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FileStore.API.Controllers
 {
-
-    [EnableCors()]
+    [Microsoft.AspNetCore.Cors.EnableCors("CorsPolicy")]
     [Route("api/[controller]")]
     public class FilesController : MainController
     {

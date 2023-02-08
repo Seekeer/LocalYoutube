@@ -151,6 +151,9 @@ private switchToFullscreen(){
 }
 
   private setNextVideo(encreaseCounter:boolean) {
+
+    console.log(`Video ended ${this.videoURL} ${this.name}`)
+
     if(this.parameters.videosCount <= this.playedVideoCount){
       this.videoURL = null;
       return false;
@@ -161,6 +164,7 @@ private switchToFullscreen(){
     this.videoURL = this.service.getVideoURLById(currentId);
     var el = this.getVideoElement();
     el?.load();
+    
     // else if (el.webkitRequestFullscreen) 
     //     el.webkitRequestFullscreen();
     // else if (el.msRequestFullScreen) 

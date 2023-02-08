@@ -15,7 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace FileStore.API.Controllers
 {
-    [EnableCors()]
+    [EnableCors("CorsPolicy")]
     [Route("api/[controller]")]
     public class UpdateController : MainController
     {
@@ -28,6 +28,24 @@ namespace FileStore.API.Controllers
             _db = dbContext;
             _config = config;
             _serviceScopeFactory = serviceScopeFactory;
+        }
+
+        [HttpGet]
+        [Route("checkDownloaded")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> CheckDownloaded()
+        {
+            var files = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).
+                Where(x => x.Type == VideoType.Film).ToList();
+            foreach (var file in files)
+            {
+                if(!System.IO.File.Exists(file.Path))
+                    _db.VideoFiles.Remove(file);
+            }
+
+            _db.SaveChanges();
+
+            return Ok();
         }
 
         [HttpGet]
@@ -78,12 +96,51 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
-        //[HttpGet]
-        //[Route("removeFile")]
-        //[ProducesResponseType(StatusCodes.Status200OK)]
-        //[ProducesResponseType(StatusCodes.Status404NotFound)]
+
+        [HttpDelete]
+        [Route("removeSeason")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public void RemoveSeason(int seasonId)
+        {
+            var files = _db.Files.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeasonId == seasonId).ToList();
+
+            foreach (var file in files)
+            {
+                _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
+                _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
+                _db.Files.Remove(file);
+            }
+
+            var seriesId = 0;
+            var season = _db.Seasons.First(x => x.Id == seasonId);
+            _db.Seasons.Remove(season);
+            if(!_db.Seasons.Any(x => x.SeriesId == season.SeriesId))
+            {
+                var serie = _db.Series.First(x => x.Id == season.SeriesId);
+                _db.Series.Remove(serie);
+            }
+
+            _db.SaveChanges();
+        }
+
+
         [HttpDelete]
         [Route("removeFile")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> RemoveFile(int fileId)
+        {
+            var file = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).First(x => x.Id == fileId);
+
+            System.IO.File.Delete(file.Path);
+            Remove(file);
+
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpDelete]
+        [Route("removeFiles")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> RemoveFile(int startId, int endId, bool removeFile)
         {
@@ -133,6 +190,18 @@ namespace FileStore.API.Controllers
             }
 
             return NotFound();
+        }
+
+        [HttpGet]
+        [Route("addFile")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> AddFile(string path, VideoType? type = null)
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            dbUpdater.FillSeries(path, Origin.Unknown, type.Value, false, "Загрузки");
+
+            return Ok();
         }
 
         [HttpGet]
@@ -413,11 +482,30 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("updateCoverByFile")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateCoverByFile(int startId, int endId)
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            var filesToUpdate = _db.VideoFiles.Where(x => x.Id >= startId && x.Id < endId).ToList();
+
+            foreach (var file in filesToUpdate)
+            {
+                DbUpdateManager.FillVideoProperties(file);
+                await _db.SaveChangesAsync();
+            }
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("updateAll")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateAll()
         {
             var dbUpdater = new DbUpdateManager(_db);
+
 
             //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские", Origin.Russian, VideoType.ChildEpisode, true);
             //dbUpdater.FillSeries(@"F:\Анюта\Фильмы\В гостях у сказки", Origin.Soviet, VideoType.FairyTale, false);

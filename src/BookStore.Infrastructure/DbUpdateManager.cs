@@ -365,7 +365,7 @@ namespace Infrastructure
                 video.Number = GetSeriesNumberFromName(file.Name);
             }
 
-            //FillVideoProperties(video);
+            FillVideoProperties(video);
 
             return video;
         }

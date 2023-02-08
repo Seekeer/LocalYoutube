@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FileStore.API.Controllers
 {
+    [Microsoft.AspNetCore.Cors.EnableCors("CorsPolicy")]
     [Route("api/[controller]")]
     public class SeriesController : MainController
     {

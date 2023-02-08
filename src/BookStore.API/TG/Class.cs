@@ -14,10 +14,12 @@ namespace API.TG
         Series,
         [CommandName("Фильм")]
         Film,
-        [CommandName("Мультфильм")]
+        [CommandName("Cartoon")]
         Animation,
-        [CommandName("Детский сериал")]
+        [CommandName("Мульт/с")]
         ChildSeries,
+        [CommandName("Сказка")]
+        FairyTale,
         [CommandName("Удалить")]
         Delete,
         Unknown,

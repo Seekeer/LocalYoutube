@@ -419,7 +419,7 @@ namespace API.Controllers
            ));
 
             long maxLimit = (long)20 * 1024 * 1024 * 1024;
-            long minLimit = (long)2 * 1024 * 1024 * 1024;
+            long minLimit = (long)1 * 1024 * 1024 * 1024;
 
             if (res.Topics.Count() < 5)
                 return res.Topics;

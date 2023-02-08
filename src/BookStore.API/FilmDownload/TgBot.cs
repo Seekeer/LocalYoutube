@@ -22,6 +22,8 @@ using API.TG;
 using System.Diagnostics;
 using static System.Net.WebRequestMethods;
 using AngleSharp.Dom;
+using System.Text;
+using Polly;
 
 namespace API.FilmDownload
 {
@@ -299,6 +301,9 @@ namespace API.FilmDownload
                             case CommandType.Animation:
                                 await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Animation);
                                 break;
+                            case CommandType.FairyTale:
+                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.FairyTale);
+                                break;
                             case CommandType.Delete:
                                 await DeleteFile(update.CallbackQuery.Id, command.Data);
                                 break;
@@ -433,6 +438,11 @@ namespace API.FilmDownload
                 var childDownloaded = manager.AddOrUpdateSeason(downloadSeries, "Детские мультики");
                 file.SeasonId = childDownloaded.Id;
             }
+            else if (type == VideoType.FairyTale && tgRecord != null)
+            {
+                var childDownloaded = manager.AddOrUpdateSeason(downloadSeries, "Сказки");
+                file.SeasonId = childDownloaded.Id;
+            }
             else
                 Debug.Assert(false);
             file.Type = type;
@@ -503,23 +513,9 @@ namespace API.FilmDownload
 
         private async Task ProcessUserInput(Message message)
         {
-            if (message.Text.Contains("youtube"))
+            if (message.Text.Contains("youtube")|| message.Text.Contains("youtu.be"))
             {
-                var file = await YoutubeDownloader.GetInfo(message.Text, Path.Combine(_config.RootDownloadFolder, "Youtube"));
-
-                var scope = _serviceScopeFactory.CreateScope();
-                var fileService = scope.ServiceProvider.GetRequiredService<DbUpdateManager>();
-                fileService.AddFromYoutube(file.File, file.ChannelName);
-
-                await _botClient.SendTextMessageAsync(new ChatId(message.From.Id), $"Начата загрузка видео с ютуба {Environment.NewLine}{file.File.Name} ");
-
-                Task.Run(async () =>
-                {
-                    await YoutubeDownloader.Download(message.Text, file.File.Path);
-
-                    fileService.YoutubeFinished(file.File);
-                    await _botClient.SendTextMessageAsync(new ChatId(message.From.Id), $"Закончена загрузка видео {Environment.NewLine}{file.File.Name}");
-                });
+                ProcessYoutubeVideo(message);
 
                 return;
             }
@@ -531,16 +527,20 @@ namespace API.FilmDownload
 
             foreach (var info in infos)
             {
-                var keyboard = new List<InlineKeyboardButton>
+                var keyboard = new List<List<InlineKeyboardButton>>
                 {
-                    new InlineKeyboardButton("+фильм") { CallbackData = CommandParser.GetMessageFromData(CommandType.Film, info.Id.ToString()) },
-                    new InlineKeyboardButton("+сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.Series, info.Id.ToString()) },
-                    new InlineKeyboardButton("+мультфильм") { CallbackData = CommandParser.GetMessageFromData(CommandType.Animation, info.Id.ToString()) },
-                    new InlineKeyboardButton("+детский сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.ChildSeries, info.Id.ToString()) }
-                };
+                 new List<InlineKeyboardButton>{
+                    new InlineKeyboardButton("фильм") { CallbackData = CommandParser.GetMessageFromData(CommandType.Film, info.Id.ToString()) },
+                    new InlineKeyboardButton("сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.Series, info.Id.ToString()) },
+                    },
+                 new List<InlineKeyboardButton>{
+                    new InlineKeyboardButton("мульт/сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.ChildSeries, info.Id.ToString()) },
+                    new InlineKeyboardButton("длинный мульт") { CallbackData = CommandParser.GetMessageFromData(CommandType.Animation, info.Id.ToString()) },
+                    new InlineKeyboardButton("сказка") { CallbackData = CommandParser.GetMessageFromData(CommandType.FairyTale, info.Id.ToString()) }
+                } };
                 var size = decimal.Round(info.SizeInBytes / 1024 / 1024 / 1024, 2, MidpointRounding.AwayFromZero);
                 var title = info.Title;
-                if(title.Contains("DVD9") && !title.Contains("DVD5"))
+                if (title.Contains("DVD9") && !title.Contains("DVD5"))
                     title = $"КОПИЯ ДИСКА {title}";
 
                 var messageText = $"{size} GB | {info.DownloadsCount} | {info.CreatedAt.ToString("MM-yy")} | {title}";
@@ -548,6 +548,38 @@ namespace API.FilmDownload
                     messageText, replyMarkup: new InlineKeyboardMarkup(keyboard));
 
                 _infos.Add(new SearchRecord { Topic = info, MessageId = tgMessage.MessageId, SearchSctring = message.Text });
+            }
+        }
+
+        private async Task ProcessYoutubeVideo(Message message)
+        {
+            var info = await YoutubeDownloader.GetInfo(message.Text, Path.Combine(_config.RootDownloadFolder, "Youtube"));
+
+            foreach (var record in info.Records)
+            {
+                try
+                {
+                    var scope = _serviceScopeFactory.CreateScope();
+                    var fileService = scope.ServiceProvider.GetRequiredService<DbUpdateManager>();
+                    fileService.AddFromYoutube(record.Value, info.ChannelName);
+
+                    //await _botClient.SendTextMessageAsync(new ChatId(message.From.Id), $"Начата загрузка видео с ютуба {Environment.NewLine}{record.Value.Name} ");
+
+                    var policy = Policy
+                        .Handle<Exception>()
+                        .WaitAndRetry(20, retryAttempt => TimeSpan.FromSeconds(10));
+
+                    await policy.Execute(async () => {
+                        await YoutubeDownloader.Download(record.Key, record.Value.Path);
+
+                        fileService.YoutubeFinished(record.Value);
+                        //await _botClient.SendTextMessageAsync(new ChatId(message.From.Id), $"Закончена загрузка видео {Environment.NewLine}{record.Value.Name}");
+                    });
+                }
+                catch (Exception ex)
+                {
+                    NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                }
             }
         }
 
