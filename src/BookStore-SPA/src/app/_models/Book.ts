@@ -1,6 +1,7 @@
 export class Book {
     id: number;
     seriesId: number;
+    seasonId: number;
     name: string;
     displayName: string;
     cover: string;
@@ -22,7 +23,7 @@ export enum VideoType {
     ChildEpisode,
     FairyTale,
     Lessons, 
-    Balley,
+    Art,
     AdultEpisode,
     Courses
   }

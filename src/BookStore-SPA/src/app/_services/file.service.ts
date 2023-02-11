@@ -19,6 +19,9 @@ export class FileService {
     public getFilmsByType(type: VideoType) {
         return this.http.get<Book[]>(`${this.baseUrl}files/getFileByType/${type}`);
     }
+    public getFilmsByTypeUniqueSeason(type: VideoType) {
+        return this.http.get<Book[]>(`${this.baseUrl}files/getFileByTypeUniqueSeason/${type}`);
+    }
     public getSovietAnimation() {
         return this.http.get<Book[]>(`${this.baseUrl}files/getAnimation?isSoviet=true`);
     }
@@ -44,7 +47,10 @@ export class FileService {
 
     public getVideosBySeries(seriesId: number, count: number, isRandom: boolean): Observable<Book[]> {
         return this.http.get<Book[]>( this.baseUrl +`Files/getFilesBySeries?id=${seriesId}&count=${count}&isRandom=${isRandom}`);
-        // return this.http.get<Book[]>( this.baseUrl +`Files/getVideosBySeriesId?seriesId=${seriesId}&count=${count}`);
+    }
+
+    public getVideosBySeason(seasonId: number, count: number, isRandom: boolean): Observable<Book[]> {
+        return this.http.get<Book[]>( this.baseUrl +`Files/getFilesBySeason?id=${seasonId}&count=${count}&isRandom=${isRandom}`);
     }
 
     public addBook(book: Book) {

@@ -31,6 +31,7 @@ namespace FileStore.Domain.Models
         [IsOnlineVideoAttribute]
         FairyTale,
         Lessons, 
+        [IsOnlineVideoAttribute]
         Art,
         [IsOnlineVideoAttribute]
         AdultEpisode,

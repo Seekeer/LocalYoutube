@@ -23,7 +23,7 @@ using System.Diagnostics;
 using static System.Net.WebRequestMethods;
 using AngleSharp.Dom;
 using System.Text;
-using Polly;
+//using Polly;
 
 namespace API.FilmDownload
 {
@@ -304,6 +304,9 @@ namespace API.FilmDownload
                             case CommandType.FairyTale:
                                 await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.FairyTale);
                                 break;
+                            case CommandType.Art:
+                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Art);
+                                break;
                             case CommandType.Delete:
                                 await DeleteFile(update.CallbackQuery.Id, command.Data);
                                 break;
@@ -440,11 +443,17 @@ namespace API.FilmDownload
             }
             else if (type == VideoType.FairyTale && tgRecord != null)
             {
-                var childDownloaded = manager.AddOrUpdateSeason(downloadSeries, "Сказки");
-                file.SeasonId = childDownloaded.Id;
+                file.SeriesId = 11;
+                file.SeasonId = 4356;
+            }
+            else if (type == VideoType.Art && tgRecord != null)
+            {
+                file.SeriesId = 2038;
+                file.SeasonId = manager.AddOrUpdateSeason(2038, file.Name).Id;
             }
             else
                 Debug.Assert(false);
+
             file.Type = type;
         }
 
@@ -532,6 +541,7 @@ namespace API.FilmDownload
                  new List<InlineKeyboardButton>{
                     new InlineKeyboardButton("фильм") { CallbackData = CommandParser.GetMessageFromData(CommandType.Film, info.Id.ToString()) },
                     new InlineKeyboardButton("сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.Series, info.Id.ToString()) },
+                    new InlineKeyboardButton("балет/опера") { CallbackData = CommandParser.GetMessageFromData(CommandType.Art, info.Id.ToString()) },
                     },
                  new List<InlineKeyboardButton>{
                     new InlineKeyboardButton("мульт/сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.ChildSeries, info.Id.ToString()) },
@@ -569,7 +579,8 @@ namespace API.FilmDownload
                         .Handle<Exception>()
                         .WaitAndRetry(20, retryAttempt => TimeSpan.FromSeconds(10));
 
-                    await policy.Execute(async () => {
+                    await policy.Execute(async () =>
+                    {
                         await YoutubeDownloader.Download(record.Key, record.Value.Path);
 
                         fileService.YoutubeFinished(record.Value);

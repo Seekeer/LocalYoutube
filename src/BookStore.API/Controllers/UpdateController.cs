@@ -100,7 +100,7 @@ namespace FileStore.API.Controllers
         [HttpDelete]
         [Route("removeSeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public void RemoveSeason(int seasonId)
+        public void RemoveSeason(int seasonId, bool deleteFile )
         {
             var files = _db.Files.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeasonId == seasonId).ToList();
 
@@ -109,6 +109,9 @@ namespace FileStore.API.Controllers
                 _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
                 _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
                 _db.Files.Remove(file);
+
+                if(deleteFile)
+                    System.IO.File.Delete(file.Path);
             }
 
             var seriesId = 0;
@@ -204,32 +207,26 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
-        [HttpGet]
-        [Route("updateOnline")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> UpdatePlayInBrowser(int minId = 7321)
-        {
-            var dbUpdater = new DbUpdateManager(_db);
-
-            var onlineFiles = _db.VideoFiles.Where(x => x.Id > minId && x.Type != VideoType.Film && x.Type != VideoType.Youtube && x.Type != VideoType.Downloaded).ToList();
-
-            foreach (var file in onlineFiles)
-            {
-                dbUpdater.Convert(file);
-            }
-
-            return Ok();
-        }
 
         [HttpGet]
         [Route("moveToSeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> MoveToSeason(int startId, int finishId, int seasonId, int seriesId = 0, VideoType? type = null)
+        public async Task<IActionResult> MoveToSeason(int startId, int finishId, int seasonId, int seriesId = 0, VideoType? type = null, string seasonName = null)
         {
+            var dbUpdater = new DbUpdateManager(_db);
+
             var files = _db.VideoFiles.Where(x => x.Id >= startId && x.Id <= finishId).ToList();
             foreach (var file in files)
             {
-                file.SeasonId = seasonId;
+                //if(string.IsNullOrEmpty(seasonName))
+                    file.SeasonId = seasonId;
+                //else if (seriesId != 0)
+                //{
+                //    var series = _db.Series.FirstOrDefault(x => x.Id == seriesId);
+                //    var season = dbUpdater.AddOrUpdateSeason(series, seasonName);
+                //    file.SeasonId = season.Id;
+                //}
+
                 if (seriesId != 0)
                     file.SeriesId = seriesId;
                 if (type != null)
@@ -500,12 +497,72 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("convertOnline")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> ConvertNewOnline(int minId = 19812)
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            // Update online files.
+            var ready = new List<VideoFile>();
+            IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
+                .Where(x => x.Id > minId).ToList();
+
+            var online = queue.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type)).ToList();
+            foreach (var item in online)
+                dbUpdater.Convert(item);
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("updateAll")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateAll()
         {
             var dbUpdater = new DbUpdateManager(_db);
 
+            //// Update online files.
+            //var ready = new List<VideoFile>();
+            //IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
+            //    .Where(x => x.Id > 19812).ToList();
+
+            //foreach (var item in queue)
+            //{
+            //    item.SeriesId = 2038;
+            //}
+            ////_db.SaveChanges();
+
+            //Test(dbUpdater, 19816);
+            //Test(dbUpdater, 19813);
+            //Test(dbUpdater, 8307);
+
+            //var fairy = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
+            //    .Where(x => x.Id > 19816 && x.Id < 99999).ToList();
+            //foreach (var item in fairy)
+            //{
+            //    item.Type = VideoType.Art;
+            //}
+            //_db.SaveChanges();
+
+
+            //var season = _db.Seasons
+            //    .Where(x => x.Id > 5370 && x.Id < 65370).ToList();
+            //foreach (var item in season)
+            //{
+            //    _db.Remove(item);
+            //}
+            //_db.SaveChanges();
+
+            ////var online = queue.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type)).ToList();
+            ////foreach (var item in online)
+            ////    dbUpdater.Convert(item);
+
+            //await MoveToSeason(20823, 20825, 5370, 2038, null, "Ромео и Джульетта");
+
+
+
+            ////_db.SaveChanges();
 
             //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские", Origin.Russian, VideoType.ChildEpisode, true);
             //dbUpdater.FillSeries(@"F:\Анюта\Фильмы\В гостях у сказки", Origin.Soviet, VideoType.FairyTale, false);
@@ -550,6 +607,15 @@ namespace FileStore.API.Controllers
             ////    dbUpdater.Convert(file);
 
             return Ok();
+        }
+
+        private void Test(DbUpdateManager dbUpdater, int id)
+        {
+            var file = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).First(x => x.Id == id);
+            var serie = _db.Series.First(x => x.Id == file.SeriesId);
+            var season2 = dbUpdater.AddOrUpdateSeason(serie, file.Name);
+            file.Season = season2;
+            _db.SaveChanges();
         }
 
         [HttpGet]

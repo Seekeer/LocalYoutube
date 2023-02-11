@@ -123,26 +123,34 @@ namespace Infrastructure
             }
         }
 
-        public void AddSeason(int seriesId, string directory)
+        public IEnumerable<VideoFile> AddSeason(int seriesId, string directory)
         {
             var serie = _db.Series.FirstOrDefault(x => x.Id == seriesId);
 
-            AddSeason(serie, new DirectoryInfo(directory));
+            return AddSeason(serie, new DirectoryInfo(directory));
         }
 
-        public void AddSeason(Series series, DirectoryInfo dir, string seasonName = null)
+        public IEnumerable<VideoFile> AddSeason(int seriesId, DirectoryInfo dir, string seasonName = null)
+        {
+            var serie = _db.Series.FirstOrDefault(x => x.Id == seriesId);
+
+            return AddSeason(serie, dir, seasonName);
+        }
+
+        public IEnumerable<VideoFile> AddSeason(Series series, DirectoryInfo dir, string seasonName = null)
         {
             var season = AddOrUpdateSeason(series, seasonName ?? dir.Name);
 
-            AddSeason(series, season, dir);
+            return AddSeason(series, season, dir);
         }
 
-        private void AddSeason(Series series, Season season, DirectoryInfo dir)
+        private IEnumerable<VideoFile> AddSeason(Series series, Season season, DirectoryInfo dir)
         {
+            var result = new List<VideoFile>();
             foreach (var file in dir.EnumerateFiles("", SearchOption.AllDirectories))
-            {
-                AddFile(file, series, season);
-            }
+                result.Add(AddFile(file, series, season));
+
+            return result;
         }
 
         private VideoFile AddFile(FileInfo file, Series series, Season season)
@@ -230,17 +238,23 @@ namespace Infrastructure
 
             _db.SaveChanges();
         }
+        public Season AddOrUpdateSeason(int seriesId, string name)
+        {
+            var serie = _db.Series.FirstOrDefault(x => x.Id == seriesId);
+
+            return AddOrUpdateSeason(serie, name);
+        }
 
         public Season AddOrUpdateSeason(Series series, string name)
         {
-            var seasons = _db.Seasons.ToList();
-            foreach (var season1 in seasons)
-            {
-                if (!_db.Files.Any(x => x.SeasonId == season1.Id))
-                {
-                    _db.Seasons.Remove(season1);
-                }
-            }
+            //var seasons = _db.Seasons.ToList();
+            //foreach (var season1 in seasons)
+            //{
+            //    if (!_db.Files.Any(x => x.SeasonId == season1.Id))
+            //    {
+            //        _db.Seasons.Remove(season1);
+            //    }
+            //}
 
             var season = _db.Seasons.FirstOrDefault(x => x.Name == name);
             if (season == null || season.SeriesId != series.Id)
@@ -615,6 +629,7 @@ namespace Infrastructure
             queue = queue.Except(ready);
 
             var online = ready.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type));
+            
             foreach (var item in online)
                 Convert(item);
 
@@ -707,20 +722,28 @@ namespace Infrastructure
 
                     if(dirFiles.Count() > 1)
                     {
+                        var moreFilesAdded = false;
                         var twoBiggest = dirFiles.OrderByDescending(x => x.Length).Take(2);
 
-                        // Check that files ~ same size => they are series.
-                        if(twoBiggest.First().Length / twoBiggest.Last().Length > 0.7)
+                        if (info.Type == VideoType.Art)
                         {
-                            var series = AddOrUpdateSeries("Многосерийные фильмы");
-                            AddSeason(series, dir, info.Name);
-                            result.Add(info);
+                            _type = info.Type;
+                            var newFiles = AddSeason(info.SeriesId, dir, info.Name);
+                            newFiles.ToList().ForEach(x => x.VideoFileExtendedInfo.Cover = info.Cover);
+                            result.AddRange(newFiles);
+                            moreFilesAdded = true;
+                        }
+                        // Check that files ~ same size => they are series.
+                        else if (twoBiggest.First().Length / twoBiggest.Last().Length > 0.7)
+                        {
+                            result.AddRange(AddSeason(AddOrUpdateSeries("Многосерийные фильмы"), dir, info.Name));
+                            moreFilesAdded = true;
+                        }
 
-                            _db.FilesUserInfo.Remove(info.VideoFileUserInfo);
-                            _db.FilesInfo.Remove(info.VideoFileExtendedInfo);
-                            _db.Files.Remove(info);
+                        if (moreFilesAdded)
+                        {
+                            RemoveFileCompletely(info);
                             _db.SaveChanges();
-
                             continue;
                         }
                     }

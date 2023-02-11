@@ -59,7 +59,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.parameters = <PlayerParameters>(JSON.parse(JSON.stringify((<any>this.route.snapshot.queryParamMap).params)));
+      this.parameters = <PlayerParameters>(JSON.parse(JSON.stringify((<any>this.route.snapshot.queryParamMap).params)));
 
       this.videoId = this.parameters.videoId;
       this.position = parseFloat(this.parameters.position.toString());
@@ -68,14 +68,26 @@ export class PlayerComponent implements OnInit, OnDestroy {
       this.videosList.push(this.videoId);
       this.setNextVideo(true);
 
-      this.service.getVideosBySeries(this.parameters.seriesId, this.parameters.videosCount, this.isRandom).subscribe((videos) => {
-        const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
-
-        this.videosList = this.videosList.concat(selectedIds);
-      },
-        err => {
-          console.log(`Cannot get video by series ${this.parameters.seriesId}`);
-        })
+      if(this.parameters.seasonId == 0){
+        this.service.getVideosBySeries(this.parameters.seriesId, this.parameters.videosCount, this.isRandom).subscribe((videos) => {
+          const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
+  
+          this.videosList = this.videosList.concat(selectedIds);
+        },
+          err => {
+            console.log(`Cannot get video by series ${this.parameters.seriesId}`);
+          });
+      }
+      else{
+        this.service.getVideosBySeason(this.parameters.seasonId, this.parameters.videosCount, this.isRandom).subscribe((videos) => {
+          const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
+  
+          this.videosList = this.videosList.concat(selectedIds);
+        },
+          err => {
+            console.log(`Cannot get video by season ${this.parameters.seriesId}`);
+          });
+      }
 
       setTimeout(() => this.switchToFullscreen(), 2000);
       this.intervalId = setInterval(() => this.updateStat(), 1000);

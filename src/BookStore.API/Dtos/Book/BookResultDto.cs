@@ -7,6 +7,7 @@ namespace FileStore.API.Dtos.File
         public int Id { get; set; }
 
         public int SeriesId { get; set; }
+        public int SeasonId { get; set; }
 
         public string SeriesName { get; set; }
 

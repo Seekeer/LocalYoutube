@@ -22,6 +22,8 @@ namespace API.TG
         FairyTale,
         [CommandName("Удалить")]
         Delete,
+        [CommandName("Искусство")]
+        Art,
         Unknown,
     }
 

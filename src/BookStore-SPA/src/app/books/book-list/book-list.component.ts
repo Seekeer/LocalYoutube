@@ -55,6 +55,7 @@ export class BookListComponent implements OnInit {
   public books: VideoFile[];
   public listComplet: any;
   public isRandom: boolean = true;
+  public videoType: VideoType;
   public showWatched: boolean = true;
 
   public isSelectSeries: boolean = false;
@@ -227,7 +228,11 @@ displayListForType() {
         break;
       }
       case 'balley':{
-        this.service.getFilmsByType(VideoType.Balley).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        this.videoType = VideoType.Art;
+        this.isRandom = false;
+        this.episodeCount = 1000;
+
+        this.service.getFilmsByTypeUniqueSeason(VideoType.Art).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
         break;
       }
       case 'film':{
@@ -317,8 +322,12 @@ counter : number =0 ;
       position : book.currentPosition,
       videoId : book.id,
       videosCount : this.episodeCount,
-      isRandom : this.isRandom
+      isRandom : this.isRandom,
+      seasonId : 0
     };
+    
+    if(this.videoType == VideoType.Art)
+      queryParams.seasonId = book.seasonId;
 
     const navigationExtras: NavigationExtras = {
       queryParams
@@ -331,6 +340,7 @@ counter : number =0 ;
 export class PlayerParameters {
   videoId: number;
   seriesId: number;
+  seasonId: number;
   videosCount: number;
   position: number;
   isRandom: boolean;
