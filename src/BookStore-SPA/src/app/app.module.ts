@@ -27,6 +27,7 @@ import {
   ConfirmationDialogService,
 } from './_services/confirmation-dialog.service';
 import { FileService } from './_services/file.service';
+import { SafePipe } from './_services/SafePipe';
 import { SeriesService } from './_services/series.service';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -52,6 +53,7 @@ import { NavComponent } from './nav/nav.component';
     BookListComponent,
     HomeComponent,
     NavComponent,
+    SafePipe,
     ConfirmationDialogComponent,
     NgbdDatepickerPopup
   ],

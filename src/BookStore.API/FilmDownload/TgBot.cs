@@ -23,6 +23,7 @@ using System.Diagnostics;
 using static System.Net.WebRequestMethods;
 using AngleSharp.Dom;
 using System.Text;
+using Polly;
 //using Polly;
 
 namespace API.FilmDownload

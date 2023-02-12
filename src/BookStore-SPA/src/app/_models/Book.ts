@@ -1,3 +1,5 @@
+import { SafeHtml } from '@angular/platform-browser';
+
 export class Book {
     id: number;
     seriesId: number;
@@ -14,6 +16,9 @@ export class Book {
     year: string;
     genres: string;
     director: string;
+
+    PlayURL: SafeHtml;
+    hours:string;
 }
 
 export enum VideoType {

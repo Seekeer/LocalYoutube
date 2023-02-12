@@ -6,6 +6,7 @@ import {
   ViewChild,
   ViewEncapsulation,
 } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 import {
   ActivatedRoute,
   NavigationExtras,
@@ -70,10 +71,12 @@ export class BookListComponent implements OnInit {
   public seasons: Seasons[];
   public type: string;
   apibooks: Book[];
+  public isAndroid: boolean;
 
   constructor(private router: Router,
               private service: FileService,
               private seriesService: SeriesService,
+              private sanitizer: DomSanitizer,
               private toastr: ToastrService,
               private http:HttpClient,
               private modalService: NgbModal,
@@ -100,8 +103,23 @@ export class BookListComponent implements OnInit {
       .subscribe(() => {
         this.search();
       });
+
+    this.detectOs();
   }
 
+  detectOs() {
+    let os = this.getOS();
+    if(os == "Android")
+      this.isAndroid = true;
+  }
+   getOS() {
+    var uA = navigator.userAgent || navigator.vendor ;
+    if ((/iPad|iPhone|iPod/.test(uA) && !(<any>window).MSStream) || (uA.includes('Mac') && 'ontouchend' in document)) return 'iOS';
+  
+    var i, os = ['Windows', 'Android', 'Unix', 'Mac', 'Linux', 'BlackBerry'];
+    for (i = 0; i < os.length; i++) if (new RegExp(os[i],'i').test(uA)) return os[i];
+  }
+  
   getSeries(type:VideoType) {
     this.seriesService.getAll(type).subscribe(series => {
       this.series = series.sort((a, b) => {  
@@ -284,6 +302,17 @@ watchedChanged(event){
         return 1;
     });
 
+    this.books.forEach(book => { 
+      book.PlayURL = (`vlc://${this.service.getVideoURLById(book.id)}`);
+      let hours= Math.floor(book.durationMinutes/60)
+      if(hours > 0){
+        let ending  = hours==1?'':'а';
+        book.hours =hours.toString() +" час"+ending;
+        console.log(book.displayName);
+        console.log(book.hours);
+      }
+    });
+
     this.hideSpinner(); 
   }
   getFilmsError(error) {
@@ -295,11 +324,15 @@ watchedChanged(event){
 
       setTimeout(() => {
         this.counter--;
+
+        if(this.counter < 0)
+        this.counter = 0;
+
+
         if(this.counter == 0)
             this.spinner.hide()
       }, 5);
 
-  // this.spinner.hide();
 }
 
 counter : number =0 ;

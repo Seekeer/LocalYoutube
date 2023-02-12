@@ -134,7 +134,14 @@ namespace FileStore.API.Controllers
         {
             var file = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).First(x => x.Id == fileId);
 
-            System.IO.File.Delete(file.Path);
+            if(file.VideoFileExtendedInfo.RutrackerId > 0)
+            {
+                var _rutracker = new RuTrackerUpdater(_config);
+                await _rutracker.Init();
+                await _rutracker.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
+            }
+            else
+                System.IO.File.Delete(file.Path);
             Remove(file);
 
             _db.SaveChanges();

@@ -91,8 +91,15 @@ namespace API.Controllers
             _httpClient = new HttpClient(handler: httpClientHandler, disposeHandler: true);
             RuTrackerClientEnvironment env = new RuTrackerClientEnvironment(_httpClient, new Uri(@"https://rutracker.org"));
 
-            _client = new RuTrackerClient(env);
-            await _client.Login(_config.RP_Login, _config.RP_Pass);
+            try
+            {
+                _client = new RuTrackerClient(env);
+                await _client.Login(_config.RP_Login, _config.RP_Pass);
+            }
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+            }
         }
 
 
