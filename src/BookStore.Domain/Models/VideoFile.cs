@@ -177,7 +177,16 @@ namespace FileStore.Domain.Models
 
             }
         }
-    }
+
+        [NotMapped]
+        public bool IsSupportedWebPlayer
+        {
+            get
+            {
+                return Path.EndsWith("mp4") || Path.EndsWith(".m4v");
+            }
+        }
+}
 
     public class VideoFile : DbFile
     {

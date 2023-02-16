@@ -11,6 +11,7 @@ export class Book {
     currentPosition:number;
     durationMinutes:number;
     isFinished:boolean;
+    isSupportedWebPlayer:boolean;
     
     description: string;
     year: string;

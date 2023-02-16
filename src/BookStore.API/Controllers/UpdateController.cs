@@ -410,7 +410,7 @@ namespace FileStore.API.Controllers
             var dbUpdater = new DbUpdateManager(_db);
             var childMovies = _db.VideoFiles.Where(x => x.Type == VideoType.ChildEpisode || x.Type == VideoType.Animation || x.Type == VideoType.FairyTale);
 
-            var convert = childMovies.Where(x => !x.Path.EndsWith("mp4") && !x.Path.EndsWith(".mkv") && !x.Path.EndsWith(".m4v")).ToList();
+            var convert = childMovies.Where(x => !x.Path.EndsWith("mp4") && !x.Path.EndsWith(".m4v")).ToList();
 
             //var sovietToConvert = _db.Files.Where(x => x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
             //var nonSovietToConvert = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();

@@ -34,6 +34,7 @@
 
     <mat-checkbox class="ml-2"  *ngIf="isSelectSeries && !showKPINfo"  [(ngModel)]="isRandom" >Случайный порядок</mat-checkbox>
     <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showWatched"  (change)="watchedChanged($event)">Показать просмотренное</mat-checkbox>
+    <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showOnlyWebSupported"  (change)="showFilteredBooks()">Только в браузере</mat-checkbox>
 
     <button mat-icon-button color="primary"  (click)="searchBooks()" >
       <mat-icon>refresh</mat-icon>
@@ -71,6 +72,7 @@
     >
       <mat-card class="mat-elevation-z4 mt-2">
         <mat-card-header>
+          <mat-icon *ngIf="book.isSupportedWebPlayer" mat-card-avatar>video_library</mat-icon>
           <mat-card-title>{{ book.displayName }} </mat-card-title>
           <mat-card-subtitle>{{book.hours}} {{book.durationMinutes%60}} минут</mat-card-subtitle>
         </mat-card-header>

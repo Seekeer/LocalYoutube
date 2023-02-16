@@ -36,6 +36,7 @@ namespace FileStore.API.Dtos.File
 
         public DateTime PublishDate { get; set; }
         public bool IsFinished { get; set; }
+        public bool IsSupportedWebPlayer{ get; set; }
         public int Number { get; set; }
 
         public string DisplayName { get

@@ -58,7 +58,8 @@ export class BookListComponent implements OnInit {
   public isRandom: boolean = true;
   public videoType: VideoType;
   public showWatched: boolean = true;
-
+  public showOnlyWebSupported: boolean;
+  
   public isSelectSeries: boolean = false;
   public showKPINfo: boolean = false;
   public serieId: number = 0;
@@ -293,14 +294,20 @@ watchedChanged(event){
     if(this.type != 'film')
       this.books = books;
     else  
+    {
+      if(this.showOnlyWebSupported)
+        books = books.filter(x => x.isSupportedWebPlayer);
+
       this.books = books.sort((a,b) => {
-      if(a.year > b.year) 
-        return -1 ;
-      else if(a.year == b.year) 
-        return 0 ;
-      else
-        return 1;
-    });
+        if(a.year > b.year) 
+          return -1 ;
+        else if(a.year == b.year) 
+          return 0 ;
+        else
+          return 1;
+      });
+
+  }
 
     this.books.forEach(book => { 
       book.PlayURL = (`vlc://${this.service.getVideoURLById(book.id)}`);
@@ -315,6 +322,7 @@ watchedChanged(event){
 
     this.hideSpinner(); 
   }
+
   getFilmsError(error) {
     this.hideSpinner(); 
     this.books = [];
