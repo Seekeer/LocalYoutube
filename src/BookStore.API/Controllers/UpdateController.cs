@@ -384,13 +384,31 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("convertOnline")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> ConvertNewOnline(int minId = 19812)
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            // Update online files.
+            var ready = new List<VideoFile>();
+            IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
+                .Where(x => x.Id > minId).ToList();
+
+            var online = queue.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type)).ToList();
+            foreach (var item in online)
+                dbUpdater.Convert(item);
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("convertChild")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public void Convert()
         {
             var dbUpdater = new DbUpdateManager(_db);
             var childMovies = _db.VideoFiles.Where(x => x.Type == VideoType.ChildEpisode || x.Type == VideoType.Animation || x.Type == VideoType.FairyTale);
-            var childMovies2 = _db.VideoFiles.Where(x => x.Type == VideoType.FairyTale);
 
             var convert = childMovies.Where(x => !x.Path.EndsWith("mp4") && !x.Path.EndsWith(".mkv") && !x.Path.EndsWith(".m4v")).ToList();
 
@@ -499,25 +517,6 @@ namespace FileStore.API.Controllers
                 DbUpdateManager.FillVideoProperties(file);
                 await _db.SaveChangesAsync();
             }
-
-            return Ok();
-        }
-
-        [HttpGet]
-        [Route("convertOnline")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> ConvertNewOnline(int minId = 19812)
-        {
-            var dbUpdater = new DbUpdateManager(_db);
-
-            // Update online files.
-            var ready = new List<VideoFile>();
-            IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
-                .Where(x => x.Id > minId).ToList();
-
-            var online = queue.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type)).ToList();
-            foreach (var item in online)
-                dbUpdater.Convert(item);
 
             return Ok();
         }

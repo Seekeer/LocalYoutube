@@ -52,9 +52,9 @@
       <mat-card class="mat-elevation-z4 mt-2">
         <mat-card-header>
           <mat-card-title>{{ book.displayName }}</mat-card-title>
-          <!-- <mat-card-subtitle>{{book.displayName}}</mat-card-subtitle> -->
+          <mat-card-subtitle>{{book.hours}} {{book.durationMinutes%60}} минут</mat-card-subtitle>
         </mat-card-header>
-        <img
+        <img 
           [ngClass]="{ shownFilm: book.isFinished }"
           src="data:image/jpg;base64,{{ book.cover }}"
           (click)="openVideo(book)"
@@ -72,7 +72,7 @@
       <mat-card class="mat-elevation-z4 mt-2">
         <mat-card-header>
           <mat-card-title>{{ book.displayName }} </mat-card-title>
-          <!-- <mat-card-subtitle>{{book.displayName}}</mat-card-subtitle> -->
+          <mat-card-subtitle>{{book.hours}} {{book.durationMinutes%60}} минут</mat-card-subtitle>
         </mat-card-header>
         <div class="container">
           <div class="row">
@@ -82,7 +82,6 @@
                 src="data:image/jpg;base64,{{ book.cover }}"
                 (click)="openVideo(book)"
               />
-              <mat-card-title style="padding-top: 10px;">{{book.hours}} {{book.durationMinutes%60}} минут</mat-card-title>
             </div>
             <div class="col-sm"> 
               <button *ngIf="!isAndroid" class="btn btn-outline-primary btn-sm" (click)="copyLink(book)">Скопировать ссылку</button>

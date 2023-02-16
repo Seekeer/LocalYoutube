@@ -80,6 +80,14 @@ namespace FileStore.Infrastructure.Repositories
 
             var files = (Db.VideoFiles.Where(f => f.SeriesId == series.Id).ToList());
 
+            //if (!files.Any())
+            //{
+            //    var seasons = Db.Seasons.Where(s => s.SeriesId == series.Id);
+
+            //    foreach (var season in seasons)
+            //        files.AddRange(Db.VideoFiles.Where(f => f.SeasonId == season.Id).ToList());
+            //}
+
             if (isRandom)
             {
                 result = files.OrderBy(x => Guid.NewGuid()).Take(resultCount).ToList();
