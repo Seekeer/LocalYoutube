@@ -358,6 +358,11 @@ counter : number =0 ;
 
   openVideo(book: Book) {
 
+    if(!book.isSupportedWebPlayer){
+      window.open(`vlc://${this.service.getVideoURLById(book.id)}`, "_blank");
+      return;
+    }
+
     const queryParams: PlayerParameters = {
       seriesId : book.seriesId,
       position : book.currentPosition,
