@@ -33,8 +33,9 @@
     </mat-form-field>
 
     <mat-checkbox class="ml-2"  *ngIf="isSelectSeries && !showKPINfo"  [(ngModel)]="isRandom" >Случайный порядок</mat-checkbox>
-    <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showWatched"  (change)="watchedChanged($event)">Показать просмотренное</mat-checkbox>
+    <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showWatched"  (change)="watchedChanged($event)">Просмотренное</mat-checkbox>
     <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showOnlyWebSupported"  (change)="showFilteredBooks()">Только в браузере</mat-checkbox>
+    <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showSelected"  (change)="watchedChanged($event)">Показать отобранное</mat-checkbox>
 
     <button mat-icon-button color="primary"  (click)="searchBooks()" >
       <mat-icon>refresh</mat-icon>
@@ -94,6 +95,7 @@
 
               <button class="btn btn-outline-danger btn-sm mt-2" (click)="deleteFilm(content, book)">Удалить фильм</button>
               <button class="btn btn-outline-success btn-sm mt-2" (click)="filmWatched( book)">Фильм просмотрен</button>
+              <mat-checkbox class="ml-2"   [(ngModel)]="book.isSelected" >Отобрать</mat-checkbox>
               <br>
               <br>
 

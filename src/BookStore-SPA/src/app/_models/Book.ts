@@ -18,6 +18,8 @@ export class Book {
     genres: string;
     director: string;
 
+    isSelected:boolean;
+
     PlayURL: SafeHtml;
     hours:string;
 }

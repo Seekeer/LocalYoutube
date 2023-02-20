@@ -58,6 +58,8 @@ export class BookListComponent implements OnInit {
   public isRandom: boolean = true;
   public videoType: VideoType;
   public showWatched: boolean = true;
+  public showSelected: boolean = false;
+  
   public showOnlyWebSupported: boolean;
   
   public isSelectSeries: boolean = false;
@@ -70,7 +72,8 @@ export class BookListComponent implements OnInit {
   public series: Serie[];
   public selectedType: VideoType;
   public seasons: Seasons[];
-  public type: string;
+  public selected: Book[] =[];
+  type: string;
   apibooks: Book[];
   public isAndroid: boolean;
 
@@ -270,6 +273,7 @@ watchedChanged(event){
 
   this.showFilteredBooks();
 }
+
   public deleteFilm(content,film: Book){
     let that = this;
     if (window.confirm("Фильм будет удален из базы и с диска?")) {
@@ -287,6 +291,9 @@ watchedChanged(event){
 
   showFilteredBooks() {
     let books = this.apibooks;
+
+    if(this.showSelected)
+      books = books.filter(x => x.isSelected);
 
     if(!this.showWatched)
       books = books.filter(x => !x.isFinished);
