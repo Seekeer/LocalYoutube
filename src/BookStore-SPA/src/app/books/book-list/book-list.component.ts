@@ -73,6 +73,8 @@ export class BookListComponent implements OnInit {
   public selectedType: VideoType;
   public seasons: Seasons[];
   public selected: Book[] =[];
+  public selectedGenres:string[];
+  public genres: string[] = ['комедия', 'драма', 'боевик', 'детектив', 'фантастика', 'биография', 'фэнтези', 'приключения','мелодрама'];
   type: string;
   apibooks: Book[];
   public isAndroid: boolean;
@@ -314,7 +316,19 @@ watchedChanged(event){
           return 1;
       });
 
-  }
+      if(this.selectedGenres){
+        this.books = this.books.filter(book => {
+          var haveGenre = false;
+          this.selectedGenres.forEach(genre => {
+            if(book.genres?.toLowerCase().indexOf(genre.toLowerCase())!= -1){
+              haveGenre = true;
+              return;
+            }
+          });
+          return haveGenre;
+          });
+        }
+    }
 
     this.books.forEach(book => { 
       book.PlayURL = (`vlc://${this.service.getVideoURLById(book.id)}`);
@@ -322,8 +336,6 @@ watchedChanged(event){
       if(hours > 0){
         let ending  = hours==1?'':'а';
         book.hours =hours.toString() +" час"+ending;
-        console.log(book.displayName);
-        console.log(book.hours);
       }
     });
 

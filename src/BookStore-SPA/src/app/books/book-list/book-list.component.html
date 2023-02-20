@@ -32,10 +32,20 @@
       <input matInput type="number"  [(ngModel)]="episodeCount" >
     </mat-form-field>
 
+    <mat-form-field appearance="fill">
+      <mat-label>Жанры</mat-label>
+      <mat-select  [(value)]="selectedGenres"  (selectionChange)="watchedChanged($event)" multiple>
+        <mat-option *ngFor="let topping of genres" [value]="topping">{{topping}}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    </div>
+    <div>
+
     <mat-checkbox class="ml-2"  *ngIf="isSelectSeries && !showKPINfo"  [(ngModel)]="isRandom" >Случайный порядок</mat-checkbox>
     <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showWatched"  (change)="watchedChanged($event)">Просмотренное</mat-checkbox>
     <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showOnlyWebSupported"  (change)="showFilteredBooks()">Только в браузере</mat-checkbox>
     <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showSelected"  (change)="watchedChanged($event)">Показать отобранное</mat-checkbox>
+
 
     <button mat-icon-button color="primary"  (click)="searchBooks()" >
       <mat-icon>refresh</mat-icon>
@@ -95,7 +105,7 @@
 
               <button class="btn btn-outline-danger btn-sm mt-2" (click)="deleteFilm(content, book)">Удалить фильм</button>
               <button class="btn btn-outline-success btn-sm mt-2" (click)="filmWatched( book)">Фильм просмотрен</button>
-              <mat-checkbox class="ml-2"   [(ngModel)]="book.isSelected" >Отобрать</mat-checkbox>
+              <mat-checkbox class="mt-2" [(ngModel)]="book.isSelected" >Отобрать</mat-checkbox>
               <br>
               <br>
 
