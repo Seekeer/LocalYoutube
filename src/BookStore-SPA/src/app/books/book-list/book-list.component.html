@@ -32,7 +32,7 @@
       <input matInput type="number"  [(ngModel)]="episodeCount" >
     </mat-form-field>
 
-    <mat-form-field appearance="fill">
+    <mat-form-field appearance="fill" *ngIf="showKPINfo">
       <mat-label>Жанры</mat-label>
       <mat-select  [(value)]="selectedGenres"  (selectionChange)="watchedChanged($event)" multiple>
         <mat-option *ngFor="let topping of genres" [value]="topping">{{topping}}</mat-option>

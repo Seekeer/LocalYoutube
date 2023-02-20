@@ -1,4 +1,5 @@
-﻿using Infrastructure;
+﻿using API.FilmDownload;
+using Infrastructure;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,8 +9,10 @@ namespace API.TG
 {
     public enum CommandType
     {
-        [CommandName("Обновить обложку")]
+        [CommandName(TgBot.UPDATECOVER_MESSAGE)]
         FixCover,
+        [CommandName(TgBot.SETUP_VLC_Message)]
+        SetupVLC,
         [CommandName("Сериал")]
         Series,
         [CommandName("Фильм")]

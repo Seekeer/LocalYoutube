@@ -51,6 +51,7 @@ namespace API.FilmDownload
         private readonly Dictionary<string, SearchResult> _images = new Dictionary<string, SearchResult>();
         private readonly List<TgLink> _tgSeasonDict = new List<TgLink>(); 
         public const string UPDATECOVER_MESSAGE = "Обновить обложку";
+        public const string SETUP_VLC_Message = "Настроить VLC";
         private Timer _timer;
 
         public TgBot(AppConfig config, IServiceScopeFactory serviceScopeFactory)
@@ -79,6 +80,8 @@ namespace API.FilmDownload
             _tgSeasonDict.Add(new TgLink { TgId = 360495063, FilmSeasonId = seasonA.Id});
             // DIMA
             _tgSeasonDict.Add(new TgLink { TgId = 176280269, FilmSeasonId = seasonD.Id });
+            // Jully
+            _tgSeasonDict.Add(new TgLink { TgId = 76951227, FilmSeasonId = manager.AddOrUpdateSeason(seriesDownload, "Юля").Id });
         }
 
         private async Task SendAdminMessage(string message)
@@ -107,6 +110,7 @@ namespace API.FilmDownload
             if (isAdmin)
             {
                 keyboard.Add(new KeyboardButton(UPDATECOVER_MESSAGE));
+                keyboard.Add(new KeyboardButton(SETUP_VLC_Message));
             }
 
             return keyboard;
@@ -269,6 +273,8 @@ namespace API.FilmDownload
 
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
+            
+
             try
             {
                 switch (update.Type)
@@ -276,13 +282,17 @@ namespace API.FilmDownload
                     case Tg.UpdateType.Unknown:
                         break;
                     case Tg.UpdateType.Message:
-                        await this._botClient_OnMessage(botClient, update.Message);
+                        if (_tgSeasonDict.Any(x => x.TgId == update.Message.From.Id))
+                            await this._botClient_OnMessage(botClient, update.Message);
                         break;
                     case Tg.UpdateType.InlineQuery:
                         break;
                     case Tg.UpdateType.ChosenInlineResult:
                         break;
                     case Tg.UpdateType.CallbackQuery:
+                        if (!_tgSeasonDict.Any(x => x.TgId == update.Message.From.Id))
+                            return;
+
                         var command = CommandParser.GetDataFromMessage(update.CallbackQuery.Data);
 
                         switch (command.Type)
@@ -356,6 +366,23 @@ namespace API.FilmDownload
                 catch (Exception)
                 {
                 }
+            }
+        }
+
+        private async Task SetupVLC(long id)
+        {
+            var message = @$"1. Положи файлы из bat.zip в C:\Program Files\VideoLAN\VLC 
+2. Запусти vlc-protocol-register.bat";
+
+            using (var stream = System.IO.File.OpenRead(@"Assets\bat.zip"))
+            {
+                var file = new Telegram.Bot.Types.InputFiles.InputOnlineFile(stream, "bat.zip");
+
+                await _botClient.SendDocumentAsync(
+                    caption: message,
+                    chatId: id,
+                    document: file
+                );
             }
         }
 
@@ -505,6 +532,9 @@ namespace API.FilmDownload
 
             switch (command)
             {
+                case CommandType.SetupVLC:
+                    await SetupVLC(message.From.Id);
+                    break;
                 case CommandType.FixCover:
                     await UpdateCover(3, message.From.Id);
                     break;
