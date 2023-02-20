@@ -177,8 +177,13 @@ namespace API.FilmDownload
                 if (telegramLink != null)
                     telegramId = telegramLink.TgId;
 
-                await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Открыть в VLC: http://192.168.1.55:2022/api/Files/getFileById?fileId={item.Id}");
+                await NotifyDownloadEnded(telegramId, item);
             }
+        }
+
+        private async Task NotifyDownloadEnded(long telegramId, VideoFile item)
+        {
+            await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Открыть в VLC: http://192.168.1.55:2022/api/Files/getFileById?fileId={item.Id}");
         }
 
         private FileStore.Infrastructure.Context.VideoCatalogDbContext _GetDb()
@@ -615,7 +620,8 @@ namespace API.FilmDownload
                         await YoutubeDownloader.Download(record.Key, record.Value.Path);
 
                         fileService.YoutubeFinished(record.Value);
-                        //await _botClient.SendTextMessageAsync(new ChatId(message.From.Id), $"Закончена загрузка видео {Environment.NewLine}{record.Value.Name}");
+
+                        await NotifyDownloadEnded(message.From.Id, record.Value);
                     });
                 }
                 catch (Exception ex)
