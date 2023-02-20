@@ -7,6 +7,7 @@ namespace FileStore.API.Dtos.File
         public int Id { get; set; }
 
         public int SeriesId { get; set; }
+        public int SeasonId { get; set; }
 
         public string SeriesName { get; set; }
 
@@ -35,6 +36,7 @@ namespace FileStore.API.Dtos.File
 
         public DateTime PublishDate { get; set; }
         public bool IsFinished { get; set; }
+        public bool IsSupportedWebPlayer{ get; set; }
         public int Number { get; set; }
 
         public string DisplayName { get

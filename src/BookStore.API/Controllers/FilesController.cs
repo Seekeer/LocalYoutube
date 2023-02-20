@@ -8,6 +8,7 @@ using AutoMapper;
 using FileStore.API.Dtos.File;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
+using FileStore.Domain.Services;
 using Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -19,18 +20,20 @@ namespace FileStore.API.Controllers
 {
 
     [Authorize]
-    [EnableCors()]
+    [Microsoft.AspNetCore.Cors.EnableCors("CorsPolicy")]
     [Route("api/[controller]")]
     public class FilesController : MainController
     {
         private readonly IFileService _FileService;
+        private readonly ISeriesService _seriesService;
         private readonly IMapper _mapper;
         private readonly static Dictionary<string, int> _randomFileDict = new Dictionary<string, int>();
 
-        public FilesController(IMapper mapper, IFileService FileService)
+        public FilesController(IMapper mapper, IFileService FileService, ISeriesService seriesService)
         {
             _mapper = mapper;
             _FileService = FileService;
+            _seriesService = seriesService;
         }
 
         [HttpGet]
@@ -62,7 +65,21 @@ namespace FileStore.API.Controllers
         {
             var Files = await _FileService.GetFilesBySearies(id, isRandom);
 
-            if (!Files.Any()) 
+            if (!Files.Any())
+                return NotFound();
+
+            return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
+        }
+
+        [HttpGet]
+        [Route("getFilesBySeason")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetFilesBySeason(int id, int count, bool isRandom)
+        {
+            var Files = await _FileService.GetFilesBySeason(id, isRandom, count);
+
+            if (!Files.Any())
                 return NotFound();
 
             return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
@@ -185,7 +202,35 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound("None File was founded");
 
-            var filesDTO = _mapper.Map<IEnumerable<VideoFileResultDto>>(Files).OrderByDescending(x=> x.Year);
+            var filesDTO = _mapper.Map<IEnumerable<VideoFileResultDto>>(Files).OrderByDescending(x => x.Year);
+            return Ok(filesDTO);
+        }
+
+        [HttpGet]
+        [Route("getFileByTypeUniqueSeason/{type}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<List<VideoFile>>> GetFileByTypeUniqueSeason(VideoType type)
+        {
+            var result = await _FileService.SearchFileByType(type);
+            var files = _mapper.Map<List<VideoFile>>(result);
+
+            if (!files.Any())
+                return NotFound("None File was founded");
+
+            var seasons = (await _seriesService.GetAllByType(VideoType.Art)).SelectMany(x => x.Seasons);
+            var unique = files.OrderBy(x => x.Id).GroupBy(x => x.SeasonId).Select(x => {
+                var file = x.First(); 
+                if (x.Count() > 1)
+                    file.Name = seasons.FirstOrDefault(x => x.Id == file.SeasonId).Name;
+                return file;
+                }
+            ).ToList();
+
+            var filesDTO = _mapper.Map<IEnumerable<VideoFileResultDto>>(unique).OrderByDescending(x => x.Year);
+            foreach (var file in filesDTO)
+                file.IsFinished = false;
+
             return Ok(filesDTO);
         }
 

@@ -1,6 +1,9 @@
+import { SafeHtml } from '@angular/platform-browser';
+
 export class Book {
     id: number;
     seriesId: number;
+    seasonId: number;
     name: string;
     displayName: string;
     cover: string;
@@ -8,11 +11,17 @@ export class Book {
     currentPosition:number;
     durationMinutes:number;
     isFinished:boolean;
+    isSupportedWebPlayer:boolean;
     
     description: string;
     year: string;
     genres: string;
     director: string;
+
+    isSelected:boolean;
+
+    PlayURL: SafeHtml;
+    hours:string;
 }
 
 export enum VideoType {
@@ -22,7 +31,7 @@ export enum VideoType {
     ChildEpisode,
     FairyTale,
     Lessons, 
-    Balley,
+    Art,
     AdultEpisode,
     Courses
   }

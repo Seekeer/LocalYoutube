@@ -46,6 +46,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   isRandom: boolean;
   timerMinutes: number;
   timerStr: string;
+  totalDuration: moment.Moment;
 
   constructor(public service: FileService,
     private categoryService: SeriesService,
@@ -58,7 +59,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.parameters = <PlayerParameters>(JSON.parse(JSON.stringify((<any>this.route.snapshot.queryParamMap).params)));
+      this.parameters = <PlayerParameters>(JSON.parse(JSON.stringify((<any>this.route.snapshot.queryParamMap).params)));
 
       this.videoId = this.parameters.videoId;
       this.position = parseFloat(this.parameters.position.toString());
@@ -67,14 +68,26 @@ export class PlayerComponent implements OnInit, OnDestroy {
       this.videosList.push(this.videoId);
       this.setNextVideo(true);
 
-      this.service.getVideosBySeries(this.parameters.seriesId, this.parameters.videosCount, this.isRandom).subscribe((videos) => {
-        const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
-
-        this.videosList = this.videosList.concat(selectedIds);
-      },
-        err => {
-          console.log(`Cannot get video by series ${this.parameters.seriesId}`);
-        })
+      if(this.parameters.seasonId == 0){
+        this.service.getVideosBySeries(this.parameters.seriesId, this.parameters.videosCount, this.isRandom).subscribe((videos) => {
+          const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
+  
+          this.videosList = this.videosList.concat(selectedIds);
+        },
+          err => {
+            console.log(`Cannot get video by series ${this.parameters.seriesId}`);
+          });
+      }
+      else{
+        this.service.getVideosBySeason(this.parameters.seasonId, this.parameters.videosCount, this.isRandom).subscribe((videos) => {
+          const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
+  
+          this.videosList = this.videosList.concat(selectedIds);
+        },
+          err => {
+            console.log(`Cannot get video by season ${this.parameters.seriesId}`);
+          });
+      }
 
       setTimeout(() => this.switchToFullscreen(), 2000);
       this.intervalId = setInterval(() => this.updateStat(), 1000);
@@ -128,7 +141,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     if(this.interval) 
         clearInterval(this.interval);
 
-    this.timeLeft = this.timerMinutes * 1;
+    this.timeLeft = this.timerMinutes * 60;
 
     this.interval =Number( setInterval(() => {
       if(this.timeLeft > 0) {
@@ -150,6 +163,9 @@ private switchToFullscreen(){
 }
 
   private setNextVideo(encreaseCounter:boolean) {
+
+    console.log(`Video ended ${this.videoURL} ${this.name}`)
+
     if(this.parameters.videosCount <= this.playedVideoCount){
       this.videoURL = null;
       return false;
@@ -160,6 +176,7 @@ private switchToFullscreen(){
     this.videoURL = this.service.getVideoURLById(currentId);
     var el = this.getVideoElement();
     el?.load();
+    
     // else if (el.webkitRequestFullscreen) 
     //     el.webkitRequestFullscreen();
     // else if (el.msRequestFullScreen) 
@@ -185,7 +202,7 @@ private switchToFullscreen(){
 
       var video = this.getVideoElement();
       if(video)
-        this.previousVideoTimePlayed.seconds(video.currentTime);
+        this.previousVideoTimePlayed = this.totalDuration.clone();
     }
 
     this.service.getBookById(currentId).subscribe((videoInfo) => {
@@ -204,16 +221,17 @@ private switchToFullscreen(){
 
     this.setPosition();
     
-    var totalDuration = moment(this.previousVideoTimePlayed);
+    this.totalDuration = moment(this.previousVideoTimePlayed);
     if(video)
     {
-      totalDuration = totalDuration.seconds(video.currentTime);
+      this.totalDuration = this.totalDuration.add(video.currentTime, 'seconds');
 
       if(video.currentTime > 10)
         this.service.setPosition(this.videoId, video.currentTime);
     }
 
-    this.statStr = `Общее время просмотра ${totalDuration.format("mm:ss")} ${this.playedVideoCount}/${this.parameters.videosCount}`
+    if(this.totalDuration.seconds() - video.currentTime>  2)
+    this.statStr = `Общее время просмотра всех серий ${this.totalDuration.format("mm:ss")} ${this.playedVideoCount}/${this.parameters.videosCount}`
   }
 
   setPosition() {

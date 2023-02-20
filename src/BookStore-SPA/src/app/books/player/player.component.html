@@ -11,23 +11,22 @@
       <!-- <button (click)="download()">Скачать</button> -->
       <button (click)="copyLink()">Скопировать ссылку</button>
 
-      <h4>{{name}}</h4>
-
+      <h2>{{name}}</h2>
       <div>{{statStr}}</div>
       <div> 
 
     </div>
         
         <mat-form-field class="example-full-width" appearance="fill">
-          <mat-label>Выключить через </mat-label>
-          <input matInput type="number"  [(ngModel)]="timerMinutes" >
+          <mat-label>Выключить через (минут)</mat-label>
+          <input matInput type="number"  [(ngModel)]="timerMinutes" (keyup.enter)="setTimer()">
         </mat-form-field>
 
         <button mat-icon-button color="primary"  (click)="setTimer()" >
           <mat-icon>alarm_on</mat-icon>
         </button>
 
-        <div>Осталось: <div>{{ timeLeft * 1000 | date:'mm:ss' }} </div></div>
+        <div *ngIf="timeLeft">Осталось до остановки: {{ timeLeft * 1000 | date:'mm:ss' }} </div>
     </div>
   </div>
 </div>

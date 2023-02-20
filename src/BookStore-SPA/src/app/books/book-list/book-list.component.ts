@@ -6,6 +6,7 @@ import {
   ViewChild,
   ViewEncapsulation,
 } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 import {
   ActivatedRoute,
   NavigationExtras,
@@ -55,8 +56,12 @@ export class BookListComponent implements OnInit {
   public books: VideoFile[];
   public listComplet: any;
   public isRandom: boolean = true;
+  public videoType: VideoType;
   public showWatched: boolean = true;
-
+  public showSelected: boolean = false;
+  
+  public showOnlyWebSupported: boolean;
+  
   public isSelectSeries: boolean = false;
   public showKPINfo: boolean = false;
   public serieId: number = 0;
@@ -67,12 +72,17 @@ export class BookListComponent implements OnInit {
   public series: Serie[];
   public selectedType: VideoType;
   public seasons: Seasons[];
+  public selected: Book[] =[];
+  public selectedGenres:string[];
+  public genres: string[] = ['комедия', 'драма', 'боевик', 'детектив', 'фантастика', 'биография', 'фэнтези', 'приключения','мелодрама'];
   type: string;
   apibooks: Book[];
+  public isAndroid: boolean;
 
   constructor(private router: Router,
               private service: FileService,
               private seriesService: SeriesService,
+              private sanitizer: DomSanitizer,
               private toastr: ToastrService,
               private http:HttpClient,
               private modalService: NgbModal,
@@ -99,11 +109,30 @@ export class BookListComponent implements OnInit {
       .subscribe(() => {
         this.search();
       });
+
+    this.detectOs();
   }
 
+  detectOs() {
+    let os = this.getOS();
+    if(os == "Android")
+      this.isAndroid = true;
+  }
+   getOS() {
+    var uA = navigator.userAgent || navigator.vendor ;
+    if ((/iPad|iPhone|iPod/.test(uA) && !(<any>window).MSStream) || (uA.includes('Mac') && 'ontouchend' in document)) return 'iOS';
+  
+    var i, os = ['Windows', 'Android', 'Unix', 'Mac', 'Linux', 'BlackBerry'];
+    for (i = 0; i < os.length; i++) if (new RegExp(os[i],'i').test(uA)) return os[i];
+  }
+  
   getSeries(type:VideoType) {
     this.seriesService.getAll(type).subscribe(series => {
-      this.series = series;
+      this.series = series.sort((a, b) => {  
+        return a.name >= b.name
+          ? 1
+          : -1
+      });
       this.hideSpinner(); 
     });
   }
@@ -188,6 +217,12 @@ displayListForType() {
         this.getSeries(VideoType.ChildEpisode);
         break;
       }
+      case 'adultSeries':{
+        this.isRandom = false;
+        this.isSelectSeries = true;
+        this.getSeries(VideoType.AdultEpisode);
+        break;
+      }
       case 'soviet':{
         this.isSelectSeries = true;
         this.series = [];
@@ -217,7 +252,11 @@ displayListForType() {
         break;
       }
       case 'balley':{
-        this.service.getFilmsByType(VideoType.Balley).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        this.videoType = VideoType.Art;
+        this.isRandom = false;
+        this.episodeCount = 1000;
+
+        this.service.getFilmsByTypeUniqueSeason(VideoType.Art).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
         break;
       }
       case 'film':{
@@ -236,6 +275,7 @@ watchedChanged(event){
 
   this.showFilteredBooks();
 }
+
   public deleteFilm(content,film: Book){
     let that = this;
     if (window.confirm("Фильм будет удален из базы и с диска?")) {
@@ -254,23 +294,54 @@ watchedChanged(event){
   showFilteredBooks() {
     let books = this.apibooks;
 
+    if(this.showSelected)
+      books = books.filter(x => x.isSelected);
+
     if(!this.showWatched)
       books = books.filter(x => !x.isFinished);
 
     if(this.type != 'film')
       this.books = books;
     else  
+    {
+      if(this.showOnlyWebSupported)
+        books = books.filter(x => x.isSupportedWebPlayer);
+
       this.books = books.sort((a,b) => {
-      if(a.year > b.year) 
-        return -1 ;
-      else if(a.year == b.year) 
-        return 0 ;
-      else
-        return 1;
+        if(a.year > b.year) 
+          return -1 ;
+        else if(a.year == b.year) 
+          return 0 ;
+        else
+          return 1;
+      });
+
+      if(this.selectedGenres){
+        this.books = this.books.filter(book => {
+          var haveGenre = false;
+          this.selectedGenres.forEach(genre => {
+            if(book.genres?.toLowerCase().indexOf(genre.toLowerCase())!= -1){
+              haveGenre = true;
+              return;
+            }
+          });
+          return haveGenre;
+          });
+        }
+    }
+
+    this.books.forEach(book => { 
+      book.PlayURL = (`vlc://${this.service.getVideoURLById(book.id)}`);
+      let hours= Math.floor(book.durationMinutes/60)
+      if(hours > 0){
+        let ending  = hours==1?'':'а';
+        book.hours =hours.toString() +" час"+ending;
+      }
     });
 
     this.hideSpinner(); 
   }
+
   getFilmsError(error) {
     this.hideSpinner(); 
     this.books = [];
@@ -280,11 +351,15 @@ watchedChanged(event){
 
       setTimeout(() => {
         this.counter--;
+
+        if(this.counter < 0)
+        this.counter = 0;
+
+
         if(this.counter == 0)
             this.spinner.hide()
       }, 5);
 
-  // this.spinner.hide();
 }
 
 counter : number =0 ;
@@ -302,13 +377,22 @@ counter : number =0 ;
 
   openVideo(book: Book) {
 
+    if(!book.isSupportedWebPlayer){
+      window.open(`vlc://${this.service.getVideoURLById(book.id)}`, "_blank");
+      return;
+    }
+
     const queryParams: PlayerParameters = {
       seriesId : book.seriesId,
       position : book.currentPosition,
       videoId : book.id,
       videosCount : this.episodeCount,
-      isRandom : this.isRandom
+      isRandom : this.isRandom,
+      seasonId : 0
     };
+    
+    if(this.videoType == VideoType.Art)
+      queryParams.seasonId = book.seasonId;
 
     const navigationExtras: NavigationExtras = {
       queryParams
@@ -321,6 +405,7 @@ counter : number =0 ;
 export class PlayerParameters {
   videoId: number;
   seriesId: number;
+  seasonId: number;
   videosCount: number;
   position: number;
   isRandom: boolean;

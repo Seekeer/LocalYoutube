@@ -1,4 +1,5 @@
 ﻿using AngleSharp.Html.Parser;
+using AngleSharp.Io;
 using FileStore.API;
 using FileStore.Domain.Models;
 using HtmlAgilityPack;
@@ -28,6 +29,7 @@ namespace API.Controllers
         public int Id { get; init; }
         public string Url { get; set; }
         public string Name { get; set; }
+        public string SeasonName { get; set; }
         public byte[] Cover { get; set; }
         public TimeSpan Duration { get; set; }
         public string Genres { get; set; }
@@ -89,8 +91,15 @@ namespace API.Controllers
             _httpClient = new HttpClient(handler: httpClientHandler, disposeHandler: true);
             RuTrackerClientEnvironment env = new RuTrackerClientEnvironment(_httpClient, new Uri(@"https://rutracker.org"));
 
-            _client = new RuTrackerClient(env);
-            await _client.Login(_config.RP_Login, _config.RP_Pass);
+            try
+            {
+                _client = new RuTrackerClient(env);
+                await _client.Login(_config.RP_Login, _config.RP_Pass);
+            }
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+            }
         }
 
 
@@ -269,6 +278,9 @@ namespace API.Controllers
 
             text = HttpUtility.HtmlDecode(text);
 
+            var title = doc.QuerySelector("#topic-title").InnerText;
+            info.SeasonName = title.StartingFrom("Сезон", true)?.EndingBefore("/")?.Trim();
+
             info.Name = text.SplitByNewLine().First();
             if (info.Name.Contains("||") || info.Name.Contains("все релизы") || info.Name.Contains("Rip"))
             {
@@ -293,9 +305,11 @@ namespace API.Controllers
             info.Description = GetProperty("Описание", text);
             if (string.IsNullOrEmpty(info.Description))
                 info.Description = GetProperty("О фильме", text);
-            else if (string.IsNullOrEmpty(info.Description))
+            if (string.IsNullOrEmpty(info.Description))
+                info.Description = GetProperty("Сюжет фильма", text);
+            if (string.IsNullOrEmpty(info.Description))
                 info.Description = GetProperty("Сюжет", text);
-            else if (string.IsNullOrEmpty(info.Description))
+            if (string.IsNullOrEmpty(info.Description))
                 info.Description = GetProperty("Описание фильма", text);
 
             var director = GetProperty("Режиссер:", text);
@@ -321,6 +335,8 @@ namespace API.Controllers
             }
 
             var yearStr = GetProperty("Год выпуска", text);
+            if (string.IsNullOrEmpty(yearStr))
+                yearStr = GetProperty("Год выхода", text);
             if (string.IsNullOrEmpty(yearStr))
                 yearStr = GetProperty("Год", text);
             var yearStrDigits = yearStr.Length > 6 ? yearStr.Substring(0, 6).OnlyDigits() : yearStr.OnlyDigits();
@@ -409,18 +425,20 @@ namespace API.Controllers
                SortDirection: SearchTopicsSortDirection.Descending
            ));
 
-            long maxLimit = (long)12 * 1024 * 1024 * 1024;
-            long minLimit = (long)2 * 1024 * 1024 * 1024;
+            long maxLimit = (long)20 * 1024 * 1024 * 1024;
+            long minLimit = (long)1 * 1024 * 1024 * 1024;
 
             if (res.Topics.Count() < 5)
                 return res.Topics;
 
-            var topics = res.Topics.Where(x => x.SizeInBytes < maxLimit && x.SizeInBytes > minLimit && !x.Title.Contains("DVD9") && !x.Title.Contains("DVD5"));
-
+            var topics = res.Topics.Where(x => x.SizeInBytes < maxLimit && x.SizeInBytes > minLimit);
             if (topics.Count() < 3)
                 topics = res.Topics;
 
-            return topics.OrderByDescending(x => x.SizeInBytes).Take(10);
+            topics = topics.Where(x => !x.Title.Contains("DVD9") && !x.Title.Contains("DVD5"));
+
+            return topics.OrderByDescending(x => x.SizeInBytes).Take(15);
+            //return topics.OrderByDescending(x => x.SizeInBytes).Take(10);
             //return topics.OrderByDescending(x => x.SizeInBytes).Take(10);
         }
 
@@ -437,6 +455,7 @@ namespace API.Controllers
             var request = new AddTorrentFilesRequest();
             request.TorrentFiles.Add(temp);
             request.DownloadFolder = rootDownloadFolder;
+            request.Tags = new List<string> { id.ToString() };
             await _qclient.AddTorrentsAsync(request);
 
             //var args = $"--save-path=\"{rootDownloadFolder}\" --skip-dialog=true {temp}";
@@ -444,5 +463,14 @@ namespace API.Controllers
             //var process = Process.Start(@"C:\Program Files\qBittorrent\qbittorrent.exe", args);
         }
 
+        public async Task DeleteTorrent(string id)
+        {
+           var torrents = await _qclient.GetTorrentListAsync();
+
+            var torrent = torrents.FirstOrDefault(x => x.Tags.Contains(id));
+
+            if (torrent != null)
+                await _qclient.DeleteAsync(torrent.Hash, true);
+        }
     }
 }

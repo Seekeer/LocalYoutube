@@ -32,12 +32,12 @@ namespace FileStore.Infrastructure.Repositories
         }
 
 
-        public async Task<IEnumerable<VideoFile>> GetFilesBySeason(int seriesId, bool isRandom, int count)
+        public async Task<IEnumerable<VideoFile>> GetFilesBySeason(int seasonId, bool isRandom, int count)
         {
             if (isRandom)
-                return await SearchRandom(b => b.SeasonId == seriesId, count);
+                return await SearchRandom(b => b.SeasonId == seasonId, count);
             else
-                return await Search(b => b.SeasonId == seriesId, 100);
+                return await Search(b => b.SeasonId == seasonId);
         }
 
         public async Task<IEnumerable<VideoFile>> GetFilesBySeriesAsync(int seriesId, bool isRandom)
@@ -67,7 +67,7 @@ namespace FileStore.Infrastructure.Repositories
 
         public async Task<IEnumerable<VideoFile>> SearchFileByType(VideoType type)
         {
-            return Db.VideoFiles.Where(x => x.Type == type).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo);
+            return Db.VideoFiles.Where(x => x.Type == type).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).OrderBy(x => Guid.NewGuid());
         }
 
         public async Task<IEnumerable<VideoFile>> SearchFileWithSeasonAsync(string searchedValue, bool isRandom, int resultCount)
@@ -80,13 +80,20 @@ namespace FileStore.Infrastructure.Repositories
 
             var files = (Db.VideoFiles.Where(f => f.SeriesId == series.Id).ToList());
 
+            //if (!files.Any())
+            //{
+            //    var seasons = Db.Seasons.Where(s => s.SeriesId == series.Id);
+
+            //    foreach (var season in seasons)
+            //        files.AddRange(Db.VideoFiles.Where(f => f.SeasonId == season.Id).ToList());
+            //}
+
             if (isRandom)
             {
-                var rand = new Random();
                 result = files.OrderBy(x => Guid.NewGuid()).Take(resultCount).ToList();
             }
             else
-                result = files.OrderByDescending(x => x.Id).Take(resultCount).ToList();
+                result = files.OrderBy(x => x.Id).Take(resultCount).ToList();
 
             result.ToList().ForEach(
                 x =>

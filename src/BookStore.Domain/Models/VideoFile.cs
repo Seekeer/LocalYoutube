@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
 
 namespace FileStore.Domain.Models
 {
@@ -22,15 +24,29 @@ namespace FileStore.Domain.Models
     {
         Unknown,
         Film,
+        [IsOnlineVideoAttribute]
         Animation,
+        [IsOnlineVideoAttribute]
         ChildEpisode,
+        [IsOnlineVideoAttribute]
         FairyTale,
         Lessons, 
+        [IsOnlineVideoAttribute]
         Art,
+        [IsOnlineVideoAttribute]
         AdultEpisode,
+        [IsOnlineVideoAttribute]
         Courses,
         Downloaded,
         Youtube
+    }
+    [System.AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
+    public sealed class IsOnlineVideoAttribute : Attribute
+    {
+        public IsOnlineVideoAttribute()
+        {
+        }
+
     }
 
     public enum AudioType
@@ -140,13 +156,16 @@ namespace FileStore.Domain.Models
         }
 
         [NotMapped]
-        public bool IsFinished
+        public virtual bool IsFinished
         {
             get
             {
                 if (VideoFileUserInfo == null || Duration > TimeSpan.Zero)
                     return false;
                 //return true;
+                if (VideoFileUserInfo.Position > 0 && Duration == TimeSpan.Zero)
+                    return true;
+
                 var watchedTime = TimeSpan.FromSeconds(VideoFileUserInfo.Position);
 
                 if ((this as VideoFile)?.Type == VideoType.Courses)
@@ -158,13 +177,44 @@ namespace FileStore.Domain.Models
 
             }
         }
-    }
+
+        [NotMapped]
+        public bool IsSupportedWebPlayer
+        {
+            get
+            {
+                return Path.EndsWith("mp4") || Path.EndsWith(".m4v");
+            }
+        }
+}
 
     public class VideoFile : DbFile
     {
         public VideoType Type { get; set; }
         public Quality Quality { get; set; }
         public bool IsDownloading { get; set; }
+
+        [NotMapped]
+        public override bool IsFinished
+        {
+            get
+            {
+                if (VideoFileUserInfo == null)
+                    return false;
+
+                if (VideoFileUserInfo.Position > 0 && Duration == TimeSpan.Zero && Type == VideoType.Lessons)
+                    return true;
+
+                var watchedTime = TimeSpan.FromSeconds(VideoFileUserInfo.Position);
+
+                if ((this as VideoFile)?.Type == VideoType.Courses)
+                    return (Duration - watchedTime) < TimeSpan.FromSeconds(10);
+
+                var watchedPercent = (watchedTime) / Duration;
+
+                return watchedPercent > 0.9;
+            }
+        }
     }
 
     public class AudioFile : DbFile

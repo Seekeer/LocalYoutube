@@ -9,10 +9,15 @@
 
   <ItemGroup>
     <Content Remove="NLog.config" />
+    <Content Remove="Properties\launchSettings.Development.json" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="C:\Users\Dim\.nuget\packages\nlog.config\4.7.13\contentFiles\any\any\NLog.config" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <_WebToolingArtifacts Remove="Properties\launchSettings.Development.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,6 +34,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.10.8" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="4.14.0" />
+    <PackageReference Include="Polly" Version="7.2.3" />
     <PackageReference Include="QBittorrent.Client" Version="1.8.22037.2" />
     <PackageReference Include="RuTracker.Client" Version="0.8.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.5.1" />
@@ -43,11 +49,22 @@
     <None Include="NLog.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="Properties\launchSettings.Development.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\BookStore.Domain\FileStore.Domain.csproj" />
     <ProjectReference Include="..\BookStore.Infrastructure\Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Assets\bat.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 

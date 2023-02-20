@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FileStore.API.Controllers
 {
+    [Microsoft.AspNetCore.Cors.EnableCors("CorsPolicy")]
     [Route("api/[controller]")]
     [Authorize]
     public class SeriesController : MainController
@@ -39,6 +40,7 @@ namespace FileStore.API.Controllers
         public async Task<IActionResult> SeriesOther()
         {
             var series = new List<Series>();
+            series.AddRange(await _SeriesService.GetAllByType(VideoType.AdultEpisode));
             series.AddRange(await _SeriesService.GetAllByType(VideoType.Courses));
             series.AddRange(await _SeriesService.GetAllByType(VideoType.Youtube));
 

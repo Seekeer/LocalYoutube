@@ -6,8 +6,41 @@ using System.Text.RegularExpressions;
 
 namespace Infrastructure
 {
+
+    public static class CollectionHelper
+    {
+        public static bool TryGetKey<K, V>(this IDictionary<K, V> instance, V value, out K key)
+        {
+            foreach (var entry in instance)
+            {
+                if (!entry.Value.Equals(value))
+                {
+                    continue;
+                }
+                key = entry.Key;
+                return true;
+            }
+
+            key = default(K);
+            return false;
+        }
+    }
+
     public static class StringHelper
     {
+        public static string ClearEnd(this string text, string end, bool includeEndString = false)
+        {
+            var indexStart = text.IndexOf(end);
+
+            if (indexStart == -1)
+                return text;
+
+            var result = includeEndString ? text.Substring(0, indexStart + end.Length) : text.Substring(0, indexStart);
+
+            return result.Trim();
+        }
+
+
         /// <summary>
         /// Compute the distance between two strings.
         /// </summary>
@@ -264,6 +297,10 @@ namespace Infrastructure
         public static string StartingFrom(this string text, string start, bool includeStartString = false)
         {
             var indexStart = text.IndexOf(start);
+
+            if (indexStart == -1)
+                return null;
+
             return includeStartString ? text.Substring(indexStart) : text.Substring(indexStart + start.Length);
         }
 
