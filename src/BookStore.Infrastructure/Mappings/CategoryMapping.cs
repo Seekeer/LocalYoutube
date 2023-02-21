@@ -33,7 +33,7 @@ namespace FileStore.Infrastructure.Context
             builder.HasOne(video => video.DbFile)
                 .WithOne(info => info.VideoFileExtendedInfo)
                 .HasForeignKey<FileExtendedInfo>(info => info.VideoFileId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.ClientCascade);
 
             builder.ToTable("VideoFileExtendedInfos");
         }
@@ -50,7 +50,7 @@ namespace FileStore.Infrastructure.Context
             builder.HasOne(video => video.DbFile)
                 .WithOne(info => info.VideoFileUserInfo)
                 .HasForeignKey<FileUserInfo>(info => info.VideoFileId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.ClientCascade);
 
             builder.ToTable("VideoFileUserInfos");
         }
