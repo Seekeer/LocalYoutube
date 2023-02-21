@@ -22,7 +22,8 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "http://192.168.1.55:51951"
+      "applicationUrl": "http://192.168.1.55:51951",
+      "sslPort": 51952
     },
     "Docker": {
       "commandName": "Docker",
@@ -52,7 +53,7 @@
     },
     "iisExpress": {
       "applicationUrl": "http://192.168.1.55:51951",
-      "sslPort": 0
+      "sslPort": 51952
     }
   }
 }

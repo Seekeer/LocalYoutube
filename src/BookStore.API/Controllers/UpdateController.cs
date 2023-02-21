@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace FileStore.API.Controllers
 {
+#if DEBUG
     [EnableCors("CorsPolicy")]
     [Authorize]
     [Route("api/[controller]")]
@@ -717,4 +718,5 @@ namespace FileStore.API.Controllers
         }
 
     }
+#endif
 }

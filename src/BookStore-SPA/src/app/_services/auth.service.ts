@@ -98,13 +98,14 @@ export class AuthService implements OnDestroy {
 
   refreshToken(): Observable<LoginResult | null> {
     const refreshToken = localStorage.getItem('refresh_token');
+    const userName = localStorage.getItem('user_name') ;
     if (!refreshToken) {
       this.clearLocalStorage();
       return of(null);
     }
 
     return this.http
-      .post<LoginResult>(`${this.apiUrl}/refresh-token`, { refreshToken })
+      .post<LoginResult>(`${this.apiUrl}/refresh-token`, { refreshToken, userName})
       .pipe(
         map((x) => {
           this._user.next({
@@ -120,12 +121,14 @@ export class AuthService implements OnDestroy {
   }
 
   setLocalStorage(x: LoginResult) {
+    localStorage.setItem('user_name', x.username);
     localStorage.setItem('access_token', x.accessToken);
     localStorage.setItem('refresh_token', x.refreshToken);
     localStorage.setItem('login-event', 'login' + Math.random());
   }
 
   clearLocalStorage() {
+    localStorage.removeItem('user_name');
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.setItem('logout-event', 'logout' + Math.random());

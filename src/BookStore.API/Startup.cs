@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -78,9 +79,21 @@ namespace FileStore.API
                     ClockSkew = TimeSpan.FromMinutes(1)
                 };
             });
-            services.AddSingleton<IJwtAuthManager, JwtAuthManager>();
-            services.AddHostedService<JwtRefreshTokenCache>();
-            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IJwtAuthManager, JwtAuthManager>();
+            //services.AddHostedService<JwtRefreshTokenCache>();
+            //services.AddScoped<IUserService, UserService>();
+
+            services.AddIdentityCore<IdentityUser>(options =>
+                {
+                    options.SignIn.RequireConfirmedAccount = false;
+                    options.User.RequireUniqueEmail = false;
+                    options.Password.RequireDigit = false;
+                    options.Password.RequiredLength = 1;
+                    options.Password.RequireNonAlphanumeric = false;
+                    options.Password.RequireUppercase = false;
+                    options.Password.RequireLowercase = false;
+                })
+                .AddEntityFrameworkStores<VideoCatalogDbContext>();
 
             services.AddSwaggerGen(c =>
             {

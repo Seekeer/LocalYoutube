@@ -1,5 +1,8 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using FileStore.Domain.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -10,16 +13,16 @@ namespace FileStore.Infrastructure.Context
         public VideoCatalogDbContext CreateDbContext(string[] args)
         {
             var optionsBuilder = new DbContextOptionsBuilder<VideoCatalogDbContext>();
-            optionsBuilder.UseSqlServer("Server=localhost;Database=FileStore;Trusted_Connection=True;");
+            optionsBuilder.UseSqlServer("Server=localhost;Database=FileStore;Encrypt=False;Trusted_Connection=True;");
 
             return new VideoCatalogDbContext(optionsBuilder.Options);
         }
     }
 
     // cd .\BookStore.Infrastructure\
-    // dotnet ef migrations add InitialCreate7
+    // dotnet ef migrations add InitialCreate9
     //  dotnet ef database update
-    public class VideoCatalogDbContext : DbContext
+    public class VideoCatalogDbContext : IdentityUserContext<IdentityUser>
     {
         public VideoCatalogDbContext(DbContextOptions options) : base(options) {
             this.ChangeTracker.LazyLoadingEnabled = false;
@@ -48,9 +51,18 @@ namespace FileStore.Infrastructure.Context
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(VideoCatalogDbContext).Assembly);
 
             foreach (var relationship in modelBuilder.Model.GetEntityTypes()
-                .SelectMany(e => e.GetForeignKeys())) relationship.DeleteBehavior = DeleteBehavior.Cascade;
+                .SelectMany(e => e.GetForeignKeys())) relationship.DeleteBehavior = DeleteBehavior.ClientSetNull;
+
+            //SeedData(modelBuilder);
 
             base.OnModelCreating(modelBuilder);
         }
+
+        //private void SeedData(ModelBuilder modelBuilder)
+        //{
+        //    modelBuilder.Entity<User>().HasData(
+        //        (new User { Id = 1, Username = "dimtim", Password = "hehe", ExpireAt = DateTime.MaxValue })
+        //    );
+        //}
     }
 }
