@@ -22,7 +22,7 @@ namespace FileStore.Infrastructure.Context
     // cd .\BookStore.Infrastructure\
     // dotnet ef migrations add InitialCreate9
     //  dotnet ef database update
-    public class VideoCatalogDbContext : IdentityUserContext<IdentityUser>
+    public class VideoCatalogDbContext : IdentityUserContext<ApplicationUser>
     {
         public VideoCatalogDbContext(DbContextOptions options) : base(options) {
             this.ChangeTracker.LazyLoadingEnabled = false;
@@ -46,7 +46,8 @@ namespace FileStore.Infrastructure.Context
             //});
 
             modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileExtendedInfo).AutoInclude();
-            modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileUserInfo).AutoInclude();
+            modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileUserInfos).AutoInclude();
+            modelBuilder.Entity<FileUserInfo>().Navigation(e => e.User).AutoInclude();
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(VideoCatalogDbContext).Assembly);
 

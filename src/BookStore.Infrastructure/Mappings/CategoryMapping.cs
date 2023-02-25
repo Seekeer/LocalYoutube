@@ -47,9 +47,13 @@ namespace FileStore.Infrastructure.Context
             builder.Property(c => c.Rating);
             builder.Property(c => c.Position);
 
-            builder.HasOne(video => video.DbFile)
-                .WithOne(info => info.VideoFileUserInfo)
-                .HasForeignKey<FileUserInfo>(info => info.VideoFileId)
+            builder.HasOne<ApplicationUser>(e => e.User)
+                .WithMany(b => b.VideoFileUserInfos)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.ClientCascade);
+            builder.HasOne<DbFile>(e => e.DbFile)
+                .WithMany(b => b.VideoFileUserInfos)
+                .HasForeignKey(e => e.VideoFileId)
                 .OnDelete(DeleteBehavior.ClientCascade);
 
             builder.ToTable("VideoFileUserInfos");

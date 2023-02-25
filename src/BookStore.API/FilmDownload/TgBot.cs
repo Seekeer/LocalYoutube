@@ -637,7 +637,7 @@ namespace API.FilmDownload
             var filesToUpdateCoverByTg = db.VideoFiles
                 .Where(x => x.Type != VideoType.Courses)
             //var filesToUpdateCoverByTg = db.VideoFiles.Where(x => x.Type == VideoType.Animation)
-                .Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).OrderByDescending(x => x.Id).ToList();
+                .Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).OrderByDescending(x => x.Id).ToList();
             filesToUpdateCoverByTg = filesToUpdateCoverByTg.Where(x => x.Cover == null || x.Cover.Length < 20 * 1024).ToList();
 
             //var files = db.VideoFiles.Where(x => x.SeasonId == 202);

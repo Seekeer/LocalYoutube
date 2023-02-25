@@ -2,6 +2,7 @@ using API.FilmDownload;
 using AutoMapper;
 using FileStore.API.Configuration;
 using FileStore.API.JWT;
+using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -83,7 +84,7 @@ namespace FileStore.API
             //services.AddHostedService<JwtRefreshTokenCache>();
             //services.AddScoped<IUserService, UserService>();
 
-            services.AddIdentityCore<IdentityUser>(options =>
+            services.AddIdentityCore<ApplicationUser>(options =>
                 {
                     options.SignIn.RequireConfirmedAccount = false;
                     options.User.RequireUniqueEmail = false;

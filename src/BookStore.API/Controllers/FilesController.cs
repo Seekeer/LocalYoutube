@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
+using FileStore.API.Configuration;
 using FileStore.API.Dtos.File;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
@@ -42,7 +44,7 @@ namespace FileStore.API.Controllers
         {
             var Files = await _FileService.GetAll();
 
-            return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
+            return Ok(_mapper.GetFiles(Files, GetUserId()));
         }
 
         [HttpGet("{id:int}")]
@@ -54,64 +56,35 @@ namespace FileStore.API.Controllers
 
             if (File == null) return NotFound();
 
-            return Ok(_mapper.Map<VideoFileResultDto>(File));
+            return Ok(_mapper.GetFile(File, GetUserId()));
         }
 
         [HttpGet]
         [Route("getFilesBySeries")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetFilesBySeries(int id, int count, bool isRandom)
+        public async Task<IActionResult> GetFilesBySeries(int id, int count, bool isRandom, int startId)
         {
-            var Files = await _FileService.GetFilesBySearies(id, isRandom);
+            var Files = await _FileService.GetFilesBySearies(id, isRandom, startId);
 
             if (!Files.Any())
                 return NotFound();
 
-            return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
+            return Ok(_mapper.GetFiles(Files, GetUserId()));
         }
 
         [HttpGet]
         [Route("getFilesBySeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetFilesBySeason(int id, int count, bool isRandom)
+        public async Task<IActionResult> GetFilesBySeason(int id, int count, bool isRandom, int startId)
         {
-            var Files = await _FileService.GetFilesBySeason(id, isRandom, count);
+            var Files = await _FileService.GetFilesBySeason(id, isRandom, count, startId);
 
             if (!Files.Any())
                 return NotFound();
 
-            return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
-        }
-
-        [HttpPost]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Add(FileAddDto FileDto)
-        {
-            if (!ModelState.IsValid) return BadRequest();
-
-            var File = _mapper.Map<VideoFile>(FileDto);
-            var FileResult = await _FileService.Add(File);
-
-            if (FileResult == null) return BadRequest();
-
-            return Ok(_mapper.Map<VideoFileResultDto>(FileResult));
-        }
-
-        [HttpPut("{id:int}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Update(int id, FileEditDto FileDto)
-        {
-            if (id != FileDto.Id) return BadRequest();
-
-            if (!ModelState.IsValid) return BadRequest();
-
-            await _FileService.Update(_mapper.Map<VideoFile>(FileDto));
-
-            return Ok(FileDto);
+            return Ok(_mapper.GetFiles(Files, GetUserId()));
         }
 
         [HttpDelete("{id:int}")]
@@ -137,7 +110,7 @@ namespace FileStore.API.Controllers
 
             if (Files == null || Files.Count == 0) return NotFound("None File was founded");
 
-            var resultDTO = _mapper.Map<IEnumerable<VideoFileResultDto>>(Files);
+            var resultDTO = _mapper.GetFiles(Files, GetUserId());
             return Ok(resultDTO);
         }
 
@@ -152,7 +125,14 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound("None File was founded");
 
-            return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
+            return Ok(_mapper.GetFiles(Files, GetUserId()));
+        }
+
+        private string GetUserId()
+        {
+            var user = HttpContext.User;
+            var id = user.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Hash)?.Value;
+            return id;
         }
 
         [HttpGet]
@@ -161,12 +141,12 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<List<VideoFile>>> SearchFileWithSeason(int seasonId, bool isRandom)
         {
-            var Files = _mapper.Map<List<VideoFile>>(await _FileService.GetFilesBySeason(seasonId, isRandom, 0));
+            var Files = _mapper.Map<List<VideoFile>>(await _FileService.GetFilesBySeason(seasonId, isRandom, 0, 0));
 
             if (!Files.Any())
                 return NotFound("None File was founded");
 
-            return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(Files));
+            return Ok(_mapper.GetFiles(Files, GetUserId()));
         }
 
         [HttpGet]
@@ -187,7 +167,7 @@ namespace FileStore.API.Controllers
             if (!result.Any())
                 return NotFound("None File was founded");
 
-            return Ok(_mapper.Map<IEnumerable<VideoFileResultDto>>(result));
+            return Ok(_mapper.GetFiles(result, GetUserId())); 
         }
 
         [HttpGet]
@@ -202,7 +182,7 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound("None File was founded");
 
-            var filesDTO = _mapper.Map<IEnumerable<VideoFileResultDto>>(Files).OrderByDescending(x => x.Year);
+            var filesDTO = _mapper.GetFiles(Files, GetUserId()).OrderByDescending(x => x.Year);
             return Ok(filesDTO);
         }
 
@@ -227,7 +207,7 @@ namespace FileStore.API.Controllers
                 }
             ).ToList();
 
-            var filesDTO = _mapper.Map<IEnumerable<VideoFileResultDto>>(unique).OrderByDescending(x => x.Year);
+            var filesDTO = _mapper.GetFiles(unique, GetUserId()).OrderByDescending(x => x.Year);
             foreach (var file in filesDTO)
                 file.IsFinished = false;
 
@@ -248,7 +228,8 @@ namespace FileStore.API.Controllers
         [Route("updatePosition/{videoId}")]
         public async Task<IActionResult> SetPosition(int videoId, [FromBody] double value)
         {
-            await _FileService.SetPosition(videoId, value);
+            string userId = GetUserId();
+            await _FileService.SetPosition(videoId, value, userId);
 
             return Ok();
         }

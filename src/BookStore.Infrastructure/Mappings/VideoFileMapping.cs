@@ -44,6 +44,10 @@ namespace FileStore.Infrastructure.Context
             builder.Property(b => b.Number);
             builder.Property(b => b.Duration);
 
+            //builder.HasMany(video => video.VideoFileUserInfos)
+            //    .WithOne(info => info.DbFile)
+            //    .OnDelete(DeleteBehavior.ClientCascade);
+
             builder.ToTable("DbFile");
         }
     }

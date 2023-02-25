@@ -99,8 +99,7 @@ namespace FileStore.API.JWT
             var userName = principal.Identity?.Name;
 
             //var user = _db.Users.FirstOrDefault(x => x.UserName == userName);
-            var claim = claims.FirstOrDefault(x => x.Type == ClaimTypes.Anonymous.ToString());
-            if (claim == null || string.IsNullOrEmpty(claim.Value) || claim.Value != refreshToken)
+            if (!claims.Any(x => x.Type == ClaimTypes.Anonymous && x.Value == refreshToken))
             {
                 throw new SecurityTokenException("Invalid token");
             }

@@ -49,14 +49,14 @@ namespace FileStore.Domain.Services
             return true;
         }
 
-        public async Task<IEnumerable<VideoFile>> GetFilesBySearies(int SeriesId, bool isRandom)
+        public async Task<IEnumerable<VideoFile>> GetFilesBySearies(int SeriesId, bool isRandom, int startId)
         {
-            return await _FileRepository.GetFilesBySeriesAsync(SeriesId, isRandom);
+            return await _FileRepository.GetFilesBySeriesAsync(SeriesId, isRandom, startId);
         }
 
-        public async Task<IEnumerable<VideoFile>> GetFilesBySeason(int seasonId, bool isRandom, int count)
+        public async Task<IEnumerable<VideoFile>> GetFilesBySeason(int seasonId, bool isRandom, int count, int startId)
         {
-            return await _FileRepository.GetFilesBySeason(seasonId, isRandom,  count);
+            return await _FileRepository.GetFilesBySeason(seasonId, isRandom,  count,  startId);
         }
 
         public async Task<IEnumerable<VideoFile>> Search(string FileName)
@@ -66,7 +66,7 @@ namespace FileStore.Domain.Services
 
         public async Task<IEnumerable<VideoFile>> SearchFileWithSeries(string searchedValue, bool isRandom)
         {
-            return await _FileRepository.SearchFileWithSeasonAsync(searchedValue, isRandom);
+            return await _FileRepository.SearchFileWithSerieAsync(searchedValue, isRandom);
         }
 
         public void Dispose()
@@ -81,17 +81,27 @@ namespace FileStore.Domain.Services
 
         public async Task SetRating(int videoId, double value)
         {
-            var video = await _FileRepository.GetById(videoId);
+            //var video = await _FileRepository.GetById(videoId);
 
-            video.VideoFileUserInfo.Rating = value;
-            await _FileRepository.Update(video);
+            //video.VideoFileUserInfos.Rating = value;
+            //await _FileRepository.Update(video);
         }
 
-        public async Task SetPosition(int videoId, double value)
+        public async Task SetPosition(int videoId, double value, string userId)
         {
+            if (string.IsNullOrEmpty(userId))
+                return;
+
             var video = await _FileRepository.GetById(videoId);
 
-            video.VideoFileUserInfo.Position = value;
+            var info = video.VideoFileUserInfos.FirstOrDefault(x => x.UserId == userId);
+            if (info == null)
+            {
+                info = new FileUserInfo { DbFile = video, UserId = userId};
+                video.VideoFileUserInfos.Add(info);
+            }
+            info.Position = value;
+
             await _FileRepository.Update(video);
         }
 

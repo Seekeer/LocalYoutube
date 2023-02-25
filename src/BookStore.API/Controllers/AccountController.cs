@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using FileStore.API.JWT;
+using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -24,10 +25,10 @@ namespace FileStore.API.Controllers
         private readonly ILogger<AccountController> _logger;
         private readonly IJwtAuthManager _jwtAuthManager;
         private readonly VideoCatalogDbContext _dbContext;
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
         private static readonly string REFRESH_TOKEN_CLAIM_TYPE = ClaimTypes.Anonymous.ToString();
 
-        public AccountController(ILogger<AccountController> logger, UserManager<IdentityUser> userManager,  IJwtAuthManager jwtAuthManager,
+        public AccountController(ILogger<AccountController> logger, UserManager<ApplicationUser> userManager,  IJwtAuthManager jwtAuthManager,
             VideoCatalogDbContext dbContext)
         {
             _logger = logger;
@@ -81,10 +82,13 @@ namespace FileStore.API.Controllers
             });
         }
 
-        private async Task _UpdateUserRefreshToken(IdentityUser userInDb, string refreshToken, System.Collections.Generic.IList<Claim> claims)
+        private async Task _UpdateUserRefreshToken(ApplicationUser userInDb, string refreshToken, 
+            System.Collections.Generic.IList<Claim> claims)
         {
-            await _userManager.RemoveClaimsAsync(userInDb, claims.Where(x => x.Type == REFRESH_TOKEN_CLAIM_TYPE));
             await _userManager.AddClaimAsync(userInDb, new Claim(REFRESH_TOKEN_CLAIM_TYPE, refreshToken));
+
+            await _userManager.RemoveClaimsAsync(userInDb, claims.Where(x => x.Type == ClaimTypes.Hash));
+            await _userManager.AddClaimAsync(userInDb, new Claim(ClaimTypes.Hash, userInDb.Id));
         }
 
         [HttpGet("user")]

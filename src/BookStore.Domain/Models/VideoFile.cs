@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Identity;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
@@ -49,6 +50,11 @@ namespace FileStore.Domain.Models
 
     }
 
+    public class ApplicationUser : IdentityUser
+    {
+        public IList<FileUserInfo> VideoFileUserInfos { get; set; } = new List<FileUserInfo>();
+    }
+
     public enum AudioType
     {
         Unknown,
@@ -77,6 +83,9 @@ namespace FileStore.Domain.Models
         public DbFile DbFile { get; set; }
         public int VideoFileId { get; set; }
 
+        public ApplicationUser User { get; set; }
+        public string UserId { get; set; }
+
         public double Position { get; set; }
         public double Rating { get; set; }
     }
@@ -98,8 +107,22 @@ namespace FileStore.Domain.Models
         public Season Season { get; set; }
         public Series Series { get; set; }
 
-        public FileUserInfo VideoFileUserInfo { get; set; } = new FileUserInfo();
+        public IList<FileUserInfo> VideoFileUserInfos { get; set; } = new List<FileUserInfo>();
         public FileExtendedInfo VideoFileExtendedInfo { get; set; } = new FileExtendedInfo();
+
+        [NotMapped]
+        public string CurrentUserId { get; set; }
+        [NotMapped]
+        public FileUserInfo VideoFileUserInfo
+        {
+            get
+            {
+                if (VideoFileUserInfos == null)
+                    return new FileUserInfo();
+
+                return VideoFileUserInfos.FirstOrDefault(x => x.User?.Id == CurrentUserId) ?? new FileUserInfo() ;
+            }
+        }
 
         [NotMapped]
         public byte[] Cover
@@ -147,11 +170,11 @@ namespace FileStore.Domain.Models
         }
 
         [NotMapped]
-        public double? CurrentPosition
+        public double CurrentPosition
         {
             get
             {
-                return VideoFileUserInfo?.Position;
+                return VideoFileUserInfo?.Position ?? 0;
             }
         }
 

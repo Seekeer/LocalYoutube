@@ -53,7 +53,7 @@ namespace FileStore.Domain.Services
 
         public async Task<bool> Remove(Series series)
         {
-            var files = await _fileService.GetFilesBySearies(series.Id, true);
+            var files = await _fileService.GetFilesBySearies(series.Id, true, 0);
             if (files.Any()) 
                 return false;
 

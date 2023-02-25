@@ -55,7 +55,7 @@ export class BookListComponent implements OnInit {
   
   public books: VideoFile[];
   public listComplet: any;
-  public isRandom: boolean = true;
+  public isRandom: boolean = false;
   public videoType: VideoType;
   public showWatched: boolean = true;
   public showSelected: boolean = false;
