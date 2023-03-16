@@ -54,6 +54,7 @@ import { NgbdDatepickerPopup } from './datepicker/datepicker-popup';
 import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './login/login.component';
 import { NavComponent } from './nav/nav.component';
+import { AudioComponent } from './audio/audio.component';
 
 @NgModule({
   declarations: [
@@ -67,7 +68,8 @@ import { NavComponent } from './nav/nav.component';
     NavComponent,
     SafePipe,
     ConfirmationDialogComponent,
-    NgbdDatepickerPopup
+    NgbdDatepickerPopup,
+    AudioComponent
   ],
   imports: [
     BrowserModule,

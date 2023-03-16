@@ -34,4 +34,20 @@ export enum VideoType {
     Art,
     AdultEpisode,
     Courses
-  }
+}
+
+
+export class AudioFile {
+    id: number;
+    seriesId: number;
+    seasonId: number;
+}
+
+export enum AudioType {
+    Unknown,
+    Music,
+    Podcast,
+    EoT,
+    FairyTale,
+    Lessons
+}

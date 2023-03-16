@@ -20,6 +20,7 @@ const routes: Routes = [
   // { path: 'books', component: BookListComponent },
   { path: 'login', component: LoginComponent },
   { path: 'books/:type', component: BookListComponent , canActivate: [AuthGuard]},
+  { path: 'audio/:type', component: BookListComponent , canActivate: [AuthGuard]},
   { path: 'player', component: PlayerComponent  , canActivate: [AuthGuard]},
   { path: 'player/:id', component: PlayerComponent  , canActivate: [AuthGuard]},
   { path: 'categories', component: CategoryListComponent , canActivate: [AuthGuard] },

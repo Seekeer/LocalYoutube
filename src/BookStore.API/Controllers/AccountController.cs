@@ -46,9 +46,11 @@ namespace FileStore.API.Controllers
             {
                 return BadRequest();
             }
-
-            //var user = new IdentityUser { UserName = request.UserName };
-            //var createdUser = await _userManager.CreateAsync(user, request.Password);
+            
+            //var managedUser = await _userManager.FindByNameAsync(request.UserName);
+            //_userManager.DeleteAsync(managedUser);
+            var user = new ApplicationUser { UserName = request.UserName };
+            var createdUser = await _userManager.CreateAsync(user, request.Password);
 
             var managedUser = await _userManager.FindByNameAsync(request.UserName);
             if (managedUser == null)

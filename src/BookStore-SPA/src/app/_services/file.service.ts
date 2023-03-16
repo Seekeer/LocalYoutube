@@ -1,5 +1,4 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
 
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
@@ -9,10 +8,11 @@ import {
   VideoType,
 } from '../_models/Book';
 
-@Injectable({
-    providedIn: 'root'
-})
 export class FileService {
+    private baseUrl: string = environment.baseUrl + 'api/';
+
+    constructor(private http: HttpClient) { }
+
     public updateDownloaded() {
         return this.http.get<string>(`${this.baseUrl}update/updateDownloaded`);
     }
@@ -28,9 +28,6 @@ export class FileService {
     getBigAnimation() {
         return this.http.get<Book[]>(`${this.baseUrl}files/getAnimation?isSoviet=false`);
     }
-    private baseUrl: string = environment.baseUrl + 'api/';
-
-    constructor(private http: HttpClient) { }
 
     public getVideoURLById(id: number) {
         return this.baseUrl +'Files/getFileById?fileId=' + id;
