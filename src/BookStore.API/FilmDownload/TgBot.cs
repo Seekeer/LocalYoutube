@@ -295,7 +295,7 @@ namespace API.FilmDownload
                     case Tg.UpdateType.ChosenInlineResult:
                         break;
                     case Tg.UpdateType.CallbackQuery:
-                        if (!_tgSeasonDict.Any(x => x.TgId == update.Message.From.Id))
+                        if (!_tgSeasonDict.Any(x => x.TgId == update.CallbackQuery.From.Id))
                             return;
 
                         var command = CommandParser.GetDataFromMessage(update.CallbackQuery.Data);

@@ -240,6 +240,35 @@ namespace FileStore.API.Controllers
 
 
         [HttpGet]
+        [Route("moveCompleteSeries")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveCompleteSeries(int seriesId, int newSeriesId)
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            var seasons = _db.Seasons.Where(x => x.SeriesId == seriesId).Include(x => x.Files).ToList();
+
+            foreach (var item in seasons)
+            {
+                item.SeriesId = newSeriesId;
+
+                foreach (var file in item.Files)
+                {
+                    file.SeriesId = newSeriesId; 
+                }
+            }
+
+            _db.SaveChanges();
+
+            var series = _db.Series.FirstOrDefault(x =>x.Id == seriesId);
+            _db.Remove(series);
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+
+        [HttpGet]
         [Route("moveToSeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> MoveToSeason(int startId, int finishId, int seasonId, int seriesId = 0, VideoType? type = null, string seasonName = null)
@@ -250,7 +279,7 @@ namespace FileStore.API.Controllers
             foreach (var file in files)
             {
                 //if(string.IsNullOrEmpty(seasonName))
-                    file.SeasonId = seasonId;
+                file.SeasonId = seasonId;
                 //else if (seriesId != 0)
                 //{
                 //    var series = _db.Series.FirstOrDefault(x => x.Id == seriesId);
