@@ -19,6 +19,12 @@ namespace FileStore.Infrastructure.Context
             builder.Property(b => b.Number);
             builder.Property(b => b.Duration);
 
+            builder.HasOne("FileStore.Domain.Models.DbFile", null)
+                .WithOne()
+                .HasForeignKey("FileStore.Domain.Models.VideoFile", "Id")
+                .OnDelete(DeleteBehavior.ClientCascade)
+                .IsRequired();
+
             builder.ToTable("VideoFile");
         }
     }
@@ -38,6 +44,10 @@ namespace FileStore.Infrastructure.Context
             builder.Property(b => b.Number);
             builder.Property(b => b.Duration);
 
+            //builder.HasMany(video => video.VideoFileUserInfos)
+            //    .WithOne(info => info.DbFile)
+            //    .OnDelete(DeleteBehavior.ClientCascade);
+
             builder.ToTable("DbFile");
         }
     }
@@ -54,6 +64,12 @@ namespace FileStore.Infrastructure.Context
             builder.Property(b => b.Type);
             builder.Property(b => b.Number);
             builder.Property(b => b.Duration);
+
+            builder.HasOne("FileStore.Domain.Models.DbFile", null)
+                .WithOne()
+                .HasForeignKey("FileStore.Domain.Models.AudioFile", "Id")
+                .OnDelete(DeleteBehavior.ClientCascade)
+                .IsRequired();
 
             builder.ToTable("AudioFile");
         }

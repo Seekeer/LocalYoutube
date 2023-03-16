@@ -2,9 +2,28 @@
 using FileStore.API.Dtos.File;
 using FileStore.API.Dtos.Series;
 using FileStore.Domain.Models;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace FileStore.API.Configuration
 {
+    public static class AutomapperHelper
+    {
+        public static IEnumerable<VideoFileResultDto> GetFiles(this IMapper mapper, IEnumerable<VideoFile> files, string userId)
+        {
+            files.ToList().ForEach(x => x.CurrentUserId = userId);
+
+            return mapper.Map<IEnumerable<VideoFileResultDto>>(files);
+        }
+
+        public static VideoFileResultDto GetFile(this IMapper mapper, VideoFile file, string userId)
+        {
+            file.CurrentUserId = userId;
+
+            return mapper.Map<VideoFileResultDto>(file);
+        }
+    }
+
     public class AutomapperConfig : Profile
     {
         public AutomapperConfig()
@@ -16,7 +35,6 @@ namespace FileStore.API.Configuration
             CreateMap<Series, SeriesResultDto>().ReverseMap();
             CreateMap<VideoFile, FileAddDto>().ReverseMap();
             CreateMap<VideoFile, FileEditDto>().ReverseMap();
-            CreateMap<VideoFile, VideoFileResultDto>().ReverseMap();
             CreateMap<VideoFile, VideoFileResultDto>().ReverseMap();
         }
     }

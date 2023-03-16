@@ -12,10 +12,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FileStore.API.Controllers
 {
+#if DEBUG
     [EnableCors("CorsPolicy")]
+    [AllowAnonymous]
     [Route("api/[controller]")]
     public class UpdateController : MainController
     {
@@ -35,7 +38,7 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> CheckDownloaded()
         {
-            var files = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).
+            var files = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).
                 Where(x => x.Type == VideoType.Film).ToList();
             foreach (var file in files)
             {
@@ -53,7 +56,7 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> CheckDownloaded(string seriesName)
         {
-            var files = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
+            var files = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos)
                 .Where(x => x.IsDownloading).ToList();
             foreach (var info in files)
             {
@@ -100,24 +103,23 @@ namespace FileStore.API.Controllers
         [HttpDelete]
         [Route("removeSeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public void RemoveSeason(int seasonId, bool deleteFile )
+        public void RemoveSeason(int seasonId, bool deleteFile)
         {
-            var files = _db.Files.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeasonId == seasonId).ToList();
+            var files = _db.Files.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeasonId == seasonId).ToList();
 
+            var manager = new DbUpdateManager(_db);
             foreach (var file in files)
             {
-                _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
-                _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
-                _db.Files.Remove(file);
+                manager.RemoveFileCompletely(file);
 
-                if(deleteFile)
+                if (deleteFile)
                     System.IO.File.Delete(file.Path);
             }
 
             var seriesId = 0;
             var season = _db.Seasons.First(x => x.Id == seasonId);
             _db.Seasons.Remove(season);
-            if(!_db.Seasons.Any(x => x.SeriesId == season.SeriesId))
+            if (!_db.Seasons.Any(x => x.SeriesId == season.SeriesId))
             {
                 var serie = _db.Series.First(x => x.Id == season.SeriesId);
                 _db.Series.Remove(serie);
@@ -126,22 +128,33 @@ namespace FileStore.API.Controllers
             _db.SaveChanges();
         }
 
+        [HttpDelete]
+        [Route("removeSeries")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> RemoveSeries(int serieId, bool deleteFile)
+        {
+            var dbManager = new DbUpdateManager(_db);
+
+            var files = _db.Files.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).
+                Where(x => x.SeriesId == serieId).ToList();
+            foreach (var file in files)
+            {
+                if (deleteFile)
+                    await PhisicallyRemoveFile(file);
+            }
+            dbManager.RemoveSeriesCompletely(serieId);
+
+            return Ok();
+        }
 
         [HttpDelete]
         [Route("removeFile")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> RemoveFile(int fileId)
         {
-            var file = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).First(x => x.Id == fileId);
+            var file = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).First(x => x.Id == fileId);
 
-            if(file.VideoFileExtendedInfo.RutrackerId > 0)
-            {
-                var _rutracker = new RuTrackerUpdater(_config);
-                await _rutracker.Init();
-                await _rutracker.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
-            }
-            else
-                System.IO.File.Delete(file.Path);
+            await PhisicallyRemoveFile(file);
             Remove(file);
 
             _db.SaveChanges();
@@ -149,12 +162,24 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
+        private async Task PhisicallyRemoveFile(DbFile file)
+        {
+            if (file.VideoFileExtendedInfo.RutrackerId > 0)
+            {
+                var _rutracker = new RuTrackerUpdater(_config);
+                await _rutracker.Init();
+                await _rutracker.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
+            }
+            else
+                System.IO.File.Delete(file.Path);
+        }
+
         [HttpDelete]
         [Route("removeFiles")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> RemoveFile(int startId, int endId, bool removeFile)
         {
-            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).Where(x => x.Id >= startId && x.Id <= endId).ToList();
+            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).Where(x => x.Id >= startId && x.Id <= endId).ToList();
 
             foreach (var file in files)
             {
@@ -171,9 +196,8 @@ namespace FileStore.API.Controllers
 
         private void Remove(DbFile file)
         {
-            _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
-            _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
-            _db.Files.Remove(file);
+            var manager = new DbUpdateManager(_db);
+            manager.RemoveFileCompletely(file); 
         }
 
         [HttpGet]
@@ -216,6 +240,35 @@ namespace FileStore.API.Controllers
 
 
         [HttpGet]
+        [Route("moveCompleteSeries")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveCompleteSeries(int seriesId, int newSeriesId)
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            var seasons = _db.Seasons.Where(x => x.SeriesId == seriesId).Include(x => x.Files).ToList();
+
+            foreach (var item in seasons)
+            {
+                item.SeriesId = newSeriesId;
+
+                foreach (var file in item.Files)
+                {
+                    file.SeriesId = newSeriesId; 
+                }
+            }
+
+            _db.SaveChanges();
+
+            var series = _db.Series.FirstOrDefault(x =>x.Id == seriesId);
+            _db.Remove(series);
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+
+        [HttpGet]
         [Route("moveToSeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> MoveToSeason(int startId, int finishId, int seasonId, int seriesId = 0, VideoType? type = null, string seasonName = null)
@@ -226,7 +279,7 @@ namespace FileStore.API.Controllers
             foreach (var file in files)
             {
                 //if(string.IsNullOrEmpty(seasonName))
-                    file.SeasonId = seasonId;
+                file.SeasonId = seasonId;
                 //else if (seriesId != 0)
                 //{
                 //    var series = _db.Series.FirstOrDefault(x => x.Id == seriesId);
@@ -254,7 +307,7 @@ namespace FileStore.API.Controllers
             await _rutracker.Init();
 
             //var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.Id == 3852).ToList();
-            var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.VideoFileExtendedInfo.RutrackerId != 0).ToList();
+            var files = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Where(x => x.VideoFileExtendedInfo.RutrackerId != 0).ToList();
 
             foreach (var file in files.OrderBy(x => x.Duration))
             {
@@ -306,7 +359,7 @@ namespace FileStore.API.Controllers
 
                     var name = parts[0].Trim();
 
-                    var file = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).First(x => x.Name == name);
+                    var file = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).First(x => x.Name == name);
 
                     //file.VideoFileExtendedInfo.Cover = RuTrackerUpdater.GetCoverByUrl(parts[1].Trim());
 
@@ -337,7 +390,7 @@ namespace FileStore.API.Controllers
             var _rutracker = new RuTrackerUpdater(_config);
             await _rutracker.Init();
 
-            var file = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).First(x => x.Id == fileId);
+            var file = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).First(x => x.Id == fileId);
 
             var info = await _rutracker.FillInfo(file.VideoFileExtendedInfo.RutrackerId);
             _rutracker.FillFileInfo(file, info);
@@ -358,7 +411,7 @@ namespace FileStore.API.Controllers
             //    await UpdateByRutracker(file.Name);
             //}
 
-            var films = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.Id >= 11433 || x.Id <= 11437);
+            var films = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Where(x => x.Id >= 11433 || x.Id <= 11437);
             foreach (var film in films)
             {
                 Remove(film);
@@ -392,7 +445,7 @@ namespace FileStore.API.Controllers
 
             // Update online files.
             var ready = new List<VideoFile>();
-            IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
+            IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos)
                 .Where(x => x.Id > minId).ToList();
 
             var online = queue.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type)).ToList();
@@ -465,7 +518,7 @@ namespace FileStore.API.Controllers
         public async Task<ActionResult> UpdateFileCover(int fileId, string coverUrl)
         {
             coverUrl = System.Web.HttpUtility.UrlDecode(coverUrl);
-            var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).FirstOrDefault(x => x.Id == fileId);
+            var files = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).FirstOrDefault(x => x.Id == fileId);
 
             files.VideoFileExtendedInfo.Cover = RuTrackerUpdater.GetCoverByUrl(coverUrl);
             _db.SaveChanges();
@@ -478,7 +531,7 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public void ClearFiles()
         {
-            var files = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).ToList();
+            var files = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).ToList();
 
             foreach (var file in files.Where(x => x.Id > 5071))
             {
@@ -617,7 +670,7 @@ namespace FileStore.API.Controllers
 
         private void Test(DbUpdateManager dbUpdater, int id)
         {
-            var file = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).First(x => x.Id == id);
+            var file = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).First(x => x.Id == id);
             var serie = _db.Series.First(x => x.Id == file.SeriesId);
             var season2 = dbUpdater.AddOrUpdateSeason(serie, file.Name);
             file.Season = season2;
@@ -685,14 +738,12 @@ namespace FileStore.API.Controllers
 
         private void RemoveSeries(DbUpdateManager dbUpdater, int serieId)
         {
-            var files = _db.Files.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeriesId == serieId).ToList();
+            var files = _db.Files.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeriesId == serieId).ToList();
+
+            var manager = new DbUpdateManager(_db);
 
             foreach (var file in files)
-            {
-                _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
-                _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
-                _db.Files.Remove(file);
-            }
+                manager.RemoveFileCompletely(file);
 
             foreach (var season in _db.Seasons.Where(x => x.SeriesId == serieId).ToList())
                 _db.Seasons.Remove(season);
@@ -715,4 +766,5 @@ namespace FileStore.API.Controllers
         }
 
     }
+#endif
 }

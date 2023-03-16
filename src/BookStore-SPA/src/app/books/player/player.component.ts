@@ -69,7 +69,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
       this.setNextVideo(true);
 
       if(this.parameters.seasonId == 0){
-        this.service.getVideosBySeries(this.parameters.seriesId, this.parameters.videosCount, this.isRandom).subscribe((videos) => {
+        this.service.getVideosBySeries(this.parameters.seriesId, this.parameters.videosCount, this.isRandom, this.videoId).subscribe((videos) => {
           const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
   
           this.videosList = this.videosList.concat(selectedIds);
@@ -79,7 +79,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
           });
       }
       else{
-        this.service.getVideosBySeason(this.parameters.seasonId, this.parameters.videosCount, this.isRandom).subscribe((videos) => {
+        this.service.getVideosBySeason(this.parameters.seasonId, this.parameters.videosCount, this.isRandom,this.videoId).subscribe((videos) => {
           const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
   
           this.videosList = this.videosList.concat(selectedIds);

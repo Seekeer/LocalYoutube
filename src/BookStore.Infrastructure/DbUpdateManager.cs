@@ -616,7 +616,7 @@ namespace Infrastructure
         public IEnumerable<VideoFile> UpdateDownloading(Func<VideoFile, bool> selectFiles, int? newSeasonId = null)
         {
             var ready = new List<VideoFile>();
-            IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
+            IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos)
                 .Where(selectFiles).ToList();
 
             _ignoreNonCyrillic = true;
@@ -824,22 +824,15 @@ namespace Infrastructure
             var series = GetDownloadSeries();
 
             var childDownloaded = AddOrUpdateSeason(series, "Детские мультики");
-            var child = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.Id >= 3533 && x.Id <= 3553).ToList();
-            child.AddRange(_db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.Id >= 3530 && x.Id <= 3530));
-            child.AddRange(_db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).Where(x => x.Id >= 3565 && x.Id <= 3565));
+            var child = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Where(x => x.Id >= 3533 && x.Id <= 3553).ToList();
+            child.AddRange(_db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Where(x => x.Id >= 3530 && x.Id <= 3530));
+            child.AddRange(_db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Where(x => x.Id >= 3565 && x.Id <= 3565));
             foreach (var item in child)
             {
                 item.Type = VideoType.Animation;
                 item.Season = childDownloaded;
                 _db.SaveChanges();
             }
-        }
-
-        public void RemoveFileCompletely(DbFile file)
-        {
-            _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
-            _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
-            _db.Files.Remove(file);
         }
 
         public void RemoveSeriesCompletely(int seriesId)
@@ -860,7 +853,7 @@ namespace Infrastructure
 
         public void DeleteFiles(int startId, int endId, bool removeFile = true)
         {
-            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo).Where(x => x.Id >= startId && x.Id <= endId).ToList();
+            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).Where(x => x.Id >= startId && x.Id <= endId).ToList();
 
             foreach (var file in files)
             {
@@ -873,14 +866,14 @@ namespace Infrastructure
             if (removeFile && System.IO.File.Exists(file.Path))
                 System.IO.File.Delete(file.Path);
 
-            Remove(file);
+            RemoveFileCompletely(file);
 
             _db.SaveChanges();
         }
 
-        private void Remove(DbFile file)
+        public void RemoveFileCompletely(DbFile file)
         {
-            _db.FilesUserInfo.Remove(file.VideoFileUserInfo);
+            file.VideoFileUserInfos.ToList().ForEach(x => _db.FilesUserInfo.Remove(x));
             _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
             _db.Files.Remove(file);
         }

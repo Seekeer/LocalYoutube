@@ -45,20 +45,12 @@ export class FileService {
         // return this.baseUrl +`Files/getRandomFileBySeriesId?seriesId=${seriesId}&guid=${btoa(Math.random().toString()).substr(10, 15)}` ;
     }
 
-    public getVideosBySeries(seriesId: number, count: number, isRandom: boolean): Observable<Book[]> {
-        return this.http.get<Book[]>( this.baseUrl +`Files/getFilesBySeries?id=${seriesId}&count=${count}&isRandom=${isRandom}`);
+    public getVideosBySeries(seriesId: number, count: number, isRandom: boolean, startId: number): Observable<Book[]> {
+        return this.http.get<Book[]>( this.baseUrl +`Files/getFilesBySeries?id=${seriesId}&count=${count}&isRandom=${isRandom}&startId=${startId}`);
     }
 
-    public getVideosBySeason(seasonId: number, count: number, isRandom: boolean): Observable<Book[]> {
-        return this.http.get<Book[]>( this.baseUrl +`Files/getFilesBySeason?id=${seasonId}&count=${count}&isRandom=${isRandom}`);
-    }
-
-    public addBook(book: Book) {
-        return this.http.post(this.baseUrl + 'files', book);
-    }
-
-    public updateBook(id: number, book: Book) {
-        return this.http.put(this.baseUrl + 'files/' + id, book);
+    public getVideosBySeason(seasonId: number, count: number, isRandom: boolean, startId: number): Observable<Book[]> {
+        return this.http.get<Book[]>( this.baseUrl +`Files/getFilesBySeason?id=${seasonId}&count=${count}&isRandom=${isRandom}&startId=${startId}`);
     }
 
     public setRating(id, rating) {
@@ -89,7 +81,7 @@ export class FileService {
     }
 
     public searchFilesWithSeries(searchedValue: string, isRandom: boolean): Observable<Book[]> {
-        return this.http.get<Book[]>(`${this.baseUrl}files/search-file-with-series/${searchedValue}/${isRandom}`);
+        return this.http.get<Book[]>(`${this.baseUrl}files/search-file-with-series/${encodeURIComponent(searchedValue)}/${isRandom}`);
     }
 
     public searchFilesWithSeason(seasonId: number, isRandom: boolean): Observable<Book[]> {
