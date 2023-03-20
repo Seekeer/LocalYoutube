@@ -11,10 +11,11 @@ using System.Drawing;
 using System.Threading.Tasks;
 using Xabe.FFmpeg;
 using Microsoft.EntityFrameworkCore;
+using Id3;
 
 namespace Infrastructure
 {
-    public class DbUpdateManager
+    public class DbUpdateManager : IDisposable
     {
         private VideoCatalogDbContext _db;
         private Origin _origin;
@@ -40,7 +41,7 @@ namespace Infrastructure
             _type = type;
 
             var dirInfo = new DirectoryInfo(rootPath);
-            var series = AddOrUpdateSeries(dirInfo.Name);
+            var series = AddOrUpdateVideoSeries(dirInfo.Name);
 
             AddSeason(series, dirInfo);
 
@@ -52,7 +53,7 @@ namespace Infrastructure
             _origin = origin;
             _type = type;
 
-            var series = AddOrUpdateSeries("Опера и балет");
+            var series = AddOrUpdateVideoSeries("Опера и балет");
 
             var dir = new DirectoryInfo(operaPath);
             var season = AddOrUpdateSeason(series, "Опера");
@@ -108,7 +109,7 @@ namespace Infrastructure
 
         private void AddSeries(DirectoryInfo dir, string seriesName = null)
         {
-            var series = AddOrUpdateSeries(seriesName ?? dir.Name);
+            var series = AddOrUpdateVideoSeries(seriesName ?? dir.Name);
 
             var folders = dir.GetDirectories();
 
@@ -224,7 +225,7 @@ namespace Infrastructure
         {
             _type = type;
 
-            var series = AddOrUpdateSeries(seriesName);
+            var series = AddOrUpdateVideoSeries(seriesName);
             var season = AddOrUpdateSeason(series, seriesName);
             //var series = _db.Series.FirstOrDefault(x => x.Type == type);
             //var season = _db.Seasons.FirstOrDefault(x => x.SeriesId == series.Id);
@@ -269,10 +270,23 @@ namespace Infrastructure
 
         public Series GetDownloadSeries()
         {
-            return AddOrUpdateSeries("Загрузки", false);
+            return AddOrUpdateVideoSeries("Загрузки", false);
         }
 
-        public Series AddOrUpdateSeries(string folderName, bool analyzeFolderName = true, VideoType? type = null)
+        public Series AddOrUpdateVideoSeries(string folderName, bool analyzeFolderName = true, VideoType? type = null)
+        {
+            if (type == null)
+                type = _type;
+
+            var series = AddOrUpdateSeries(folderName, analyzeFolderName, type == VideoType.ChildEpisode || type == VideoType.FairyTale || type == VideoType.Animation);
+            series.Type = type;
+
+            _db.SaveChanges();
+
+            return series;
+        }
+
+        public Series AddOrUpdateSeries(string folderName, bool analyzeFolderName, bool isChild)
         {
             var name = analyzeFolderName ? GetSeriesNameFromFolder(folderName) : folderName;
 
@@ -280,10 +294,8 @@ namespace Infrastructure
             if (series == null)
             {
                 series = new Series { Name = name, Origin = _origin };
-                series.Type = type ?? _type;
-                series.IsChild = _type == VideoType.ChildEpisode || _type == VideoType.FairyTale || _type == VideoType.Animation;
+                series.IsChild = isChild;
                 _db.Series.Add(series);
-                _db.SaveChanges();
             }
 
             return series;
@@ -334,7 +346,7 @@ namespace Infrastructure
 
         public void AddFromYoutube(VideoFile file, string seasonName)
         {
-            var series = AddOrUpdateSeries("Youtube", false);
+            var series = AddOrUpdateVideoSeries("Youtube", false);
             series.Type = VideoType.Youtube;
             var season = AddOrUpdateSeason(series, seasonName);
 
@@ -736,7 +748,7 @@ namespace Infrastructure
                         // Check that files ~ same size => they are series.
                         else if (twoBiggest.First().Length / twoBiggest.Last().Length > 0.7)
                         {
-                            result.AddRange(AddSeason(AddOrUpdateSeries("Многосерийные фильмы"), dir, info.Name));
+                            result.AddRange(AddSeason(AddOrUpdateVideoSeries("Многосерийные фильмы"), dir, info.Name));
                             moreFilesAdded = true;
                         }
 
@@ -876,6 +888,86 @@ namespace Infrastructure
             file.VideoFileUserInfos.ToList().ForEach(x => _db.FilesUserInfo.Remove(x));
             _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
             _db.Files.Remove(file);
+        }
+
+        public void UpdateAudioInfo(AudioFile audioFile)
+        {
+            using (var mp3 = new Mp3(audioFile.Path))
+            {
+                Id3Tag tag = mp3.GetTag(Id3TagFamily.Version2X);
+
+                audioFile.Name = tag?.Title ?? audioFile.Name;
+            }
+
+            try
+            {
+                var probe = FFProbe.Analyse(audioFile.Path);
+                audioFile.Duration = probe.Duration;
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        public void AddAudioFilesFromTg(string text, IEnumerable<string> enumerable, AudioType type, Origin origin, string coverImage)
+        {
+            var rows = text.SplitByNewLine().ToList();
+
+            var artistName = rows.Count > 0 ? rows[0] : "Аудио";
+            var albumName = rows.Count > 1 ? rows[1] : "Неизвестный";
+
+            var isChild = type == AudioType.FairyTale;
+            var artist = AddOrUpdateSeries(artistName, false, isChild);
+            artist.AudioType = type;
+
+            var album = AddOrUpdateSeason(artist, albumName);
+
+            var files = new List<AudioFile>();
+            foreach (var item in enumerable.Select((path, index) => (path, index)))
+            {
+                var fInfo = new FileInfo(item.path);
+
+                var filename = fInfo.Name.Split("##").First().Replace(".mp3","");
+
+                var audioFile = new AudioFile
+                {
+                    Season = album,
+                    Series = artist,
+                    Path = item.path,
+                    Name = filename,
+                    Number = item.index + 1,
+                    Type = type,
+                    Origin = origin,
+                };
+
+                UpdateAudioInfo(audioFile);
+                files.Add(audioFile);
+            }
+
+            var start = new string[] { "Читает", "В ролях", "Исполнители", "Рассказчик" };
+            var voice = rows.FirstOrDefault(x => start.Any(y => x.Contains(y)));
+            if (voice != null)
+            {
+                start.ToList().ForEach(x => voice = voice.Replace(x, ""));
+                voice.Trim(' ', '-', ':', '.');
+
+                files.ForEach(x => x.VideoFileExtendedInfo.Director = voice);
+            }
+
+            if (!string.IsNullOrEmpty(coverImage))
+            {
+                var file = files.First();
+
+                file.VideoFileExtendedInfo.Cover = File.ReadAllBytes(coverImage);
+            }
+
+            _db.AudioFiles.AddRange(files);
+            _db.SaveChanges();
+        }
+
+        public void Dispose()
+        {
+            _db.Dispose();
         }
     }
 }

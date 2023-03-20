@@ -177,25 +177,6 @@ private switchToFullscreen(){
     var el = this.getVideoElement();
     el?.load();
     
-    // else if (el.webkitRequestFullscreen) 
-    //     el.webkitRequestFullscreen();
-    // else if (el.msRequestFullScreen) 
-    //   el.msRequestFullScreen();
-      // if(this.parameters.videoId != 0){
-      //   this.videoURL = this.service.getVideoURLById(this.parameters.videoId);
-      //   this.parameters.videoId = 0;
-      // }
-      // else
-      // this.service.getRandomVideoIdBySeries(this.parameters.seriesId).subscribe((id) => {
-      //   this.videoId = id;
-      //   this.videoURL = this.service.getVideoURLById(id);
-      //   this.getVideoElement().load();
-      // },
-      //   err => {
-      //     console.log(`Cannot get video by series ${this.parameters.seriesId}`);
-      //   })
-      //   // this.videoURL = this.service.getRandomVideoBySeries(this.parameters.seriesId);
-
     if(encreaseCounter)
     {
       this.playedVideoCount++;

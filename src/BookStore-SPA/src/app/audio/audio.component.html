@@ -29,9 +29,19 @@
 
     </div>
 
-    <div
-        *ngFor="let file of filteredFiles"
-    >
-        {{data.name}}<audio controls src="{{data.videoURL}}"></audio>
-  </div>
+    <div *ngIf="selectedFile">{{selectedFile.name}}</div>
+    <audio  controls height="auto" autoplay  #audioElement (ended)="videoEnded()" src="{{audioURL}}"></audio>
+
+    <button (click)="videoEnded()">Следующее</button>
+    <button (click)="continue()">Продолжить</button>
+    
+    <ul class="list-group list-group-light">
+      <li class="list-group-item d-flex justify-content-between align-items-center" (click)="selectAudio(file)"
+        [ngClass]="{'greenBackground' : file.id==selectedFile.id}"
+        *ngFor="let file of filteredFiles">
+        {{file.name}}
+        <span class="badge badge-primary rounded-pill">{{file.durationMinutes}}</span>
+      </li>
+    </ul>
+
 </div>  

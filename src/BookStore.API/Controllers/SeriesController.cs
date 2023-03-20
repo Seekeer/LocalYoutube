@@ -26,6 +26,17 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("getAllAudio")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllAudio(AudioType? type = null)
+        {
+            var Series = await _SeriesService.GetAllByType(type);
+
+            return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(Series));
+        }
+
+
+        [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll(VideoType? type = null)
         {

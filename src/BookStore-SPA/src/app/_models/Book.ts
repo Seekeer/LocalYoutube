@@ -37,10 +37,8 @@ export enum VideoType {
 }
 
 
-export class AudioFile {
-    id: number;
-    seriesId: number;
-    seasonId: number;
+export class AudioFile extends Book {
+    index : number;
 }
 
 export enum AudioType {

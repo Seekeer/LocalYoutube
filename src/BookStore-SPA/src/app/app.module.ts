@@ -29,6 +29,7 @@ import { ToastrModule } from 'ngx-toastr';
 
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
+import { AudioFileService } from './_services/AudioFileService';
 import { AuthService } from './_services/auth.service';
 import {
   ConfirmationDialogService,
@@ -38,6 +39,7 @@ import { SafePipe } from './_services/SafePipe';
 import { SeriesService } from './_services/series.service';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { AudioComponent } from './audio/audio.component';
 import { appInitializer } from './auth/app-initializer';
 import { JwtInterceptor } from './auth/jwt.interceptor';
 import { UnauthorizedInterceptor } from './auth/unauthorized.interceptor';
@@ -54,7 +56,6 @@ import { NgbdDatepickerPopup } from './datepicker/datepicker-popup';
 import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './login/login.component';
 import { NavComponent } from './nav/nav.component';
-import { AudioComponent } from './audio/audio.component';
 
 @NgModule({
   declarations: [
@@ -93,6 +94,7 @@ import { AudioComponent } from './audio/audio.component';
   ],
   providers: [
     FileService,
+    AudioFileService,
     SeriesService,
     ConfirmationDialogService,
     {provide: LocationStrategy, useClass: HashLocationStrategy},

@@ -1,4 +1,5 @@
 import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
 
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
@@ -8,6 +9,9 @@ import {
   VideoType,
 } from '../_models/Book';
 
+@Injectable({
+    providedIn: 'root'
+})
 export class FileService {
     private baseUrl: string = environment.baseUrl + 'api/';
 

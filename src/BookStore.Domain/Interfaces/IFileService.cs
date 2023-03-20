@@ -5,19 +5,23 @@ using FileStore.Domain.Models;
 
 namespace FileStore.Domain.Interfaces
 {
-    public interface IFileService : IDisposable
+    public interface IVideoFileService : IFileService<VideoFile, VideoType> { }
+    public interface IAudioFileService : IFileService<AudioFile, AudioType> { }
+
+    public interface IFileService<T,V> : IDisposable
+        where T : DbFile
     {
-        Task<IEnumerable<VideoFile>> GetAll();
-        Task<VideoFile> GetById(int id);
-        Task<VideoFile> Add(VideoFile File);
-        Task<VideoFile> Update(VideoFile File);
-        Task<bool> Remove(VideoFile File);
-        Task<IEnumerable<VideoFile>> GetFilesBySearies(int seriesId, bool isRandom, int startId);
-        Task<IEnumerable<VideoFile>> GetFilesBySeason(int seriesId, bool isRandom, int count, int startId);
-        Task<IEnumerable<VideoFile>> Search(string FileName);
-        Task<IEnumerable<VideoFile>> SearchFileByType(VideoType type);
-        Task<IEnumerable<VideoFile>> SearchFileWithSeries(string searchedValue, bool isRandom);
-        Task<VideoFile> GetRandomFileBySeriesId(int seriesId);
+        Task<IEnumerable<T>> GetAll();
+        Task<T> GetById(int id);
+        Task<T> Add(T File);
+        Task<T> Update(T File);
+        Task<bool> Remove(T File);
+        Task<IEnumerable<T>> GetFilesBySearies(int seriesId, bool isRandom, int startId);
+        Task<IEnumerable<T>> GetFilesBySeason(int seriesId, bool isRandom, int count, int startId);
+        Task<IEnumerable<T>> Search(string FileName);
+        Task<IEnumerable<T>> SearchFileByType(V type);
+        Task<IEnumerable<T>> SearchFileWithSeries(string searchedValue, bool isRandom);
+        Task<T> GetRandomFileBySeriesId(int seriesId);
         Task SetRating(int videoId, double value);
         Task SetPosition(int videoId, double value, string userId);
     }

@@ -27,6 +27,8 @@ namespace API.TG
         Delete,
         [CommandName("Искусство")]
         Art,
+        [CommandName("Аудиосказка")]
+        AudioFairyTale,
         Unknown,
     }
 

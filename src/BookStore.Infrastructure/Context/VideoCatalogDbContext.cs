@@ -19,8 +19,8 @@ namespace FileStore.Infrastructure.Context
         }
     }
 
-    // cd .\BookStore.Infrastructure\
-    // dotnet ef migrations add InitialCreate9
+    // cd .\src\BookStore.Infrastructure\
+    // dotnet ef migrations add InitialCreate11
     //  dotnet ef database update
     public class VideoCatalogDbContext : IdentityUserContext<ApplicationUser>
     {

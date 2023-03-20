@@ -1,7 +1,10 @@
 import {
   Component,
+  ElementRef,
   OnInit,
+  ViewChild,
 } from '@angular/core';
+import { SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 
 import { NgxSpinnerService } from 'ngx-spinner';
@@ -21,7 +24,9 @@ import { SeriesService } from '../_services/series.service';
   styleUrls: ['./audio.component.css'],
 })
 export class AudioComponent implements OnInit {
+  @ViewChild('audioElement') audio:ElementRef; 
   type: string;
+  public isSelectSeries: boolean = true;
   public series: Serie[];
   searchTitle: string;
   seasonId: number;
@@ -29,6 +34,11 @@ export class AudioComponent implements OnInit {
   serieId: number;
   apiFiles: AudioFile[];
   filteredFiles: AudioFile[];
+  position: number;
+  currentIndex: number = -1;
+  intervalId: any;
+  selectedFile: AudioFile;
+  audioURL: SafeHtml;
 
   constructor(
     private service: AudioFileService,
@@ -39,17 +49,19 @@ export class AudioComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    console.log('audio');
     setTimeout(() => this.showSpinner(), 5);
 
     this.type = this.activatedRoute.snapshot.paramMap.get('type');
 
     this.displayListForType();
+    this.intervalId = setInterval(() => this.updateStat(), 1000);
   }
 
   displayListForType() {
     switch (this.type) {
       case 'main': {
-        this.getSeries(AudioType.Music);
+        this.getSeries(AudioType.FairyTale);
         break;
       }
     }
@@ -64,18 +76,19 @@ export class AudioComponent implements OnInit {
     });
   }
 
-  private search() {
+  public search() {
     this.showSpinner();
+    this.currentIndex = -1;
 
-    if (this.searchTitle !== '') {
+    if (this.searchTitle ) {
       this.service
         .searchFilesWithTitle(this.searchTitle)
         .subscribe(this.processFiles.bind(this), this.getFilesError.bind(this));
-    } else if (this.seasonId != 0) {
+    } else if (this.seasonId ) {
       this.service
         .searchFilesWithSeason(this.seasonId, false)
         .subscribe(this.processFiles.bind(this), this.getFilesError.bind(this));
-    } else if (this.serieId != 0) {
+    } else if (this.serieId) {
       let serie = this.series.filter((x) => x.id == this.serieId)[0];
       this.seasons = serie.seasons;
       this.service
@@ -101,15 +114,23 @@ export class AudioComponent implements OnInit {
     this.showFilteredBooks();
   }
 
+  selectAudio(file: AudioFile) {
+    this.setVideoByIndex(file.index);
+  }
+
   showFilteredBooks() {
 
-    this.apiFiles.forEach(element => {
+    this.apiFiles.forEach((element,index) => {
       element.PlayURL = this.service.getAudioURLById(element.id);
+      element.index = index;
     });
 
     this.filteredFiles = this.apiFiles;
 
     this.hideSpinner();
+
+    this.selectedFile = new AudioFile();
+    // this.videoEnded();
   }
 
   getFilesError(error) {
@@ -131,6 +152,66 @@ export class AudioComponent implements OnInit {
 
       if (this.counter == 0) this.spinner.hide();
     }, 5);
+  }
+  
+
+  private updateStat() {
+    var video = this.getAudioElement();
+
+    if(video.currentTime > 10 && this.selectedFile)
+      this.service.setPosition(this.selectedFile.id, video.currentTime);
+
+    // this.setPosition();
+  }
+
+  private getAudioElement(){
+    if (this.audio)
+      return  (this.audio.nativeElement as HTMLAudioElement);
+  }
+
+  setPosition() {
+    var video = this.getAudioElement();
+    if(this.position >0 && video){
+      video.currentTime = this.position;
+      this.position = -1;
+    }
+  }
+  
+  public continue() {
+    for (let index = 0; index < this.apiFiles.length; index++) {
+      const element = this.apiFiles[index];
+      if(!element.isFinished && element.index)
+      {
+        this.setVideoByIndex(element.index);
+        this.position = element.currentPosition;
+        this.setPosition();
+        return;
+      }
+    }
+
+    this.setVideoByIndex(0);
+  }
+
+  public videoEnded() {
+    console.log('ended');
+    if(this.setNextVideo())
+      this.getAudioElement().load();
+  }
+  
+  private setNextVideo() {
+
+    return this.setVideoByIndex(this.currentIndex+1);
+  }
+  private setVideoByIndex(index:number) {
+    this.currentIndex = index;
+
+    this.selectedFile = this.filteredFiles[this.currentIndex];
+    this.audioURL = this.selectedFile.PlayURL;
+
+    var el = this.getAudioElement();
+    el?.load();
+
+    return true;
   }
 
   counter: number = 0;

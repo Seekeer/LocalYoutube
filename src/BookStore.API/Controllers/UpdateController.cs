@@ -227,6 +227,24 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("updateTracks")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateTracks()
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            var audios = _db.AudioFiles.ToList();
+            foreach (var audio in audios)
+            {
+                dbUpdater.UpdateAudioInfo(audio);
+
+                _db.SaveChanges();
+            }
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("addFile")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> AddFile(string path, VideoType? type = null)

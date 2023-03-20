@@ -9,18 +9,20 @@ namespace FileStore.API.Configuration
 {
     public static class AutomapperHelper
     {
-        public static IEnumerable<VideoFileResultDto> GetFiles(this IMapper mapper, IEnumerable<VideoFile> files, string userId)
+        public static IEnumerable<DTO> GetFiles<T, DTO>(this IMapper mapper, IEnumerable<T> files, string userId)
+            where T : DbFile
         {
             files.ToList().ForEach(x => x.CurrentUserId = userId);
 
-            return mapper.Map<IEnumerable<VideoFileResultDto>>(files);
+            return mapper.Map<IEnumerable<DTO>>(files);
         }
 
-        public static VideoFileResultDto GetFile(this IMapper mapper, VideoFile file, string userId)
+        public static DTO GetFile<T, DTO>(this IMapper mapper, T file, string userId)
+            where T : DbFile
         {
             file.CurrentUserId = userId;
 
-            return mapper.Map<VideoFileResultDto>(file);
+            return mapper.Map<DTO>(file);
         }
     }
 
@@ -36,6 +38,7 @@ namespace FileStore.API.Configuration
             CreateMap<VideoFile, FileAddDto>().ReverseMap();
             CreateMap<VideoFile, FileEditDto>().ReverseMap();
             CreateMap<VideoFile, VideoFileResultDto>().ReverseMap();
+            CreateMap<AudioFile, VideoFileResultDto>().ReverseMap();
         }
     }
 

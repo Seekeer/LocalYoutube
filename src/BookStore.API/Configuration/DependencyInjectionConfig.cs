@@ -1,6 +1,8 @@
 ﻿using API.Controllers;
 using API.FilmDownload;
+using API.TG;
 using FileStore.Domain.Interfaces;
+using FileStore.Domain.Models;
 using FileStore.Domain.Services;
 using FileStore.Infrastructure.Context;
 using FileStore.Infrastructure.Repositories;
@@ -19,15 +21,19 @@ namespace FileStore.API.Configuration
         {
             services.AddScoped<VideoCatalogDbContext>();
 
+            services.AddScoped<IVideoFileRepository, VideoFileRepository>();
+            services.AddScoped<IAudioFileRepository, AudioFileRepository>();
             services.AddScoped<ISeriesRepository, SeriesRepository>();
-            services.AddScoped<IFileRepository, FileRepository>();
 
             services.AddScoped<ISeriesService, SeriesService>();
-            services.AddScoped<IFileService, FileService>();
+            services.AddScoped<IAudioFileService, AudioFileService>();
+            services.AddScoped<IVideoFileService, VideoFileService>();
 
-            services.AddSingleton<TgBot, TgBot>();
             services.AddScoped<DbUpdateManager, DbUpdateManager>();
-            
+            services.AddScoped<IMessageProcessor, MessageProcessor>();
+            services.AddSingleton<TgBot, TgBot>();
+            services.AddScoped<TgAPIClient, TgAPIClient>();
+
             services.AddHostedService<StartupService>();
 
             return services;
@@ -48,8 +54,10 @@ namespace FileStore.API.Configuration
             {
                 using var scope = services.CreateScope();
                 var tg = scope.ServiceProvider.GetRequiredService<TgBot>();
-
                 await tg.Start();
+
+                var tgAPI = scope.ServiceProvider.GetRequiredService<TgAPIClient>();
+                await tgAPI.Start();
             }
             catch (Exception ex)
             {
