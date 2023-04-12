@@ -17,9 +17,6 @@ export class FileService {
 
     constructor(private http: HttpClient) { }
 
-    public updateDownloaded() {
-        return this.http.get<string>(`${this.baseUrl}update/updateDownloaded`);
-    }
     public getFilmsByType(type: VideoType) {
         return this.http.get<Book[]>(`${this.baseUrl}files/getFileByType/${type}`);
     }
@@ -74,7 +71,7 @@ export class FileService {
     }
 
     public deleteBook(id: number) {
-        return this.http.delete(this.baseUrl + 'update/removeFile/?fileId=' + id);
+        return this.http.delete(this.baseUrl + 'files/' + id);
     }
 
     public getBookById(id): Observable<Book> {

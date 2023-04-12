@@ -165,9 +165,6 @@ namespace FileStore.API
             {
                 endpoints.MapControllers();
             });
-
-            //var tgAPIClient = app.ApplicationServices.GetService<TgAPIClient>();
-            // tgAPIClient.Start();
         }
     }
 }

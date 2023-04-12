@@ -628,7 +628,8 @@ namespace Infrastructure
         public IEnumerable<VideoFile> UpdateDownloading(Func<VideoFile, bool> selectFiles, int? newSeasonId = null)
         {
             var ready = new List<VideoFile>();
-            IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos)
+            IEnumerable<VideoFile> queue = _db.VideoFiles
+                .Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).Include(x => x.Series).Include(x => x.Season)
                 .Where(selectFiles).ToList();
 
             _ignoreNonCyrillic = true;
@@ -737,6 +738,8 @@ namespace Infrastructure
                         var moreFilesAdded = false;
                         var twoBiggest = dirFiles.OrderByDescending(x => x.Length).Take(2);
 
+                        ResetUpdateManager(info);
+
                         if (info.Type == VideoType.Art)
                         {
                             _type = info.Type;
@@ -748,7 +751,10 @@ namespace Infrastructure
                         // Check that files ~ same size => they are series.
                         else if (twoBiggest.First().Length / twoBiggest.Last().Length > 0.7)
                         {
-                            result.AddRange(AddSeason(AddOrUpdateVideoSeries("Многосерийные фильмы"), dir, info.Name));
+                            if(info.Type == VideoType.FairyTale)
+                                result.AddRange(AddSeason(info.Series, info.Season, dir));
+                            else
+                                result.AddRange(AddSeason(AddOrUpdateVideoSeries("Многосерийные фильмы"), dir, info.Name));
                             moreFilesAdded = true;
                         }
 
@@ -780,56 +786,12 @@ namespace Infrastructure
             return result;
         }
 
-        //public async Task FillByRutrackerDownload(string path, IRuTrackerUpdater updater)
-        //{
-        //    var dir = new DirectoryInfo(path);
-        //    var folders = dir.EnumerateDirectories().OrderBy(x => x.CreationTime);
-
-        //    var series = AddOrUpdateSeries("Загрузки", false);
-        //    var season = AddOrUpdateSeason(series, "Rutracker");
-
-        //    foreach (var folder in folders)
-        //    {
-        //        if (!int.TryParse(folder.Name, out var rutrackerId))
-        //            continue;
-
-        //        var dirFiles = folder.EnumerateFiles("*", SearchOption.AllDirectories);
-
-        //        if (!dirFiles.Any())
-        //        {
-        //            Directory.Delete(folder.FullName);
-        //            continue;
-        //        }
-
-        //        var existingInfo = _db.VideoFiles.Include(x => x.VideoFileUserInfo).Include(x => x.VideoFileExtendedInfo).FirstOrDefault(x => x.VideoFileExtendedInfo.RutrackerId == rutrackerId);
-
-        //        if (existingInfo != null)
-        //            continue;
-
-        //        var biggestFile = dirFiles.OrderByDescending(x => x.Length).First();
-
-        //        var videoFile = new VideoFile
-        //        {
-        //            Name = GetEpisodeNameFromFilenName(biggestFile.Name),
-        //            Path = biggestFile.FullName,
-        //            Type = VideoType.Film,
-        //            Origin = Origin.Unknown,
-        //            Series = series,
-        //            Season = season,
-        //        };
-        //        FillVideoProperties(videoFile);
-
-        //        videoFile.VideoFileExtendedInfo = new FileExtendedInfo()
-        //        {
-        //            RutrackerId = rutrackerId
-        //        };
-
-        //        await updater.UpdateVideoFile(true, videoFile);
-
-        //        _db.VideoFiles.Add(videoFile);
-        //        _db.SaveChanges();
-        //    }
-        //}
+        private void ResetUpdateManager(VideoFile info)
+        {
+            _type = info.Type;
+            _origin = info.Origin;
+            _episodeNumber = 0;
+        }
 
         public void UpdateChildRutracker(string path)
         {

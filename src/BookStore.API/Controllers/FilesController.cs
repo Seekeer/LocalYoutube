@@ -25,11 +25,14 @@ namespace FileStore.API.Controllers
     [Route("api/[controller]")]
     public class FilesController : FilesControllerBase<VideoFile, VideoType, VideoFileResultDto>
     {
+        private readonly DbUpdateManager _updateManager;
         private readonly ISeriesService _seriesService;
         private readonly static Dictionary<string, int> _randomFileDict = new Dictionary<string, int>();
 
-        public FilesController(IMapper mapper, IVideoFileService FileService, ISeriesService seriesService) : base(mapper, FileService)
-        { 
+        public FilesController(IMapper mapper, IVideoFileService FileService, DbUpdateManager updateManager,
+            ISeriesService seriesService) : base(mapper, FileService)
+        {
+            _updateManager = updateManager;
             _seriesService = seriesService;
         }
 
@@ -87,10 +90,10 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Remove(int id)
         {
-            var File = await _fileService.GetById(id);
-            if (File == null) return NotFound();
+            var file = await _fileService.GetById(id);
+            if (file == null) return NotFound();
 
-            await _fileService.Remove(File);
+            _updateManager.DeleteFile(true, file);
 
             return Ok();
         }
@@ -111,7 +114,7 @@ namespace FileStore.API.Controllers
             var result = _mapper.Map<List<VideoFile>>(files).OrderByDescending(x => x.Name);
 
             if (!result.Any())
-                return NotFound("None File was founded");
+                return NotFound("None file was founded");
 
             return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(result, GetUserId()));
         }
@@ -126,7 +129,7 @@ namespace FileStore.API.Controllers
             var Files = _mapper.Map<List<VideoFile>>(result);
 
             if (!Files.Any())
-                return NotFound("None File was founded");
+                return NotFound("None file was founded");
 
             var filesDTO = _mapper.GetFiles<VideoFile, VideoFileResultDto>(Files, GetUserId()).OrderByDescending(x => x.Year);
             return Ok(filesDTO);
@@ -142,7 +145,7 @@ namespace FileStore.API.Controllers
             var files = _mapper.Map<List<VideoFile>>(result);
 
             if (!files.Any())
-                return NotFound("None File was founded");
+                return NotFound("None file was founded");
 
             var seasons = (await _seriesService.GetAllByType(VideoType.Art)).SelectMany(x => x.Seasons);
             var unique = files.OrderBy(x => x.Id).GroupBy(x => x.SeasonId).Select(x =>

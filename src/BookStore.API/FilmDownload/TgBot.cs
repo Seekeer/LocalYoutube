@@ -480,7 +480,7 @@ namespace API.FilmDownload
             else if (type == VideoType.FairyTale && tgRecord != null)
             {
                 file.SeriesId = 11;
-                file.SeasonId = 4356;
+                file.SeasonId = 4355;
             }
             else if (type == VideoType.Art && tgRecord != null)
             {

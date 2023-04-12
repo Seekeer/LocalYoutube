@@ -26,12 +26,12 @@ namespace API.TG
     {
         public TgAPIClient(IMessageProcessor messageProcessor, AppConfig config)
         {
-            //InitLogging();
+            InitLogging();
 
-            //_config = config;
-            //_credentials = config.TelegramSettings.TgCredentials;
-            //_messageProcessor = messageProcessor;
-            //_client = new WTelegram.Client(Config);
+            _config = config;
+            _credentials = config.TelegramSettings.TgCredentials;
+            _messageProcessor = messageProcessor;
+            _client = new WTelegram.Client(Config);
         }
 
         private void InitLogging()
@@ -66,7 +66,16 @@ namespace API.TG
 
             //_client.OnUpdate += Client_OnUpdate;
 
-            await AddOldMessages(1210302841, 0, new DateTime(2023, 1, 15), new DateTime(2023, 3, 15));
+            var startDate = new DateTime(2023, 1, 1);
+            var finihsDate = new DateTime(2023, 3, 3);
+
+            var currentDate = finihsDate;
+            while (currentDate > startDate)
+            {
+                var localFinishDate = currentDate;
+                currentDate = currentDate.AddDays(-3);
+                await AddOldMessages(1210302841, 0, currentDate, localFinishDate);
+            }
         }
 
         private async Task Client_OnUpdate(IObject arg)
@@ -171,10 +180,16 @@ namespace API.TG
 
             var db1 = new VideoCatalogDbContext(optionsBuilder.Options);
 
-            using (var manager = new DbUpdateManager(db1))
+            try
             {
-                manager.AddAudioFilesFromTg(message.Text, audio.Select(x => x.FilePath),
-                    FileStore.Domain.Models.AudioType.FairyTale, FileStore.Domain.Models.Origin.Soviet, image.FilePath);
+                using (var manager = new DbUpdateManager(db1))
+                {
+                    manager.AddAudioFilesFromTg(message.Text, audio.Select(x => x.FilePath),
+                        FileStore.Domain.Models.AudioType.FairyTale, FileStore.Domain.Models.Origin.Soviet, image.FilePath);
+                }
+            }
+            catch (Exception)
+            {
             }
 
             return true;

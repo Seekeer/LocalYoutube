@@ -251,7 +251,7 @@ namespace FileStore.API.Controllers
         {
             var dbUpdater = new DbUpdateManager(_db);
 
-            dbUpdater.FillSeries(path, Origin.Unknown, type.Value, false, "Загрузки");
+            dbUpdater.FillSeries(path, Origin.Soviet, type.Value, false, "Загрузки");
 
             return Ok();
         }

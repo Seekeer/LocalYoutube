@@ -16,6 +16,10 @@ namespace FileStore.Infrastructure.Repositories
 
         public override async Task<IEnumerable<VideoFile>> SearchFileByType(VideoType type)
         {
+
+            if(type == VideoType.FairyTale)
+                return Db.VideoFiles.Where(x => x.Type == type).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).OrderBy(x => x.Id);
+
             return Db.VideoFiles.Where(x => x.Type == type).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).OrderBy(x => Guid.NewGuid());
         }
 
