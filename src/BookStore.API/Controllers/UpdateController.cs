@@ -641,6 +641,9 @@ namespace FileStore.API.Controllers
 
             ////_db.SaveChanges();
 
+            dbUpdater.AddSeason(8, new DirectoryInfo(@"F:\Анюта\Мульты\Мультсериалы российские\Три кота.2015.WEBRip 1080p\04\Три кота.s04.2021.WEB-DL 1080p"), "04");
+
+            dbUpdater.AddSeason(3, new DirectoryInfo(@"F:\Анюта\Мульты\Мультсериалы российские\Мимимишки.2015.WEBRip 720p\s09-1080\Ми-ми-мишки.s09.2021.WEB-DL 1080p"), "09");
             //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские", Origin.Russian, VideoType.ChildEpisode, true);
             //dbUpdater.FillSeries(@"F:\Анюта\Фильмы\В гостях у сказки", Origin.Soviet, VideoType.FairyTale, false);
 

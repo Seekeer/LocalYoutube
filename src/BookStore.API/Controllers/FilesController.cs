@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using API.Controllers;
 using AutoMapper;
 using FileStore.API.Configuration;
 using FileStore.API.Dtos.File;
@@ -17,6 +18,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TL;
 
 namespace FileStore.API.Controllers
 {
@@ -25,13 +27,15 @@ namespace FileStore.API.Controllers
     [Route("api/[controller]")]
     public class FilesController : FilesControllerBase<VideoFile, VideoType, VideoFileResultDto>
     {
+        private readonly IRuTrackerUpdater _ruTrackerUpdater;
         private readonly DbUpdateManager _updateManager;
         private readonly ISeriesService _seriesService;
         private readonly static Dictionary<string, int> _randomFileDict = new Dictionary<string, int>();
 
         public FilesController(IMapper mapper, IVideoFileService FileService, DbUpdateManager updateManager,
-            ISeriesService seriesService) : base(mapper, FileService)
+            ISeriesService seriesService, IRuTrackerUpdater ruTrackerUpdater) : base(mapper, FileService)
         {
+            _ruTrackerUpdater = ruTrackerUpdater;
             _updateManager = updateManager;
             _seriesService = seriesService;
         }
@@ -93,10 +97,13 @@ namespace FileStore.API.Controllers
             var file = await _fileService.GetById(id);
             if (file == null) return NotFound();
 
+            await _ruTrackerUpdater.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
+
             _updateManager.DeleteFile(true, file);
 
             return Ok();
         }
+
 
         [HttpGet]
         [Route("getAnimation")]

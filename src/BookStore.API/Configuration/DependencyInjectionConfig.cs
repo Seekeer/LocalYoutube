@@ -12,12 +12,13 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using TL;
 
 namespace FileStore.API.Configuration
 {
     public static class DependencyInjectionConfig
     {
-        public static IServiceCollection ResolveDependencies(this IServiceCollection services)
+        public static IServiceCollection ResolveDependencies(this IServiceCollection services, AppConfig config)
         {
             services.AddScoped<VideoCatalogDbContext>();
 
@@ -35,6 +36,10 @@ namespace FileStore.API.Configuration
             services.AddScoped<TgAPIClient, TgAPIClient>();
 
             services.AddHostedService<StartupService>();
+
+            var rutracker = new RuTrackerUpdater(config);
+            rutracker.Init().GetAwaiter().GetResult();
+            services.AddSingleton<IRuTrackerUpdater>(rutracker);
 
             return services;
         }

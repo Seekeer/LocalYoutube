@@ -114,7 +114,7 @@ namespace FileStore.API
             var cfg = Configuration.Get<AppConfig>();
             services.AddSingleton<AppConfig>(cfg);
 
-            services.ResolveDependencies();
+            services.ResolveDependencies(cfg);
 
         }
 
