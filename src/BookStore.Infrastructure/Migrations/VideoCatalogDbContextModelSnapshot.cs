@@ -229,6 +229,9 @@ namespace Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AudioType")
+                        .HasColumnType("int");
+
                     b.Property<TimeSpan>("IntroDuration")
                         .HasColumnType("time");
 
@@ -241,7 +244,7 @@ namespace Infrastructure.Migrations
                     b.Property<int>("Origin")
                         .HasColumnType("int");
 
-                    b.Property<int>("Type")
+                    b.Property<int?>("Type")
                         .HasColumnType("int");
 
                     b.HasKey("Id");

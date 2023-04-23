@@ -1,4 +1,5 @@
 using API.FilmDownload;
+using API.TG;
 using AutoMapper;
 using FileStore.API.Configuration;
 using FileStore.API.JWT;
@@ -23,7 +24,6 @@ using System.Timers;
 
 namespace FileStore.API
 {
-
     public class Startup
     {
         public Startup(IConfiguration configuration)
@@ -114,7 +114,7 @@ namespace FileStore.API
             var cfg = Configuration.Get<AppConfig>();
             services.AddSingleton<AppConfig>(cfg);
 
-            services.ResolveDependencies();
+            services.ResolveDependencies(cfg);
 
         }
 
@@ -165,7 +165,6 @@ namespace FileStore.API
             {
                 endpoints.MapControllers();
             });
-
         }
     }
 }

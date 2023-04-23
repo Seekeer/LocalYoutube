@@ -205,10 +205,6 @@ export class BookListComponent implements OnInit {
     }
   }
 
-  public udateDownloaded(){
-    this.service.updateDownloaded().subscribe(x => this.displayListForType(), this.getFilmsError.bind(this));
-  }
-
 displayListForType() {
 
     switch (this.type){

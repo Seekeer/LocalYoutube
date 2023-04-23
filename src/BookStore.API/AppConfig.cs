@@ -26,5 +26,24 @@ namespace FileStore.API
         public string ApiKey { get; set; }
         public long InfoGroupId { get; set; }
         public long AdminId { get; set; }
+
+        public TgCredentials TgCredentials { get; set; }
+    }
+
+    [Serializable]
+    public class TgCredentials : Credentials
+    {
+        public TimeSpan WaitForMediaTs { get; set; }
+        public TimeSpan WaitTimeForMessageCheck { get; set; }
+
+        public string AppHash { get; set; }
+    }
+
+    [Serializable]
+    public class Credentials
+    {
+        public string Password { get; set; }
+        public string Login { get; set; }
+        public ulong AppId { get; set; }
     }
 }

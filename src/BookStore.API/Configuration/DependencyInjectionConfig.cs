@@ -1,6 +1,8 @@
 ﻿using API.Controllers;
 using API.FilmDownload;
+using API.TG;
 using FileStore.Domain.Interfaces;
+using FileStore.Domain.Models;
 using FileStore.Domain.Services;
 using FileStore.Infrastructure.Context;
 using FileStore.Infrastructure.Repositories;
@@ -10,25 +12,34 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using TL;
 
 namespace FileStore.API.Configuration
 {
     public static class DependencyInjectionConfig
     {
-        public static IServiceCollection ResolveDependencies(this IServiceCollection services)
+        public static IServiceCollection ResolveDependencies(this IServiceCollection services, AppConfig config)
         {
             services.AddScoped<VideoCatalogDbContext>();
 
+            services.AddScoped<IVideoFileRepository, VideoFileRepository>();
+            services.AddScoped<IAudioFileRepository, AudioFileRepository>();
             services.AddScoped<ISeriesRepository, SeriesRepository>();
-            services.AddScoped<IFileRepository, FileRepository>();
 
             services.AddScoped<ISeriesService, SeriesService>();
-            services.AddScoped<IFileService, FileService>();
+            services.AddScoped<IAudioFileService, AudioFileService>();
+            services.AddScoped<IVideoFileService, VideoFileService>();
 
-            services.AddSingleton<TgBot, TgBot>();
             services.AddScoped<DbUpdateManager, DbUpdateManager>();
-            
+            services.AddScoped<IMessageProcessor, MessageProcessor>();
+            services.AddSingleton<TgBot, TgBot>();
+            services.AddScoped<TgAPIClient, TgAPIClient>();
+
             services.AddHostedService<StartupService>();
+
+            var rutracker = new RuTrackerUpdater(config);
+            rutracker.Init().GetAwaiter().GetResult();
+            services.AddSingleton<IRuTrackerUpdater>(rutracker);
 
             return services;
         }
@@ -48,8 +59,10 @@ namespace FileStore.API.Configuration
             {
                 using var scope = services.CreateScope();
                 var tg = scope.ServiceProvider.GetRequiredService<TgBot>();
-
                 await tg.Start();
+
+                //var tgAPI = scope.ServiceProvider.GetRequiredService<TgAPIClient>();
+                //await tgAPI.Start();
             }
             catch (Exception ex)
             {

@@ -4,7 +4,10 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
 
-import { VideoType } from '../_models/Book';
+import {
+  AudioType,
+  VideoType,
+} from '../_models/Book';
 import { Serie } from '../_models/Category';
 
 @Injectable({
@@ -17,6 +20,9 @@ export class SeriesService {
 
     public getAll(type:VideoType): Observable<Serie[]> {
         return this.http.get<Serie[]>(this.baseUrl + `series?type=` + <number>type);
+    }
+    public getAllAudio(type:AudioType): Observable<Serie[]> {
+        return this.http.get<Serie[]>(this.baseUrl + `series/getAllAudio?type=` + <number>type);
     }
     getOther(): Observable<Serie[]> {
         return this.http.get<Serie[]>(this.baseUrl + `series/other`);

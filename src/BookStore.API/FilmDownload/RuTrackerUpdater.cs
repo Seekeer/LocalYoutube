@@ -43,6 +43,7 @@ namespace API.Controllers
     public interface IRuTrackerUpdater
     {
         string ClearFromForeignOption(string text);
+        Task DeleteTorrent(string id);
         Task<VideoInfo> FillInfo(int topicId);
         Task<IEnumerable<SearchTopicInfo>> FindTheme(string name);
         Task Init();

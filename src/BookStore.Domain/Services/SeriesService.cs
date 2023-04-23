@@ -9,9 +9,9 @@ namespace FileStore.Domain.Services
     public class SeriesService : ISeriesService
     {
         private readonly ISeriesRepository _seriesRepository;
-        private readonly IFileService _fileService;
+        private readonly IVideoFileService _fileService;
 
-        public SeriesService(ISeriesRepository SeriesRepository, IFileService fileService)
+        public SeriesService(ISeriesRepository SeriesRepository, IVideoFileService fileService)
         {
             _seriesRepository = SeriesRepository;
             _fileService = fileService;
@@ -26,6 +26,11 @@ namespace FileStore.Domain.Services
             //    return allTypes;
             //else
             //    return allTypes.Where(x => x.Type == type);
+        }
+
+        public async Task<IEnumerable<Series>> GetAllByType(AudioType? type)
+        {
+            return await _seriesRepository.GetAll(type);
         }
 
         public async Task<Series> GetById(int id)

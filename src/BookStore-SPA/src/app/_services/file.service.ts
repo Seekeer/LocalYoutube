@@ -13,9 +13,10 @@ import {
     providedIn: 'root'
 })
 export class FileService {
-    public updateDownloaded() {
-        return this.http.get<string>(`${this.baseUrl}update/updateDownloaded`);
-    }
+    private baseUrl: string = environment.baseUrl + 'api/';
+
+    constructor(private http: HttpClient) { }
+
     public getFilmsByType(type: VideoType) {
         return this.http.get<Book[]>(`${this.baseUrl}files/getFileByType/${type}`);
     }
@@ -28,9 +29,6 @@ export class FileService {
     getBigAnimation() {
         return this.http.get<Book[]>(`${this.baseUrl}files/getAnimation?isSoviet=false`);
     }
-    private baseUrl: string = environment.baseUrl + 'api/';
-
-    constructor(private http: HttpClient) { }
 
     public getVideoURLById(id: number) {
         return this.baseUrl +'Files/getFileById?fileId=' + id;
@@ -73,7 +71,7 @@ export class FileService {
     }
 
     public deleteBook(id: number) {
-        return this.http.delete(this.baseUrl + 'update/removeFile/?fileId=' + id);
+        return this.http.delete(this.baseUrl + 'files/' + id);
     }
 
     public getBookById(id): Observable<Book> {

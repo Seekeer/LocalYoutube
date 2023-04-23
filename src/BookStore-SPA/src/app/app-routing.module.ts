@@ -5,6 +5,7 @@ import {
   Routes,
 } from '@angular/router';
 
+import { AudioComponent } from './audio/audio.component';
 import { AuthGuard } from './auth/auth.guard';
 import { BookListComponent } from './books/book-list/book-list.component';
 import { PlayerComponent } from './books/player/player.component';
@@ -20,6 +21,7 @@ const routes: Routes = [
   // { path: 'books', component: BookListComponent },
   { path: 'login', component: LoginComponent },
   { path: 'books/:type', component: BookListComponent , canActivate: [AuthGuard]},
+  { path: 'audio/:type', component: AudioComponent , canActivate: [AuthGuard]},
   { path: 'player', component: PlayerComponent  , canActivate: [AuthGuard]},
   { path: 'player/:id', component: PlayerComponent  , canActivate: [AuthGuard]},
   { path: 'categories', component: CategoryListComponent , canActivate: [AuthGuard] },

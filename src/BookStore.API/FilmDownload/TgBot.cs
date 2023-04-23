@@ -191,7 +191,7 @@ namespace API.FilmDownload
             return _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<FileStore.Infrastructure.Context.VideoCatalogDbContext>();
         }
 
-        public async Task SearchCoverForFile(VideoFile file, long tgAccountId)
+        public async Task SearchCoverForFile(DbFile file, long tgAccountId)
         {
             var search = new SearchEngine("f228f7e30451842e8", "AIzaSyB9gRWRoQRXZiLcX7ZUACwi-Smm5L8R-Mg");
             var results = search.Search($"фильм {file.Name} {file.VideoFileExtendedInfo.Year}", file.Name);
@@ -227,7 +227,7 @@ namespace API.FilmDownload
             try
             {
                 var fileRepo = _serviceScopeFactory.CreateScope().ServiceProvider.
-                    GetRequiredService<IFileRepository>();
+                    GetRequiredService<IVideoFileRepository>();
 
                 var file = await fileRepo.GetById(data.File.Id);
 
@@ -252,7 +252,7 @@ namespace API.FilmDownload
             }
         }
 
-        private async Task AddTorrent(string data, long fromId, VideoType type)
+        private async Task AddTorrent(string data, long fromId, VideoType type, AudioType? audioType = null)
         {
             if (!int.TryParse(data, out var id))
                 return;
@@ -323,6 +323,9 @@ namespace API.FilmDownload
                             case CommandType.Art:
                                 await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Art);
                                 break;
+                            case CommandType.AudioFairyTale:
+                                //await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.FairyTale);
+                                break;
                             case CommandType.Delete:
                                 await DeleteFile(update.CallbackQuery.Id, command.Data);
                                 break;
@@ -366,7 +369,7 @@ namespace API.FilmDownload
                 try
                 {
                     await _botClient.SendTextMessageAsync(new ChatId(userId), $"Ошибка при обработке торрента",
-                        null, null, null, null, messageId);
+                        null, null, null, null, null, messageId);
                 }
                 catch (Exception)
                 {
@@ -436,7 +439,7 @@ namespace API.FilmDownload
 
             FillFilePropertiesByType(tgFromId, type, info, file);
 
-            await _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IFileRepository>().Add(file);
+            await _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IVideoFileRepository>().Add(file);
 
             await ProcessTelegram(file, tgFromId, info, record);
 
@@ -453,14 +456,14 @@ namespace API.FilmDownload
             var downloadSeries = manager.GetDownloadSeries();
             if (type == VideoType.AdultEpisode)
             {
-                var series = manager.AddOrUpdateSeries(info.Name, false, VideoType.AdultEpisode);
+                var series = manager.AddOrUpdateVideoSeries(info.Name, false, VideoType.AdultEpisode);
                 file.SeriesId = series.Id;
                 var season = manager.AddOrUpdateSeason(series, info.SeasonName);
                 file.SeasonId = season.Id;
             }
             else if (type == VideoType.ChildEpisode)
             {
-                var series = manager.AddOrUpdateSeries(info.Name, false, VideoType.ChildEpisode);
+                var series = manager.AddOrUpdateVideoSeries(info.Name, false, VideoType.ChildEpisode);
                 file.SeriesId = series.Id;
                 var season = manager.AddOrUpdateSeason(series, info.SeasonName);
                 file.SeasonId = season.Id;
@@ -477,7 +480,7 @@ namespace API.FilmDownload
             else if (type == VideoType.FairyTale && tgRecord != null)
             {
                 file.SeriesId = 11;
-                file.SeasonId = 4356;
+                file.SeasonId = 4355;
             }
             else if (type == VideoType.Art && tgRecord != null)
             {
@@ -490,7 +493,7 @@ namespace API.FilmDownload
             file.Type = type;
         }
 
-        private async Task ProcessTelegram(VideoFile file, long tgFromId, VideoInfo info, SearchRecord record)
+        private async Task ProcessTelegram(DbFile file, long tgFromId, VideoInfo info, SearchRecord record)
         {
             var result = @$"Название: {file.Name}
 Длительность: {file.Duration}
@@ -580,9 +583,10 @@ namespace API.FilmDownload
                     new InlineKeyboardButton("балет/опера") { CallbackData = CommandParser.GetMessageFromData(CommandType.Art, info.Id.ToString()) },
                     },
                  new List<InlineKeyboardButton>{
-                    new InlineKeyboardButton("мульт/сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.ChildSeries, info.Id.ToString()) },
+                    new InlineKeyboardButton("мультсериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.ChildSeries, info.Id.ToString()) },
                     new InlineKeyboardButton("длинный мульт") { CallbackData = CommandParser.GetMessageFromData(CommandType.Animation, info.Id.ToString()) },
-                    new InlineKeyboardButton("сказка") { CallbackData = CommandParser.GetMessageFromData(CommandType.FairyTale, info.Id.ToString()) }
+                    new InlineKeyboardButton("сказка") { CallbackData = CommandParser.GetMessageFromData(CommandType.FairyTale, info.Id.ToString()) },
+                    new InlineKeyboardButton("аудиосказка") { CallbackData = CommandParser.GetMessageFromData(CommandType.AudioFairyTale, info.Id.ToString()) },
                 } };
                 var size = decimal.Round(info.SizeInBytes / 1024 / 1024 / 1024, 2, MidpointRounding.AwayFromZero);
                 var title = info.Title;
