@@ -15,6 +15,7 @@ import {
   AudioType,
 } from '../_models/Book';
 import { Serie } from '../_models/Category';
+import { Seasons } from '../_models/Seasons';
 import { AudioFileService } from '../_services/AudioFileService';
 import { SeriesService } from '../_services/series.service';
 
@@ -30,7 +31,6 @@ export class AudioComponent implements OnInit {
   public series: Serie[];
   searchTitle: string;
   seasonId: number;
-  seasons: import('c:/Dev/LocalYoutube/src/BookStore-SPA/src/app/_models/Seasons').Seasons[];
   serieId: number;
   apiFiles: AudioFile[];
   filteredFiles: AudioFile[];
@@ -39,6 +39,7 @@ export class AudioComponent implements OnInit {
   intervalId: any;
   selectedFile: AudioFile;
   audioURL: SafeHtml;
+  seasons: Seasons[];
 
   constructor(
     private service: AudioFileService,
