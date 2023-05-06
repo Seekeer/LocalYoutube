@@ -24,6 +24,21 @@ namespace FileStore.API.JWT
         (ClaimsPrincipal, JwtSecurityToken) DecodeJwtToken(string token);
     }
 
+    public class TokenGenerator
+    {
+        public string Generate(string secretKey, string issuer, string audience, double expires, IEnumerable<Claim> claims = null)
+        {
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            JwtSecurityToken securityToken = new(issuer, audience,
+                claims,
+                DateTime.UtcNow,
+                DateTime.UtcNow.AddMinutes(expires),
+                credentials);
+            return new JwtSecurityTokenHandler().WriteToken(securityToken);
+        }
+    }
+
     public class JwtAuthManager : IJwtAuthManager
     {
         private readonly JwtTokenConfig _jwtTokenConfig;
@@ -71,8 +86,9 @@ namespace FileStore.API.JWT
             //var refreshToken = new RefreshToken
             //{
             //    UserName = username,
-            var tokenString = GenerateRefreshTokenString();
-            var expireAt = now.AddMinutes(_jwtTokenConfig.RefreshTokenExpiration);
+            var refreshToken = (new TokenGenerator()).Generate(_jwtTokenConfig.Secret, _jwtTokenConfig.Issuer, _jwtTokenConfig.Audience,
+                _jwtTokenConfig.AccessTokenExpiration, claims);
+            //var expireAt = now.AddMinutes(_jwtTokenConfig.RefreshTokenExpiration);
             //};
 
             //var user = _db.Users.First(x => x.UserName == username);
@@ -84,7 +100,7 @@ namespace FileStore.API.JWT
             return new JwtAuthResult
             {
                 AccessToken = accessToken,
-                RefreshToken = tokenString
+                RefreshToken = refreshToken
             };
         }
 

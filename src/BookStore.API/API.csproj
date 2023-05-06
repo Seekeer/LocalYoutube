@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AngleSharp" Version="1.0.1" />
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.0" />
     <PackageReference Include="Google.Apis.CustomSearchAPI.v1" Version="1.57.0.2455" />
     <PackageReference Include="Hangfire.Core" Version="1.7.30" />
@@ -51,8 +52,6 @@
     <PackageReference Include="Telegram.Bot.Extensions.Polling" Version="1.0.2" />
     <PackageReference Include="WTelegramClient" Version="3.3.2" />
     <PackageReference Include="Xabe.FFmpeg.Downloader" Version="5.2.0" />
-    <PackageReference Include="YoutubeExplode" Version="6.1.2" />
-    <PackageReference Include="YoutubeExplode.Converter" Version="6.1.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -69,6 +68,15 @@
   <ItemGroup>
     <ProjectReference Include="..\BookStore.Domain\FileStore.Domain.csproj" />
     <ProjectReference Include="..\BookStore.Infrastructure\Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="YoutubeExplode">
+      <HintPath>..\..\lib\Youtube-dl\YoutubeExplode.dll</HintPath>
+    </Reference>
+    <Reference Include="YoutubeExplode.Converter">
+      <HintPath>..\..\lib\Youtube-dl\YoutubeExplode.Converter.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
