@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 
@@ -53,6 +54,15 @@ namespace FileStore.Domain.Models
     public class ApplicationUser : IdentityUser
     {
         public IList<FileUserInfo> VideoFileUserInfos { get; set; } = new List<FileUserInfo>();
+    }
+
+    public class UserRefreshTokens : Entity
+    {
+        [Required]
+        public string UserName { get; set; }
+        [Required]
+        public string RefreshToken { get; set; }
+        public bool IsActive { get; set; } = true;
     }
 
     public enum AudioType

@@ -28,6 +28,7 @@ namespace FileStore.Infrastructure.Context
             this.ChangeTracker.LazyLoadingEnabled = false;
         }
 
+        public DbSet<UserRefreshTokens> RefreshTokens { get; set; }
         public DbSet<Season> Seasons { get; set; }
         public DbSet<AudioFile> AudioFiles { get; set; }
         public DbSet<VideoFile> VideoFiles { get; set; }

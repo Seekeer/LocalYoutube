@@ -8,6 +8,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
+using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -17,7 +18,7 @@ namespace FileStore.API.JWT
 {
     public interface IJwtAuthManager
     {
-        JwtAuthResult GenerateTokens(string username, IEnumerable<Claim> claims, DateTime now);
+        JwtAuthResult GenerateTokens(string username, IEnumerable<Claim> claims, DateTime now, string refreshToken = null);
         JwtAuthResult Refresh(string refreshToken, string accessToken, DateTime now, IEnumerable<Claim> claims);
         void RemoveExpiredRefreshTokens(DateTime now);
         //void RemoveRefreshTokenByUserName(string userName);
@@ -41,11 +42,13 @@ namespace FileStore.API.JWT
 
     public class JwtAuthManager : IJwtAuthManager
     {
+        private readonly VideoCatalogDbContext _db;
         private readonly JwtTokenConfig _jwtTokenConfig;
         private readonly byte[] _secret;
 
-        public JwtAuthManager(JwtTokenConfig jwtTokenConfig)
+        public JwtAuthManager(JwtTokenConfig jwtTokenConfig, VideoCatalogDbContext db)
         {
+            _db = db;
             _jwtTokenConfig = jwtTokenConfig;
             _secret = Encoding.ASCII.GetBytes(jwtTokenConfig.Secret);
         }
@@ -72,7 +75,7 @@ namespace FileStore.API.JWT
         //    }
         //}
 
-        public JwtAuthResult GenerateTokens(string username, IEnumerable<Claim> claims, DateTime now)
+        public JwtAuthResult GenerateTokens(string username, IEnumerable<Claim> claims, DateTime now, string refreshToken = null)
         {
             var shouldAddAudienceClaim = string.IsNullOrWhiteSpace(claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Aud)?.Value);
             var jwtToken = new JwtSecurityToken(
@@ -83,19 +86,20 @@ namespace FileStore.API.JWT
                 signingCredentials: new SigningCredentials(new SymmetricSecurityKey(_secret), SecurityAlgorithms.HmacSha256Signature));
             var accessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken);
 
-            //var refreshToken = new RefreshToken
-            //{
-            //    UserName = username,
-            var refreshToken = (new TokenGenerator()).Generate(_jwtTokenConfig.Secret, _jwtTokenConfig.Issuer, _jwtTokenConfig.Audience,
-                _jwtTokenConfig.AccessTokenExpiration, claims);
-            //var expireAt = now.AddMinutes(_jwtTokenConfig.RefreshTokenExpiration);
-            //};
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                refreshToken = (new TokenGenerator()).Generate(_jwtTokenConfig.Secret, _jwtTokenConfig.Issuer, _jwtTokenConfig.Audience,
+                    _jwtTokenConfig.AccessTokenExpiration, claims);
 
-            //var user = _db.Users.First(x => x.UserName == username);
-            //user.add
-            //user.TokenString = tokenString;
-            //user.ExpireAt = expireAt;
-            //_db.SaveChanges();
+                var token = new UserRefreshTokens
+                {
+                    UserName = claims.First(x => x.Type == ClaimTypes.Hash).Value,
+                    RefreshToken = refreshToken,
+                    IsActive = true
+                };
+                _db.RefreshTokens.Add(token);
+                _db.SaveChanges();
+            }
 
             return new JwtAuthResult
             {
@@ -112,20 +116,19 @@ namespace FileStore.API.JWT
                 throw new SecurityTokenException("Invalid token");
             }
 
-            var userName = principal.Identity?.Name;
+            var userId = principal.Claims.First(x => x.Type == ClaimTypes.Hash).Value;
+            var refreshTokens = _db.RefreshTokens.Where(x =>x.UserName== userId).ToList();
 
-            //var user = _db.Users.FirstOrDefault(x => x.UserName == userName);
-            if (!claims.Any(x => x.Type == ClaimTypes.Anonymous && x.Value == refreshToken))
-            {
+            if(!refreshTokens.Any(x => x.RefreshToken == refreshToken))
                 throw new SecurityTokenException("Invalid token");
-            }
+
             // TODO auth expire
             //if (existingRefreshToken.UserName != userName || existingRefreshToken.ExpireAt < now)
             //{
             //    throw new SecurityTokenException("Invalid token");
             //}
 
-            return GenerateTokens(userName, principal.Claims.ToArray(), now); 
+            return GenerateTokens(userId, principal.Claims.ToArray(), now, refreshToken); 
         }
 
         public (ClaimsPrincipal, JwtSecurityToken) DecodeJwtToken(string token)

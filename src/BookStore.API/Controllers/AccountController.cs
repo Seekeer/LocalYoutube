@@ -26,7 +26,6 @@ namespace FileStore.API.Controllers
         private readonly IJwtAuthManager _jwtAuthManager;
         private readonly VideoCatalogDbContext _dbContext;
         private readonly UserManager<ApplicationUser> _userManager;
-        private static readonly string REFRESH_TOKEN_CLAIM_TYPE = ClaimTypes.Anonymous.ToString();
 
         public AccountController(ILogger<AccountController> logger, UserManager<ApplicationUser> userManager,  IJwtAuthManager jwtAuthManager,
             VideoCatalogDbContext dbContext)
@@ -71,7 +70,7 @@ namespace FileStore.API.Controllers
             var claims = await _userManager.GetClaimsAsync(userInDb);
 
             var jwtResult = _jwtAuthManager.GenerateTokens(request.UserName, claims, DateTime.Now);
-            await _UpdateUserRefreshToken(userInDb, jwtResult.RefreshToken, claims);
+            //await _UpdateUserRefreshToken(userInDb, jwtResult.RefreshToken, claims);
 
             _logger.LogInformation($"User [{request.UserName}] logged in the system.");
 
@@ -83,14 +82,13 @@ namespace FileStore.API.Controllers
                 RefreshToken = jwtResult.RefreshToken
             });
         }
+        [HttpGet("user")]
 
         private async Task _UpdateUserRefreshToken(ApplicationUser userInDb, string refreshToken, 
             System.Collections.Generic.IList<Claim> claims)
         {
-            await _userManager.AddClaimAsync(userInDb, new Claim(REFRESH_TOKEN_CLAIM_TYPE, refreshToken));
-
-            await _userManager.RemoveClaimsAsync(userInDb, claims.Where(x => x.Type == ClaimTypes.Hash));
             await _userManager.AddClaimAsync(userInDb, new Claim(ClaimTypes.Hash, userInDb.Id));
+            await _userManager.AddClaimAsync(userInDb, new Claim(ClaimTypes.Name, userInDb.UserName));
         }
 
         [HttpGet("user")]
@@ -141,7 +139,6 @@ namespace FileStore.API.Controllers
 
                 var accessToken = await HttpContext.GetTokenAsync("Bearer", "access_token");
                 var jwtResult = _jwtAuthManager.Refresh(request.RefreshToken, accessToken, DateTime.Now, claims);
-                await _UpdateUserRefreshToken(managedUser, jwtResult.RefreshToken, claims);
                 _logger.LogInformation($"User [{request.UserName}] has refreshed JWT token.");
                 return Ok(new LoginResult
                 {
