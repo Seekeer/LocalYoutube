@@ -77,6 +77,7 @@ export class BookListComponent implements OnInit {
   public genres: string[] = ['комедия', 'драма', 'боевик', 'детектив', 'фантастика', 'биография', 'фэнтези', 'приключения','мелодрама'];
   type: string;
   apibooks: Book[];
+  _numberOfTry = 0;
   public isAndroid: boolean;
 
   constructor(private router: Router,
@@ -206,7 +207,7 @@ export class BookListComponent implements OnInit {
   }
 
 displayListForType() {
-
+    let that = this;
     switch (this.type){
       case 'series':{
         this.isSelectSeries = true;
@@ -261,7 +262,10 @@ displayListForType() {
         this.showWatched  = false;
         this.getSeries(VideoType.Film);
 
-        this.service.getFilmsByType(VideoType.Film).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
+        this.service.getFilmsByType(VideoType.Film).subscribe({
+         next: (books) => that.showBooks(books),
+         error: (e) => this.getFilmsError(e)
+        });
         this.showKPINfo = true;
         break;
       }
@@ -339,8 +343,12 @@ watchedChanged(event){
   }
 
   getFilmsError(error) {
-    this.hideSpinner(); 
-    this.books = [];
+    if(this._numberOfTry++< 10)
+      this.displayListForType();
+    else{
+      this.hideSpinner(); 
+      this.books = [];
+    }
   }
 
   hideSpinner(){

@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import {
   HttpEvent,
   HttpHandler,
@@ -8,17 +9,16 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 
 import {
+  EMPTY,
   Observable,
-  throwError,
 } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { environment } from 'src/environments/environment';
 
 import { AuthService } from '../_services/auth.service';
 
 @Injectable()
 export class UnauthorizedInterceptor implements HttpInterceptor {
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(private authService: AuthService, private router: Router, public location: Location) {}
 
   intercept(
     request: HttpRequest<unknown>,
@@ -27,15 +27,16 @@ export class UnauthorizedInterceptor implements HttpInterceptor {
     return next.handle(request).pipe(
       catchError((err) => {
         if (err.status === 401) {
-          
-          this.authService.logout();
-        }
+          this.authService.clearLocalStorage();
+          let currentUrl = this.location.path();
+          this.router.navigate(['login'], {
+            queryParams: { returnUrl: currentUrl },
+          });
 
-        if (!environment.production) {
-          console.error(err);
-        }
-        const error = (err && err.error && err.error.message) || err.statusText;
-        return throwError(error);
+        return EMPTY;
+      }
+
+        return next.handle(request);
       })
     );
   }
