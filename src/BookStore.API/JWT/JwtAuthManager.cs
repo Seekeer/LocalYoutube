@@ -18,7 +18,7 @@ namespace FileStore.API.JWT
 {
     public interface IJwtAuthManager
     {
-        JwtAuthResult GenerateTokens(string username, IEnumerable<Claim> claims, DateTime now, string refreshToken = null);
+        JwtAuthResult GenerateTokens(IEnumerable<Claim> claims, DateTime now, string userId, string refreshToken = null);
         JwtAuthResult Refresh(string refreshToken, string accessToken, DateTime now, IEnumerable<Claim> claims);
         void RemoveExpiredRefreshTokens(DateTime now);
         //void RemoveRefreshTokenByUserName(string userName);
@@ -75,7 +75,7 @@ namespace FileStore.API.JWT
         //    }
         //}
 
-        public JwtAuthResult GenerateTokens(string username, IEnumerable<Claim> claims, DateTime now, string refreshToken = null)
+        public JwtAuthResult GenerateTokens(IEnumerable<Claim> claims, DateTime now, string userId, string refreshToken = null)
         {
             var shouldAddAudienceClaim = string.IsNullOrWhiteSpace(claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Aud)?.Value);
             var jwtToken = new JwtSecurityToken(
@@ -93,7 +93,7 @@ namespace FileStore.API.JWT
 
                 var token = new UserRefreshTokens
                 {
-                    UserName = claims.First(x => x.Type == ClaimTypes.Hash).Value,
+                    UserName = userId,
                     RefreshToken = refreshToken,
                     IsActive = true
                 };
@@ -116,10 +116,9 @@ namespace FileStore.API.JWT
                 throw new SecurityTokenException("Invalid token");
             }
 
-            var userId = principal.Claims.First(x => x.Type == ClaimTypes.Hash).Value;
-            var refreshTokens = _db.RefreshTokens.Where(x =>x.UserName== userId).ToList();
+            var refreshTokens = _db.RefreshTokens.Where(x =>x.RefreshToken == refreshToken).ToList();
 
-            if(!refreshTokens.Any(x => x.RefreshToken == refreshToken))
+            if(refreshToken == null)
                 throw new SecurityTokenException("Invalid token");
 
             // TODO auth expire
@@ -128,7 +127,7 @@ namespace FileStore.API.JWT
             //    throw new SecurityTokenException("Invalid token");
             //}
 
-            return GenerateTokens(userId, principal.Claims.ToArray(), now, refreshToken); 
+            return GenerateTokens(principal.Claims.ToArray(), now, null, refreshToken); 
         }
 
         public (ClaimsPrincipal, JwtSecurityToken) DecodeJwtToken(string token)

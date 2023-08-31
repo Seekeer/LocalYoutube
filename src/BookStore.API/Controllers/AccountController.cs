@@ -49,7 +49,7 @@ namespace FileStore.API.Controllers
             //var managedUser = await _userManager.FindByNameAsync(request.UserName);
             //_userManager.DeleteAsync(managedUser);
             var user = new ApplicationUser { UserName = request.UserName };
-            var createdUser = await _userManager.CreateAsync(user, request.Password);
+            //var createdUser = await _userManager.CreateAsync(user, request.Password);
 
             var managedUser = await _userManager.FindByNameAsync(request.UserName);
             if (managedUser == null)
@@ -68,9 +68,14 @@ namespace FileStore.API.Controllers
 
             //var role = await _userManager.GetRolesAsync(userInDb);
             var claims = await _userManager.GetClaimsAsync(userInDb);
+            if(!claims.Any())
+            {
+                var nameClaim = new Claim(ClaimTypes.Name, userInDb.UserName);
+                await _userManager.AddClaimAsync(userInDb, nameClaim);
+                claims.Add(nameClaim);
+            }
 
-            var jwtResult = _jwtAuthManager.GenerateTokens(request.UserName, claims, DateTime.Now);
-            //await _UpdateUserRefreshToken(userInDb, jwtResult.RefreshToken, claims);
+            var jwtResult = _jwtAuthManager.GenerateTokens(claims, DateTime.Now, userInDb.Id);
 
             _logger.LogInformation($"User [{request.UserName}] logged in the system.");
 

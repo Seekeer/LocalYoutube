@@ -16,6 +16,7 @@ using Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TL;
@@ -32,8 +33,8 @@ namespace FileStore.API.Controllers
         private readonly ISeriesService _seriesService;
         private readonly static Dictionary<string, int> _randomFileDict = new Dictionary<string, int>();
 
-        public FilesController(IMapper mapper, IVideoFileService FileService, DbUpdateManager updateManager,
-            ISeriesService seriesService, IRuTrackerUpdater ruTrackerUpdater) : base(mapper, FileService)
+        public FilesController(UserManager<ApplicationUser> userManager, IMapper mapper, IVideoFileService FileService, DbUpdateManager updateManager,
+            ISeriesService seriesService, IRuTrackerUpdater ruTrackerUpdater) : base(userManager, mapper, FileService)
         {
             _ruTrackerUpdater = ruTrackerUpdater;
             _updateManager = updateManager;
@@ -46,7 +47,7 @@ namespace FileStore.API.Controllers
         {
             var Files = await _fileService.GetAll();
 
-            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files, GetUserId()));
+            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId()));
         }
 
         [HttpGet("{id:int}")]
@@ -58,7 +59,7 @@ namespace FileStore.API.Controllers
 
             if (File == null) return NotFound();
 
-            return Ok(_mapper.GetFile<VideoFile, VideoFileResultDto>(File, GetUserId()));
+            return Ok(_mapper.GetFile<VideoFile, VideoFileResultDto>(File,await GetUserId()));
         }
 
         [HttpGet]
@@ -72,7 +73,7 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound();
 
-            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files, GetUserId()));
+            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId()));
         }
 
         [HttpGet]
@@ -86,7 +87,7 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound();
 
-            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files, GetUserId()));
+            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId()));
         }
 
         [HttpDelete("{id:int}")]
@@ -123,7 +124,7 @@ namespace FileStore.API.Controllers
             if (!result.Any())
                 return NotFound("None file was founded");
 
-            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(result, GetUserId()));
+            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(result,await GetUserId()));
         }
 
         [HttpGet]
@@ -132,13 +133,15 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<List<VideoFile>>> GetFileByType(VideoType type)
         {
+
+            throw new NotSupportedException();
             var result = await _fileService.SearchFileByType(type);
             var Files = _mapper.Map<List<VideoFile>>(result);
 
             if (!Files.Any())
                 return NotFound("None file was founded");
 
-            var filesDTO = _mapper.GetFiles<VideoFile, VideoFileResultDto>(Files, GetUserId()).OrderByDescending(x => x.Year);
+            var filesDTO = _mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId()).OrderByDescending(x => x.Year);
             return Ok(filesDTO);
         }
 
@@ -164,7 +167,7 @@ namespace FileStore.API.Controllers
             }
             ).ToList();
 
-            var filesDTO = _mapper.GetFiles<VideoFile, VideoFileResultDto>(unique, GetUserId()).OrderByDescending(x => x.Year);
+            var filesDTO = _mapper.GetFiles<VideoFile, VideoFileResultDto>(unique,await GetUserId()).OrderByDescending(x => x.Year);
             foreach (var file in filesDTO)
                 file.IsFinished = false;
 

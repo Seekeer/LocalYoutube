@@ -409,3 +409,5 @@ MigrationBackup/
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudio,dotnetcore,visualstudiocode,angular
 /src/BookStore-SPA/.angular
+/src/BookStore.API/Assets/ffmpeg.exe
+/src/BookStore.API/Assets/yt-dlp.exe

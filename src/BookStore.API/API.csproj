@@ -23,6 +23,7 @@
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="1.0.1" />
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.0" />
+    <PackageReference Include="CliWrap" Version="3.6.1" />
     <PackageReference Include="Google.Apis.CustomSearchAPI.v1" Version="1.57.0.2455" />
     <PackageReference Include="Hangfire.Core" Version="1.7.30" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.43" />
@@ -82,6 +83,9 @@
   <ItemGroup>
     <None Update="Assets\bat.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\downloadScript.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

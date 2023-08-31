@@ -48,7 +48,7 @@ namespace FileStore.Infrastructure.Context
 
             modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileExtendedInfo).AutoInclude();
             modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileUserInfos).AutoInclude();
-            modelBuilder.Entity<FileUserInfo>().Navigation(e => e.User).AutoInclude();
+            //modelBuilder.Entity<FileUserInfo>().Navigation(e => e.User).AutoInclude();
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(VideoCatalogDbContext).Assembly);
 

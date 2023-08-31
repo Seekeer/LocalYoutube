@@ -10,6 +10,7 @@ using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FileStore.API.Controllers
@@ -20,7 +21,7 @@ namespace FileStore.API.Controllers
     [Route("api/[controller]")]
     public class AudioFilesController : FilesControllerBase<AudioFile, AudioType, VideoFileResultDto>
     {
-        public AudioFilesController(IMapper mapper, IAudioFileService FileService) : base(mapper, FileService)
+        public AudioFilesController(UserManager<ApplicationUser> userManager, IMapper mapper, IAudioFileService FileService) : base(userManager, mapper, FileService)
         {
         }
     }
@@ -31,20 +32,22 @@ namespace FileStore.API.Controllers
     public abstract class FilesControllerBase<T,V, DTO> : MainController
         where T : DbFile
     {
+        private readonly UserManager<ApplicationUser> _userManager;
         protected readonly IMapper _mapper;
         protected readonly IFileService<T, V> _fileService;
 
-        public FilesControllerBase(IMapper mapper, IFileService<T, V> FileService)
+        public FilesControllerBase(UserManager<ApplicationUser> userManager, IMapper mapper, IFileService<T, V> FileService)
         {
+            _userManager = userManager;
             _mapper = mapper;
             _fileService = FileService;
         }
 
-        protected string GetUserId()
+        protected async Task<string>  GetUserId()
         {
-            var user = HttpContext.User;
-            var id = user.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Hash)?.Value;
-            return id;
+            var name = HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Name);
+            var user =  await _userManager.FindByNameAsync(name.Value);
+            return user.Id;
         }
 
         [HttpGet]
@@ -81,7 +84,7 @@ namespace FileStore.API.Controllers
 
             if (Files == null || Files.Count == 0) return NotFound("None File was founded");
 
-            var resultDTO = _mapper.GetFiles<T, DTO>(Files, GetUserId());
+            var resultDTO = _mapper.GetFiles<T, DTO>(Files, await GetUserId());
             return Ok(resultDTO);
         }
 
@@ -91,12 +94,12 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<List<DTO>>> SearchFileWithSeries(string searchedValue, bool isRandom)
         {
-            var Files = _mapper.Map<List<T>>(await _fileService.SearchFileWithSeries(searchedValue, isRandom));
+            var Files = _mapper.Map<List<T>>(await _fileService.SearchFileWithSeries(searchedValue, isRandom, searchedValue.ToLower().Contains("youtube")));
 
             if (!Files.Any())
                 return NotFound("None File was founded");
 
-            return Ok(_mapper.GetFiles<T,DTO>(Files, GetUserId()));
+            return Ok(_mapper.GetFiles<T,DTO>(Files, await GetUserId()));
         }
 
         [HttpGet]
@@ -110,14 +113,14 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound("None File was founded");
 
-            return Ok(_mapper.GetFiles<T, DTO>(Files, GetUserId()));
+            return Ok(_mapper.GetFiles<T, DTO>(Files, await GetUserId()));
         }
 
         [HttpPut]
         [Route("updatePosition/{id}")]
         public async Task<IActionResult> SetPosition(int id, [FromBody] double value)
         {
-            string userId = GetUserId();
+            string userId = await GetUserId();
             await _fileService.SetPosition(id, value, userId);
 
             return Ok();

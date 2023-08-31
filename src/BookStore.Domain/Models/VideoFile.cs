@@ -130,7 +130,7 @@ namespace FileStore.Domain.Models
                 if (VideoFileUserInfos == null)
                     return new FileUserInfo();
 
-                return VideoFileUserInfos.FirstOrDefault(x => x.User?.Id == CurrentUserId) ?? new FileUserInfo() ;
+                return VideoFileUserInfos.FirstOrDefault(x => x.UserId == CurrentUserId) ?? new FileUserInfo() ;
             }
         }
 

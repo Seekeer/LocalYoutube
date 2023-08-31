@@ -52,6 +52,22 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("markComplete")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MarkComplete(int fileId, string filePath)
+        {
+            var file = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).
+                FirstOrDefault(x => x.Id == fileId);
+
+            file.IsDownloading = false;
+            file.Path = filePath;
+
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("updateDownloaded")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> CheckDownloaded(string seriesName)
@@ -100,7 +116,21 @@ namespace FileStore.API.Controllers
         }
 
 
+
         [HttpDelete]
+        [Route("removeYoutube")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public void RemoveYoutube()
+        {
+            var series = _db.Series.FirstOrDefault(x => x.Name == "Youtube");
+
+            if (series == null)
+                return;
+
+            RemoveSeries(new DbUpdateManager(_db), series.Id);
+        }
+
+            [HttpDelete]
         [Route("removeSeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public void RemoveSeason(int seasonId, bool deleteFile)
