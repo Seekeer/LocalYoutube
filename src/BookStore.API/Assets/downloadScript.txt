@@ -1,0 +1,20 @@
+$ytdlp = 'yt-dlp.exe'
+$ffmpeg = 'ffmpeg.exe'
+$filename = 'linklist.txt'
+$assets = '.'
+$linkYTDLP = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
+$linkFFMPEG = 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip' 
+
+$testytdlp = Test-Path $ytdlp -PathType Leaf
+$testffmpeg = Test-Path $ffmpeg -PathType Leaf
+if (!$testytdlp) { Start-BitsTransfer -Source $linkYTDLP -Destination $assets }
+if (!$testffmpeg) 
+{ 
+  $zipfile = '.\ffmpeg.zip'
+  $temp = '.\temp'
+  Start-BitsTransfer -Source $linkFFMPEG -Destination $zipfile
+  Expand-Archive $assets\ffmpeg.zip -DestinationPath $temp
+  Get-ChildItem -Include $ffmpeg -Path $temp -Recurse -ErrorAction SilentlyContinue | Move-Item -Destination $assets
+  Remove-Item -Path $temp -Recurse -ErrorAction SilentlyContinue
+  Remove-Item -Path $zipfile -Recurse -ErrorAction SilentlyContinue
+}

@@ -621,6 +621,7 @@ namespace API.FilmDownload
 
                     await policy.Execute(async () =>
                     {
+                        record.Value.Path = record.Value.Path.Replace(" ", "");
                         await YoutubeDownloader.Download(record.Key, record.Value.Path);
 
                         fileService.YoutubeFinished(record.Value);

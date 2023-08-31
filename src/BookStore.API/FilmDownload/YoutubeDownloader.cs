@@ -3,6 +3,7 @@ using FileStore.Domain.Models;
 using Google.Apis.CustomSearchAPI.v1.Data;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -100,28 +101,27 @@ namespace API.FilmDownload
 
         internal async static Task Download(string url, string path)
         {
-            var youtube = new YoutubeClient();
+            //$path = '{path.Replace(" ", "")}'
+            var downloadUtilitiesScript = File.ReadAllText(@"Assets\downloadScript.txt");
+            var downloadVideoScript = @$"
+            $ytdlp = 'yt-dlp.exe'
+            $cmd = '-f bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best --merge-output-format mp4 {url} -o {path}'
+            Start-Process -FilePath $ytdlp -ArgumentList $cmd -Wait 
+";
 
-            // Low Quality
+            var finalScript = downloadUtilitiesScript + downloadVideoScript;
 
-            //await youtube.Videos.DownloadAsync(url, path, o => o
-            //    .SetContainer("webm") // override format
-            //    .SetPreset(ConversionPreset.Fast) // change preset
-            //    .SetFFmpegPath(@"C:\Dev\_Smth\BookStore-master\lib\ffmpeg\ffmpeg.exe")); // custom FFmpeg location
+            var processStartInfo = new ProcessStartInfo();
+            processStartInfo.FileName = "powershell.exe";
+            processStartInfo.Arguments = $"-Command \"{finalScript}\"";
+            processStartInfo.UseShellExecute = false;
+            processStartInfo.RedirectStandardOutput = true;
+            processStartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Assets");
 
-            // Get stream manifest
-            var streamManifest = await youtube.Videos.Streams.GetManifestAsync(url);
-
-            // Select streams (1080p60 / highest bitrate audio)
-            var audioStreamInfo = streamManifest.GetAudioStreams().GetWithHighestBitrate();
-            var videoStreamInfo = streamManifest.GetVideoStreams().FirstOrDefault(s => s.VideoQuality.MaxHeight == 1080);
-            if (videoStreamInfo == null)
-            {
-                videoStreamInfo = streamManifest.GetVideoStreams().OrderBy(s => s.VideoQuality.MaxHeight).First();
-            }
-            var streamInfos = new IStreamInfo[] { audioStreamInfo, videoStreamInfo };
-
-           await youtube.Videos.DownloadAsync(streamInfos, new ConversionRequest(@"F:\Видео\Фильмы\Загрузки\lib\ffmpeg\ffmpeg.exe", path, new Container("webm"), ConversionPreset.UltraFast));
+            using var process = new Process();
+            process.StartInfo = processStartInfo;
+            process.Start();
+            string output = process.StandardOutput.ReadToEnd();
         }
     }
 }
