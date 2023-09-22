@@ -24,6 +24,7 @@ using static System.Net.WebRequestMethods;
 using AngleSharp.Dom;
 using System.Text;
 using Polly;
+using static System.Net.Mime.MediaTypeNames;
 //using Polly;
 
 namespace API.FilmDownload
@@ -52,6 +53,7 @@ namespace API.FilmDownload
         private readonly List<TgLink> _tgSeasonDict = new List<TgLink>(); 
         public const string UPDATECOVER_MESSAGE = "Обновить обложку";
         public const string SETUP_VLC_Message = "Настроить VLC";
+        public const string SHOW_ALL_SEARCH_RESULT_Message = "Показать все результаты поиска";
         private Timer _timer;
 
         public TgBot(AppConfig config, IServiceScopeFactory serviceScopeFactory)
@@ -326,6 +328,15 @@ namespace API.FilmDownload
                             case CommandType.AudioFairyTale:
                                 //await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.FairyTale);
                                 break;
+                            case CommandType.ShowAllSearchResult:
+                                await ProcessUserInput(command.Data, update.CallbackQuery.From.Id, false);
+                                break;
+                            case CommandType.YoutubeAsDesigned:
+                                await ProcessYoutubeVideo(command.Data, update.CallbackQuery.From.Id, false);
+                                break;
+                            case CommandType.YoutubeWatchLater:
+                                await ProcessYoutubeVideo(command.Data, update.CallbackQuery.From.Id, true);
+                                break;
                             case CommandType.Delete:
                                 await DeleteFile(update.CallbackQuery.Id, command.Data);
                                 break;
@@ -551,7 +562,7 @@ namespace API.FilmDownload
                 case CommandType.Film:
                     break;
                 case CommandType.Unknown:
-                    await ProcessUserInput(message);
+                    await ProcessUserInput(message.Text, message.From.Id, true);
                     break;
                 default:
                     break;
@@ -559,19 +570,20 @@ namespace API.FilmDownload
 
         }
 
-        private async Task ProcessUserInput(Message message)
+        private async Task ProcessUserInput(string text, long fromId, bool filterThemes)
         {
-            if (message.Text.Contains("youtube")|| message.Text.Contains("youtu.be"))
+            if (text.Contains("youtube")|| text.Contains("youtu.be"))
             {
-                ProcessYoutubeVideo(message);
+                await ShowYoutubeChoice(text, fromId);
+
 
                 return;
             }
 
-            var infos = await _rutracker.FindTheme(message.Text);
+            var infos = await _rutracker.FindTheme(text, filterThemes);
 
             if (!infos.Any())
-                await _botClient.SendTextMessageAsync(new ChatId(message.From.Id), $"Ничего не найдено");
+                await _botClient.SendTextMessageAsync(new ChatId(fromId), $"Ничего не найдено");
 
             foreach (var info in infos)
             {
@@ -594,16 +606,39 @@ namespace API.FilmDownload
                     title = $"КОПИЯ ДИСКА {title}";
 
                 var messageText = $"{size} GB | {info.DownloadsCount} | {info.CreatedAt.ToString("MM-yy")} | {title}";
-                var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(message.From.Id),
+                var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(fromId),
                     messageText, replyMarkup: new InlineKeyboardMarkup(keyboard));
 
-                _infos.Add(new SearchRecord { Topic = info, MessageId = tgMessage.MessageId, SearchSctring = message.Text });
+                _infos.Add(new SearchRecord { Topic = info, MessageId = tgMessage.MessageId, SearchSctring = text });
             }
+
+            await AddSearchAllButton(text, fromId);
         }
 
-        private async Task ProcessYoutubeVideo(Message message)
+        private async Task ShowYoutubeChoice(string text, long fromId)
         {
-            var info = await YoutubeDownloader.GetInfo(message.Text, Path.Combine(_config.RootDownloadFolder, "Youtube"));
+            var keyboard = new List<List<InlineKeyboardButton>>
+                {
+                 new List<InlineKeyboardButton>{
+                    new InlineKeyboardButton("Посмотреть на один раз") { CallbackData = CommandParser.GetMessageFromData(CommandType.YoutubeWatchLater, text) },
+                    new InlineKeyboardButton("Как положено") { CallbackData = CommandParser.GetMessageFromData(CommandType.YoutubeAsDesigned, text) },
+                    }};
+
+            var messageText = $"Как храним скачанное с ютуба?";
+            var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(fromId),
+                messageText, replyMarkup: new InlineKeyboardMarkup(keyboard));
+        }
+
+        private async Task AddSearchAllButton(string text, long fromId)
+        {
+            var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(fromId),
+                "Нет ничего подходящего?", replyMarkup: new InlineKeyboardMarkup(new InlineKeyboardButton("Показать без фильтрации") { 
+                    CallbackData = CommandParser.GetMessageFromData(CommandType.ShowAllSearchResult, text) }));
+        }
+
+        private async Task ProcessYoutubeVideo(string text, long fromId, bool watchLater)
+        {
+            var info = await YoutubeDownloader.GetInfo(text, Path.Combine(_config.RootDownloadFolder, "Youtube"));
 
             foreach (var record in info.Records)
             {
@@ -611,9 +646,7 @@ namespace API.FilmDownload
                 {
                     var scope = _serviceScopeFactory.CreateScope();
                     var fileService = scope.ServiceProvider.GetRequiredService<DbUpdateManager>();
-                    fileService.AddFromYoutube(record.Value, info.ChannelName);
-
-                    //await _botClient.SendTextMessageAsync(new ChatId(message.From.Id), $"Начата загрузка видео с ютуба {Environment.NewLine}{record.Value.Name} ");
+                    fileService.AddFromYoutube(record.Value, info.ChannelName, watchLater);
 
                     var policy = Policy
                         .Handle<Exception>()
@@ -626,7 +659,7 @@ namespace API.FilmDownload
 
                         fileService.YoutubeFinished(record.Value);
 
-                        await NotifyDownloadEnded(message.From.Id, record.Value);
+                        await NotifyDownloadEnded(fromId, record.Value);
                     });
                 }
                 catch (Exception ex)

@@ -94,7 +94,7 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<List<DTO>>> SearchFileWithSeries(string searchedValue, bool isRandom)
         {
-            var Files = _mapper.Map<List<T>>(await _fileService.SearchFileWithSeries(searchedValue, isRandom, searchedValue.ToLower().Contains("youtube")));
+            var Files = _mapper.Map<List<T>>(await _fileService.SearchFileWithSeries(searchedValue, isRandom));
 
             if (!Files.Any())
                 return NotFound("None File was founded");

@@ -45,7 +45,7 @@ namespace API.Controllers
         string ClearFromForeignOption(string text);
         Task DeleteTorrent(string id);
         Task<VideoInfo> FillInfo(int topicId);
-        Task<IEnumerable<SearchTopicInfo>> FindTheme(string name);
+        Task<IEnumerable<SearchTopicInfo>> FindTheme(string name, bool filterThemes);
         Task Init();
         Task ParseInfo(string html, VideoInfo info);
         Task StartDownload(int id, string rootDownloadFolder);
@@ -418,7 +418,7 @@ namespace API.Controllers
             return null;
         }
 
-        public async Task<IEnumerable<SearchTopicInfo>> FindTheme(string name)
+        public async Task<IEnumerable<SearchTopicInfo>> FindTheme(string name, bool filterThemes)
         {
             var res = await _client.SearchTopics(new SearchTopicsRequest(
                Title: name,
@@ -432,9 +432,13 @@ namespace API.Controllers
             if (res.Topics.Count() < 5)
                 return res.Topics;
 
-            var topics = res.Topics.Where(x => x.SizeInBytes < maxLimit && x.SizeInBytes > minLimit);
-            if (topics.Count() < 3)
-                topics = res.Topics;
+            var topics = res.Topics.AsEnumerable();
+            if (filterThemes)
+            {
+                topics = topics.Where(x => x.SizeInBytes < maxLimit && x.SizeInBytes > minLimit);
+                if (topics.Count() < 3)
+                    topics = res.Topics;
+            }
 
             topics = topics.Where(x => !x.Title.Contains("DVD9") && !x.Title.Contains("DVD5"));
 

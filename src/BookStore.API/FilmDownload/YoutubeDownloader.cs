@@ -117,10 +117,12 @@ namespace API.FilmDownload
             processStartInfo.UseShellExecute = false;
             processStartInfo.RedirectStandardOutput = true;
             processStartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Assets");
+            processStartInfo.UseShellExecute = false; // causes consoles to share window 
 
             using var process = new Process();
             process.StartInfo = processStartInfo;
             process.Start();
+            await process.WaitForExitAsync();
             string output = process.StandardOutput.ReadToEnd();
         }
     }

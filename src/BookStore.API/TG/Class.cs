@@ -11,6 +11,10 @@ namespace API.TG
         FixCover,
         [CommandName(TgBot.SETUP_VLC_Message)]
         SetupVLC,
+        [CommandName(TgBot.SHOW_ALL_SEARCH_RESULT_Message)]
+        ShowAllSearchResult,
+        YoutubeWatchLater,
+        YoutubeAsDesigned,
         [CommandName("Сериал")]
         Series,
         [CommandName("Фильм")]
