@@ -1,5 +1,6 @@
 ﻿using API.FilmDownload;
 using FileStore.API;
+using FileStore.Domain;
 using FileStore.Infrastructure.Context;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;

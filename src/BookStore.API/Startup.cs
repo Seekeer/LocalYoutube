@@ -3,6 +3,7 @@ using API.TG;
 using AutoMapper;
 using FileStore.API.Configuration;
 using FileStore.API.JWT;
+using FileStore.Domain;
 using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using Hangfire;
@@ -123,6 +124,7 @@ namespace FileStore.API
         {
             app.Use((context, next) =>
             {
+            
                 var url = context.Request.GetDisplayUrl();
                 var uri = new Uri(url);
                 var builder = new UriBuilder(uri);

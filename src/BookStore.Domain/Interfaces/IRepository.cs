@@ -15,5 +15,6 @@ namespace FileStore.Domain.Interfaces
         Task Remove(TEntity entity);
         Task<IEnumerable<TEntity>> SearchRandom(Expression<Func<TEntity, bool>> predicate, int resultCount = 10);
         Task<int> SaveChanges();
+        Task<IEnumerable<TEntity>> Search(Expression<Func<TEntity, bool>> predicate);
     }
 }

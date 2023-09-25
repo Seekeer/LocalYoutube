@@ -10,6 +10,7 @@ using Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using FileStore.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
+using FileStore.Domain;
 
 namespace API.TG
 {

@@ -133,8 +133,6 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<List<VideoFile>>> GetFileByType(VideoType type)
         {
-
-            throw new NotSupportedException();
             var result = await _fileService.SearchFileByType(type);
             var Files = _mapper.Map<List<VideoFile>>(result);
 

@@ -1,6 +1,7 @@
 ﻿using AngleSharp.Html.Parser;
 using AngleSharp.Io;
 using FileStore.API;
+using FileStore.Domain;
 using FileStore.Domain.Models;
 using HtmlAgilityPack;
 using HtmlAgilityPack.CssSelectors.NetCore;

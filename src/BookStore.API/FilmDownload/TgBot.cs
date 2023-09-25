@@ -25,6 +25,7 @@ using AngleSharp.Dom;
 using System.Text;
 using Polly;
 using static System.Net.Mime.MediaTypeNames;
+using FileStore.Domain;
 //using Polly;
 
 namespace API.FilmDownload

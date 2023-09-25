@@ -26,8 +26,11 @@ namespace Infrastructure
         static DbUpdateManager()
         {
             //FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official);
-            GlobalFFOptions.Configure(new FFOptions { BinaryFolder = @"F:\Видео\Фильмы\Загрузки\lib\ffmpeg\" });
-                FFmpeg.SetExecutablesPath(@"F:\Видео\Фильмы\Загрузки\lib\ffmpeg\");
+
+            var directory = new DirectoryInfo((@"Assets\downloadScript.txt"));
+
+            GlobalFFOptions.Configure(new FFOptions { BinaryFolder = directory.Parent.FullName });
+                FFmpeg.SetExecutablesPath(directory.Parent.FullName);
         }
 
         public DbUpdateManager(VideoCatalogDbContext db)
@@ -403,7 +406,7 @@ namespace Infrastructure
             return (fileInfo.Extension == ".mp4" || fileInfo.Extension == ".webm");
         }
 
-        private static string EncodeToMp4(string path)
+        public static string EncodeToMp4(string path)
         {
             if (IsEncoded(path))
                 return null;

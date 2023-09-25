@@ -116,6 +116,7 @@ namespace FileStore.Domain.Models
         /* EF Relation */
         public Season Season { get; set; }
         public Series Series { get; set; }
+        public bool IsBackedup{ get; set; }
 
         public IList<FileUserInfo> VideoFileUserInfos { get; set; } = new List<FileUserInfo>();
         public FileExtendedInfo VideoFileExtendedInfo { get; set; } = new FileExtendedInfo();

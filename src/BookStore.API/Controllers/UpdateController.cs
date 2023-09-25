@@ -13,6 +13,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Authorization;
+using FileStore.Domain;
+using Telegram.Bot.Types;
+using System;
+using System.Runtime;
+using System.Security.AccessControl;
+using static System.Net.Mime.MediaTypeNames;
+using System.Diagnostics;
 
 namespace FileStore.API.Controllers
 {
@@ -38,17 +45,199 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> CheckDownloaded()
         {
+
+
             var files = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).
                 Where(x => x.Type == VideoType.Film).ToList();
             foreach (var file in files)
             {
-                if(!System.IO.File.Exists(file.Path))
+                if (!System.IO.File.Exists(file.Path))
                     _db.VideoFiles.Remove(file);
             }
 
             _db.SaveChanges();
 
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("checkDB")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> CheckDatabase()
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            var files = _db.VideoFiles.ToList();
+
+            var finfo = files.Where(f =>
+                //f.Type == VideoType.Animation && f.Origin != Origin.Soviet
+                //&& 
+                !System.IO.File.Exists(f.Path)
+                )
+                .Select(x => new FileInfo(x.Path))
+                //.Reverse();
+                ;
+
+            var badPaths = new List<string>();
+
+            var folders = finfo.GroupBy(x => x.DirectoryName);
+
+            foreach (var file in finfo)
+            {
+
+                var path = await TryToFindFile(file.DirectoryName, file.FullName);
+
+                if (!string.IsNullOrEmpty(path))
+                {
+                    //var converted = DbUpdateManager.EncodeToMp4(path);
+                    //System.IO.File.Delete(path);
+
+                    //if(file.FullName != converted)
+                    //{
+                    //    System.IO.File.Move(converted, file.FullName);
+                    //}
+                }
+            }
+
+            //foreach (var dir in finfo.GroupBy(x => x.DirectoryName))
+            //{
+            //    var dirInfo = dir.First().Directory;
+            //    try
+            //    {
+            //        var dirFiles = dirInfo.GetFiles();
+
+            //        foreach (var fileDBRecord in dir)
+            //        {
+            //            var same = dirFiles.Where(x => x.Name == fileDBRecord.Name);
+            //            if (same.Any())
+            //            {
+            //                var found = same.OrderByDescending(x => x.Length).First();
+            //                var newPath = DbUpdateManager.EncodeToMp4(found.FullName);
+
+            //                if(fileDBRecord.FullName != newPath)
+            //                {
+
+            //                }
+            //            }
+            //            else
+            //            {
+            //                badPaths.Add(fileDBRecord.FullName);
+            //            }
+            //        }
+            //    }
+            //    catch (System.Exception)
+            //    {
+            //        badPaths.Add(dir.Key);
+            //    }
+            //}
+
+            //_db.SaveChanges();
+
+            this.RemoveFile(3632798, 3632798, true);
+            this.RemoveFile(6352695, 6352695, true);
+
+            //for (int i = 2041; i < 2086; i++)
+            //{
+            //    RemoveSeries(dbUpdater, i);
+
+            //}
+
+            //this.RemoveSeries(dbUpdater, 2086);
+            //this.RemoveSeries(dbUpdater, 32);
+            //this.RemoveSeries(dbUpdater, 2039);
+            //this.RemoveSeries(dbUpdater, 2087);
+            //this.RemoveSeries(dbUpdater, 2089);
+            //this.RemoveSeries(dbUpdater, 22);
+            //this.RemoveSeries(dbUpdater, 25);
+
+            //this.RemoveSeries(dbUpdater, 3090);
+            //this.RemoveSeries(dbUpdater, 2090);
+            //this.RemoveSeries(dbUpdater, 4090);
+
+            //this.RemoveSeason(9462, false);
+            //this.RemoveSeason(8460, false);
+            //this.RemoveSeason(7450, false);
+            //this.RemoveSeason(7449, false);
+            //this.RemoveSeason(7446, false);
+            //this.RemoveSeason(7441, false);
+            //this.RemoveSeason(7386, false);
+            //this.RemoveSeason(7385, false);
+            //this.RemoveSeason(4367, false);
+            //this.RemoveSeason(4354, false);
+            //this.RemoveSeason(4353, false);
+            //this.RemoveSeason(1332, false);
+            //this.RemoveSeason(1330, false);
+            //this.RemoveSeason(327, false);
+            //this.RemoveSeason(322, false);
+
+            return Ok();
+        }
+
+        private async Task<string> TryToFindFile(string folder, string fullName)
+        {
+            var dirInfo = new DirectoryInfo(folder);
+
+            if (!dirInfo.Exists)
+            {
+                return null;
+                try
+                {
+                    var rutracker = new RuTrackerUpdater(_config);
+                    await rutracker.Init();
+                    await rutracker.StartDownload(int.Parse(dirInfo.Name), folder);
+                }
+                catch (Exception)
+                {
+                }
+
+                return null;
+            }
+
+            try
+            {
+                var name = GetName(fullName);
+                var goodFiles = dirInfo.GetFiles("*",SearchOption.AllDirectories).Where(x => GetName(x.FullName) == name);
+
+                if(goodFiles.Any(x => x.Name.Contains(".mp4")))
+                {
+                    return null;
+                }
+
+                if(!goodFiles.Any())
+                    return null;
+
+                var found = goodFiles.OrderByDescending(x => x.Length).First();
+
+                return found.FullName;
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    var rutracker = new RuTrackerUpdater(_config);
+                    await rutracker.Init();
+                    await rutracker.StartDownload(int.Parse(dirInfo.Name), folder);
+                    //await rutracker.StartDownload(int.Parse(dirInfo.Name), folder);
+                }
+                catch (Exception ex1)
+                {
+                }
+
+            }
+
+            return null;
+        }
+
+        private string GetName(string fullName)
+        {
+            var fInfo = new FileInfo(fullName);
+
+            var text = fInfo.Name;
+            var qualityStart = text.LastIndexOf(".");
+            if (qualityStart != -1)
+                text = text.Substring(0, qualityStart);
+
+            return text;
         }
 
         [HttpGet]
@@ -180,11 +369,13 @@ namespace FileStore.API.Controllers
         [HttpDelete]
         [Route("removeFile")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> RemoveFile(int fileId)
+        public async Task<IActionResult> RemoveFile(int fileId, bool deleteFile)
         {
             var file = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).First(x => x.Id == fileId);
 
-            await PhisicallyRemoveFile(file);
+            if(deleteFile)
+                await PhisicallyRemoveFile(file);
+            
             Remove(file);
 
             _db.SaveChanges();
@@ -347,6 +538,52 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("reDownloadByRutracker")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> ReDownloadByRutracker()
+        {
+            _ReDownloadByRutracker(VideoType.Animation);
+            _ReDownloadByRutracker(VideoType.FairyTale);
+            return Ok();
+        }
+
+        private void _ReDownloadByRutracker(VideoType animation)
+        {
+            var files = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).
+                Where(x => x.VideoFileExtendedInfo.RutrackerId != 0 && x.Type == animation).ToList();
+
+            var rutracker = new RuTrackerUpdater(_config);
+            var dbUpdater = new DbUpdateManager(_db);
+            foreach (var file in files)
+            {
+                var directory = new DirectoryInfo(file.Path);
+                var path = directory.Parent.FullName;
+                //rutracker.StartDownload(file.VideoFileExtendedInfo.RutrackerId, path);
+
+                //var dirInfo= new DirectoryInfo(path);
+                //var dirFiles = dirInfo.GetFiles();
+
+                ////foreach (var fileDBRecord in dir)
+                //{
+                //    var same = dirFiles;
+                //    //var same = dirFiles.Where(x => x.Name == file.Name);
+                //    if (same.Any())
+                //    {
+                //        var found = same.OrderByDescending(x => x.Length).First();
+                //        var newPath = DbUpdateManager.EncodeToMp4(found.FullName);
+
+                //        if (file.Path != newPath)
+                //        {
+
+                //        }
+                //    }
+                //}
+            }
+
+            throw new NotImplementedException();
+        }
+
+        [HttpGet]
         [Route("updateByExistingRutracker")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateByExistingRutracker(bool updateCover)
@@ -487,7 +724,7 @@ namespace FileStore.API.Controllers
         [HttpGet]
         [Route("convertOnline")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> ConvertNewOnline(int minId = 19812)
+        public async Task<IActionResult> ConvertNewOnline(int minId = 48354)
         {
             var dbUpdater = new DbUpdateManager(_db);
 
@@ -629,6 +866,10 @@ namespace FileStore.API.Controllers
         {
             var dbUpdater = new DbUpdateManager(_db);
 
+            RemoveFile(46305, false);
+            RemoveFile(48310, 48510, false);
+
+            dbUpdater.FillSeries(@"F:\Видео\Фильмы\Загрузки\6293131\София Прекрасная (2012-2018)", Origin.Foreign, VideoType.ChildEpisode, false, "София Прекрасная");
             //// Update online files.
             //var ready = new List<VideoFile>();
             //IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
