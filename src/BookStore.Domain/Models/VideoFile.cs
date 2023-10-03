@@ -119,6 +119,7 @@ namespace FileStore.Domain.Models
         public bool IsBackedup{ get; set; }
 
         public IList<FileUserInfo> VideoFileUserInfos { get; set; } = new List<FileUserInfo>();
+        public IList<FileMark> Marks { get; set; } = new List<FileMark>();
         public FileExtendedInfo VideoFileExtendedInfo { get; set; } = new FileExtendedInfo();
 
         [NotMapped]

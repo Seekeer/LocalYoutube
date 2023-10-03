@@ -14,6 +14,7 @@ import * as moment from 'moment';
 import { Moment } from 'moment';
 import { ToastrService } from 'ngx-toastr';
 import { Book } from 'src/app/_models/Book';
+import { Mark } from 'src/app/_models/Mark';
 import { FileService } from 'src/app/_services/file.service';
 import { SeriesService } from 'src/app/_services/series.service';
 
@@ -36,7 +37,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   private previousVideoTimePlayed: Moment = moment.unix(0);
   
   playedVideoCount: number = 0;
-  parameters: PlayerParameters;
+  public parameters: PlayerParameters;
   videoId: number;
 
   videosList: number[] = [];
@@ -47,6 +48,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
   timerMinutes: number;
   timerStr: string;
   totalDuration: moment.Moment;
+  marks: Mark[] = [];
+  subscribed: boolean;
+  lastVolumeChangedTime: Date = new Date(1);
+  vlcPlayURL: string;
 
   constructor(public service: FileService,
     private categoryService: SeriesService,
@@ -94,10 +99,69 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
   
   private getVideoElement(){
-    if (this.video)
-      return  (this.video.nativeElement as HTMLVideoElement);
+    if (this.video){
+      var videoEl = this.video.nativeElement as HTMLVideoElement;
+
+      return  videoEl;
+    }
   }
   
+  public paused() {
+    this.lastVolumeChangedTime = new Date();
+  }
+    public volumeChanged() {
+    var timeDiff = ((new Date().getTime()) - (this.lastVolumeChangedTime.getTime()));
+    if(timeDiff < 1000){
+        this.addMark();
+    }
+  }
+
+  public addMark() {
+    var element = this.getVideoElement();
+
+    var mark = new Mark();
+    mark.dbFileId = this.videoId;
+    mark.position = element.currentTime;
+    this.calculateDisplayTime(mark);
+    this.service.addMarkByFile(mark).subscribe();
+    this.marks.push(mark);
+  }
+
+  public calculateDisplayTime(mark: Mark){
+    let minutes = Math.floor((mark.position) / 60);
+    let seconds = Math.floor(mark.position - minutes *60);
+
+    let minutesStr = minutes.toString().padStart(2, "0");
+    let secondsStr = seconds.toString().padStart(2, "0");
+    
+    mark.displayTime = `${minutesStr}:${secondsStr}`;
+}
+
+  public markClicked(mark: Mark) {
+    var element = this.getVideoElement();
+    element.currentTime = mark.position - 5;
+  }
+
+
+  public deleteMark(mark: Mark) {
+    this.service.deleteMark(mark.id).subscribe();
+    this.marks = this.marks.filter(obj => {return obj.id !== mark.id});
+    
+  }
+  
+  public showDeleteModal() {
+    const dialog = <any>document.getElementById("favDialog");
+    dialog.showModal();
+  }
+
+  public deleteFilm(deleteFilm:boolean) {
+    const dialog = <any>document.getElementById("favDialog");
+    dialog.close();
+
+    if(deleteFilm)
+      this.service.deleteBook(this.videoId).subscribe();
+  }
+
   public videoEnded() {
     console.log('ended');
     if(this.setNextVideo(true))
@@ -174,6 +238,7 @@ private switchToFullscreen(){
     let currentId = this.videosList[++this.currentVideoIndex];
 
     this.videoURL = this.service.getVideoURLById(currentId);
+    this.vlcPlayURL = (`vlc://${this.videoURL}`);
     var el = this.getVideoElement();
     el?.load();
     
@@ -193,6 +258,10 @@ private switchToFullscreen(){
         console.log(`Cannot get video by series ${this.parameters.seriesId}`);
       });
 
+      this.service.getMarksByFile(this.videoId).subscribe(marks =>{
+        marks.forEach(x => this.calculateDisplayTime(x));
+        this.marks = marks;
+      });
 
     return true;
   }
@@ -223,5 +292,10 @@ private switchToFullscreen(){
     }
   }
   
+}
+
+
+function Override(target: PlayerComponent, propertyKey: 'boolean'): void {
+  throw new Error('Function not implemented.');
 }
 

@@ -30,15 +30,20 @@ namespace Infrastructure.Scheduler
     {
         private readonly IServiceProvider _service;
         private readonly YandexDisc _client;
+        private readonly AppConfig _config;
 
         public BackuperJob(IServiceProvider service, AppConfig appConfig) 
         {
             _service = service;
             _client = new YandexDisc(appConfig.YandexToken);
+            _config = appConfig;
         }
 
         public async Task Execute(IJobExecutionContext context)
         {
+#if DEBUG
+            return;
+#endif
             var stack = new ConcurrentBag<UploadFile>();
 
             using (var fileRepo = GetFileRepo())
@@ -47,11 +52,24 @@ namespace Infrastructure.Scheduler
                 nonBackupedFiles.ToList().ForEach(x => stack.Add(new UploadFile { Id = x.Id, Path = x.Path }));
             }
 
-            Parallel.For(0, 10, new ParallelOptions(), async i =>
+            Parallel.For(0, _config.YD_Upload_Threads_Count, new ParallelOptions(), async i =>
             {
-                if (!stack.TryTake(out var file))
-                    return;
+                do
+                {
+                    if ( !stack.TryTake(out var file))
+                        return;
+                    await UploadAndSaveStatus(file);
 
+                } while (true);
+            }
+            );
+
+        }
+
+        private async Task UploadAndSaveStatus(UploadFile file)
+        {
+            try
+            {
                 if (await _client.UploadFile(file.Path))
                 {
                     var factory = new VideoCatalogContextFactory();
@@ -59,18 +77,19 @@ namespace Infrastructure.Scheduler
                     {
                         var dbFile = db.Files.FirstOrDefault(x => x.Id == file.Id);
                         dbFile.IsBackedup = true;
-                        await db.SaveChangesAsync(); 
+                        await db.SaveChangesAsync();
                     }
                     //using (var fileRepo = GetFileRepo())
                     //{
-                        //var dbFile = await fileRepo.GetById(file.Id);
-                        //dbFile.IsBackedup = true;
-                        //await fileRepo.Update(dbFile);
+                    //var dbFile = await fileRepo.GetById(file.Id);
+                    //dbFile.IsBackedup = true;
+                    //await fileRepo.Update(dbFile);
                     //}
                 }
             }
-            );
-
+            catch (Exception)
+            {
+            }
         }
 
         private IVideoFileRepository GetFileRepo()
@@ -87,7 +106,6 @@ namespace Infrastructure.Scheduler
 
         public async Task<bool> UploadFile(string filepath)
         {
-            return true;
             if (!File.Exists(filepath))
                 return false;
 
@@ -103,8 +121,8 @@ namespace Infrastructure.Scheduler
 
         public async Task<bool> UploadToDirectory(string filepath, string folderName)
         {
-
             var api = new DiskHttpApi(_token);
+
             string path = GetDiskFilepath(filepath, folderName);
 
             try

@@ -386,13 +386,15 @@ counter : number =0 ;
       return;
     }
 
+    let showDelete = this.type != 'soviet' && this.type != 'sovietfairytale'&& this.type != 'series';
     const queryParams: PlayerParameters = {
       seriesId : book.seriesId,
       position : book.currentPosition,
       videoId : book.id,
       videosCount : this.episodeCount,
       isRandom : this.isRandom,
-      seasonId : 0
+      seasonId : 0,
+      showDeleteButton: showDelete
     };
     
     if(this.videoType == VideoType.Art)
@@ -413,6 +415,7 @@ export class PlayerParameters {
   videosCount: number;
   position: number;
   isRandom: boolean;
+  showDeleteButton: boolean;
 }
 
 

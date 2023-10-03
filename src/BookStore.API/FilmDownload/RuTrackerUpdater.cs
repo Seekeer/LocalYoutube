@@ -476,7 +476,10 @@ namespace API.Controllers
             var torrent = torrents.FirstOrDefault(x => x.Tags.Contains(id));
 
             if (torrent != null)
+            {
+                await _qclient.PauseAsync(torrent.Hash);
                 await _qclient.DeleteAsync(torrent.Hash, true);
+            }
         }
     }
 }

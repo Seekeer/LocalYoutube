@@ -32,7 +32,7 @@ namespace FileStore.API.Controllers
     public abstract class FilesControllerBase<T,V, DTO> : MainController
         where T : DbFile
     {
-        private readonly UserManager<ApplicationUser> _userManager;
+        protected readonly UserManager<ApplicationUser> _userManager;
         protected readonly IMapper _mapper;
         protected readonly IFileService<T, V> _fileService;
 
@@ -41,13 +41,6 @@ namespace FileStore.API.Controllers
             _userManager = userManager;
             _mapper = mapper;
             _fileService = FileService;
-        }
-
-        protected async Task<string>  GetUserId()
-        {
-            var name = HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Name);
-            var user =  await _userManager.FindByNameAsync(name.Value);
-            return user.Id;
         }
 
         [HttpGet]
@@ -84,7 +77,7 @@ namespace FileStore.API.Controllers
 
             if (Files == null || Files.Count == 0) return NotFound("None File was founded");
 
-            var resultDTO = _mapper.GetFiles<T, DTO>(Files, await GetUserId());
+            var resultDTO = _mapper.GetFiles<T, DTO>(Files, await GetUserId(_userManager));
             return Ok(resultDTO);
         }
 
@@ -99,7 +92,7 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound("None File was founded");
 
-            return Ok(_mapper.GetFiles<T,DTO>(Files, await GetUserId()));
+            return Ok(_mapper.GetFiles<T,DTO>(Files, await GetUserId(_userManager)));
         }
 
         [HttpGet]
@@ -113,14 +106,14 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound("None File was founded");
 
-            return Ok(_mapper.GetFiles<T, DTO>(Files, await GetUserId()));
+            return Ok(_mapper.GetFiles<T, DTO>(Files, await GetUserId(_userManager)));
         }
 
         [HttpPut]
         [Route("updatePosition/{id}")]
         public async Task<IActionResult> SetPosition(int id, [FromBody] double value)
         {
-            string userId = await GetUserId();
+            string userId = await GetUserId(_userManager);
             await _fileService.SetPosition(id, value, userId);
 
             return Ok();

@@ -35,6 +35,8 @@ namespace FileStore.Infrastructure.Context
         public DbSet<DbFile> Files{ get; set; }
         public DbSet<FileExtendedInfo> FilesInfo { get; set; }
         public DbSet<FileUserInfo> FilesUserInfo { get; set; }
+        public DbSet<FileMark> FileMarks { get; set; }
+        
         public DbSet<Series> Series { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

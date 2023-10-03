@@ -1,15 +1,53 @@
+<dialog id="favDialog">
+  <div>
+    Вы уверены, что хотите удалить фильм?
+  </div>
+    <div class="mt-2" style="text-align: center;">
+      <button class="btn btn-outline-warning" (click)="deleteFilm(false)">Нет</button>
+      <button class="btn btn-outline-danger ml-5 "  (click)="deleteFilm(true)">Да</button>
+    </div>
+</dialog>
+
 <div>
   <img *ngIf="!videoURL " alt="Finish!" src="./assets/img/finish.jpg" >
   <div *ngIf="videoURL">
       
-    <video  controls height="auto" autoplay  #videoElement (ended)="videoEnded()">
+    <video  controls height="auto" autoplay  #videoElement (ended)="videoEnded()" (play)="volumeChanged()" (pause)="paused()">
       <source src="{{videoURL}}" type="video/mp4"/>
     </video>
 
     <div class="ml-2">
-      <button (click)="skipVideo()">Следующее</button>
+      <!-- <button mat-icon-button color="primary"   data-toggle="tooltip" data-placement="top" title="Следующее видео" >
+        <mat-icon  (click)="skipVideo()">navigate_next</mat-icon>
+      </button> -->
+
+      <button class="btn btn-outline-danger btn-sm " (click)="skipVideo()">Следующее видео</button>
+
+      <a  [href]="vlcPlayURL | safe" >
+        <button class="btn btn-outline-warning btn-sm ml-2" >Открыть фильм в VLC</button>
+      </a>
+
       <!-- <button (click)="download()">Скачать</button> -->
-      <button (click)="copyLink()">Скопировать ссылку</button>
+      <button mat-icon-button color="primary"   data-toggle="tooltip" data-placement="top" title="Скопировать ссылку" >
+        <mat-icon  (click)="copyLink()">file_copy</mat-icon>
+      </button>
+      
+      <button mat-icon-button color="primary" data-toggle="tooltip" data-placement="top" title="Добавить метку" (click)="addMark()" >
+        <mat-icon>bookmark</mat-icon>
+      </button>
+      
+      <button mat-icon-button color="warn" *ngIf="parameters.showDeleteButton"        (click)="showDeleteModal()">
+        <mat-icon>delete</mat-icon>
+      </button>
+      
+      <a  href="#" >
+        <button mat-icon-button >
+          <mat-icon>home</mat-icon>
+        </button>
+      </a>
+      
+      <!-- <button type="button" class="btn btn-danger"         data-target="#deleteModal" data-toggle="modal">Delete Item</button> -->
+
 
       <h2>{{name}}</h2>
       <div>{{statStr}}</div>
@@ -27,6 +65,14 @@
         </button>
 
         <div *ngIf="timeLeft">Осталось до остановки: {{ timeLeft * 1000 | date:'mm:ss' }} </div>
+
+        <div *ngFor="let mark of marks">
+          <a (click)="markClicked(mark)" class="link-primary">Метка в {{mark.displayTime }}</a>
+          
+        <button mat-icon-button color="primary"   >
+          <mat-icon  (click)="deleteMark(mark)">delete</mat-icon>
+        </button>
+        </div>
     </div>
   </div>
 </div>

@@ -47,7 +47,7 @@ namespace FileStore.API.Controllers
         {
             var Files = await _fileService.GetAll();
 
-            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId()));
+            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId(_userManager)));
         }
 
         [HttpGet("{id:int}")]
@@ -59,7 +59,7 @@ namespace FileStore.API.Controllers
 
             if (File == null) return NotFound();
 
-            return Ok(_mapper.GetFile<VideoFile, VideoFileResultDto>(File,await GetUserId()));
+            return Ok(_mapper.GetFile<VideoFile, VideoFileResultDto>(File,await GetUserId(_userManager)));
         }
 
         [HttpGet]
@@ -73,7 +73,7 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound();
 
-            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId()));
+            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId(_userManager)));
         }
 
         [HttpGet]
@@ -87,7 +87,7 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound();
 
-            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId()));
+            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId(_userManager)));
         }
 
         [HttpDelete("{id:int}")]
@@ -96,6 +96,7 @@ namespace FileStore.API.Controllers
         public async Task<IActionResult> Remove(int id)
         {
             var file = await _fileService.GetById(id);
+
             if (file == null) return NotFound();
 
             await _ruTrackerUpdater.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
@@ -124,7 +125,7 @@ namespace FileStore.API.Controllers
             if (!result.Any())
                 return NotFound("None file was founded");
 
-            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(result,await GetUserId()));
+            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(result,await GetUserId(_userManager)));
         }
 
         [HttpGet]
@@ -139,7 +140,7 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound("None file was founded");
 
-            var filesDTO = _mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId()).OrderByDescending(x => x.Year);
+            var filesDTO = _mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId(_userManager)).OrderByDescending(x => x.Year);
             return Ok(filesDTO);
         }
 
@@ -165,7 +166,7 @@ namespace FileStore.API.Controllers
             }
             ).ToList();
 
-            var filesDTO = _mapper.GetFiles<VideoFile, VideoFileResultDto>(unique,await GetUserId()).OrderByDescending(x => x.Year);
+            var filesDTO = _mapper.GetFiles<VideoFile, VideoFileResultDto>(unique,await GetUserId(_userManager)).OrderByDescending(x => x.Year);
             foreach (var file in filesDTO)
                 file.IsFinished = false;
 

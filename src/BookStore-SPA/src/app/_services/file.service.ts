@@ -8,6 +8,7 @@ import {
   Book,
   VideoType,
 } from '../_models/Book';
+import { Mark } from '../_models/Mark';
 
 @Injectable({
     providedIn: 'root'
@@ -16,10 +17,21 @@ export class FileService {
     private baseUrl: string = environment.baseUrl + 'api/';
 
     constructor(private http: HttpClient) { }
+    
+    public getMarksByFile(fileId:number) {
+        return this.http.get<Mark[]>(`${this.baseUrl}marks/getAllMarks?fileId=${fileId}`);
+    }
+    public deleteMark(fileId: number) {
+        return this.http.delete(this.baseUrl + 'marks/' + fileId);
+    }
+    public addMarkByFile(mark: Mark) {
+        return this.http.post(this.baseUrl + 'marks/add', mark);
+    }
 
     public getFilmsByType(type: VideoType) {
         return this.http.get<Book[]>(`${this.baseUrl}files/getFileByType/${type}`);
     }
+
     public getFilmsByTypeUniqueSeason(type: VideoType) {
         return this.http.get<Book[]>(`${this.baseUrl}files/getFileByTypeUniqueSeason/${type}`);
     }

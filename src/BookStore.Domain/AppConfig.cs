@@ -7,6 +7,7 @@ namespace FileStore.Domain
     {
         public TelegramSettings TelegramSettings { get; set; }
 
+        public int YD_Upload_Threads_Count { get; set; }
         public string RP_Pass { get; set; }
         public string RP_Login { get; set; }
         public string RootFolder { get; set; }

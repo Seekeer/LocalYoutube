@@ -61,6 +61,119 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("updateByRutrackersId")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateByRutrackerId()
+        {
+            var manager = new DbUpdateManager(_db);
+            //await DeleteByRutrackerId(manager, "5754671");
+            //await DeleteByRutrackerId(manager, "3903715");
+            //await DeleteByRutrackerId(manager, "1460651");
+            //await DeleteByRutrackerId(manager, "5565233");
+            //await DeleteByRutrackerId(manager, "899612");
+            //await DeleteByRutrackerId(manager, "1011059");
+            //await DeleteByRutrackerId(manager, "5754671");
+            //await DeleteByRutrackerId(manager, "3903715");
+            //await DeleteByRutrackerId(manager, "5754671");
+            //await DeleteByRutrackerId(manager, "3903715");
+            //await DeleteByRutrackerId(manager, "6352695");
+            //await DeleteByRutrackerId(manager, "4521111");
+            //await DeleteByRutrackerId(manager, "2773613");
+            //await DeleteByRutrackerId(manager, "6342215");
+            //await DeleteByRutrackerId(manager, "6194960");
+            //await DeleteByRutrackerId(manager, "4839320");
+            //await DeleteByRutrackerId(manager, "6091735");
+            //await DeleteByRutrackerId(manager, "6194960");
+            //await DeleteByRutrackerId(manager, "6091735");
+            //await DeleteByRutrackerId(manager, "3138942");
+            //await DeleteByRutrackerId(manager, "3229867");
+            //await DeleteByRutrackerId(manager, "4318473");
+            //await DeleteByRutrackerId(manager, "5740721");
+            //await DeleteByRutrackerId(manager, "2734135");
+
+            //await RedownloadByRutrackerId(4854194);
+            //await RedownloadByRutrackerId(3749082);
+            //await RedownloadByRutrackerId(4854194);
+            //await RedownloadByRutrackerId(4874327);
+            //await RedownloadByRutrackerId(4290104);
+            //await RedownloadByRutrackerId(3328876);
+            //await RedownloadByRutrackerId(5138578);
+            //await RedownloadByRutrackerId(798343);
+            //await RedownloadByRutrackerId(5771745);
+            //await RedownloadByRutrackerId(2081581);
+
+            //await RedownloadByRutrackerId(3729674);
+            //await RedownloadByRutrackerId(3283453);
+
+            await RedownloadByRutrackerId(5400445);
+            await RedownloadByRutrackerId(5103043);
+            await RedownloadByRutrackerId(3434813);
+
+            return Ok();
+        }
+
+        private async Task RedownloadByRutrackerId(int id)
+        {
+            var files = _db.Files.Where(x => x.Path.Contains(id.ToString()));
+
+            foreach (var file in files)
+            {
+                var directory = new DirectoryInfo(file.Path);
+
+                await AddTorrent(id, directory.Parent.FullName);
+            }
+        }
+
+        private async Task DeleteByRutrackerId(DbUpdateManager manager, string v)
+        {
+            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos)
+                .Where(x => x.Path.Contains(v)).ToList();
+
+            if(files.Count() > 1)
+            {
+
+            }
+
+            foreach (var file in files)
+            {
+                try
+                {
+                    file.VideoFileUserInfos.ToList().ForEach(x => _db.FilesUserInfo.Remove(x));
+                    _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
+                    _db.Files.Remove(file);
+                    _db.SaveChanges();
+
+                    var _rutracker = new RuTrackerUpdater(_config);
+                    await _rutracker.Init();
+                    await _rutracker.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
+                }
+                catch (Exception ex)
+                {
+                }
+            }
+        }
+
+        [HttpGet]
+        [Route("clearNonMP4")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> ClearNonMp4()
+        {
+            var directory = new DirectoryInfo(@"F:\Анюта\Советские мультфильмы");
+            var files = directory.GetFiles("*.*", SearchOption.AllDirectories);
+
+            var toDelete = files.Where(x => !x.Extension.EndsWith("mp4")).ToList();
+            var good = files.Where(x => x.Extension.EndsWith("mp4")).ToList();
+
+            if (good.Count != toDelete.Count)
+                return Ok();
+
+            foreach (var file in toDelete)
+                System.IO.File.Delete(file.FullName);
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("checkDB")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> CheckDatabase()
@@ -70,8 +183,10 @@ namespace FileStore.API.Controllers
             var files = _db.VideoFiles.ToList();
 
             var finfo = files.Where(f =>
-                //f.Type == VideoType.Animation && f.Origin != Origin.Soviet
+                //f.Type == VideoType.Animation
                 //&& 
+                f.Origin != Origin.Russian
+                &&
                 !System.IO.File.Exists(f.Path)
                 )
                 .Select(x => new FileInfo(x.Path))
@@ -80,8 +195,7 @@ namespace FileStore.API.Controllers
 
             var badPaths = new List<string>();
 
-            var folders = finfo.GroupBy(x => x.DirectoryName);
-
+            //var folders = finfo.GroupBy(x => x.DirectoryName);TryToFindFile
             foreach (var file in finfo)
             {
 
@@ -89,52 +203,23 @@ namespace FileStore.API.Controllers
 
                 if (!string.IsNullOrEmpty(path))
                 {
-                    //var converted = DbUpdateManager.EncodeToMp4(path);
-                    //System.IO.File.Delete(path);
+                    var converted = DbUpdateManager.EncodeToMp4(path);
 
-                    //if(file.FullName != converted)
-                    //{
-                    //    System.IO.File.Move(converted, file.FullName);
-                    //}
+                    if (file.FullName != converted)
+                    {
+                        System.IO.File.Move(converted, file.FullName);
+                    }
+                    else
+                        System.IO.File.Delete(path);
+                }
+                else
+                {
+                    badPaths.Add(file.FullName);
                 }
             }
 
-            //foreach (var dir in finfo.GroupBy(x => x.DirectoryName))
-            //{
-            //    var dirInfo = dir.First().Directory;
-            //    try
-            //    {
-            //        var dirFiles = dirInfo.GetFiles();
-
-            //        foreach (var fileDBRecord in dir)
-            //        {
-            //            var same = dirFiles.Where(x => x.Name == fileDBRecord.Name);
-            //            if (same.Any())
-            //            {
-            //                var found = same.OrderByDescending(x => x.Length).First();
-            //                var newPath = DbUpdateManager.EncodeToMp4(found.FullName);
-
-            //                if(fileDBRecord.FullName != newPath)
-            //                {
-
-            //                }
-            //            }
-            //            else
-            //            {
-            //                badPaths.Add(fileDBRecord.FullName);
-            //            }
-            //        }
-            //    }
-            //    catch (System.Exception)
-            //    {
-            //        badPaths.Add(dir.Key);
-            //    }
-            //}
-
-            //_db.SaveChanges();
-
-            this.RemoveFile(3632798, 3632798, true);
-            this.RemoveFile(6352695, 6352695, true);
+            //this.RemoveFile(3632798, 3632798, true);
+            //this.RemoveFile(6352695, 6352695, true);
 
             //for (int i = 2041; i < 2086; i++)
             //{
@@ -144,9 +229,6 @@ namespace FileStore.API.Controllers
 
             //this.RemoveSeries(dbUpdater, 2086);
             //this.RemoveSeries(dbUpdater, 32);
-            //this.RemoveSeries(dbUpdater, 2039);
-            //this.RemoveSeries(dbUpdater, 2087);
-            //this.RemoveSeries(dbUpdater, 2089);
             //this.RemoveSeries(dbUpdater, 22);
             //this.RemoveSeries(dbUpdater, 25);
 
@@ -161,14 +243,6 @@ namespace FileStore.API.Controllers
             //this.RemoveSeason(7446, false);
             //this.RemoveSeason(7441, false);
             //this.RemoveSeason(7386, false);
-            //this.RemoveSeason(7385, false);
-            //this.RemoveSeason(4367, false);
-            //this.RemoveSeason(4354, false);
-            //this.RemoveSeason(4353, false);
-            //this.RemoveSeason(1332, false);
-            //this.RemoveSeason(1330, false);
-            //this.RemoveSeason(327, false);
-            //this.RemoveSeason(322, false);
 
             return Ok();
         }
@@ -177,21 +251,12 @@ namespace FileStore.API.Controllers
         {
             var dirInfo = new DirectoryInfo(folder);
 
-            if (!dirInfo.Exists)
-            {
-                return null;
-                try
-                {
-                    var rutracker = new RuTrackerUpdater(_config);
-                    await rutracker.Init();
-                    await rutracker.StartDownload(int.Parse(dirInfo.Name), folder);
-                }
-                catch (Exception)
-                {
-                }
+            //if (!dirInfo.Exists)
+            //{
+            //    await AddTorrent(folder, dirInfo);
 
-                return null;
-            }
+            //    return null;
+            //}
 
             try
             {
@@ -212,20 +277,27 @@ namespace FileStore.API.Controllers
             }
             catch (Exception ex)
             {
-                try
-                {
-                    var rutracker = new RuTrackerUpdater(_config);
-                    await rutracker.Init();
-                    await rutracker.StartDownload(int.Parse(dirInfo.Name), folder);
-                    //await rutracker.StartDownload(int.Parse(dirInfo.Name), folder);
-                }
-                catch (Exception ex1)
-                {
-                }
-
+                //await AddTorrent(folder, dirInfo);
             }
 
             return null;
+        }
+
+        private async Task AddTorrent(string folder, DirectoryInfo dirInfo)
+        {
+            await  AddTorrent(int.Parse(dirInfo.Name), folder);
+        }
+        private async Task AddTorrent(int id, string folder)
+        {
+            try
+            {
+                var rutracker = new RuTrackerUpdater(_config);
+                await rutracker.Init();
+                await rutracker.StartDownload(id, folder);
+            }
+            catch (Exception)
+            {
+            }
         }
 
         private string GetName(string fullName)

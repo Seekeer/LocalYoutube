@@ -39,6 +39,7 @@ namespace FileStore.API.Configuration
             CreateMap<VideoFile, FileEditDto>().ReverseMap();
             CreateMap<VideoFile, VideoFileResultDto>().ReverseMap();
             CreateMap<AudioFile, VideoFileResultDto>().ReverseMap();
+            CreateMap<FileMark, MarkAddDto>().ReverseMap();
         }
     }
 

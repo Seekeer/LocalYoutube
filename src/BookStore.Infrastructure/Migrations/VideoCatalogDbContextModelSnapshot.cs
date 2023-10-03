@@ -168,6 +168,30 @@ namespace Infrastructure.Migrations
                     b.ToTable("VideoFileExtendedInfos", (string)null);
                 });
 
+            modelBuilder.Entity("FileStore.Domain.Models.FileMark", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DbFileId")
+                        .HasColumnType("int");
+
+                    b.Property<double>("Position")
+                        .HasColumnType("float");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DbFileId");
+
+                    b.ToTable("FileMarks");
+                });
+
             modelBuilder.Entity("FileStore.Domain.Models.FileUserInfo", b =>
                 {
                     b.Property<int>("Id")
@@ -398,6 +422,14 @@ namespace Infrastructure.Migrations
                     b.Navigation("DbFile");
                 });
 
+            modelBuilder.Entity("FileStore.Domain.Models.FileMark", b =>
+                {
+                    b.HasOne("FileStore.Domain.Models.DbFile", null)
+                        .WithMany("Marks")
+                        .HasForeignKey("DbFileId")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FileStore.Domain.Models.FileUserInfo", b =>
                 {
                     b.HasOne("FileStore.Domain.Models.ApplicationUser", "User")
@@ -474,6 +506,8 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("FileStore.Domain.Models.DbFile", b =>
                 {
+                    b.Navigation("Marks");
+
                     b.Navigation("VideoFileExtendedInfo");
 
                     b.Navigation("VideoFileUserInfos");

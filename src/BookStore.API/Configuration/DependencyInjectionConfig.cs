@@ -27,6 +27,7 @@ namespace FileStore.API.Configuration
             services.AddScoped<IVideoFileRepository, VideoFileRepository>();
             services.AddScoped<IAudioFileRepository, AudioFileRepository>();
             services.AddScoped<ISeriesRepository, SeriesRepository>();
+            services.AddScoped<IMarksRepository, MarksRepository>();
 
             services.AddScoped<ISeriesService, SeriesService>();
             services.AddScoped<IAudioFileService, AudioFileService>();
@@ -40,14 +41,14 @@ namespace FileStore.API.Configuration
             services.AddHostedService<StartupService>();
             services.AddQuartz(q =>
             {
-                //q.ScheduleJob<BackuperJob>(trigger => trigger
-                //    .WithIdentity("trigger1", "group1")
-                //    .StartNow()
-                //    //.StartAt(DateBuilder.EvenSecondDate(DateTimeOffset.UtcNow.AddSeconds(7)))
-                //    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(10)).RepeatForever())
-                //    //.WithDailyTimeIntervalSchedule(x => x.WithIntervalInMinutes(10))
-                //    .WithDescription("my awesome trigger configured for a job with single call")
-                //); ;
+                q.ScheduleJob<BackuperJob>(trigger => trigger
+                    .WithIdentity("trigger1", "group1")
+                    .StartNow()
+                    //.StartAt(DateBuilder.EvenSecondDate(DateTimeOffset.UtcNow.AddSeconds(7)))
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(5)).RepeatForever())
+                    //.WithDailyTimeIntervalSchedule(x => x.WithIntervalInMinutes(10))
+                    .WithDescription("my awesome trigger configured for a job with single call")
+                ); ;
             });
 
             // Quartz.Extensions.Hosting allows you to fire background service that handles scheduler lifecycle

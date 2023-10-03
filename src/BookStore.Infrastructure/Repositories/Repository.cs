@@ -50,6 +50,12 @@ namespace FileStore.Infrastructure.Repositories
             await SaveChanges();
         }
 
+        public virtual async Task Remove(int entityId)
+        {
+            var entity= await GetById(entityId);
+            await Remove(entity);
+        }
+
         public async Task<IEnumerable<TEntity>> SearchRandom(Expression<Func<TEntity, bool>> predicate, int resultCount = 10)
         {
             return await Random(DbSet.AsNoTracking().Where(predicate), resultCount).ToListAsync();

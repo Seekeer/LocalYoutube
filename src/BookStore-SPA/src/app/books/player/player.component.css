@@ -7,3 +7,9 @@ video{
     width: 100%;
     cursor: pointer;
 }
+
+a{
+    color: rgb(0, 123, 255) !important;
+    text-decoration-style: solid;
+    cursor:pointer ;
+}
