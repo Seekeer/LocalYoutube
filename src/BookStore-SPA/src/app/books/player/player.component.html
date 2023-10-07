@@ -8,13 +8,10 @@
     </div>
 </dialog>
 
-<div>
-  <img *ngIf="!videoURL " alt="Finish!" src="./assets/img/finish.jpg" >
-  <div *ngIf="videoURL">
-
     <div class="video-container">
 
-      <video  controls height="auto" autoplay class="player__video viewer" (dblclick)="doubleClickHandler"
+      <video  controls height="auto" autoplay class="player__video viewer"
+        (dblclick)="doubleClickHandler($event)" controlsList="nofullscreen"
         #videoElement (ended)="videoEnded()" (play)="volumeChanged()" (pause)="paused()">
         <source src="{{videoURL}}" type="video/mp4"/>
       </video>
@@ -92,8 +89,6 @@
         </button>
         </div>
     </div>
-  </div>
-</div>
 
 <!-- https://openbase.com/js/@vime/angular
 https://openbase.com/js/@videogular/ngx-videogular

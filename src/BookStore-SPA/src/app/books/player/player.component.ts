@@ -53,11 +53,11 @@ export class PlayerComponent implements OnInit, OnDestroy {
   lastVolumeChangedTime: Date = new Date(1);
   vlcPlayURL: string;
   notifications: NodeListOf<Element>;
-  timer: NodeJS.Timeout;
-  forwardSpeed: any;
-  rewindSpeed: number;
-  rewindNotificationValue: any =document.querySelector('.video-forward-notify span');
-  forwardNotificationValue: any= document.querySelector('.video-rewind-notify span');
+  timer: any;
+  forwardSpeed: number = 0;
+  rewindSpeed: number= 0;
+  rewindNotificationValue: any =document.querySelector('.video-rewind-notify span');
+  forwardNotificationValue: any= document.querySelector('.video-forward-notify span');
 
   constructor(public service: FileService,
     private categoryService: SeriesService,
@@ -103,21 +103,27 @@ export class PlayerComponent implements OnInit, OnDestroy {
       setTimeout(() => this.switchToFullscreen(), 2000);
       this.intervalId = setInterval(() => this.updateStat(), 1000);
 
-      this.notifications = document.querySelectorAll('.notification');
-      this.notifications.forEach(function(notification){
-          notification.addEventListener('animationend', this.animateNotificationOut());
-      });
   }
 
   private getVideoElement(){
-    if (this.video){
+    if (this.video ){
       var videoEl = this.video.nativeElement as HTMLVideoElement;
 
+      this.rewindNotificationValue=document.querySelector('.video-rewind-notify span');
+      this.forwardNotificationValue= document.querySelector('.video-forward-notify span');
+      this.notifications = document.querySelectorAll('.notification');
+
+      let that = this;
+      this.notifications.forEach(function(notification){
+          notification.addEventListener('animationend', e => that.animateNotificationOut(e));
+      });
+      // videoEl.addEventListener('dblclick', (e) => {
+      //   e.preventDefault(); });
       return  videoEl;
     }
   }
   public doubleClickHandler(e) {
-    console.log(e);
+    e.preventDefault();
     const videoWidth = this.getVideoElement().offsetWidth;
     (e.offsetX < videoWidth/2) ? this.rewindVideo() : this.forwardVideo();
   }
@@ -129,7 +135,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.updateCurrentTime(-10);
     this.animateNotificationIn(true);
   }
-  public animateNotificationOut(event: MouseEvent) {
+  private animateNotificationOut(event: Event) {
     this.notifications.forEach( x => x.classList.remove('animate-in'));
   }
 
