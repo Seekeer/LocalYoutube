@@ -6,10 +6,114 @@
 video{
     width: 100%;
     cursor: pointer;
+    display:block;
 }
 
 a{
     color: rgb(0, 123, 255) !important;
     text-decoration-style: solid;
     cursor:pointer ;
+}
+
+
+.video-forward-notify{
+  text-align: center;
+  width:100%;
+  height:200%;
+  border-radius:100% 0 0 100%;
+  position: absolute;
+  display:flex;
+  flex-direction: row;
+  right: -50%;
+  top:-50%;
+}
+
+.video-forward-notify .icon{
+  justify-content:flex-start;
+  align-items:center;
+  margin: auto 0 auto 15%;
+  color: rgba(255,255,255, 1);
+}
+.video-rewind-notify{
+  text-align: center;
+  width:100%;
+  height:200%;
+  border-radius:0 100% 100% 0;
+  position: absolute;
+  display:flex;
+  flex-direction: row;
+  left: -50%;
+  top:-50%;
+}
+
+.video-rewind-notify .icon{
+  justify-content:flex-start;
+  align-items:center;
+  margin: auto 0 auto 60%;
+  color: rgba(255,255,255, 1);
+}
+.icon i{
+  display:block;
+}
+.notification{
+  transition: background 0.8s;
+  background: rgba(200,200,200,.4) radial-gradient(circle, transparent 1%, rgba(200,200,200,.4) 1%) center/15000%;
+  pointer-events:none;
+  display: none;
+}
+i{
+  font-style:normal;
+}
+.animate-in{
+  display:flex;
+  animation: ripple 1s forwards;
+}
+.animate-in i{
+  display:block;
+}
+.animate-in.forward i{
+  padding-bottom:2px;
+}
+.animate-in.forward i{
+  animation: fadeInLeft .7s;
+}
+.animate-in.rewind i{
+  animation: fadeInRight .7s;
+}
+@keyframes ripple{
+  0%   {
+    background-color: rgba(200,200,200,.4);
+    background-size: 100%;
+    transition: background 0s;
+    opacity:1;
+  }
+  100% {
+  transition: background 0.8s;
+  background: rgba(200,200,200,.4) radial-gradient(circle, transparent 1%, rgba(200,200,200,.4) 1%) center/15000%;
+  display: flex;
+    opacity:0;
+  }
+}
+@keyframes fadeInLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes fadeInRight {
+  0% {
+    opacity: 0;
+    transform: translateX(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-20px);
+  }
+}
+span{
+  font-size:12px;
 }

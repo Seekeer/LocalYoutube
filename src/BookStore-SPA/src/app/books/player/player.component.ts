@@ -26,8 +26,8 @@ import { PlayerParameters } from '../book-list/book-list.component';
   styleUrls: ['./player.component.css']
 })
 export class PlayerComponent implements OnInit, OnDestroy {
-  
-  @ViewChild('videoElement') video:ElementRef; 
+
+  @ViewChild('videoElement') video:ElementRef;
 
   public formData: Book;
   public categories: any;
@@ -35,7 +35,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   public statStr: string;
   public name: string;
   private previousVideoTimePlayed: Moment = moment.unix(0);
-  
+
   playedVideoCount: number = 0;
   public parameters: PlayerParameters;
   videoId: number;
@@ -52,6 +52,12 @@ export class PlayerComponent implements OnInit, OnDestroy {
   subscribed: boolean;
   lastVolumeChangedTime: Date = new Date(1);
   vlcPlayURL: string;
+  notifications: NodeListOf<Element>;
+  timer: NodeJS.Timeout;
+  forwardSpeed: any;
+  rewindSpeed: number;
+  rewindNotificationValue: any =document.querySelector('.video-forward-notify span');
+  forwardNotificationValue: any= document.querySelector('.video-rewind-notify span');
 
   constructor(public service: FileService,
     private categoryService: SeriesService,
@@ -76,7 +82,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
       if(this.parameters.seasonId == 0){
         this.service.getVideosBySeries(this.parameters.seriesId, this.parameters.videosCount, this.isRandom, this.videoId).subscribe((videos) => {
           const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
-  
+
           this.videosList = this.videosList.concat(selectedIds);
         },
           err => {
@@ -86,7 +92,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
       else{
         this.service.getVideosBySeason(this.parameters.seasonId, this.parameters.videosCount, this.isRandom,this.videoId).subscribe((videos) => {
           const selectedIds = videos.map(({ id }) => id).filter(x => x.toString() != this.videosList[0].toString());
-  
+
           this.videosList = this.videosList.concat(selectedIds);
         },
           err => {
@@ -96,8 +102,13 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
       setTimeout(() => this.switchToFullscreen(), 2000);
       this.intervalId = setInterval(() => this.updateStat(), 1000);
+
+      this.notifications = document.querySelectorAll('.notification');
+      this.notifications.forEach(function(notification){
+          notification.addEventListener('animationend', this.animateNotificationOut());
+      });
   }
-  
+
   private getVideoElement(){
     if (this.video){
       var videoEl = this.video.nativeElement as HTMLVideoElement;
@@ -105,7 +116,54 @@ export class PlayerComponent implements OnInit, OnDestroy {
       return  videoEl;
     }
   }
-  
+  public doubleClickHandler(e) {
+    console.log(e);
+    const videoWidth = this.getVideoElement().offsetWidth;
+    (e.offsetX < videoWidth/2) ? this.rewindVideo() : this.forwardVideo();
+  }
+  forwardVideo() {
+    this.updateCurrentTime(10);
+    this.animateNotificationIn(false);
+  }
+  rewindVideo() {
+    this.updateCurrentTime(-10);
+    this.animateNotificationIn(true);
+  }
+  public animateNotificationOut(event: MouseEvent) {
+    this.notifications.forEach( x => x.classList.remove('animate-in'));
+  }
+
+  private updateCurrentTime(delta){
+    let isRewinding = delta < 0;
+
+    if(isRewinding){
+      this.rewindSpeed = this.rewindSpeed + delta;
+      this.forwardSpeed = 0;
+    }else{
+      this.forwardSpeed = this.forwardSpeed + delta;
+      this.rewindSpeed = 0;
+    }
+
+    //clear the timeout
+    clearTimeout(this.timer);
+
+    let speed = (isRewinding ? this.rewindSpeed : this.forwardSpeed);
+    this.getVideoElement().currentTime = this.getVideoElement().currentTime + speed;
+
+    let NotificationValue =  isRewinding ? this.rewindNotificationValue : this.forwardNotificationValue ;
+    NotificationValue.innerHTML = `${Math.abs(speed)} seconds`;
+
+    //reset accumulator within 2 seconds of a double click
+    this.timer = setTimeout(function(){
+      this.rewindSpeed = 0;
+      this.forwardSpeed = 0;
+    }, 2000); // you can edit this delay value for the timeout, i have it set for 2 seconds
+}
+
+  public animateNotificationIn(isRewinding:boolean) {
+    isRewinding ? this.notifications[0].classList.add('animate-in') : this.notifications[1].classList.add('animate-in');
+  }
+
   public paused() {
     this.lastVolumeChangedTime = new Date();
   }
@@ -133,7 +191,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
     let minutesStr = minutes.toString().padStart(2, "0");
     let secondsStr = seconds.toString().padStart(2, "0");
-    
+
     mark.displayTime = `${minutesStr}:${secondsStr}`;
 }
 
@@ -146,9 +204,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
   public deleteMark(mark: Mark) {
     this.service.deleteMark(mark.id).subscribe();
     this.marks = this.marks.filter(obj => {return obj.id !== mark.id});
-    
+
   }
-  
+
   public showDeleteModal() {
     const dialog = <any>document.getElementById("favDialog");
     dialog.showModal();
@@ -173,12 +231,12 @@ export class PlayerComponent implements OnInit, OnDestroy {
     // this.name;
     // videoURL
   }
-  
+
   public copyLink() {
     this.copyToClipboard(this.videoURL);
     // navigator.clipboard.writeText(this.videoURL).then().catch(e => console.error(e));
   }
-  
+
   private copyToClipboard(text) {
     if(navigator.clipboard) {
       navigator.clipboard.writeText(text);
@@ -200,9 +258,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
       // this.getVideoElement().play();
       // this.updateStat();
   }
-    
+
    setTimer(){
-    if(this.interval) 
+    if(this.interval)
         clearInterval(this.interval);
 
     this.timeLeft = this.timerMinutes * 60;
@@ -222,7 +280,7 @@ private interval:number;
 private switchToFullscreen(){
     var el = this.getVideoElement();
 
-    if(el && el.requestFullscreen) 
+    if(el && el.requestFullscreen)
           el.requestFullscreen();
 }
 
@@ -241,7 +299,7 @@ private switchToFullscreen(){
     this.vlcPlayURL = (`vlc://${this.videoURL}`);
     var el = this.getVideoElement();
     el?.load();
-    
+
     if(encreaseCounter)
     {
       this.playedVideoCount++;
@@ -270,7 +328,7 @@ private switchToFullscreen(){
     var video = this.getVideoElement();
 
     this.setPosition();
-    
+
     this.totalDuration = moment(this.previousVideoTimePlayed);
     if(video)
     {
@@ -291,7 +349,7 @@ private switchToFullscreen(){
       this.position = -1;
     }
   }
-  
+
 }
 
 
