@@ -122,6 +122,15 @@ export class PlayerComponent implements OnInit, OnDestroy {
       return  videoEl;
     }
   }
+
+  public startPlay() {
+    let video = this.getVideoElement();
+    if(video.paused === false)
+      video.pause();
+    else
+      video.play()
+  }
+
   public doubleClickHandler(e) {
     e.preventDefault();
     const videoWidth = this.getVideoElement().offsetWidth;

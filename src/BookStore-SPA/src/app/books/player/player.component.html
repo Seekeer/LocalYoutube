@@ -11,7 +11,7 @@
     <div class="video-container">
 
       <video  controls height="auto" autoplay class="player__video viewer"
-        (dblclick)="doubleClickHandler($event)" controlsList="nofullscreen"
+        (dblclick)="doubleClickHandler($event)" controlsList="nofullscreen" (click)="startPlay()"
         #videoElement (ended)="videoEnded()" (play)="volumeChanged()" (pause)="paused()">
         <source src="{{videoURL}}" type="video/mp4"/>
       </video>
