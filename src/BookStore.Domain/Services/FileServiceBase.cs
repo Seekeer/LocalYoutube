@@ -115,6 +115,7 @@ namespace FileStore.Domain.Services
                 video.VideoFileUserInfos.Add(info);
             }
             info.Position = value;
+            info.UpdatedDate = System.DateTime.Now;
 
             await _FileRepository.Update(video);
         }
@@ -122,6 +123,11 @@ namespace FileStore.Domain.Services
         public async Task<IEnumerable<T>> SearchFileByType(V type)
         {
             return await _FileRepository.SearchFileByType(type);
+        }
+
+        public async Task<IEnumerable<T>> GetLatest(string userId)
+        {
+            return await _FileRepository.GetLatest(userId);
         }
     }
 }

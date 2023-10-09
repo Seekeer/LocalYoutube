@@ -36,7 +36,8 @@ namespace FileStore.API.Controllers
         protected readonly IMapper _mapper;
         protected readonly IFileService<T, V> _fileService;
 
-        public FilesControllerBase(UserManager<ApplicationUser> userManager, IMapper mapper, IFileService<T, V> FileService)
+        public FilesControllerBase(UserManager<ApplicationUser> userManager, IMapper mapper, 
+            IFileService<T, V> FileService)
         {
             _userManager = userManager;
             _mapper = mapper;
@@ -118,5 +119,17 @@ namespace FileStore.API.Controllers
 
             return Ok();
         }
+
+        [HttpPut]
+        [Route("getLatest")]
+        public async Task<IActionResult> GetLatest()
+        {
+            string userId = await GetUserId(_userManager);
+            await _fileService.GetLatest(userId);
+
+            return Ok();
+        }
+
+        
     }
 }

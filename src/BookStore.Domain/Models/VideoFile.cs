@@ -98,6 +98,8 @@ namespace FileStore.Domain.Models
 
         public double Position { get; set; }
         public double Rating { get; set; }
+
+        public DateTime UpdatedDate { get; set; } = DateTime.Now;
     }
 
     public abstract class DbFile : Entity

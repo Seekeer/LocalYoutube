@@ -17,7 +17,7 @@ export class FileService {
     private baseUrl: string = environment.baseUrl + 'api/';
 
     constructor(private http: HttpClient) { }
-    
+
     public getMarksByFile(fileId:number) {
         return this.http.get<Mark[]>(`${this.baseUrl}marks/getAllMarks?fileId=${fileId}`);
     }
@@ -31,6 +31,10 @@ export class FileService {
     public getFilmsByType(type: VideoType) {
         return this.http.get<Book[]>(`${this.baseUrl}files/getFileByType/${type}`);
     }
+
+    public getLatest() {
+      return this.http.get<Book[]>(`${this.baseUrl}files/getLatest}`);
+  }
 
     public getFilmsByTypeUniqueSeason(type: VideoType) {
         return this.http.get<Book[]>(`${this.baseUrl}files/getFileByTypeUniqueSeason/${type}`);

@@ -7,6 +7,7 @@ using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Schema;
 
 namespace FileStore.Infrastructure.Repositories
 {
@@ -137,6 +138,15 @@ namespace FileStore.Infrastructure.Repositories
 
             return result;
 
+        }
+        public async Task<IEnumerable<T>> GetLatest(string userId)
+        {
+            var filesInfo = Db.FilesUserInfo.Where(x => x.UserId == userId).OrderBy(x => x.UpdatedDate).Take(10);
+
+            var filesIds = filesInfo.Select(x => x.VideoFileId).ToList();
+            var files = GetFilesSet().Where(x => filesIds.Contains(x.Id));
+
+            return files;
         }
 
     }
