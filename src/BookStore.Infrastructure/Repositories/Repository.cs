@@ -22,10 +22,12 @@ namespace FileStore.Infrastructure.Repositories
             DbSet = db.Set<TEntity>();
         }
 
-        public virtual async Task Add(TEntity entity)
+        public virtual async Task<TEntity> Add(TEntity entity)
         {
             DbSet.Add(entity);
             await SaveChanges();
+
+            return entity;
         }
 
         public virtual async Task<List<TEntity>> GetAll()

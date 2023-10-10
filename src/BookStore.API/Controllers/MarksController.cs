@@ -54,9 +54,9 @@ namespace API.Controllers
 
             var mark = _mapper.Map<FileMark>(dto);
             mark.UserId = userId;
-            await _marksRepository.Add(mark);
+            var addedMark = await _marksRepository.Add(mark);
 
-            return Ok(true);
+            return Ok(addedMark.Id);
         }
 
         [HttpDelete("{id:int}")]

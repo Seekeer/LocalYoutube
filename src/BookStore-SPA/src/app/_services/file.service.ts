@@ -17,15 +17,15 @@ export class FileService {
     private baseUrl: string = environment.baseUrl + 'api/';
 
     constructor(private http: HttpClient) { }
-    
+
     public getMarksByFile(fileId:number) {
         return this.http.get<Mark[]>(`${this.baseUrl}marks/getAllMarks?fileId=${fileId}`);
     }
     public deleteMark(fileId: number) {
         return this.http.delete(this.baseUrl + 'marks/' + fileId);
     }
-    public addMarkByFile(mark: Mark) {
-        return this.http.post(this.baseUrl + 'marks/add', mark);
+    public addMarkByFile(mark: Mark): Observable<number> {
+        return this.http.post<number>(this.baseUrl + 'marks/add', mark);
     }
 
     public getFilmsByType(type: VideoType) {
