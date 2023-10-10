@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -56,6 +57,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   constructor(public service: FileService,
     private categoryService: SeriesService,
     private router: Router,
+    private location: Location,
     private route: ActivatedRoute,
     private toastr: ToastrService) { }
 
@@ -164,8 +166,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
     const dialog = <any>document.getElementById("favDialog");
     dialog.close();
 
-    if(deleteFilm)
+    if(deleteFilm){
+      this.location.back();
       this.service.deleteBook(this.videoId).subscribe();
+    }
   }
 
   public videoEnded() {

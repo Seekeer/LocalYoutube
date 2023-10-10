@@ -11,7 +11,7 @@
 <div>
   <img *ngIf="!videoURL " alt="Finish!" src="./assets/img/finish.jpg" >
   <div *ngIf="videoURL">
-      
+
     <video  controls height="auto" autoplay  #videoElement (ended)="videoEnded()" (play)="volumeChanged()" (pause)="paused()">
       <source src="{{videoURL}}" type="video/mp4"/>
     </video>
@@ -31,30 +31,30 @@
       <button mat-icon-button color="primary"   data-toggle="tooltip" data-placement="top" title="Скопировать ссылку" >
         <mat-icon  (click)="copyLink()">file_copy</mat-icon>
       </button>
-      
+
       <button mat-icon-button color="primary" data-toggle="tooltip" data-placement="top" title="Добавить метку" (click)="addMark()" >
         <mat-icon>bookmark</mat-icon>
       </button>
-      
+
       <button mat-icon-button color="warn" *ngIf="parameters.showDeleteButton"        (click)="showDeleteModal()">
         <mat-icon>delete</mat-icon>
       </button>
-      
+
       <a  href="#" >
         <button mat-icon-button >
           <mat-icon>home</mat-icon>
         </button>
       </a>
-      
+
       <!-- <button type="button" class="btn btn-danger"         data-target="#deleteModal" data-toggle="modal">Delete Item</button> -->
 
 
       <h2>{{name}}</h2>
       <div>{{statStr}}</div>
-      <div> 
+      <div>
 
     </div>
-        
+
         <mat-form-field class="example-full-width" appearance="fill">
           <mat-label>Выключить через (минут)</mat-label>
           <input matInput type="number"  [(ngModel)]="timerMinutes" (keyup.enter)="setTimer()">
@@ -68,7 +68,7 @@
 
         <div *ngFor="let mark of marks">
           <a (click)="markClicked(mark)" class="link-primary">Метка в {{mark.displayTime }}</a>
-          
+
         <button mat-icon-button color="primary"   >
           <mat-icon  (click)="deleteMark(mark)">delete</mat-icon>
         </button>
@@ -81,3 +81,5 @@
 https://openbase.com/js/@videogular/ngx-videogular
 https://openbase.com/js/videogular2
 https://pepe19000.github.io/Demo/menu/NgxVideoListPlayer -->
+<!-- https://codepen.io/2fdevs/pen/bGPqxv
+https://www.positronx.io/angular-video-player-using-ngx-videogular-with-customized-controls-example/ -->
