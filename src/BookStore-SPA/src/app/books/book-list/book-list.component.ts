@@ -274,8 +274,11 @@ displayListForType() {
         this.isSelectSeries = false;
         this.showWatched  = true;
 
-        this.service.getFilmsByType(VideoType.Film).subscribe({
-         next: (books) => that.showBooks(books),
+        this.service.getLatest().subscribe({
+         next: (books) => {
+            that.showBooks(books);
+            this.hideSpinner();
+         },
          error: (e) => this.getFilmsError(e)
         });
         break;

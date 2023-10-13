@@ -33,7 +33,7 @@ export class FileService {
     }
 
     public getLatest() {
-      return this.http.get<Book[]>(`${this.baseUrl}files/getLatest}`);
+      return this.http.get<Book[]>(`${this.baseUrl}files/getLatest`);
   }
 
     public getFilmsByTypeUniqueSeason(type: VideoType) {

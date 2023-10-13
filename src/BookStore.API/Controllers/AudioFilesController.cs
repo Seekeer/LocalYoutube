@@ -120,14 +120,14 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
-        [HttpPut]
+        [HttpGet]
         [Route("getLatest")]
-        public async Task<IActionResult> GetLatest()
+        public async Task<ActionResult<List<DTO>>> GetLatest()
         {
             string userId = await GetUserId(_userManager);
-            await _fileService.GetLatest(userId);
+            var files = _mapper.Map<List<T>>(await _fileService.GetLatest(userId));
 
-            return Ok();
+            return Ok(_mapper.GetFiles<T, DTO>(files, await GetUserId(_userManager)));
         }
 
         

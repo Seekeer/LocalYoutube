@@ -20,7 +20,7 @@ namespace FileStore.Infrastructure.Context
     }
 
     // cd .\src\BookStore.Infrastructure\
-    // dotnet ef migrations add InitialCreate11
+    // dotnet ef migrations add ShowLatest
     //  dotnet ef database update
     public class VideoCatalogDbContext : IdentityUserContext<ApplicationUser>
     {
@@ -60,6 +60,27 @@ namespace FileStore.Infrastructure.Context
             //SeedData(modelBuilder);
 
             base.OnModelCreating(modelBuilder);
+        }
+
+        public override int SaveChanges()
+        {
+            var entries = ChangeTracker
+                .Entries()
+                .Where(e => e.Entity is TrackUpdateCreateTimeEntity && (
+                        e.State == EntityState.Added
+                        || e.State == EntityState.Modified));
+
+            foreach (var entityEntry in entries)
+            {
+                ((TrackUpdateCreateTimeEntity)entityEntry.Entity).UpdatedDate = DateTime.Now;
+
+                if (entityEntry.State == EntityState.Added)
+                {
+                    ((TrackUpdateCreateTimeEntity)entityEntry.Entity).CreatedDate = DateTime.Now;
+                }
+            }
+
+            return base.SaveChanges();
         }
 
         //private void SeedData(ModelBuilder modelBuilder)

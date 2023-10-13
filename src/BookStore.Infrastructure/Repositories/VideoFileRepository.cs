@@ -141,10 +141,12 @@ namespace FileStore.Infrastructure.Repositories
         }
         public async Task<IEnumerable<T>> GetLatest(string userId)
         {
-            var filesInfo = Db.FilesUserInfo.Where(x => x.UserId == userId).OrderBy(x => x.UpdatedDate).Take(10);
+            var filesInfo = Db.FilesUserInfo.Where(x => x.UserId == userId).OrderByDescending(x => x.UpdatedDate).Take(10);
 
             var filesIds = filesInfo.Select(x => x.VideoFileId).ToList();
-            var files = GetFilesSet().Where(x => filesIds.Contains(x.Id));
+            var files = GetFilesSet().Where(x => filesIds.Contains(x.Id)).ToList();
+            
+            files = files.OrderByDescending(x => x.VideoFileUserInfos.FirstOrDefault(x => x.UserId == userId)?.UpdatedDate).ToList();
 
             return files;
         }

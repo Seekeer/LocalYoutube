@@ -928,6 +928,8 @@ namespace Infrastructure
         public void RemoveFileCompletely(DbFile file)
         {
             file.VideoFileUserInfos.ToList().ForEach(x => _db.FilesUserInfo.Remove(x));
+            var marks = _db.FileMarks.Where(x => x.DbFileId == file.Id);
+            _db.FileMarks.RemoveRange(marks);
             _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
             _db.Files.Remove(file);
         }

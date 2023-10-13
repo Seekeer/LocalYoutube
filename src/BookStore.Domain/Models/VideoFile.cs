@@ -88,7 +88,7 @@ namespace FileStore.Domain.Models
         public string Director { get; set; }
     }
 
-    public class FileUserInfo : Entity
+    public class FileUserInfo : TrackUpdateCreateTimeEntity
     {
         public DbFile DbFile { get; set; }
         public int VideoFileId { get; set; }
@@ -99,7 +99,6 @@ namespace FileStore.Domain.Models
         public double Position { get; set; }
         public double Rating { get; set; }
 
-        public DateTime UpdatedDate { get; set; } = DateTime.Now;
     }
 
     public abstract class DbFile : Entity
