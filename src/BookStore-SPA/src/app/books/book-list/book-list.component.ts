@@ -395,10 +395,10 @@ counter : number =0 ;
 
   openVideo(book: Book) {
 
-    if(!book.isSupportedWebPlayer){
-      window.open(`vlc://${this.service.getVideoURLById(book.id)}`, "_blank");
-      return;
-    }
+    // if(!book.isSupportedWebPlayer){
+    //   window.open(`vlc://${this.service.getVideoURLById(book.id)}`, "_blank");
+    //   return;
+    // }
 
     let showDelete = this.type != 'soviet' && this.type != 'sovietfairytale'&& this.type != 'series';
     const queryParams: PlayerParameters = {

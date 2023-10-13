@@ -11,6 +11,7 @@ using FileStore.API.Configuration;
 using FileStore.API.Dtos.File;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
+using Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -39,7 +40,7 @@ namespace FileStore.API.Controllers
         protected readonly IMapper _mapper;
         protected readonly IFileService<T, V> _fileService;
 
-        public FilesControllerBase(UserManager<ApplicationUser> userManager, IMapper mapper, 
+        public FilesControllerBase(UserManager<ApplicationUser> userManager, IMapper mapper,
             IFileService<T, V> FileService)
         {
             _userManager = userManager;
@@ -70,9 +71,11 @@ namespace FileStore.API.Controllers
         //        throw;
         //    }
         //}
+
         [HttpGet]
         [AllowAnonymous]
         [Route("getFileById")]
+        [Route("getTranscodedFileById")]
         public async Task<FileResult> GetTransVideoById(int fileId)
         {
             var logger = NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger();
@@ -80,29 +83,28 @@ namespace FileStore.API.Controllers
             try
             {
                 var file = await _fileService.GetById(fileId);
+                var newFilePath = DbUpdateManager.EncodeToMp4Realtime(file.Path);
 
-                var path = file.Path;
+                //var path = file.Path;
 
-                var resultPath = "1.mp4";
+                //var inputFilePath = file.Path;
+                //var outputFilePath = @"out.mp4";
+                //path = outputFilePath;
 
-                var inputFilePath = @"C:\Users\Dim\Desktop\Фильмы\Oktyabr.mkv";
-                var outputFilePath = @"out.mp4";
-                path = outputFilePath;
-                var finalScript = $"ffmpeg -i input {inputFilePath} -movflags +frag_keyframe+separate_moof+omit_tfhd_offset+empty_moov {outputFilePath}";
+                //var finalScript = $"ffmpeg -i input {inputFilePath} -movflags +frag_keyframe+separate_moof+omit_tfhd_offset+empty_moov {outputFilePath}";
 
-                var processStartInfo = new ProcessStartInfo();
-                processStartInfo.FileName = "cmd.exe";
-                processStartInfo.Arguments = finalScript;
-                processStartInfo.UseShellExecute = false;
-                processStartInfo.RedirectStandardOutput = true;
-                processStartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Assets");
-                processStartInfo.UseShellExecute = false; // causes consoles to share window 
+                //var processStartInfo = new ProcessStartInfo();
+                //processStartInfo.FileName = "cmd.exe";
+                //processStartInfo.Arguments = finalScript;
+                //processStartInfo.UseShellExecute = false;
+                //processStartInfo.RedirectStandardOutput = true;
+                //processStartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Assets");
+                //processStartInfo.UseShellExecute = false; // causes consoles to share window 
 
-                using var process = new Process();
-                process.StartInfo = processStartInfo;
-                process.Start();
-                process.WaitForExitAsync();
-
+                //using var process = new Process();
+                //process.StartInfo = processStartInfo;
+                //process.Start();
+                //process.WaitForExitAsync();
 
                 //var format = FFMpeg.GetContainerFormat("mp4");
                 //FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.Faster,
@@ -110,8 +112,7 @@ namespace FileStore.API.Controllers
 
                 //FFMpeg.conv
 
-
-                return PhysicalFile($"{path}", "application/octet-stream", enableRangeProcessing: true);
+                return PhysicalFile($"{newFilePath}", "application/octet-stream", enableRangeProcessing: true);
             }
             catch (Exception ex)
             {

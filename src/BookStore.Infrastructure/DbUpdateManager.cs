@@ -13,6 +13,7 @@ using Xabe.FFmpeg;
 using Microsoft.EntityFrameworkCore;
 using Id3;
 using System.Drawing.Drawing2D;
+using System.Threading;
 
 namespace Infrastructure
 {
@@ -464,6 +465,30 @@ namespace Infrastructure
             var fileInfo = new FileInfo(path);
 
             return (fileInfo.Extension == ".mp4" || fileInfo.Extension == ".webm");
+        }
+        //https://www.codeproject.com/Articles/1079119/Video-Transcoding-and-Streaming-on-the-fly
+
+        public static async Task<string> EncodeToMp4Realtime(string path)
+        {
+            if (IsEncoded(path))
+                return null;
+
+            var fileInfo = new FileInfo(path);
+
+            var resultPath = path.Replace(fileInfo.Extension, ".mp4");
+
+            var cancellationTokenSource = new CancellationTokenSource();
+            string outputPath = Path.ChangeExtension(Path.GetTempFileName(), ".mp4");
+            IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(path);
+            IStream videoStream = mediaInfo.VideoStreams.FirstOrDefault()
+                ?.SetCodec(VideoCodec.h264);
+
+            await FFmpeg.Conversions.New()
+                .AddStream(videoStream)
+                .SetOutput(outputPath)
+                .Start(cancellationTokenSource.Token);
+
+            return resultPath;
         }
 
         public static string EncodeToMp4(string path)
