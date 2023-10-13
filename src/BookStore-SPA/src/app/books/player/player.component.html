@@ -10,11 +10,26 @@
 
 <div>
   <img *ngIf="!videoURL " alt="Finish!" src="./assets/img/finish.jpg" >
-  <div *ngIf="videoURL">
+  <div *ngIf="videoURL" class="video-container">
 
-    <video  controls height="auto" autoplay  #videoElement (ended)="videoEnded()" (play)="volumeChanged()" (pause)="paused()">
-      <source src="{{videoURL}}" type="video/mp4"/>
-    </video>
+      <video  controls height="auto" autoplay class="player__video viewer"
+        (dblclick)="doubleClickHandler($event)" controlsList="nofullscreen" (click)="startPlay()"
+        #videoElement (ended)="videoEnded()" (play)="volumeChanged()" (pause)="paused()">
+        <source src="{{videoURL}}" type="video/mp4"/>
+      </video>
+
+      <div class="video-rewind-notify rewind notification">
+        <div class="rewind-icon icon">
+            <i class="left-triangle triangle">◀◀◀</i>
+            <span class="rewind">10 seconds</span>
+        </div>
+      </div>
+      <div class="video-forward-notify forward notification">
+        <div class="forward-icon icon">
+            <i class="right-triangle triangle">▶▶▶</i>
+            <span class="forward">10 seconds</span>
+        </div>
+      </div>
 
     <div class="ml-2">
       <!-- <button mat-icon-button color="primary"   data-toggle="tooltip" data-placement="top" title="Следующее видео" >

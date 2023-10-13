@@ -53,6 +53,14 @@ export class PlayerComponent implements OnInit, OnDestroy {
   subscribed: boolean;
   lastVolumeChangedTime: Date = new Date(1);
   vlcPlayURL: string;
+  notifications: NodeListOf<Element>;
+  timer: any;
+  forwardSpeed: number = 0;
+  rewindSpeed: number= 0;
+  rewindNotificationValue: any =document.querySelector('.video-rewind-notify span');
+  forwardNotificationValue: any= document.querySelector('.video-forward-notify span');
+  lastDoubleClickTime: Date;
+  addMarkTimer: any;
 
   constructor(public service: FileService,
     private categoryService: SeriesService,
@@ -98,14 +106,94 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
       setTimeout(() => this.switchToFullscreen(), 2000);
       this.intervalId = setInterval(() => this.updateStat(), 1000);
+
   }
 
   private getVideoElement(){
-    if (this.video){
+    if (this.video ){
       var videoEl = this.video.nativeElement as HTMLVideoElement;
 
+      this.rewindNotificationValue=document.querySelector('.video-rewind-notify span');
+      this.forwardNotificationValue= document.querySelector('.video-forward-notify span');
+      this.notifications = document.querySelectorAll('.notification');
+
+      let that = this;
+      this.notifications.forEach(function(notification){
+          notification.addEventListener('animationend', e => that.animateNotificationOut(e));
+      });
+      // videoEl.addEventListener('dblclick', (e) => {
+      //   e.preventDefault(); });
       return  videoEl;
     }
+  }
+
+  public startPlay() {
+    
+    let that = this;
+
+    if(this.addMarkTimer)
+      return;
+
+    this.addMarkTimer = setTimeout(function(){
+        let video = that.getVideoElement();
+        if(video.paused === false)
+          video.pause();
+        else
+          video.play()
+
+      that.addMarkTimer = null;
+    }, 300);
+  }
+
+  public doubleClickHandler(e) {
+    clearTimeout(this.addMarkTimer);
+    this.addMarkTimer = null;
+
+    e.preventDefault();
+    const videoWidth = this.getVideoElement().offsetWidth;
+    (e.offsetX < videoWidth/2) ? this.rewindVideo() : this.forwardVideo();
+  }
+  forwardVideo() {
+    this.updateCurrentTime(10);
+    this.animateNotificationIn(false);
+  }
+  rewindVideo() {
+    this.updateCurrentTime(-10);
+    this.animateNotificationIn(true);
+  }
+  private animateNotificationOut(event: Event) {
+    this.notifications.forEach( x => x.classList.remove('animate-in'));
+  }
+
+  private updateCurrentTime(delta){
+    let isRewinding = delta < 0;
+
+    if(isRewinding){
+      this.rewindSpeed = this.rewindSpeed + delta;
+      this.forwardSpeed = 0;
+    }else{
+      this.forwardSpeed = this.forwardSpeed + delta;
+      this.rewindSpeed = 0;
+    }
+
+    //clear the timeout
+    clearTimeout(this.timer);
+
+    let speed = (isRewinding ? this.rewindSpeed : this.forwardSpeed);
+    this.getVideoElement().currentTime = this.getVideoElement().currentTime + speed;
+
+    let NotificationValue =  isRewinding ? this.rewindNotificationValue : this.forwardNotificationValue ;
+    NotificationValue.innerHTML = `${Math.abs(speed)} seconds`;
+
+    //reset accumulator within 2 seconds of a double click
+    this.timer = setTimeout(function(){
+      this.rewindSpeed = 0;
+      this.forwardSpeed = 0;
+    }, 2000); // you can edit this delay value for the timeout, i have it set for 2 seconds
+}
+
+  public animateNotificationIn(isRewinding:boolean) {
+    isRewinding ? this.notifications[0].classList.add('animate-in') : this.notifications[1].classList.add('animate-in');
   }
 
   public paused() {
@@ -116,10 +204,20 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
     public volumeChanged() {
 
-    var timeDiff = ((new Date().getTime()) - (this.lastVolumeChangedTime.getTime()));
-    if(timeDiff < 1000){
-        this.addMark();
+    this.calculateTimeDiff(this.lastVolumeChangedTime, () => this.addMark(), () => {});
+  }
+
+  private calculateTimeDiff(date: Date, callbackOnLess:Function, callbackOnMore:Function) {
+    var timeDiff = this.calculateTime(date);
+    if (timeDiff < 2000) {
+      callbackOnLess();
+    }else{
+      callbackOnMore();
     }
+  }
+
+  private calculateTime(date: Date) {
+    return (new Date().getTime()) - (date.getTime());
   }
 
   public addMark() {
