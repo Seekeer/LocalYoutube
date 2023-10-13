@@ -182,21 +182,6 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
-        [Route("getRandomFileBySeriesId")]
-        public async Task<FileResult> GetRandomFileBySeriesId(int seriesId, string guid)
-        {
-            if (!_randomFileDict.ContainsKey(guid))
-            {
-                var newFile = await _fileService.GetRandomFileBySeriesId(seriesId);
-                _randomFileDict.Add(guid, newFile.Id);
-            }
-
-            var fileId = _randomFileDict[guid];
-
-            return await GetVideoById(fileId);
-        }
-
-        [HttpGet]
         [Route("getRandomFileIdBySeriesId")]
         public async Task<IActionResult> GetRandomFileIdBySeriesId(int seriesId, string guid)
         {

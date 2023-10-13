@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using AutoMapper;
+using FFMpegCore;
 using FileStore.API.Configuration;
 using FileStore.API.Dtos.File;
 using FileStore.Domain.Interfaces;
@@ -44,10 +47,33 @@ namespace FileStore.API.Controllers
             _fileService = FileService;
         }
 
+        //[HttpGet]
+        //[AllowAnonymous]
+        //[Route("getFileById")]
+        //public async Task<FileResult> GetVideoById(int fileId)
+        //{
+        //    var logger = NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger();
+
+        //    try
+        //    {
+        //        var file = await _fileService.GetById(fileId);
+
+        //        var path = file.Path;
+
+        //        return PhysicalFile($"{path}", "application/octet-stream", enableRangeProcessing: true);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        logger.Debug("getFileById 5");
+        //        logger.Error(ex);
+
+        //        throw;
+        //    }
+        //}
         [HttpGet]
         [AllowAnonymous]
         [Route("getFileById")]
-        public async Task<FileResult> GetVideoById(int fileId)
+        public async Task<FileResult> GetTransVideoById(int fileId)
         {
             var logger = NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger();
 
@@ -56,6 +82,34 @@ namespace FileStore.API.Controllers
                 var file = await _fileService.GetById(fileId);
 
                 var path = file.Path;
+
+                var resultPath = "1.mp4";
+
+                var inputFilePath = @"C:\Users\Dim\Desktop\Фильмы\Oktyabr.mkv";
+                var outputFilePath = @"out.mp4";
+                path = outputFilePath;
+                var finalScript = $"ffmpeg -i input {inputFilePath} -movflags +frag_keyframe+separate_moof+omit_tfhd_offset+empty_moov {outputFilePath}";
+
+                var processStartInfo = new ProcessStartInfo();
+                processStartInfo.FileName = "cmd.exe";
+                processStartInfo.Arguments = finalScript;
+                processStartInfo.UseShellExecute = false;
+                processStartInfo.RedirectStandardOutput = true;
+                processStartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Assets");
+                processStartInfo.UseShellExecute = false; // causes consoles to share window 
+
+                using var process = new Process();
+                process.StartInfo = processStartInfo;
+                process.Start();
+                process.WaitForExitAsync();
+
+
+                //var format = FFMpeg.GetContainerFormat("mp4");
+                //FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.Faster,
+                //    FFMpegCore.Enums.VideoSize.Ld, FFMpegCore.Enums.AudioQuality.VeryHigh, true);
+
+                //FFMpeg.conv
+
 
                 return PhysicalFile($"{path}", "application/octet-stream", enableRangeProcessing: true);
             }
