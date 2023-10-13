@@ -186,7 +186,7 @@ namespace API.FilmDownload
 
         private async Task NotifyDownloadEnded(long telegramId, VideoFile item)
         {
-            await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Открыть в VLC: http://192.168.1.55:2022/api/Files/getFileById?fileId={item.Id}");
+             await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Открыть в VLC: http://192.168.1.55:2022/api/Files/getFileById?fileId={item.Id}");
         }
 
         private FileStore.Infrastructure.Context.VideoCatalogDbContext _GetDb()
@@ -237,7 +237,7 @@ namespace API.FilmDownload
                 ImageConverter converter = new ImageConverter();
                 var bytes = (byte[])converter.ConvertTo(data.Bitmap, typeof(byte[]));
 
-                file.VideoFileExtendedInfo.Cover = bytes;
+                file.VideoFileExtendedInfo.SetCover(bytes);
                 await fileRepo.Update(file);
 
                 var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(data.TgId),

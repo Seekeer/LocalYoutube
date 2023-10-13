@@ -12,9 +12,69 @@ using System.Threading.Tasks;
 using Xabe.FFmpeg;
 using Microsoft.EntityFrameworkCore;
 using Id3;
+using System.Drawing.Drawing2D;
 
 namespace Infrastructure
 {
+    public static class FileExtendedInfoExtension
+    {
+        public static void SetCover(this FileExtendedInfo info, byte[] cover)
+        {
+            info.Cover = ResizeImage(cover);
+        }
+
+        private static byte[] ResizeImage(byte[] cover)
+        {
+            if (cover == null)
+                return cover;
+
+            System.Drawing.Image img = null;
+            using (var ms = new MemoryStream(cover))
+            {
+                img = Image.FromStream(ms);
+            }
+
+            var maxWidth = 1000;
+            if (img.Width <= maxWidth)
+                return cover;
+
+            var newImag = ResizeImage(img, maxWidth);
+
+            using (MemoryStream memoryStream = new MemoryStream())
+            {
+                newImag.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Jpeg);
+
+                return memoryStream.ToArray();
+            }
+
+        }
+        private static System.Drawing.Image ResizeImage(System.Drawing.Image imgToResize, int newWidth)
+        {
+            // Get the image current width
+            int sourceWidth = imgToResize.Width;
+            // Get the image current height
+            int sourceHeight = imgToResize.Height;
+            float nPercent = 0;
+            float nPercentW = 0;
+            float nPercentH = 0;
+            // Calculate width and height with new desired size
+            nPercentW = ((float)newWidth / (float)sourceWidth);
+            //nPercentH = ((float)size.Height / (float)sourceHeight);
+            //nPercent = Math.Min(nPercentW, nPercentH);
+            nPercent = nPercentW;
+            // New Width and Height
+            int destWidth = (int)(sourceWidth * nPercent);
+            int destHeight = (int)(sourceHeight * nPercent);
+            Bitmap b = new Bitmap(destWidth, destHeight);
+            Graphics g = Graphics.FromImage((System.Drawing.Image)b);
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            // Draw image with new width and height
+            g.DrawImage(imgToResize, 0, 0, destWidth, destHeight);
+            g.Dispose();
+            return (System.Drawing.Image)b;
+        }
+    }
+
     public class DbUpdateManager : IDisposable
     {
         private VideoCatalogDbContext _db;
@@ -557,9 +617,26 @@ namespace Infrastructure
             }
         }
 
+        public void UpdateAllImages()
+        {
+            var files = _db.FilesInfo;
+            foreach (var file in files) 
+            {
+                try
+                {
+                    file.SetCover(file.Cover);
+                    _db.SaveChanges();
+                }
+                catch (Exception e)
+                {
+
+                }
+            }
+        }
+
+
         public static void FillVideoProperties(VideoFile videoFile)
         {
-            
             try
             {
                 var probe = FFProbe.Analyse(videoFile.Path);
@@ -576,7 +653,7 @@ namespace Infrastructure
                 {
                     bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Jpeg);
 
-                    videoFile.VideoFileExtendedInfo.Cover = memoryStream.ToArray();
+                    videoFile.VideoFileExtendedInfo.SetCover(memoryStream.ToArray());
                 }
             }
             catch (Exception ex)
@@ -747,7 +824,7 @@ namespace Infrastructure
                         {
                             _type = info.Type;
                             var newFiles = AddSeason(info.SeriesId, dir, info.Name);
-                            newFiles.ToList().ForEach(x => x.VideoFileExtendedInfo.Cover = info.Cover);
+                            newFiles.ToList().ForEach(x => x.VideoFileExtendedInfo.SetCover(info.Cover));
                             result.AddRange(newFiles);
                             moreFilesAdded = true;
                         }
@@ -923,7 +1000,7 @@ namespace Infrastructure
             {
                 var file = files.First();
 
-                file.VideoFileExtendedInfo.Cover = File.ReadAllBytes(coverImage);
+                file.VideoFileExtendedInfo.SetCover(File.ReadAllBytes(coverImage));
             }
 
             _db.AudioFiles.AddRange(files);

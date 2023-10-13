@@ -2,6 +2,7 @@
 using FileStore.Domain;
 using FileStore.Domain.Models;
 using Google.Apis.CustomSearchAPI.v1.Data;
+using Infrastructure;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -66,7 +67,7 @@ namespace API.FilmDownload
             {
                 imageAsByteArray = webClient.DownloadData(video.Thumbnails.Last().Url);
             }
-            file.VideoFileExtendedInfo.Cover = imageAsByteArray;
+            file.VideoFileExtendedInfo.SetCover(imageAsByteArray);
 
             var streamManifest = await youtube.Videos.Streams.GetManifestAsync(video.Url);
             // Get highest quality muxed stream
