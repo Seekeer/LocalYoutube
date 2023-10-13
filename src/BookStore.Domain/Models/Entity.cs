@@ -1,7 +1,10 @@
-﻿namespace FileStore.Domain.Models
+﻿using System;
+
+namespace FileStore.Domain.Models
 {
     public abstract class Entity
     {
         public int Id { get; set; }
+
     }
 }

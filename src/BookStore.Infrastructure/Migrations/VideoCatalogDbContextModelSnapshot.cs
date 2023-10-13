@@ -206,6 +206,9 @@ namespace Infrastructure.Migrations
                     b.Property<double>("Rating")
                         .HasColumnType("float");
 
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");
 

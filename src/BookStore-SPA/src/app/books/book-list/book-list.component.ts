@@ -51,17 +51,17 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
   encapsulation: ViewEncapsulation.None, //<--this line
 })
 export class BookListComponent implements OnInit {
-  @ViewChild('videoElement') video:ElementRef; 
-  
+  @ViewChild('videoElement') video:ElementRef;
+
   public books: VideoFile[];
   public listComplet: any;
   public isRandom: boolean = false;
   public videoType: VideoType;
   public showWatched: boolean = true;
   public showSelected: boolean = false;
-  
+
   public showOnlyWebSupported: boolean;
-  
+
   public isSelectSeries: boolean = false;
   public showKPINfo: boolean = false;
   public serieId: number = 0;
@@ -89,13 +89,13 @@ export class BookListComponent implements OnInit {
               private modalService: NgbModal,
               private spinner: NgxSpinnerService,
               private activatedRoute: ActivatedRoute,
-              private confirmationDialogService: ConfirmationDialogService) 
-  { 
+              private confirmationDialogService: ConfirmationDialogService)
+  {
     this.activatedRoute.queryParams.subscribe(params => {
       console.log(params['type']);
       // let value = params['type'];
-      // var color : VideoType = value as unknown as VideoType; 
-      }); 
+      // var color : VideoType = value as unknown as VideoType;
+      });
 
   }
 
@@ -122,19 +122,19 @@ export class BookListComponent implements OnInit {
    getOS() {
     var uA = navigator.userAgent || navigator.vendor ;
     if ((/iPad|iPhone|iPod/.test(uA) && !(<any>window).MSStream) || (uA.includes('Mac') && 'ontouchend' in document)) return 'iOS';
-  
+
     var i, os = ['Windows', 'Android', 'Unix', 'Mac', 'Linux', 'BlackBerry'];
     for (i = 0; i < os.length; i++) if (new RegExp(os[i],'i').test(uA)) return os[i];
   }
-  
+
   getSeries(type:VideoType) {
     this.seriesService.getAll(type).subscribe(series => {
-      this.series = series.sort((a, b) => {  
+      this.series = series.sort((a, b) => {
         return a.name >= b.name
           ? 1
           : -1
       });
-      this.hideSpinner(); 
+      this.hideSpinner();
     });
   }
 
@@ -176,7 +176,7 @@ export class BookListComponent implements OnInit {
   public copyLink(file: Book) {
     this.copyToClipboard(this.service.getVideoURLById(file.id));
   }
-  
+
   private copyToClipboard(text) {
     if(navigator.clipboard) {
       navigator.clipboard.writeText(text);
@@ -200,7 +200,7 @@ export class BookListComponent implements OnInit {
       let serie = this.series.filter(x => x.id == this.serieId)[0];
       this.seasons = serie.seasons;
       this.service.searchFilesWithSeries(serie.name, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
-    } 
+    }
     else {
             this.toastr.error('Выберите название файла или сериала');
     }
@@ -234,7 +234,7 @@ displayListForType() {
           this.seriesService.getOther().subscribe(series => {
             this.series = series;
             this.isSelectSeries = true;
-            this.hideSpinner(); 
+            this.hideSpinner();
             this.isRandom = false;
             this.episodeCount = 10;
           });
@@ -267,6 +267,17 @@ displayListForType() {
          error: (e) => this.getFilmsError(e)
         });
         this.showKPINfo = true;
+        break;
+      }
+      case 'latest':{
+        this.showSpinner();
+        this.isSelectSeries = false;
+        this.showWatched  = true;
+
+        this.service.getFilmsByType(VideoType.Film).subscribe({
+         next: (books) => that.showBooks(books),
+         error: (e) => this.getFilmsError(e)
+        });
         break;
       }
     }
@@ -302,15 +313,15 @@ watchedChanged(event){
 
     if(this.type != 'film')
       this.books = books;
-    else  
+    else
     {
       if(this.showOnlyWebSupported)
         books = books.filter(x => x.isSupportedWebPlayer);
 
       this.books = books.sort((a,b) => {
-        if(a.year > b.year) 
+        if(a.year > b.year)
           return -1 ;
-        else if(a.year == b.year) 
+        else if(a.year == b.year)
           return 0 ;
         else
           return 1;
@@ -330,7 +341,7 @@ watchedChanged(event){
         }
     }
 
-    this.books.forEach(book => { 
+    this.books.forEach(book => {
       book.PlayURL = (`vlc://${this.service.getVideoURLById(book.id)}`);
       let hours= Math.floor(book.durationMinutes/60)
       if(hours > 0){
@@ -339,14 +350,14 @@ watchedChanged(event){
       }
     });
 
-    this.hideSpinner(); 
+    this.hideSpinner();
   }
 
   getFilmsError(error) {
     if(this._numberOfTry++< 10)
       this.displayListForType();
     else{
-      this.hideSpinner(); 
+      this.hideSpinner();
       this.books = [];
     }
   }
@@ -368,7 +379,7 @@ watchedChanged(event){
 
 counter : number =0 ;
 
-  public showSpinner(){    
+  public showSpinner(){
     this.counter++;
 
     this.spinner.show();
@@ -396,7 +407,7 @@ counter : number =0 ;
       seasonId : 0,
       showDeleteButton: showDelete
     };
-    
+
     if(this.videoType == VideoType.Art)
       queryParams.seasonId = book.seasonId;
 
