@@ -192,15 +192,19 @@ namespace FileStore.API.Controllers
 
             var files = _db.VideoFiles.ToList();
 
+            //var finfo = files.Where(f =>
+            //    //f.Type == VideoType.Animation
+            //    //&& 
+            //    f.Origin != Origin.Russian
+            //    &&
+            //    !System.IO.File.Exists(f.Path)
+            //    )
+            //    .Select(x => new FileInfo(x.Path))
+            //    //.Reverse();
+            //    ;
             var finfo = files.Where(f =>
-                //f.Type == VideoType.Animation
-                //&& 
-                f.Origin != Origin.Russian
-                &&
-                !System.IO.File.Exists(f.Path)
-                )
+                f.SeriesId == 28)
                 .Select(x => new FileInfo(x.Path))
-                //.Reverse();
                 ;
 
             var badPaths = new List<string>();

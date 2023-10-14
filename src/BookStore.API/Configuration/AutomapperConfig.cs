@@ -49,8 +49,16 @@ namespace FileStore.API.Configuration
         {
             if (source == null)
                 return "";
+            try
+            {
+                return System.Convert.ToBase64String(source);
+            }
+            catch (System.Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                return "";
+            }
 
-            return System.Convert.ToBase64String(source);
         }
     }
 }
