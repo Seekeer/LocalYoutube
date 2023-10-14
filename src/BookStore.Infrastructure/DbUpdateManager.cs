@@ -157,6 +157,9 @@ namespace Infrastructure
                 if (newFilePath == null)
                     return;
 
+                if(file.VideoFileExtendedInfo.Cover == null)
+                    DbUpdateManager.FillVideoProperties(file);
+
                 file.Path = newFilePath;
                 _db.VideoFiles.Update(file);
                 _db.SaveChanges();
