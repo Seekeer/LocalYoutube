@@ -6,7 +6,7 @@
     "start": "ng serve",
     "debug": "ng serve --port 4201",
     "build": "ng build",
-    "publish": "ng build --output-hashing=all --configuration production && npm run postbuild",
+    "publishLocal": "ng build --output-hashing=all --configuration local && npm run postbuild",
     "postbuild": "xcopy /s \"./dist\\BookStore-SPA\" \"C:\\inetpub\\LocalYoutube\" /Y",
     "publishExt": "ng build --output-hashing=all --configuration production && npm run postbuildExt",
     "postbuildExt": "xcopy /s \"./dist\\BookStore-SPA\" \"C:\\inetpub\\LocalYoutube External\" /Y",
