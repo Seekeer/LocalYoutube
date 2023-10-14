@@ -33,9 +33,13 @@ export class FileService {
     }
 
     public getLatest() {
-      return this.http.get<Book[]>(`${this.baseUrl}files/getLatest`);
-  }
+        return this.http.get<Book[]>(`${this.baseUrl}files/getLatest`);
+    }
 
+    public filmStarted(fileId: number) {
+        return this.http.patch(`${this.baseUrl}files/filmStarted`, fileId);
+    }
+    
     public getFilmsByTypeUniqueSeason(type: VideoType) {
         return this.http.get<Book[]>(`${this.baseUrl}files/getFileByTypeUniqueSeason/${type}`);
     }

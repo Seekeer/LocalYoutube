@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace FileStore.Infrastructure.Context
 {
@@ -24,7 +26,8 @@ namespace FileStore.Infrastructure.Context
     //  dotnet ef database update
     public class VideoCatalogDbContext : IdentityUserContext<ApplicationUser>
     {
-        public VideoCatalogDbContext(DbContextOptions options) : base(options) {
+        public VideoCatalogDbContext(DbContextOptions options) : base(options)
+        {
             this.ChangeTracker.LazyLoadingEnabled = false;
         }
 
@@ -32,11 +35,11 @@ namespace FileStore.Infrastructure.Context
         public DbSet<Season> Seasons { get; set; }
         public DbSet<AudioFile> AudioFiles { get; set; }
         public DbSet<VideoFile> VideoFiles { get; set; }
-        public DbSet<DbFile> Files{ get; set; }
+        public DbSet<DbFile> Files { get; set; }
         public DbSet<FileExtendedInfo> FilesInfo { get; set; }
         public DbSet<FileUserInfo> FilesUserInfo { get; set; }
         public DbSet<FileMark> FileMarks { get; set; }
-        
+
         public DbSet<Series> Series { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -64,6 +67,20 @@ namespace FileStore.Infrastructure.Context
 
         public override int SaveChanges()
         {
+            UpdateTimeStamps();
+
+            return base.SaveChanges();
+        }
+
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            UpdateTimeStamps();
+
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
+        private void UpdateTimeStamps()
+        {
             var entries = ChangeTracker
                 .Entries()
                 .Where(e => e.Entity is TrackUpdateCreateTimeEntity && (
@@ -72,15 +89,11 @@ namespace FileStore.Infrastructure.Context
 
             foreach (var entityEntry in entries)
             {
-                ((TrackUpdateCreateTimeEntity)entityEntry.Entity).UpdatedDate = DateTime.Now;
-
                 if (entityEntry.State == EntityState.Added)
-                {
                     ((TrackUpdateCreateTimeEntity)entityEntry.Entity).CreatedDate = DateTime.Now;
-                }
-            }
 
-            return base.SaveChanges();
+                ((TrackUpdateCreateTimeEntity)entityEntry.Entity).UpdatedDate = DateTime.Now;
+            }
         }
 
         //private void SeedData(ModelBuilder modelBuilder)

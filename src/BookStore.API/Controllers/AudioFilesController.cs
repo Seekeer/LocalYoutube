@@ -68,6 +68,15 @@ namespace FileStore.API.Controllers
             }
         }
 
+        [HttpPatch]
+        [Route("filmStarted")]
+        public async Task<ActionResult> FilmStarted([FromBody]int fileId)
+        {
+            await _fileService.SetPosition(fileId, await GetUserId(_userManager), null);
+
+            return Ok();
+        }
+
         [HttpGet]
         [Route("search/{FileName}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -115,7 +124,7 @@ namespace FileStore.API.Controllers
         public async Task<IActionResult> SetPosition(int id, [FromBody] double value)
         {
             string userId = await GetUserId(_userManager);
-            await _fileService.SetPosition(id, value, userId);
+            await _fileService.SetPosition(id, userId, value);
 
             return Ok();
         }

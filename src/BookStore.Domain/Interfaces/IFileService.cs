@@ -23,7 +23,7 @@ namespace FileStore.Domain.Interfaces
         Task<IEnumerable<T>> SearchFileWithSeries(string searchedValue, bool isRandom);
         Task<T> GetRandomFileBySeriesId(int seriesId);
         Task SetRating(int videoId, double value);
-        Task SetPosition(int videoId, double value, string userId);
+        Task SetPosition(int videoId, string userId, double? value);
         Task<IEnumerable<T>> GetLatest(string userId);
     }
 }

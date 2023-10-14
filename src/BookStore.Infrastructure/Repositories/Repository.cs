@@ -25,7 +25,7 @@ namespace FileStore.Infrastructure.Repositories
         public virtual async Task<TEntity> Add(TEntity entity)
         {
             DbSet.Add(entity);
-            await SaveChanges();
+            await SaveChangesAsync();
 
             return entity;
         }
@@ -43,13 +43,13 @@ namespace FileStore.Infrastructure.Repositories
         public virtual async Task Update(TEntity entity)
         {
             DbSet.Update(entity);
-            await SaveChanges();
+            await SaveChangesAsync();
         }
 
         public virtual async Task Remove(TEntity entity)
         {
             DbSet.Remove(entity);
-            await SaveChanges();
+            await SaveChangesAsync();
         }
 
         public virtual async Task Remove(int entityId)
@@ -68,7 +68,7 @@ namespace FileStore.Infrastructure.Repositories
             return await (DbSet.AsNoTracking().Where(predicate).OrderBy(x => x.Id).ToListAsync());
         }
 
-        public async Task<int> SaveChanges()
+        public async Task<int> SaveChangesAsync()
         {
             return await Db.SaveChangesAsync();
         }

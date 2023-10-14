@@ -101,7 +101,7 @@ namespace FileStore.Domain.Services
             //await _FileRepository.Update(video);
         }
 
-        public async Task SetPosition(int videoId, double value, string userId)
+        public async Task SetPosition(int videoId, string userId, double? position)
         {
             if (string.IsNullOrEmpty(userId))
                 return;
@@ -114,7 +114,8 @@ namespace FileStore.Domain.Services
                 info = new FileUserInfo { DbFile = video, UserId = userId};
                 video.VideoFileUserInfos.Add(info);
             }
-            info.Position = value;
+            if(position != null)
+                info.Position = position.Value;
             info.UpdatedDate = System.DateTime.Now;
 
             await _FileRepository.Update(video);
@@ -129,5 +130,6 @@ namespace FileStore.Domain.Services
         {
             return await _FileRepository.GetLatest(userId);
         }
+
     }
 }

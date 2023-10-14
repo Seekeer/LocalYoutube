@@ -356,6 +356,10 @@ watchedChanged(event){
     this.hideSpinner();
   }
 
+  public filmStarted(book:Book) {
+    this.service.filmStarted(book.id).subscribe();
+  }
+
   getFilmsError(error) {
     if(this._numberOfTry++< 10)
       this.displayListForType();

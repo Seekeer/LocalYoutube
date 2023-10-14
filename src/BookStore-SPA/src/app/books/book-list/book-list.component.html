@@ -100,7 +100,7 @@
               <button *ngIf="!isAndroid" class="btn btn-outline-primary btn-sm" (click)="copyLink(book)">Скопировать ссылку</button>
 
               <a [href]="book.PlayURL | safe" >
-                <button class="btn btn-outline-warning btn-sm" style="margin-top: 0.5rem;" >Открыть фильм в VLC</button>
+                <button class="btn btn-outline-warning btn-sm" style="margin-top: 0.5rem;" (click)="filmStarted(book)" >Открыть фильм в VLC</button>
               </a>
 
               <button class="btn btn-outline-danger btn-sm mt-2" (click)="deleteFilm(content, book)">Удалить фильм</button>
