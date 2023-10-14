@@ -268,6 +268,9 @@ namespace Infrastructure.Migrations
                     b.Property<TimeSpan>("IntroDuration")
                         .HasColumnType("time");
 
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsChild")
                         .HasColumnType("bit");
 

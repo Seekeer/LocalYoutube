@@ -11,6 +11,7 @@ namespace FileStore.Domain.Models
         public VideoType? Type { get; set; }
         public AudioType? AudioType { get; set; }
         public bool IsChild{ get; set; }
+        public bool IsArchived{ get; set; }
 
         public TimeSpan IntroDuration { get; set; }
 

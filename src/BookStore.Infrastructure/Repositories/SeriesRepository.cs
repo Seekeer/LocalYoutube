@@ -18,17 +18,17 @@ namespace FileStore.Infrastructure.Repositories
             return await Random(Db.VideoFiles.AsNoTracking()
                     .Include(b => b.Season)
                     .Include(b => b.Series)
-                    .Where(b => b.Name.Contains(searchedValue) ||
-                                b.Series.Name.Contains(searchedValue)), resultCount)
+                    .Where(b => !b.Series.IsArchived && (b.Name.Contains(searchedValue) ||
+                                b.Series.Name.Contains(searchedValue))), resultCount)
                 .ToListAsync();
         }
 
         public async Task<List<Series>> GetAll(VideoType? type)
         {
             if (type == null)
-                return await DbSet.Include(x => x.Seasons).Where(x => x.Type != null).ToListAsync();
+                return await DbSet.Include(x => x.Seasons).Where(x => !x.IsArchived && x.Type != null).ToListAsync();
 
-            var series =  DbSet.Include(x => x.Seasons).Where(x => x.Type == type);
+            var series =  DbSet.Include(x => x.Seasons).Where(x => !x.IsArchived && x.Type == type);
 
             return await series.ToListAsync();
         }
