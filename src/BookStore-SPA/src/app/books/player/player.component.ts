@@ -46,6 +46,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   intervalId: any;
   position: number;
   isRandom: boolean;
+  isMobile: boolean;
   timerMinutes: number;
   timerStr: string;
   totalDuration: moment.Moment;
@@ -74,6 +75,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+      this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       this.parameters = <PlayerParameters>(JSON.parse(JSON.stringify((<any>this.route.snapshot.queryParamMap).params)));
 
       this.videoId = this.parameters.videoId;
@@ -128,7 +130,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   public startPlay() {
-    
+
     let that = this;
 
     if(this.addMarkTimer)
@@ -327,7 +329,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
  timeLeft:number;
 private interval:number;
 
-private switchToFullscreen(){
+public switchToFullscreen(){
     var el = this.getVideoElement();
 
     if(el && el.requestFullscreen)
@@ -379,6 +381,9 @@ private switchToFullscreen(){
 
     this.setPosition();
 
+    if(!video || video.paused)
+      return;
+
     this.totalDuration = moment(this.previousVideoTimePlayed);
     if(video)
     {
@@ -401,9 +406,3 @@ private switchToFullscreen(){
   }
 
 }
-
-
-function Override(target: PlayerComponent, propertyKey: 'boolean'): void {
-  throw new Error('Function not implemented.');
-}
-

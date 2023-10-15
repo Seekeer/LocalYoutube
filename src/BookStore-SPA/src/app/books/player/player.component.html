@@ -12,11 +12,16 @@
   <img *ngIf="!videoURL " alt="Finish!" src="./assets/img/finish.jpg" >
   <div *ngIf="videoURL" class="video-container">
 
-      <video  controls height="auto" autoplay class="player__video viewer"
-        (dblclick)="doubleClickHandler($event)" controlsList="nofullscreen" (click)="startPlay()"
-        #videoElement (ended)="videoEnded()" (play)="volumeChanged()" (pause)="paused()">
-        <source src="{{videoURL}}" type="video/mp4"/>
-      </video>
+      <video *ngIf="isMobile" controls height="auto" autoplay class="player__video viewer"
+      (dblclick)="doubleClickHandler($event)" controlsList="nofullscreen" (click)="startPlay()"
+      #videoElement (ended)="videoEnded()" (play)="volumeChanged()" (pause)="paused()">
+      <source src="{{videoURL}}" type="video/mp4"/>
+    </video>
+
+    <video *ngIf="!isMobile"  controls height="auto" autoplay class="player__video viewer"
+      #videoElement (ended)="videoEnded()" (play)="volumeChanged()" (pause)="paused()">
+      <source src="{{videoURL}}" type="video/mp4"/>
+    </video>
 
       <div class="video-rewind-notify rewind notification">
         <div class="rewind-icon icon">
@@ -53,6 +58,18 @@
 
       <button mat-icon-button color="warn" *ngIf="parameters.showDeleteButton"        (click)="showDeleteModal()">
         <mat-icon>delete</mat-icon>
+      </button>
+
+      <button mat-icon-button color="accent" (click)="rewindVideo()">
+        <mat-icon>fast_rewind</mat-icon>
+      </button>
+
+      <button mat-icon-button color="accent" (click)="forwardVideo()">
+        <mat-icon>fast_forward</mat-icon>
+      </button>
+
+      <button mat-icon-button color="accent" (click)="switchToFullscreen()">
+        <mat-icon>fullscreen</mat-icon>
       </button>
 
       <a  href="#" >
