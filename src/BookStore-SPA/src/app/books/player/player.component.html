@@ -9,7 +9,7 @@
 </dialog>
 
 <div>
-  <img *ngIf="!videoURL " alt="Finish!" src="./assets/img/finish.jpg" >
+  <img *ngIf="!videoURL " class="bg" alt="Finish!" src="./assets/img/finish.jpg" >
   <div *ngIf="videoURL" class="video-container">
 
       <video *ngIf="isMobile" controls height="auto" autoplay class="player__video viewer"
