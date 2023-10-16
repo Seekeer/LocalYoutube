@@ -53,6 +53,7 @@ import {
   ConfirmationDialogComponent,
 } from './confirmation-dialog/confirmation-dialog.component';
 import { NgbdDatepickerPopup } from './datepicker/datepicker-popup';
+import { FailedConnectionInterceptor } from './failedConnection.interceptor';
 import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './login/login.component';
 import { NavComponent } from './nav/nav.component';
@@ -105,6 +106,7 @@ import { NavComponent } from './nav/nav.component';
       deps: [AuthService],
     },
     { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: FailedConnectionInterceptor, multi: true },
     {
       provide: HTTP_INTERCEPTORS,
       useClass: UnauthorizedInterceptor,
