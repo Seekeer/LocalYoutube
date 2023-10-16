@@ -118,6 +118,7 @@ namespace FileStore.Domain.Models
         public Season Season { get; set; }
         public Series Series { get; set; }
         public bool IsBackedup{ get; set; }
+        public bool NeedToDelete{ get; set; }
 
         public IList<FileUserInfo> VideoFileUserInfos { get; set; } = new List<FileUserInfo>();
         public IList<FileMark> Marks { get; set; } = new List<FileMark>();

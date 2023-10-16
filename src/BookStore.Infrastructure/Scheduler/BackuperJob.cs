@@ -2,6 +2,7 @@
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
+using FileStore.Infrastructure.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Client;
 using Quartz;
@@ -92,9 +93,9 @@ namespace Infrastructure.Scheduler
             }
         }
 
-        private IVideoFileRepository GetFileRepo()
+        private IDbFileRepository GetFileRepo()
         {
-            return _service.CreateScope().ServiceProvider.GetService<IVideoFileRepository>();
+            return _service.CreateScope().ServiceProvider.GetService<IDbFileRepository>();
         }
     }
     public class YandexDisc

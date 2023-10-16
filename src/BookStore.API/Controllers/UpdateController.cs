@@ -405,7 +405,7 @@ namespace FileStore.API.Controllers
             RemoveSeries(new DbUpdateManager(_db), series.Id);
         }
 
-            [HttpDelete]
+        [HttpDelete]
         [Route("removeSeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public void RemoveSeason(int seasonId, bool deleteFile)

@@ -2,7 +2,6 @@
 using API.FilmDownload;
 using API.TG;
 using FileStore.Domain.Interfaces;
-using FileStore.Domain.Models;
 using FileStore.Domain.Services;
 using FileStore.Infrastructure.Context;
 using FileStore.Infrastructure.Repositories;
@@ -26,12 +25,14 @@ namespace FileStore.API.Configuration
 
             services.AddScoped<IVideoFileRepository, VideoFileRepository>();
             services.AddScoped<IAudioFileRepository, AudioFileRepository>();
+            services.AddScoped<IDbFileRepository, DbFileRepository>();
             services.AddScoped<ISeriesRepository, SeriesRepository>();
             services.AddScoped<IMarksRepository, MarksRepository>();
 
             services.AddScoped<ISeriesService, SeriesService>();
             services.AddScoped<IAudioFileService, AudioFileService>();
             services.AddScoped<IVideoFileService, VideoFileService>();
+            services.AddScoped<IDbFileService, DbFileService>();
 
             services.AddScoped<DbUpdateManager, DbUpdateManager>();
             services.AddScoped<IMessageProcessor, MessageProcessor>();
@@ -48,7 +49,16 @@ namespace FileStore.API.Configuration
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(5)).RepeatForever())
                     //.WithDailyTimeIntervalSchedule(x => x.WithIntervalInMinutes(10))
                     .WithDescription("my awesome trigger configured for a job with single call")
-                ); ;
+                );
+            });
+            services.AddQuartz(q =>
+            {
+                q.ScheduleJob<RemoveJob>(trigger => trigger
+                    .WithIdentity("trigger2", "group2")
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(5)).RepeatForever())
+                    .WithDescription("my awesome trigger configured for a job with single call")
+                );
             });
 
             // Quartz.Extensions.Hosting allows you to fire background service that handles scheduler lifecycle

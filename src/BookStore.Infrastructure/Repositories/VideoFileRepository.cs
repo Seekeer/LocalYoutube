@@ -8,9 +8,25 @@ using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Schema;
+using static FileStore.Infrastructure.Repositories.VideoFileRepository;
 
 namespace FileStore.Infrastructure.Repositories
 {
+    public class DbFileRepository : FileRepositoryBase<DbFile, VideoType>, IDbFileRepository
+    {
+        public DbFileRepository(VideoCatalogDbContext context) : base(context) { }
+
+        public override Task<IEnumerable<DbFile>> SearchFileByType(VideoType type)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override DbSet<DbFile> GetFilesSet()
+        {
+            return Db.Files;
+        }
+    }
+
     public class VideoFileRepository : FileRepositoryBase<VideoFile, VideoType>, IVideoFileRepository
     {
         public VideoFileRepository(VideoCatalogDbContext context) : base(context) { }
@@ -29,6 +45,7 @@ namespace FileStore.Infrastructure.Repositories
             return Db.VideoFiles;
         }
     }
+
     public class AudioFileRepository : FileRepositoryBase<AudioFile, AudioType>, IAudioFileRepository
     {
         public AudioFileRepository(VideoCatalogDbContext context) : base(context) { }
@@ -151,5 +168,21 @@ namespace FileStore.Infrastructure.Repositories
             return files;
         }
 
+        public void RemoveFileCompletely(T file)
+        {
+            file.VideoFileUserInfos.ToList().ForEach(x => Db.FilesUserInfo.Remove(x));
+            var marks = Db.FileMarks.Where(x => x.DbFileId == file.Id);
+            Db.FileMarks.RemoveRange(marks);
+            Db.FilesInfo.Remove(file.VideoFileExtendedInfo);
+            Db.Files.Remove(file);
+
+            Db.SaveChanges();
+        }
+
+        public void MarkFileToDelete(T file)
+        {
+            file.NeedToDelete = true;
+            Db.SaveChanges();
+        }
     }
 }

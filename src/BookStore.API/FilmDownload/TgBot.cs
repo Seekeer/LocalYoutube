@@ -26,6 +26,7 @@ using System.Text;
 using Polly;
 using static System.Net.Mime.MediaTypeNames;
 using FileStore.Domain;
+using FileStore.Domain.Services;
 //using Polly;
 
 namespace API.FilmDownload
@@ -413,13 +414,13 @@ namespace API.FilmDownload
                 await _rutracker.DeleteTorrent(data);
 
                 var db = _GetDb();
-                var updater = new DbUpdateManager(db);
                 var id = int.Parse(data);
                 var file = db.FilesInfo.FirstOrDefault(x => x.RutrackerId == id);
                 if (file != null)
                 { 
                     db.Entry(file).State = EntityState.Detached;
-                    updater.DeleteFiles(file.VideoFileId, file.VideoFileId, true);
+                    using var fileService = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IDbFileService> ();
+                    await fileService.Remove(file.VideoFileId);
                 }
 
                 await _botClient.AnswerCallbackQueryAsync(callbackId, "Видео удалено");

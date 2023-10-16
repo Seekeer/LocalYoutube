@@ -13,6 +13,8 @@ using Xabe.FFmpeg;
 using Microsoft.EntityFrameworkCore;
 using Id3;
 using System.Drawing.Drawing2D;
+using FileStore.Domain.Interfaces;
+using FileStore.Infrastructure.Repositories;
 
 namespace Infrastructure
 {
@@ -841,9 +843,10 @@ namespace Infrastructure
                             moreFilesAdded = true;
                         }
 
+                        using var fileRepo = new DbFileRepository(_db);
                         if (moreFilesAdded)
                         {
-                            RemoveFileCompletely(info);
+                            fileRepo.RemoveFileCompletely(info);
                             _db.SaveChanges();
                             continue;
                         }
@@ -894,11 +897,10 @@ namespace Infrastructure
 
         public void RemoveSeriesCompletely(int seriesId)
         {
-            var files = _db.Files.Where(x => x.SeriesId == seriesId).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileExtendedInfo);
+            var files = _db.VideoFiles.Where(x => x.SeriesId == seriesId).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileExtendedInfo);
+            using var fileRepo = new DbFileRepository(_db);
             foreach (var file in files)
-            {
-                RemoveFileCompletely(file);
-            }
+                fileRepo.RemoveFileCompletely(file);
 
             var seasons = _db.Seasons.Where(x => x.SeriesId == seriesId);
             _db.Seasons.RemoveRange(seasons);
@@ -908,33 +910,10 @@ namespace Infrastructure
             _db.SaveChanges();
         }
 
-        public void DeleteFiles(int startId, int endId, bool removeFile = true)
-        {
-            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).Where(x => x.Id >= startId && x.Id <= endId).ToList();
-
-            foreach (var file in files)
-            {
-                DeleteFile(removeFile, file);
-            }
-        }
-
-        public void DeleteFile(bool removeFile, DbFile file)
-        {
-            if (removeFile && System.IO.File.Exists(file.Path))
-                System.IO.File.Delete(file.Path);
-
-            RemoveFileCompletely(file);
-
-            _db.SaveChanges();
-        }
-
         public void RemoveFileCompletely(DbFile file)
         {
-            file.VideoFileUserInfos.ToList().ForEach(x => _db.FilesUserInfo.Remove(x));
-            var marks = _db.FileMarks.Where(x => x.DbFileId == file.Id);
-            _db.FileMarks.RemoveRange(marks);
-            _db.FilesInfo.Remove(file.VideoFileExtendedInfo);
-            _db.Files.Remove(file);
+            var fileRepo = new DbFileRepository(_db) ;
+            fileRepo.RemoveFileCompletely(file);
         }
 
         public void UpdateAudioInfo(AudioFile audioFile)

@@ -4,6 +4,7 @@ using FileStore.Domain.Models;
 
 namespace FileStore.Domain.Interfaces
 {
+    public interface IDbFileRepository : IFileRepository<DbFile, VideoType> { }
     public interface IVideoFileRepository : IFileRepository<VideoFile, VideoType> { }
     public interface IAudioFileRepository : IFileRepository<AudioFile, AudioType> { }
 
@@ -19,5 +20,7 @@ namespace FileStore.Domain.Interfaces
         Task<IEnumerable<T>> SearchByName(string fileName);
         Task<IEnumerable<T>> GetFilesBySeason(int seriesId, bool isRandom, int count, int startId);
         Task<IEnumerable<T>> GetLatest(string userId);
+        void RemoveFileCompletely(T file);
+        void MarkFileToDelete(T file);
     }
 }

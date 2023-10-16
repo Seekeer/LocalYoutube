@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FileStore.Domain.Interfaces;
@@ -6,6 +7,13 @@ using FileStore.Domain.Models;
 
 namespace FileStore.Domain.Services
 {
+    public class DbFileService : FileServiceBase<DbFile, VideoType>, IDbFileService
+    {
+        public DbFileService(IDbFileRepository FileRepository) : base(FileRepository)
+        {
+        }
+    }
+
     public class VideoFileService : FileServiceBase<VideoFile, VideoType>, IVideoFileService
     {
         public VideoFileService(IVideoFileRepository FileRepository) : base(FileRepository)
@@ -57,10 +65,31 @@ namespace FileStore.Domain.Services
             return File;
         }
 
-        public async Task<bool> Remove(T File)
+        public async Task<bool> Remove( T file)
         {
-            await _FileRepository.Remove(File);
+            if (System.IO.File.Exists(file.Path))
+            {
+                try
+                {
+                    System.IO.File.Delete(file.Path);
+                }
+                catch (Exception ex)
+                {
+                    _FileRepository.MarkFileToDelete(file);
+
+                    return false;
+                }
+            }
+
+            _FileRepository.RemoveFileCompletely(file);
+
             return true;
+        }
+
+        public async Task<bool> Remove(int fileId)
+        {
+            var file = await _FileRepository.GetById(fileId);
+            return await Remove(file);
         }
 
         public async Task<IEnumerable<T>> GetFilesBySearies(int SeriesId, bool isRandom, int startId)
@@ -130,6 +159,5 @@ namespace FileStore.Domain.Services
         {
             return await _FileRepository.GetLatest(userId);
         }
-
     }
 }

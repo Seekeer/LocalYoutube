@@ -5,6 +5,9 @@ using FileStore.Domain.Models;
 
 namespace FileStore.Domain.Interfaces
 {
+    public interface IDbFileService : IFileService<DbFile, VideoType>
+    {
+    }
     public interface IVideoFileService : IFileService<VideoFile, VideoType> { }
     public interface IAudioFileService : IFileService<AudioFile, AudioType> { }
 
@@ -16,6 +19,7 @@ namespace FileStore.Domain.Interfaces
         Task<T> Add(T File);
         Task<T> Update(T File);
         Task<bool> Remove(T File);
+        Task<bool> Remove(int fileId);
         Task<IEnumerable<T>> GetFilesBySearies(int seriesId, bool isRandom, int startId);
         Task<IEnumerable<T>> GetFilesBySeason(int seriesId, bool isRandom, int count, int startId);
         Task<IEnumerable<T>> Search(string FileName);

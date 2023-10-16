@@ -29,15 +29,13 @@ namespace FileStore.API.Controllers
     public class FilesController : FilesControllerBase<VideoFile, VideoType, VideoFileResultDto>
     {
         private readonly IRuTrackerUpdater _ruTrackerUpdater;
-        private readonly DbUpdateManager _updateManager;
         private readonly ISeriesService _seriesService;
         private readonly static Dictionary<string, int> _randomFileDict = new Dictionary<string, int>();
 
-        public FilesController(UserManager<ApplicationUser> userManager, IMapper mapper, IVideoFileService FileService, DbUpdateManager updateManager,
+        public FilesController(UserManager<ApplicationUser> userManager, IMapper mapper, IVideoFileService FileService, 
             ISeriesService seriesService, IRuTrackerUpdater ruTrackerUpdater) : base(userManager, mapper, FileService)
         {
             _ruTrackerUpdater = ruTrackerUpdater;
-            _updateManager = updateManager;
             _seriesService = seriesService;
         }
 
@@ -101,7 +99,7 @@ namespace FileStore.API.Controllers
 
             await _ruTrackerUpdater.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
 
-            _updateManager.DeleteFile(true, file);
+            _fileService.Remove(file);
 
             return Ok();
         }
