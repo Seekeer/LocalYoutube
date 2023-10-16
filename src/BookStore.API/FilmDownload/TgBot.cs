@@ -563,7 +563,7 @@ namespace API.FilmDownload
                 case CommandType.Film:
                     break;
                 case CommandType.Unknown:
-                    await ProcessUserInput(message.Text, message.From.Id, true);
+                    await ProcessUserInput(message, true);
                     break;
                 default:
                     break;
@@ -571,16 +571,21 @@ namespace API.FilmDownload
 
         }
 
-        private async Task ProcessUserInput(string text, long fromId, bool filterThemes)
+        private async Task ProcessUserInput(Message message, bool filterThemes)
         {
-            if (text.Contains("youtube")|| text.Contains("youtu.be"))
+            var text = message.Text;
+            if (text.Contains("youtube") || text.Contains("youtu.be"))
             {
-                await ShowYoutubeChoice(text, fromId);
-
+                await ShowYoutubeChoice(message);
 
                 return;
             }
 
+            await ProcessUserInput(text, message.From.Id, filterThemes);
+        }
+
+        private async Task ProcessUserInput(string text, long fromId, bool filterThemes)
+        { 
             var infos = await _rutracker.FindTheme(text, filterThemes);
 
             if (!infos.Any())
@@ -616,18 +621,18 @@ namespace API.FilmDownload
             await AddSearchAllButton(text, fromId);
         }
 
-        private async Task ShowYoutubeChoice(string text, long fromId)
+        private async Task ShowYoutubeChoice(Message message)
         {
             var keyboard = new List<List<InlineKeyboardButton>>
                 {
                  new List<InlineKeyboardButton>{
-                    new InlineKeyboardButton("Посмотреть на один раз") { CallbackData = CommandParser.GetMessageFromData(CommandType.YoutubeWatchLater, text) },
-                    new InlineKeyboardButton("Как положено") { CallbackData = CommandParser.GetMessageFromData(CommandType.YoutubeAsDesigned, text) },
+                    new InlineKeyboardButton("Посмотреть на один раз") { CallbackData = CommandParser.GetMessageFromData(CommandType.YoutubeWatchLater, message.Text) },
+                    new InlineKeyboardButton("Как положено") { CallbackData = CommandParser.GetMessageFromData(CommandType.YoutubeAsDesigned, message.Text) },
                     }};
 
             var messageText = $"Как храним скачанное с ютуба?";
-            var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(fromId),
-                messageText, replyMarkup: new InlineKeyboardMarkup(keyboard));
+            var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(message.From.Id),
+                messageText, replyMarkup: new InlineKeyboardMarkup(keyboard), replyToMessageId:message.MessageId);
         }
 
         private async Task AddSearchAllButton(string text, long fromId)
