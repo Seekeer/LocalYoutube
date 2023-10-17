@@ -42,9 +42,15 @@ namespace Infrastructure.Scheduler
 
         public async Task Execute(IJobExecutionContext context)
         {
+            NLog.LogManager.GetCurrentClassLogger().Debug($"BackuperJob");
+
 #if DEBUG
             return;
 #endif
+
+            if (DateTime.Now.Hour > 8 || DateTime.Now.Hour < 1)
+                return;
+
             var stack = new ConcurrentBag<UploadFile>();
 
             using (var fileRepo = GetFileRepo())
@@ -122,6 +128,8 @@ namespace Infrastructure.Scheduler
 
         public async Task<bool> UploadToDirectory(string filepath, string folderName)
         {
+            NLog.LogManager.GetCurrentClassLogger().Warn($"Trying to upload{filepath}");
+
             var api = new DiskHttpApi(_token);
 
             string path = GetDiskFilepath(filepath, folderName);
@@ -163,11 +171,13 @@ namespace Infrastructure.Scheduler
                         }
                     }
 
+                    NLog.LogManager.GetCurrentClassLogger().Warn($"Uploaded");
                     return true;
                 }
             }
             catch (Exception ex)
             {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex, $"Not uploaded");
                 return false;
             }
 

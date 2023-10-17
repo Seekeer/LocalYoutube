@@ -65,7 +65,7 @@ namespace API.FilmDownload
             _botClient = new TelegramBotClient(config.TelegramSettings.ApiKey);
             _rutracker = new RuTrackerUpdater(config);
 
-            NLog.LogManager.GetCurrentClassLogger().Info($"Telegram bot created:{config.TelegramSettings.ApiKey}");
+            NLog.LogManager.GetCurrentClassLogger().Warn($"Telegram bot created");
 
             SendAdminMessage($"Сервер стартанул");
 

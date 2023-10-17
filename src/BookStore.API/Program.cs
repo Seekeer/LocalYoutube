@@ -18,7 +18,7 @@ namespace FileStore.API
             var logger = NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger();
             try
             {
-                logger.Debug("Application Starting Up");
+                logger.Warn("Application Starting Up");
                 CreateHostBuilder(args).Build().Run();
             }
             catch (Exception exception)

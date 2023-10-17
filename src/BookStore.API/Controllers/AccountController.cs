@@ -135,7 +135,7 @@ namespace FileStore.API.Controllers
                 var managedUser = await _userManager.FindByNameAsync(request.UserName);
                 var claims = await _userManager.GetClaimsAsync(managedUser);
 
-                _logger.LogInformation($"User [{request.UserName}] is trying to refresh JWT token.");
+                //_logger.LogInformation($"User [{request.UserName}] is trying to refresh JWT token.");
 
                 if (string.IsNullOrWhiteSpace(request.RefreshToken))
                 {
@@ -144,7 +144,7 @@ namespace FileStore.API.Controllers
 
                 var accessToken = await HttpContext.GetTokenAsync("Bearer", "access_token");
                 var jwtResult = _jwtAuthManager.Refresh(request.RefreshToken, accessToken, DateTime.Now, claims);
-                _logger.LogInformation($"User [{request.UserName}] has refreshed JWT token.");
+                //_logger.LogInformation($"User [{request.UserName}] has refreshed JWT token.");
                 return Ok(new LoginResult
                 {
                     UserName = request.UserName,
