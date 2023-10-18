@@ -99,7 +99,7 @@ namespace FileStore.API.Controllers
 
             await _ruTrackerUpdater.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
 
-            _fileService.Remove(file);
+            await _fileService.Remove(file);
 
             return Ok();
         }

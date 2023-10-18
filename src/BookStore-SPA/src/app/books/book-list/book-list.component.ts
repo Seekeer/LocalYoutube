@@ -237,6 +237,9 @@ displayListForType() {
             this.hideSpinner();
             this.isRandom = false;
             this.episodeCount = 10;
+            // Harcode for Youtube
+            this.serieId = 6091;
+            this.searchBooks();
           });
         break;
       }

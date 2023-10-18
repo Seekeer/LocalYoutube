@@ -182,6 +182,8 @@ namespace FileStore.Infrastructure.Repositories
         public void MarkFileToDelete(T file)
         {
             file.NeedToDelete = true;
+            Db.Attach(file);
+            Db.Update(file);
             Db.SaveChanges();
         }
     }

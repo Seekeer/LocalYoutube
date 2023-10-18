@@ -328,8 +328,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   public download() {
-    // this.name;
-    // videoURL
+    (window as any).open(this.videoURL,'_blank');
   }
 
   public copyLink() {
@@ -385,12 +384,15 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
     if (this.parameters.videosCount <= this.playedVideoCount) {
       this.videoURL = null;
+      if(this.parameters.showDeleteButton)
+        this.showDeleteModal()
       return false;
     }
 
     let currentId = this.videosList[++this.currentVideoIndex];
 
     this.videoURL = this.service.getVideoURLById(currentId);
+    //this.download();
     this.vlcPlayURL = `vlc://${this.videoURL}`;
     var el = this.getVideoElement();
     el?.load();
