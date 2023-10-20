@@ -37,7 +37,6 @@ namespace FileStore.API
         public IConfiguration Configuration { get; }
 
         private readonly string _policyName = "CorsPolicy";
-        private Timer _aTimer;
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -132,14 +131,6 @@ namespace FileStore.API
                 var builder = new UriBuilder(uri);
                 builder.Path = "api/update/stub";
 
-                if(_aTimer == null)
-                {
-                    _aTimer = new System.Timers.Timer();
-                    _aTimer.Elapsed += (_, __) => { new HttpClient().GetAsync(builder.ToString()); };
-                    _aTimer.Interval = TimeSpan.FromSeconds(30).TotalMilliseconds;
-                    _aTimer.Enabled = true;
-                }
-                //RecurringJob.AddOrUpdate(() => new HttpClient().GetAsync(builder.ToString()), " */4 * * * *");
 
                 return next.Invoke();
             });
