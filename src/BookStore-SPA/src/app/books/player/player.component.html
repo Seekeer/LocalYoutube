@@ -9,7 +9,15 @@
 </dialog>
 
 <div>
-  <img *ngIf="!videoURL " class="bg" alt="Finish!" src="./assets/img/finish.jpg" >
+  <div>
+    <img *ngIf="!videoURL " class="bg" alt="Finish!" src="./assets/img/finish.jpg" >
+
+<!-- 
+    <button class="btn btn-outline-danger btn-lg" *ngIf="parameters.showDeleteButton"        (click)="showDeleteModal()">
+      Удалить последнее видео?
+    </button> -->
+
+  </div>
   <div *ngIf="videoURL" class="video-container">
 
       <video *ngIf="isMobile" controls height="auto" autoplay class="player__video viewer"
