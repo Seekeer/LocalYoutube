@@ -57,6 +57,7 @@ import { FailedConnectionInterceptor } from './failedConnection.interceptor';
 import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './login/login.component';
 import { NavComponent } from './nav/nav.component';
+import { MarkslistComponent } from './markslist/markslist.component';
 
 @NgModule({
   declarations: [
@@ -71,7 +72,8 @@ import { NavComponent } from './nav/nav.component';
     SafePipe,
     ConfirmationDialogComponent,
     NgbdDatepickerPopup,
-    AudioComponent
+    AudioComponent,
+    MarkslistComponent
   ],
   imports: [
     BrowserModule,

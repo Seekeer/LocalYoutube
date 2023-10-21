@@ -40,6 +40,7 @@ export class AudioComponent implements OnInit {
   selectedFile: AudioFile;
   audioURL: SafeHtml;
   seasons: Seasons[];
+  fileId: number;
 
   constructor(
     private service: AudioFileService,
@@ -205,6 +206,7 @@ export class AudioComponent implements OnInit {
   }
   private setVideoByIndex(index:number) {
     this.currentIndex = index;
+    this.fileId = this.selectedFile.id;
 
     this.selectedFile = this.filteredFiles[this.currentIndex];
     this.audioURL = this.selectedFile.PlayURL;

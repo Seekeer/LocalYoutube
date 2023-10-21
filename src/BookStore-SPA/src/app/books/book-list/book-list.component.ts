@@ -239,6 +239,7 @@ displayListForType() {
             this.episodeCount = 10;
             // Harcode for Youtube
             this.serieId = 6091;
+            this.seasonId = 13469;
             this.searchBooks();
           });
         break;

@@ -30,10 +30,16 @@
     </div>
 
     <div *ngIf="selectedFile">{{selectedFile.name}}</div>
-    <audio  controls height="auto" autoplay  #audioElement (ended)="videoEnded()" src="{{audioURL}}"></audio>
+    <audio id="player"  controls height="auto" autoplay  #audioElement (ended)="videoEnded()" src="{{audioURL}}"></audio>
+      <!-- <audio id="player" controls height="auto" autoplay  #audioElement (ended)="videoEnded()" src="https://file-examples.com/storage/fe1207564e65327fe9c8723/2017/11/file_example_MP3_700KB.mp3"></audio> -->
 
-    <button (click)="videoEnded()">Следующее</button>
-    <button (click)="continue()">Продолжить</button>
+    <div>
+
+      <button class="btn btn-outline-danger btn-sm" (click)="videoEnded()">Следующее</button>
+      <button class="btn btn-outline-danger btn-sm" (click)="continue()">Продолжить</button>
+  
+      <app-markslist [videoId]="fileId"></app-markslist>
+    </div>
     
     <ul class="list-group list-group-light">
       <li class="list-group-item d-flex justify-content-between align-items-center" (click)="selectAudio(file)"

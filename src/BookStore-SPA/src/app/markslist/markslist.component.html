@@ -1,0 +1,52 @@
+
+<button
+mat-icon-button
+color="primary"
+data-toggle="tooltip"
+data-placement="top"
+title="Добавить метку"
+(click)="addMark()"
+>
+<mat-icon>bookmark</mat-icon>
+</button>
+
+<div>
+    <!-- <button style="width: 100px; height: 30px;" (click)="click()" >Reload marks</button> -->
+    <div *ngFor="let mark of marks">
+        <a (click)="markClicked(mark)" class="link-primary"
+          >{{mark.caption|| 'Метка' }}  в {{ mark.displayTime }}</a
+        >
+
+        <button mat-icon-button color="accent">
+          <mat-icon (click)="deleteMark(mark)">delete</mat-icon>
+        </button>
+
+        <button mat-icon-button color="primary" (click)="rewindMark(mark)">
+          <mat-icon>fast_rewind</mat-icon>
+        </button>
+
+        <button mat-icon-button color="primary" (click)="forwardMark(mark)">
+          <mat-icon>fast_forward</mat-icon>
+        </button>
+
+        <button mat-icon-button color="primary" (click)="edit(mark)">
+          <mat-icon>edit</mat-icon>
+        </button>
+
+        <div *ngIf="mark.isInEditMode">
+          
+          <mat-form-field class="example-full-width" appearance="fill">
+            <mat-label>Название метки</mat-label>
+            <input matInput  [(ngModel)]="mark.caption">
+          </mat-form-field>
+
+          <button mat-icon-button color="primary" (click)="stopEdit(mark, true)">
+            <mat-icon>done</mat-icon>
+          </button>
+
+          <button mat-icon-button color="accent" (click)="stopEdit(mark, false)">
+            <mat-icon>cancel</mat-icon>
+          </button>
+        </div>
+      </div>
+</div>

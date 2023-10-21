@@ -18,6 +18,7 @@ import { Book } from 'src/app/_models/Book';
 import { Mark } from 'src/app/_models/Mark';
 import { FileService } from 'src/app/_services/file.service';
 import { SeriesService } from 'src/app/_services/series.service';
+import { MarkslistComponent } from 'src/app/markslist/markslist.component';
 
 import { PlayerParameters } from '../book-list/book-list.component';
 
@@ -28,6 +29,7 @@ import { PlayerParameters } from '../book-list/book-list.component';
 })
 export class PlayerComponent implements OnInit, OnDestroy {
   @ViewChild('videoElement') video: ElementRef;
+  @ViewChild('markslist') child: MarkslistComponent;
 
   public formData: Book;
   public categories: any;
@@ -38,7 +40,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   playedVideoCount: number = 0;
   public parameters: PlayerParameters;
-  videoId: number;
+  public videoId: number;
 
   videosList: number[] = [];
   currentVideoIndex: number = -1;
@@ -149,7 +151,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   private getVideoElement() {
     if (this.video) {
-      var videoEl = this.video.nativeElement as HTMLVideoElement;
+      var videoEl = this.video.nativeElement as HTMLMediaElement;
 
       this.rewindNotificationValue = document.querySelector(
         '.video-rewind-notify span'
@@ -416,7 +418,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
     }
 
     let currentId = this.videosList[++this.currentVideoIndex];
-
+    this.videoId = currentId;
+    
     this.videoURL = this.service.getVideoURLById(currentId);
     //this.download();
     this.vlcPlayURL = `vlc://${this.videoURL}`;
