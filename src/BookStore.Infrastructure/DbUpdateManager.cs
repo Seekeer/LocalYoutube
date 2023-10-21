@@ -371,9 +371,13 @@ namespace Infrastructure
 
         public static string GetSeriesNameFromFolder(string name)
         {
-            var result = "";
-            var index =0;
             string pattern = @"\p{IsCyrillic}";
+
+            if (!Regex.IsMatch(name.ToString(), pattern))
+                return name;
+
+            var result = "";
+            var index = 0;
             foreach (var ch in name)
             {
                 if (!Regex.IsMatch(ch.ToString(), pattern))
@@ -382,7 +386,7 @@ namespace Infrastructure
 
                 index++;
                 result += ch;
-            } 
+            }
 
             return result.ClearSerieName();
         }
@@ -897,7 +901,7 @@ namespace Infrastructure
 
         public void RemoveSeriesCompletely(int seriesId)
         {
-            var files = _db.VideoFiles.Where(x => x.SeriesId == seriesId).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileExtendedInfo);
+            var files = _db.VideoFiles.Where(x => x.SeriesId == seriesId).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileExtendedInfo).ToList();
             using var fileRepo = new DbFileRepository(_db);
             foreach (var file in files)
                 fileRepo.RemoveFileCompletely(file);

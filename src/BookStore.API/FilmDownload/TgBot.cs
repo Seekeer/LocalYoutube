@@ -77,13 +77,12 @@ namespace API.FilmDownload
             var db = _GetDb();
             var manager = new DbUpdateManager(db);
             var seriesDownload = db.Series.First(x => x.Id == 18);
-            var seasonA = manager.AddOrUpdateSeason(seriesDownload, "Алена");
-            var seasonD = manager.AddOrUpdateSeason(seriesDownload, "Дима");
 
             // Helen
-            _tgSeasonDict.Add(new TgLink { TgId = 360495063, FilmSeasonId = seasonA.Id});
+            _tgSeasonDict.Add(new TgLink { TgId = 360495063, FilmSeasonId = manager.AddOrUpdateSeason(seriesDownload, "Алена").Id});
             // DIMA
-            _tgSeasonDict.Add(new TgLink { TgId = 176280269, FilmSeasonId = seasonD.Id });
+            _tgSeasonDict.Add(new TgLink { TgId = 176280269, FilmSeasonId = manager.AddOrUpdateSeason(seriesDownload, "Дима").Id });
+            _tgSeasonDict.Add(new TgLink { TgId = 1618298918, FilmSeasonId = manager.AddOrUpdateSeason(seriesDownload, "Дима").Id });
             // Jully
             _tgSeasonDict.Add(new TgLink { TgId = 76951227, FilmSeasonId = manager.AddOrUpdateSeason(seriesDownload, "Юля").Id });
         }
@@ -644,7 +643,7 @@ namespace API.FilmDownload
                     CallbackData = CommandParser.GetMessageFromData(CommandType.ShowAllSearchResult, text) }));
         }
 
-        private async Task ProcessYoutubeVideo(string text, long fromId, Message message, bool watchLater)
+        public async Task ProcessYoutubeVideo(string text, long fromId, Message message, bool watchLater)
         {
             try
             {

@@ -29,12 +29,14 @@ namespace FileStore.API.Controllers
     [Route("api/[controller]")]
     public class UpdateController : MainController
     {
+        private readonly TgBot _tgBot;
         private readonly VideoCatalogDbContext _db;
         private readonly AppConfig _config;
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
-        public UpdateController(VideoCatalogDbContext dbContext, AppConfig config, IServiceScopeFactory serviceScopeFactory)
+        public UpdateController(VideoCatalogDbContext dbContext, AppConfig config, IServiceScopeFactory serviceScopeFactory, TgBot tgBot)
         {
+            _tgBot = tgBot;
             _db = dbContext;
             _config = config;
             _serviceScopeFactory = serviceScopeFactory;
@@ -440,12 +442,15 @@ namespace FileStore.API.Controllers
         {
             var dbManager = new DbUpdateManager(_db);
 
-            var files = _db.Files.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).
-                Where(x => x.SeriesId == serieId).ToList();
-            foreach (var file in files)
+            if (deleteFile)
             {
-                if (deleteFile)
-                    await PhisicallyRemoveFile(file);
+                var files = _db.Files.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).
+                    Where(x => x.SeriesId == serieId).ToList();
+                foreach (var file in files)
+                {
+                    if (deleteFile)
+                        await PhisicallyRemoveFile(file);
+                }
             }
             dbManager.RemoveSeriesCompletely(serieId);
 
@@ -504,7 +509,43 @@ namespace FileStore.API.Controllers
         private void Remove(DbFile file)
         {
             var manager = new DbUpdateManager(_db);
-            manager.RemoveFileCompletely(file); 
+            manager.RemoveFileCompletely(file);
+        }
+
+        [HttpGet]
+        [Route("addManyYoutube")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> AddManyYoutube()
+        {
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=qmsrd9IVIh8", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=FC3AilGtb8M", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=ulN-85A6nko", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=n_twIi6l0dQ", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=iiKsyZeqtbo", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=sA2sctbdV6A", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=w_AsKtKnw3s", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=_Qbff14DEsc", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=EuB9E2iMavw", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=AZvWHdLcwOQ", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=49Qz_VvcKQk", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=1ZIaoP2tyO0", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=EgrjTiLe4_w", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=aI_47Kzb8WY", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=JJNccH7lNNM", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=-lRx_V1o_iQ", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=iLg1fkBh7Pw", 11, null, false);
+
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=TKT5mmiPKeU", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=L4mUNieliHs", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=E02BsIhcAHQ", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=TgvAPr__YDg", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=A1VFD9OX-q0", 11, null, false);
+            //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=WwxBng1i5M0", 11, null, false);
+
+            await this.RemoveSeries(6093, false );
+            await this.AddFolder(@"F:\Видео\Курсы\IT", VideoType.Courses, true);
+
+            return Ok();
         }
 
         [HttpGet]
@@ -526,11 +567,11 @@ namespace FileStore.API.Controllers
 
             if (type == VideoType.ChildEpisode || type == VideoType.Courses)
             {
-                dbUpdater.FillSeries(path, Origin.Russian, type.Value, severalSeriesInFolder, seriesName);
+                dbUpdater.FillSeries(path, type == VideoType.Courses ? Origin.Foreign : Origin.Russian, type.Value, severalSeriesInFolder, seriesName);
                 return Ok();
             }
 
-            return NotFound();
+             return NotFound();
         }
 
         [HttpGet]

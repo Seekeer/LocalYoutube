@@ -11,6 +11,6 @@ namespace FileStore.Domain.Models
         public int DbFileId { get; set; }
         public string UserId { get; set; }
         public double Position { get; set; }
-
+        public string Caption { get; set; }
     }
 }
