@@ -35,7 +35,7 @@ namespace API.Controllers
         [HttpGet]
         [Route("getAllMarks")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetAllAudio(int fileId)
+        public async Task<IActionResult> GetAllMarks(int fileId)
         {
             var userId = await GetUserId(_userManager);
             var objects = (await _marksRepository.GetAll()).Where(x => x.DbFileId == fileId && x.UserId == userId);
@@ -57,6 +57,22 @@ namespace API.Controllers
             var addedMark = await _marksRepository.Add(mark);
 
             return Ok(addedMark.Id);
+        }
+
+        [HttpPost]
+        [Route("update")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Update(MarkAddDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest();
+            var userId = await GetUserId(_userManager);
+
+            var mark = _mapper.Map<FileMark>(dto);
+            mark.UserId = userId;
+            await _marksRepository.Update(mark);
+
+            return Ok();
         }
 
         [HttpDelete("{id:int}")]
