@@ -5,4 +5,6 @@ export class Mark {
     position: number;
     displayTime: string;
 
+    caption: string;
+    isInEditMode: boolean;
 }

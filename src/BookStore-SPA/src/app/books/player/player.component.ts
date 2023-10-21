@@ -276,7 +276,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
     var mark = new Mark();
     mark.dbFileId = this.videoId;
-    mark.position = element.currentTime;
+    mark.position = element.currentTime - 5;
     this.calculateDisplayTime(mark);
     this.service.addMarkByFile(mark).subscribe((id) => {
       mark.id = id;
@@ -296,7 +296,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   public markClicked(mark: Mark) {
     var element = this.getVideoElement();
-    element.currentTime = mark.position - 5;
+    element.currentTime = mark.position;
   }
 
   public deleteMark(mark: Mark) {
@@ -304,6 +304,32 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.marks = this.marks.filter((obj) => {
       return obj.id !== mark.id;
     });
+  }
+
+  public rewindMark(mark: Mark) {
+
+    mark.position -= 10;
+    this.calculateDisplayTime(mark);
+    this.service.updateMark(mark).subscribe();
+
+  }
+
+  public forwardMark(mark: Mark) {
+    mark.position += 10;
+    this.calculateDisplayTime(mark);
+
+    this.service.updateMark(mark).subscribe();
+  }
+
+  public edit(mark: Mark) {
+    mark.isInEditMode = true;
+  }
+
+  public stopEdit(mark: Mark, applyEdit: boolean) {
+    mark.isInEditMode = false;
+
+    if(applyEdit)
+      this.service.updateMark(mark).subscribe();
   }
 
   public showDeleteModal() {

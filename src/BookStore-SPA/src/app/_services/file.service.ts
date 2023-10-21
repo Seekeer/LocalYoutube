@@ -27,6 +27,9 @@ export class FileService {
     public addMarkByFile(mark: Mark): Observable<number> {
         return this.http.post<number>(this.baseUrl + 'marks/add', mark);
     }
+    public updateMark(mark: Mark): Observable<number> {
+        return this.http.post<number>(this.baseUrl + 'marks/update', mark);
+    }
 
     public getFilmsByType(type: VideoType) {
         return this.http.get<Book[]>(`${this.baseUrl}files/getFileByType/${type}`);
