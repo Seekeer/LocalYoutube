@@ -21,6 +21,7 @@ export class Book {
     isSelected:boolean;
 
     PlayURL: SafeHtml;
+    coverURL: SafeHtml;
     hours:string;
 }
 

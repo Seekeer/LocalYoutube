@@ -12,6 +12,7 @@ using FileStore.API.Dtos.File;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using FileStore.Domain.Services;
+using Google.Apis.CustomSearchAPI.v1.Data;
 using Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -140,6 +141,19 @@ namespace FileStore.API.Controllers
 
             var filesDTO = _mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId(_userManager)).OrderByDescending(x => x.Year);
             return Ok(filesDTO);
+        }
+
+        [AllowAnonymous]
+        [HttpGet]
+        [Route("getImage")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetImage(int fileId)
+        {
+            var file = await _fileService.GetById(fileId);
+
+            // Replace the octet-stream with whatever type you desire, we decided on the basic, generic form because... well, it all is, isn't it?
+            return File(file.VideoFileExtendedInfo.Cover, "application/octet-stream", "a.jpeg");
         }
 
         [HttpGet]

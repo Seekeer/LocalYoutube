@@ -56,6 +56,9 @@ export class FileService {
     public getVideoURLById(id: number) {
         return this.baseUrl +'Files/getFileById?fileId=' + id;
     }
+    public getVideoCoverById(id: number) {
+        return this.baseUrl +'Files/getImage?fileId=' + id;
+    }
     public getRandomVideoBySeries(seriesId: number) {
         return this.baseUrl +`Files/getRandomFileBySeriesId?seriesId=${seriesId}&guid=${btoa(Math.random().toString()).substr(10, 15)}` ;
     }

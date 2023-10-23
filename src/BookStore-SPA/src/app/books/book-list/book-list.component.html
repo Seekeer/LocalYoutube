@@ -68,7 +68,8 @@
         </mat-card-header>
         <img 
           [ngClass]="{ shownFilm: book.isFinished }"
-          src="data:image/jpg;base64,{{ book.cover }}"
+          loading="lazy"
+          src="{{book.coverURL}}"
           (click)="openVideo(book)"
         />
       </mat-card>
@@ -91,8 +92,9 @@
           <div class="row">
             <div class="col-sm-8">
               <img
+                loading="lazy"
                 [ngClass]="{ shownFilm: book.isFinished }"
-                src="data:image/jpg;base64,{{ book.cover }}"
+                src="{{book.coverURL}}"
                 (click)="openVideo(book)"
               />
             </div>

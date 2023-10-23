@@ -238,9 +238,9 @@ displayListForType() {
             this.isRandom = false;
             this.episodeCount = 10;
             // Harcode for Youtube
-            this.serieId = 6091;
-            this.seasonId = 13469;
-            this.searchBooks();
+            // this.serieId = 6091;
+            // this.seasonId = 13469;
+            // this.searchBooks();
           });
         break;
       }
@@ -350,6 +350,7 @@ watchedChanged(event){
 
     this.books.forEach(book => {
       book.PlayURL = (`vlc://${this.service.getVideoURLById(book.id)}`);
+      book.coverURL = (`${this.service.getVideoCoverById(book.id)}`);
       let hours= Math.floor(book.durationMinutes/60)
       if(hours > 0){
         let ending  = hours==1?'':'а';
