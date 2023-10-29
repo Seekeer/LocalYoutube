@@ -12,9 +12,9 @@ export class Book {
     durationMinutes:number;
     isFinished:boolean;
     isSupportedWebPlayer:boolean;
-    
+
     description: string;
-    year: string;
+    year: number;
     genres: string;
     director: string;
 
@@ -31,10 +31,12 @@ export enum VideoType {
     Animation,
     ChildEpisode,
     FairyTale,
-    Lessons, 
+    Lessons,
     Art,
     AdultEpisode,
-    Courses
+    Courses,
+    Downloaded,
+    Youtube
 }
 
 

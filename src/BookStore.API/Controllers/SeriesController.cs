@@ -53,7 +53,6 @@ namespace FileStore.API.Controllers
             var series = new List<Series>();
             series.AddRange(await _SeriesService.GetAllByType(VideoType.AdultEpisode));
             series.AddRange(await _SeriesService.GetAllByType(VideoType.Courses));
-            series.AddRange(await _SeriesService.GetAllByType(VideoType.Youtube));
 
             return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(series));
         }
