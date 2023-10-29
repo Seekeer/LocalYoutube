@@ -45,13 +45,11 @@ export class PlayerComponent implements OnInit, OnDestroy {
   videosList: number[] = [];
   currentVideoIndex: number = -1;
   intervalId: any;
-  position: number;
   isRandom: boolean;
   isMobile: boolean;
   timerMinutes: number;
   timerStr: string;
   totalDuration: moment.Moment;
-  marks: Mark[] = [];
   subscribed: boolean;
   lastVolumeChangedTime: Date = new Date(1);
   vlcPlayURL: string;
@@ -93,8 +91,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     );
 
     this.videoId = this.parameters.videoId;
-    this.position = parseFloat(this.parameters.position.toString());
-
+    
     this.isRandom = String(this.parameters.isRandom) === 'true';
     this.videosList.push(this.videoId);
     this.setNextVideo(true);
@@ -243,49 +240,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
       : this.notifications[1].classList.add('animate-in');
   }
 
-  public paused() {
-    if (this.getVideoElement().seeking) return;
-
-    this.lastVolumeChangedTime = new Date();
-  }
-  public volumeChanged() {
-    this.calculateTimeDiff(
-      this.lastVolumeChangedTime,
-      () => this.addMark(),
-      () => {}
-    );
-  }
-
-  private calculateTimeDiff(
-    date: Date,
-    callbackOnLess: Function,
-    callbackOnMore: Function
-  ) {
-    var timeDiff = this.calculateTime(date);
-    if (timeDiff < 2000) {
-      callbackOnLess();
-    } else {
-      callbackOnMore();
-    }
-  }
-
-  private calculateTime(date: Date) {
-    return new Date().getTime() - date.getTime();
-  }
-
-  public addMark() {
-    var element = this.getVideoElement();
-
-    var mark = new Mark();
-    mark.dbFileId = this.videoId;
-    mark.position = element.currentTime - 5;
-    this.calculateDisplayTime(mark);
-    this.service.addMarkByFile(mark).subscribe((id) => {
-      mark.id = id;
-    });
-    this.marks.push(mark);
-  }
-
   public calculateDisplayTime(mark: Mark) {
     let minutes = Math.floor(mark.position / 60);
     let seconds = Math.floor(mark.position - minutes * 60);
@@ -294,44 +248,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
     let secondsStr = seconds.toString().padStart(2, '0');
 
     mark.displayTime = `${minutesStr}:${secondsStr}`;
-  }
-
-  public markClicked(mark: Mark) {
-    var element = this.getVideoElement();
-    element.currentTime = mark.position;
-  }
-
-  public deleteMark(mark: Mark) {
-    this.service.deleteMark(mark.id).subscribe();
-    this.marks = this.marks.filter((obj) => {
-      return obj.id !== mark.id;
-    });
-  }
-
-  public rewindMark(mark: Mark) {
-
-    mark.position -= 10;
-    this.calculateDisplayTime(mark);
-    this.service.updateMark(mark).subscribe();
-
-  }
-
-  public forwardMark(mark: Mark) {
-    mark.position += 10;
-    this.calculateDisplayTime(mark);
-
-    this.service.updateMark(mark).subscribe();
-  }
-
-  public edit(mark: Mark) {
-    mark.isInEditMode = true;
-  }
-
-  public stopEdit(mark: Mark, applyEdit: boolean) {
-    mark.isInEditMode = false;
-
-    if(applyEdit)
-      this.service.updateMark(mark).subscribe();
   }
 
   public showDeleteModal() {
@@ -436,16 +352,13 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.service.getBookById(currentId).subscribe(
       (videoInfo) => {
         this.name = videoInfo.displayName;
+        this.setPosition(videoInfo.currentPosition);
+
       },
       (err) => {
         console.log(`Cannot get video by series ${this.parameters.seriesId}`);
       }
     );
-
-    this.service.getMarksByFile(this.videoId).subscribe((marks) => {
-      marks.forEach((x) => this.calculateDisplayTime(x));
-      this.marks = marks;
-    });
 
     return true;
   }
@@ -453,7 +366,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
   private updateStat() {
     var video = this.getVideoElement();
 
-    this.setPosition();
 
     if (!video || video.paused) return;
 
@@ -471,11 +383,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
       )} ${this.playedVideoCount}/${this.parameters.videosCount}`;
   }
 
-  setPosition() {
+  setPosition(position: number) {
     var video = this.getVideoElement();
-    if (this.position > 0 && video) {
-      video.currentTime = this.position;
-      this.position = -1;
+    if (position > 0 && video) {
+      video.currentTime = position;
     }
   }
 }

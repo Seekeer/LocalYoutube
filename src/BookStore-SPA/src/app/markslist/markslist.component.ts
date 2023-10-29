@@ -20,6 +20,8 @@ export class MarkslistComponent implements OnInit, OnChanges {
   @ViewChild('audioElement') audio:ElementRef; 
   marks: Mark[] = [];
   @Input() videoId: number;
+  lastVolumeChangedTime: Date;
+  private _subscribed: any;
 
   // @Input() item = ''; // decorate the property with @Input()
   constructor(
@@ -36,6 +38,10 @@ export class MarkslistComponent implements OnInit, OnChanges {
     var mark = new Mark();
     mark.dbFileId = this.videoId;
     mark.position = element.currentTime - 5;
+
+    if(this.marks.find(x => Math.abs((x.position - mark.position)) < 5))
+      return;
+
     this.calculateDisplayTime(mark);
     this.service.addMarkByFile(mark).subscribe((id) => {
       mark.id = id;
@@ -49,6 +55,38 @@ export class MarkslistComponent implements OnInit, OnChanges {
     }
   }
   
+  public paused() {
+    if (this.getVideoElement().seeking) return;
+
+    this.lastVolumeChangedTime = new Date();
+  }
+  
+  public played() {
+    this.calculateTimeDiff(
+      this.lastVolumeChangedTime,
+      () => this.addMark(),
+      () => {}
+    );
+  }
+  
+
+  private calculateTimeDiff(
+    date: Date,
+    callbackOnLess: Function,
+    callbackOnMore: Function
+  ) {
+    var timeDiff = this.calculateTime(date);
+    if (timeDiff < 2000) {
+      callbackOnLess();
+    } else {
+      callbackOnMore();
+    }
+  }
+
+  private calculateTime(date: Date) {
+    return new Date().getTime() - date.getTime();
+  }
+
   getVideoElement() {
     // if (!this.mediaElement) 
     {
@@ -56,6 +94,12 @@ export class MarkslistComponent implements OnInit, OnChanges {
         '#player'
       );
       var mediaEl = audio as HTMLMediaElement;
+
+      if(!this._subscribed){
+        mediaEl.onpause = (event: Event) => this.paused();
+        mediaEl.onplay = (event: Event) => this.played();
+        this._subscribed = true;
+      }
 
       return mediaEl;
     }
@@ -113,6 +157,7 @@ export class MarkslistComponent implements OnInit, OnChanges {
     this.videoId = fileId;
 
     this.service.getMarksByFile(this.videoId).subscribe((marks) => {
+      this.getVideoElement();
       marks.forEach((x) => this.calculateDisplayTime(x));
       this.marks = marks;
     });

@@ -4,3 +4,10 @@ a{
     text-decoration-style: solid;
     cursor:pointer ;
 }
+
+#marksList{
+    max-height: 280px;
+    /* overscroll-behavior: none; */
+    overflow: auto;
+    width: auto;
+}

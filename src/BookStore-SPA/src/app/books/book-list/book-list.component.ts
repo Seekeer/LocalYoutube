@@ -412,7 +412,6 @@ counter : number =0 ;
     let showDelete = this.type != 'soviet' && this.type != 'sovietfairytale'&& this.type != 'series';
     const queryParams: PlayerParameters = {
       seriesId : book.seriesId,
-      position : book.currentPosition,
       videoId : book.id,
       videosCount : this.episodeCount,
       isRandom : this.isRandom,
@@ -436,7 +435,6 @@ export class PlayerParameters {
   seriesId: number;
   seasonId: number;
   videosCount: number;
-  position: number;
   isRandom: boolean;
   showDeleteButton: boolean;
 }
