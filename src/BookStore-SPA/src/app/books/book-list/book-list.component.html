@@ -3,7 +3,7 @@
   <ngx-spinner type="ball-scale-multiple"></ngx-spinner>
 
   <div>
-    
+
     <mat-form-field class="example-full-width" appearance="fill">
       <mat-label>Название</mat-label>
       <input matInput  [(ngModel)]="searchTitle" (ngModelChange)="searchBooks()">
@@ -18,7 +18,7 @@
       </mat-select>
     </mat-form-field>
 
-    <mat-form-field appearance="fill"  *ngIf="isSelectSeries" >
+    <mat-form-field appearance="fill"  *ngIf="isSelectSeason" >
       <mat-label>Сезон</mat-label>
       <mat-select [(ngModel)]="seasonId" (ngModelChange)="searchBooks()">
         <mat-option *ngFor="let data of seasons" value="{{data.id}}">
@@ -26,7 +26,7 @@
         </mat-option>
       </mat-select>
     </mat-form-field>
-    
+
     <mat-form-field class="example-full-width"  *ngIf="isSelectSeries" appearance="fill">
       <mat-label>Число серий</mat-label>
       <input matInput type="number"  [(ngModel)]="episodeCount" >
@@ -36,6 +36,13 @@
       <mat-label>Жанры</mat-label>
       <mat-select  [(value)]="selectedGenres"  (selectionChange)="watchedChanged($event)" multiple>
         <mat-option *ngFor="let topping of genres" [value]="topping">{{topping}}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill" *ngIf="showKPINfo">
+      <mat-label>Годы</mat-label>
+      <mat-select  [(value)]="selectedYears"  (selectionChange)="watchedChanged($event)" multiple>
+        <mat-option *ngFor="let range of yearsRange" [value]="range">{{range.start}}-{{range.end}}</mat-option>
       </mat-select>
     </mat-form-field>
     </div>
@@ -66,7 +73,7 @@
           <mat-card-title>{{ book.displayName }}</mat-card-title>
           <mat-card-subtitle>{{book.hours}} {{book.durationMinutes%60}} минут</mat-card-subtitle>
         </mat-card-header>
-        <img 
+        <img
           [ngClass]="{ shownFilm: book.isFinished }"
           loading="lazy"
           src="{{book.coverURL}}"
@@ -98,7 +105,7 @@
                 (click)="openVideo(book)"
               />
             </div>
-            <div class="col-sm"> 
+            <div class="col-sm">
               <button *ngIf="!isAndroid" class="btn btn-outline-primary btn-sm" (click)="copyLink(book)">Скопировать ссылку</button>
 
               <a [href]="book.PlayURL | safe" >
@@ -124,7 +131,7 @@
             </div>
           </div>
         </div>
-        
+
       </mat-card>
     </div>
   </div>

@@ -159,3 +159,7 @@ img.bg {
     margin-left: -512px;   /* 50% */
   }
 }
+
+button[mat-icon-button] {
+  transform: scale(2);
+}

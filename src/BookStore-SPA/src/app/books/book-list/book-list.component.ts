@@ -32,6 +32,11 @@ import { SeriesService } from 'src/app/_services/series.service';
 
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
+export class YearsRange  {
+  public start:number;
+  public end:number;
+}
+
 @Component({
   selector: 'app-book-list',
   templateUrl: './book-list.component.html',
@@ -63,6 +68,7 @@ export class BookListComponent implements OnInit {
   public showOnlyWebSupported: boolean;
 
   public isSelectSeries: boolean = false;
+  public isSelectSeason: boolean = false;
   public showKPINfo: boolean = false;
   public serieId: number = 0;
   public seasonId: number = 0;
@@ -74,6 +80,14 @@ export class BookListComponent implements OnInit {
   public seasons: Seasons[];
   public selected: Book[] =[];
   public selectedGenres:string[];
+  public selectedYears:YearsRange[];
+  public yearsRange: YearsRange[] = [ {start : 0, end : 1950},
+    {start : 1951, end : 1970},
+    {start : 1971, end : 1980},
+    {start : 1981, end : 1990},
+    {start : 1991, end : 2000},
+    {start : 2001, end : 2010},
+    {start : 2011, end : 2030}].reverse();
   public genres: string[] = ['комедия', 'драма', 'боевик', 'детектив', 'фантастика', 'биография', 'фэнтези', 'приключения','мелодрама'];
   type: string;
   apibooks: Book[];
@@ -135,6 +149,8 @@ export class BookListComponent implements OnInit {
           : -1
       });
       this.hideSpinner();
+      // this.serieId = 6091;
+      this.searchBooks();
     });
   }
 
@@ -202,7 +218,8 @@ export class BookListComponent implements OnInit {
       this.service.searchFilesWithSeries(serie.name, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     }
     else {
-            this.toastr.error('Выберите название файла или сериала');
+      this.hideSpinner();
+            // this.toastr.error('Выберите название файла или сериала');
     }
   }
 
@@ -210,18 +227,22 @@ displayListForType() {
     let that = this;
     switch (this.type){
       case 'series':{
-        this.isSelectSeries = true;
+        this.selectSeries(true);
+
         this.getSeries(VideoType.ChildEpisode);
         break;
       }
-      case 'adultSeries':{
+      case 'youtube':{
         this.isRandom = false;
-        this.isSelectSeries = true;
-        this.getSeries(VideoType.AdultEpisode);
+        this.isSelectSeason = true;
+        this.serieId = 6091;
+        this.getSeries(VideoType.Youtube);
+        this.episodeCount = 10;
+
         break;
       }
       case 'soviet':{
-        this.isSelectSeries = true;
+        this.selectSeries(true);
         this.series = [];
         this.series.push( {id : 13, name : 'Известные', seasons: []});
         this.series.push( {id : 14, name : 'Разные', seasons: []});
@@ -233,7 +254,7 @@ displayListForType() {
       case 'other':{
           this.seriesService.getOther().subscribe(series => {
             this.series = series;
-            this.isSelectSeries = true;
+            this.selectSeries(true);
             this.hideSpinner();
             this.isRandom = false;
             this.episodeCount = 10;
@@ -262,7 +283,7 @@ displayListForType() {
       }
       case 'film':{
         this.showSpinner();
-        this.isSelectSeries = true;
+        this.selectSeries(true);
         this.showWatched  = false;
         this.getSeries(VideoType.Film);
 
@@ -275,7 +296,7 @@ displayListForType() {
       }
       case 'latest':{
         this.showSpinner();
-        this.isSelectSeries = false;
+        this.selectSeries(false);
         this.showWatched  = true;
 
         this.service.getLatest().subscribe({
@@ -288,6 +309,11 @@ displayListForType() {
         break;
       }
     }
+}
+
+selectSeries(value:boolean){
+  this.isSelectSeries = value;
+  this.isSelectSeason = value;
 }
 watchedChanged(event){
 
@@ -344,6 +370,18 @@ watchedChanged(event){
             }
           });
           return haveGenre;
+          });
+        }
+      if(this.selectedYears){
+        this.books = this.books.filter(book => {
+          var isInRange = false;
+          this.selectedYears.forEach(range => {
+            if(book.year >= range.start && book.year<= range.end)
+            isInRange = true;
+              return;
+            }
+          );
+          return isInRange;
           });
         }
     }
