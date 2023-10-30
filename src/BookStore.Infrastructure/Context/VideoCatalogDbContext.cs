@@ -81,18 +81,25 @@ namespace FileStore.Infrastructure.Context
 
         private void UpdateTimeStamps()
         {
-            var entries = ChangeTracker
-                .Entries()
-                .Where(e => e.Entity is TrackUpdateCreateTimeEntity && (
-                        e.State == EntityState.Added
-                        || e.State == EntityState.Modified));
-
-            foreach (var entityEntry in entries)
+            try
             {
-                if (entityEntry.State == EntityState.Added)
-                    ((TrackUpdateCreateTimeEntity)entityEntry.Entity).CreatedDate = DateTime.Now;
+                var entries = ChangeTracker
+                    .Entries()
+                    .Where(e => e.Entity is TrackUpdateCreateTimeEntity && (
+                            e.State == EntityState.Added
+                            || e.State == EntityState.Modified));
 
-                ((TrackUpdateCreateTimeEntity)entityEntry.Entity).UpdatedDate = DateTime.Now;
+                foreach (var entityEntry in entries)
+                {
+                    if (entityEntry.State == EntityState.Added)
+                        ((TrackUpdateCreateTimeEntity)entityEntry.Entity).CreatedDate = DateTime.Now;
+
+                    ((TrackUpdateCreateTimeEntity)entityEntry.Entity).UpdatedDate = DateTime.Now;
+                }
+            }
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }
         }
 

@@ -364,20 +364,29 @@ namespace API.Controllers
         {
             result = TimeSpan.Zero;
 
-            if (str.Contains("мин"))
+            try
             {
-                var parts = str.Split(' ');
-                var minutes = int.Parse(parts[0]);
+                if (str.Contains("мин"))
+                {
+                    var parts = str.Split(new char[] { ' ', '~' }, StringSplitOptions.RemoveEmptyEntries);
+                    var minutes = int.Parse(parts[0]);
 
-                result = new TimeSpan(0, minutes, 0);
-                return true;
+                    result = new TimeSpan(0, minutes, 0);
+                    return true;
+                }
+                if (str.Length > 10)
+                {
+                    str = str.Substring(0, 8);
+                }
+
+                return TimeSpan.TryParse(str, out result);
             }
-            if (str.Length > 10)
+            catch (Exception ex)
             {
-                str = str.Substring(0, 8);
-            }
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
 
-            return TimeSpan.TryParse(str, out result);
+                return false;
+            }
         }
 
         private string GetProperty(string title, string doc)

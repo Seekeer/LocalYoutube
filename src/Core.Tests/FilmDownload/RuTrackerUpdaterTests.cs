@@ -51,6 +51,22 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
+        public async Task ParseInfo_Gora()
+        {
+            var updater = new RuTrackerUpdater(null);
+
+            var videoInfo = new VideoInfo();
+
+            string page = GetPage(@"Resources\Gora.html");
+
+            await updater.ParseInfo(page, videoInfo);
+
+            Assert.AreEqual(732, videoInfo.Duration.TotalMinutes);
+            Assert.AreEqual(@"Сказка — первый и самый древний путь познания мира. «Гора Самоцветов» — это 54 сказки народов России. Каждую серию из цикла «Гора самоцветов» представляют одни и те же слова: «Мы живём в России». Всего несколько добрых слов о каждом народе, а следом — его мудрая и самобытная сказка. Именно такой радостный и светлый мир каждый взрослый мечтает подарить своему ребёнку. Особую окраску мультсборнику придают голоса известных актёров, которые озвучивали эти сказки.", videoInfo.Description);
+            Assert.IsNotNull(videoInfo.Cover);
+        }
+
+        [Test()]
         public async Task ParseInfo_Bugsy()
         {
             var updater = new RuTrackerUpdater(null);

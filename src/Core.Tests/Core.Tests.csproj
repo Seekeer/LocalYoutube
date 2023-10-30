@@ -33,6 +33,9 @@
     <None Update="Resources\frozen.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Resources\Gora.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Resources\jfk.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

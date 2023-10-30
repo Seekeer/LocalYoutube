@@ -162,7 +162,7 @@ namespace API.FilmDownload
             // Discard the result
             lock (_botClient)
             {
-                _ = DoAsyncPing();
+               _ = DoAsyncPing();
             }
         }
 
@@ -470,15 +470,13 @@ namespace API.FilmDownload
             {
                 var series = manager.AddOrUpdateVideoSeries(info.Name, false, VideoType.AdultEpisode);
                 file.SeriesId = series.Id;
-                var season = manager.AddOrUpdateSeason(series, info.SeasonName);
-                file.SeasonId = season.Id;
+                file.SeasonId = 91;
             }
             else if (type == VideoType.ChildEpisode)
             {
                 var series = manager.AddOrUpdateVideoSeries(info.Name, false, VideoType.ChildEpisode);
                 file.SeriesId = series.Id;
-                var season = manager.AddOrUpdateSeason(series, info.SeasonName);
-                file.SeasonId = season.Id;
+                file.SeasonId = 91;
             }
             else if (type == VideoType.Film && tgRecord != null)
             {
@@ -492,7 +490,7 @@ namespace API.FilmDownload
             else if (type == VideoType.FairyTale && tgRecord != null)
             {
                 file.SeriesId = 11;
-                file.SeasonId = 4355;
+                file.SeasonId = manager.AddOrUpdateSeason(11, "Сказки скаченные").Id;
             }
             else if (type == VideoType.Art && tgRecord != null)
             {

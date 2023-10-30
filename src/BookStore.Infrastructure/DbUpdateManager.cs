@@ -262,8 +262,8 @@ namespace Infrastructure
                                 file.Name.EndsWith("srt") || file.Name.EndsWith("rar") || file.Name.EndsWith("zip") || file.Name.EndsWith("vtt") ||
                                 file.Name.EndsWith("pptx") || file.Name.EndsWith("html") || file.Name.EndsWith("qB") || file.Name.EndsWith("lnk") ||
                                 file.Name.EndsWith("mka") || file.Name.EndsWith("ass") || file.Name.EndsWith("tff") || file.Name.EndsWith("ac3") ||
-                                file.Name.EndsWith("ogg") ||
-                                file.FullName.Contains("Конспект") && _type == VideoType.Courses;
+                                file.Name.EndsWith("ogg") || file.Name.EndsWith("dts") ||
+                                (file.FullName.Contains("Конспект") && _type == VideoType.Courses);
         }
 
         public void MoveDownloadedToAnotherSeries(VideoType type, string seriesName)
@@ -722,18 +722,20 @@ namespace Infrastructure
                 .Where(selectFiles).ToList();
 
             _ignoreNonCyrillic = true;
-            ready.AddRange(UpdateEpisodes(queue, VideoType.ChildEpisode));
-            queue = queue.Except(ready);
+            //ready.AddRange(UpdateEpisodes(queue, VideoType.ChildEpisode));
+            //queue = queue.Except(ready);
             _ignoreNonCyrillic = false;
             ready.AddRange(UpdateFiles(queue));
             queue = queue.Except(ready);
-            ready.AddRange(UpdateEpisodes(queue, VideoType.AdultEpisode));
-            queue = queue.Except(ready);
+            //ready.AddRange(UpdateEpisodes(queue, VideoType.AdultEpisode));
+            //queue = queue.Except(ready);
 
             var online = ready.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type));
-            
+
+#if !DEBUG
             foreach (var item in online)
                 Convert(item);
+#endif
 
             return ready;
         }
@@ -838,13 +840,30 @@ namespace Infrastructure
                             moreFilesAdded = true;
                         }
                         // Check that files ~ same size => they are series.
-                        else if (twoBiggest.First().Length / twoBiggest.Last().Length > 0.7)
+                        else if (info.Series.Type == VideoType.AdultEpisode || info.Series.Type == VideoType.ChildEpisode 
+                            || info.Series.Type == VideoType.FairyTale)
                         {
-                            if(info.Type == VideoType.FairyTale)
-                                result.AddRange(AddSeason(info.Series, info.Season, dir));
+                            if (dirDirectories.Count() > 1)
+                            {
+                                foreach (var seasonDirectory in dirDirectories)
+                                    result.AddRange(AddSeason(info.Series, seasonDirectory));
+                            }
                             else
-                                result.AddRange(AddSeason(AddOrUpdateVideoSeries("Многосерийные фильмы"), dir, info.Name));
+                            {
+                                IEnumerable<VideoFile> dbFiles = null;
+                                dbFiles = AddSeason(info.Series, dir, info.Name);
+
+                                if (string.IsNullOrWhiteSpace(info.Season.Name))
+                                    info.Season.Name = info.Series.Name;
+
+                                result.AddRange(dbFiles);
+                            }
+
                             moreFilesAdded = true;
+                        }
+                        else
+                        {
+
                         }
 
                         using var fileRepo = new DbFileRepository(_db);

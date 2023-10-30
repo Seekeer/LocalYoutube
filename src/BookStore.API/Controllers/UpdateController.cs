@@ -131,7 +131,7 @@ namespace FileStore.API.Controllers
             var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos)
                 .Where(x => x.Path.Contains(v)).ToList();
 
-            if(files.Count() > 1)
+            if (files.Count() > 1)
             {
 
             }
@@ -192,7 +192,7 @@ namespace FileStore.API.Controllers
         {
             var dbUpdater = new DbUpdateManager(_db);
 
-            var files = _db.VideoFiles.ToList();
+            var files = _db.VideoFiles.Include(x => x.Season).ToList();
 
             //var finfo = files.Where(f =>
             //    //f.Type == VideoType.Animation
@@ -204,17 +204,40 @@ namespace FileStore.API.Controllers
             //    .Select(x => new FileInfo(x.Path))
             //    //.Reverse();
             //    ;
-            var finfo = files.Where(f =>
-                f.SeriesId == 28)
-                .Select(x => new FileInfo(x.Path))
+            var finfo = files
+                .Where(f =>
+                //    f.SeriesId == 28)
+                    !System.IO.File.Exists(f.Path)
+                )
+                //.Select(x => new FileInfo(x.Path))
                 ;
 
-            var badPaths = new List<string>();
+            var badSeasons = finfo.GroupBy(x => x.Season.Name);
+
+            foreach (var badSeason in badSeasons)
+            {
+                //foreach (var file in badSeason)
+                //{
+                //    Remove(file);
+                //}
+
+                RemoveSeason(badSeason.First().SeasonId, false);
+            }
+
+            var emptySeasons = _db.Seasons.Where(x => !x.Files.Any()).ToList();
+            foreach (var season in emptySeasons)
+            {
+                RemoveSeason(season.Id, false);
+            }
+
+            this.RemoveSeason(13656, true);
+
+            var badPaths = new List<VideoFile>();
 
             //var folders = finfo.GroupBy(x => x.DirectoryName);TryToFindFile
-            foreach (var file in finfo)
+            foreach (var x in finfo)
             {
-
+                var file = new FileInfo(x.Path);
                 var path = await TryToFindFile(file.DirectoryName, file.FullName);
 
                 if (!string.IsNullOrEmpty(path))
@@ -230,9 +253,10 @@ namespace FileStore.API.Controllers
                 }
                 else
                 {
-                    badPaths.Add(file.FullName);
+                    badPaths.Add(x);
                 }
             }
+
 
             //this.RemoveFile(3632798, 3632798, true);
             //this.RemoveFile(6352695, 6352695, true);
@@ -252,10 +276,10 @@ namespace FileStore.API.Controllers
             //this.RemoveSeries(dbUpdater, 2090);
             //this.RemoveSeries(dbUpdater, 4090);
 
-            //this.RemoveSeason(9462, false);
-            //this.RemoveSeason(8460, false);
-            //this.RemoveSeason(7450, false);
-            //this.RemoveSeason(7449, false);
+            //this.RemoveSeason(4345, true);
+            //this.RemoveSeason(330, true);
+            //this.RemoveSeason(324, true);
+            //this.RemoveSeason(13468, true);
             //this.RemoveSeason(7446, false);
             //this.RemoveSeason(7441, false);
             //this.RemoveSeason(7386, false);
@@ -277,14 +301,14 @@ namespace FileStore.API.Controllers
             try
             {
                 var name = GetName(fullName);
-                var goodFiles = dirInfo.GetFiles("*",SearchOption.AllDirectories).Where(x => GetName(x.FullName) == name);
+                var goodFiles = dirInfo.GetFiles("*", SearchOption.AllDirectories).Where(x => GetName(x.FullName) == name);
 
-                if(goodFiles.Any(x => x.Name.Contains(".mp4")))
+                if (goodFiles.Any(x => x.Name.Contains(".mp4")))
                 {
                     return null;
                 }
 
-                if(!goodFiles.Any())
+                if (!goodFiles.Any())
                     return null;
 
                 var found = goodFiles.OrderByDescending(x => x.Length).First();
@@ -301,7 +325,7 @@ namespace FileStore.API.Controllers
 
         private async Task AddTorrent(string folder, DirectoryInfo dirInfo)
         {
-            await  AddTorrent(int.Parse(dirInfo.Name), folder);
+            await AddTorrent(int.Parse(dirInfo.Name), folder);
         }
         private async Task AddTorrent(int id, string folder)
         {
@@ -408,9 +432,39 @@ namespace FileStore.API.Controllers
         }
 
         [HttpDelete]
+        [Route("importFromDb")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public void RemoveSeason()
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<VideoCatalogDbContext>();
+            optionsBuilder.UseSqlServer("Server=localhost;Database=res;Encrypt=False;Trusted_Connection=True;");
+
+            var extDb = new VideoCatalogDbContext(optionsBuilder.Options);
+
+            var ff = extDb.Files.ToList();
+            var ff2 = _db.Files.ToList();
+            var files = extDb.Files.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Include(x => x.Season).
+                Where(x => x.SeasonId == 171).ToList();
+
+            files.First().Season.Id = 0;
+            files.First().SeasonId = 0;
+            files.ForEach(x =>
+            {
+                foreach (var item in x.VideoFileUserInfos)
+                {
+                    item.Id = 0;
+                }
+                x.VideoFileExtendedInfo.Id = 0;
+                x.Id = 0;
+            });
+
+            _db.AddRange(files);
+            _db.SaveChanges();
+        }
+        [HttpDelete]
         [Route("removeSeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public void RemoveSeason(int seasonId, bool deleteFile)
+        public void RemoveSeason(int seasonId, bool physicallyDeleteFile)
         {
             var files = _db.Files.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeasonId == seasonId).ToList();
 
@@ -419,7 +473,7 @@ namespace FileStore.API.Controllers
             {
                 manager.RemoveFileCompletely(file);
 
-                if (deleteFile)
+                if (physicallyDeleteFile)
                     System.IO.File.Delete(file.Path);
             }
 
@@ -464,9 +518,9 @@ namespace FileStore.API.Controllers
         {
             var file = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).First(x => x.Id == fileId);
 
-            if(deleteFile)
+            if (deleteFile)
                 await PhisicallyRemoveFile(file);
-            
+
             Remove(file);
 
             _db.SaveChanges();
@@ -497,7 +551,7 @@ namespace FileStore.API.Controllers
             {
                 if (removeFile && System.IO.File.Exists(file.Path))
                     System.IO.File.Delete(file.Path);
-                
+
                 Remove(file);
             }
 
@@ -517,6 +571,9 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> AddManyYoutube()
         {
+            await this.AddFolder(@"F:\Видео\Курсы\IT", VideoType.Courses, true);
+            await this.AddFolder(@"F:\Видео\Курсы\IT", VideoType.Courses, true);
+
             //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=qmsrd9IVIh8", 11, null, false);
             //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=FC3AilGtb8M", 11, null, false);
             //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=ulN-85A6nko", 11, null, false);
@@ -542,8 +599,8 @@ namespace FileStore.API.Controllers
             //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=A1VFD9OX-q0", 11, null, false);
             //await _tgBot.ProcessYoutubeVideo("https://www.youtube.com/watch?v=WwxBng1i5M0", 11, null, false);
 
-            await this.RemoveSeries(6093, false );
-            await this.AddFolder(@"F:\Видео\Курсы\IT", VideoType.Courses, true);
+            //await this.RemoveSeries(6093, false );
+            //await this.AddFolder(@"F:\Видео\Курсы\IT", VideoType.Courses, true);
 
             return Ok();
         }
@@ -571,7 +628,7 @@ namespace FileStore.API.Controllers
                 return Ok();
             }
 
-             return NotFound();
+            return NotFound();
         }
 
         [HttpGet]
@@ -620,24 +677,53 @@ namespace FileStore.API.Controllers
 
                 foreach (var file in item.Files)
                 {
-                    file.SeriesId = newSeriesId; 
+                    file.SeriesId = newSeriesId;
                 }
             }
 
             _db.SaveChanges();
 
-            var series = _db.Series.FirstOrDefault(x =>x.Id == seriesId);
+            var series = _db.Series.FirstOrDefault(x => x.Id == seriesId);
             _db.Remove(series);
             _db.SaveChanges();
 
             return Ok();
         }
 
+        [HttpGet]
+        [Route("moveWholeSeason")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveWholeSeasons()
+        {
+            await MoveWholeSeason(13471, 13469);
+            await MoveWholeSeason(13472, 13469);
+            await MoveWholeSeason(13478, 13469);
+            await MoveWholeSeason(13480, 13469);
+            await MoveWholeSeason(13481, 13469);
+            await MoveWholeSeason(13484, 13469);
+            return Ok();
+        }
+
+        private async Task MoveWholeSeason(int oldSeasonId, int seasonId)
+        {
+            var files = _db.VideoFiles.Where(x => x.SeasonId == oldSeasonId).ToList();
+            foreach (var file in files)
+            {
+                file.SeasonId = seasonId;
+            }
+
+            _db.SaveChanges();
+
+            var season = _db.Seasons.First(x => x.Id == oldSeasonId);
+            _db.Remove(season);
+            _db.SaveChanges();
+        }
 
         [HttpGet]
         [Route("moveToSeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> MoveToSeason(int startId, int finishId, int seasonId, int seriesId = 0, VideoType? type = null, string seasonName = null)
+        public async Task<IActionResult> MoveToSeason(int startId, int finishId, int seasonId, int seriesId = 0,
+            VideoType? type = null, string seasonName = null)
         {
             var dbUpdater = new DbUpdateManager(_db);
 
@@ -756,8 +842,8 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateByRutracker(string filenames)
         {
-//            filenames = @"Его девушка Пятница        ___https://kinopoisk-ru.clstorage.net/1z4G6O223/1cbe98RE-zCm/PX9DNh72cZjg3OOWux-YFcI8y-WhRRu8p7pCyqvBO9fN8GBhCGuIJL9qseD9LQ3quyhA0aLY23TXBsbA5S_0g0kaVscPg9TdAb0Tpk4v6fE37N-EFcB__XaPl39ZMjlU72dCAvrpiuKrXvWRKPiYHrodwGDyLB8A4CUn8kGpUbevTRA3CtSx-3cMYxRozLnREswr4MGm6_gXy4DqGBLLdm-2MqGb-WgB2I7FpytI28zJTUJC4ltssYLk88BQSbOnrTwRJfl2sMlkXfGUCs-60eBfmrNjt7m6FGpCydmCyYVs1gKw2hjK0-g9FWU6mMg_y60SQ-EarDNRpLEBknuAV2yd8HeJNOP5VX5ABPtvmDHC_Rvh8fY4yfVKQhvKYNp3nnfTUwrLGtB4Xfalaoi7vomd8eKh2H5jgSRxkpDbAtUMD-L1-VTxeKSM8ybb_ssj8r7aQFEW2NikWqK7K4Gb9W4F4CJZeKjwaQ0EtFkbC195fHHRc6rvc4MWoFJCSIFUbR3CZjlGwnuHvNIHWx8rIfB-uGARZno6F9qy2wmBGSStxoAA23tIoWkcJnUIOBpsGg-yAyO4TgHhNLLRIMlg5v7_o7ULJmM7Vqzzlws_6ONBjTgBIhUJ-NY64GsaErlWr9WiIwqKekB63yVnq-hYbwvdgCJQO2wRQMZxgbC5E_dvX8NEOQTzSpafsyZ6XmrhUm5qQ8EkGDiV2FJoGIPZ9C02Q2N62ZkzSS00dKiaGEw7zqCj8BjMg8CHgqHCSoFmXo7DRliFkZumrNOmydypU2P-KaJT1Cir1yiACTiAS2TNV9KxuPupIQhdpeVqahoOmD1xgrI6HOGB5JDwwnhzRt2-cXQZlNN497_gx3n9O8GCngmzQ5dq6Lca8ogq4xkF7_TD8qgYyvLpH5WnCihbXwpfcHKTCk8BcEaDI4A4AVS8D9GEazQAyeUM43Yr3Qjxgu5ZM_EVKAg2CcNIyENZtC0VsnLKq2lzahzXxGpZOF3Z_LCT8qguQxHFgsIjmAE0DB2jJ2tUsvjkvDL3y66709O9qsJDJNuqlkpiafmTaFR_NGLhG0rK0MqfBeVKC1mfy79iIPCp7WIwl4CzEhoxNO8NYbVbt6HpZh0jxUpuWIIzXfgjEpU6KdZaoVv44as2vYWj8JsamDHaXfYkSskp71odQ7FD-gxTwyQDkaC5UwR9n7AFqqSDuPRe4Lc6_-gwgc-agSBWWuk2anGKS2D79k3EYlF6CFgDGM4VtIhZCmw7nbPhA8oMchNGILGw6XDHDP3C9Dsl40lUndAHCf8Z4KH_6GMSZHnKVDvCiUpRazTOJMHTm2p4g-m8lra56yhumF-Bg2EZ30EC54KRw4gARgyOMOV4xmN7lO4TNrl-i4BgHvshMwcJyRXIAMj7kup2zeRQo7ga6mLY7-WEiWqYjGpsQDNiOi8TIHWiwkGJoNR8HeKGWTcjaIW9Qzc5vYqyQa3r4ZOV-ihHaDJJCiN45gwX8qGJO7gSyoyFRkoZKmxqbKDCkYtdctN0w2OiKZNHvb3RVRuEkfk23lFGy7048nGP2TJgp6p6R4jguwtBO1Z8ZCGjaMlIUOp9JgWYOUqteD3DU-MIf6DhBCExwHgDpB2sACe7ZvEY1x8DRMjcasJRrxoR8pTZmNaLcXvKAQnH_STwo3soikC6_OYVGdk7_vveAMDTCmxy05WyoCLKMbSNPNAGORRQSOZvwTV7nKnTkr5a0WFViFpXGUEryLHp1__HgnGI2MlQOV_n1Mhq28yJ7yHzI-gdE5HkooCBe2Nk7Q-SBjp086uVH2EG-SyYw3Cs66MBh4iJJamAyLgzufZMJ7BjyAlZcOjsFcWrKtmPGw5i4NCKjEGRZuBjg4njBJ-uQ7U5V5Lo1t_AhLvMicBgfrrwEYeZWNSqUohr4GlUP6SQg5qpCNC6vtaXCisqXtguUMMxyK9hIoWCwdA7weesfwCUCgfSiQZdA3fI36vjYv2qYXNne9gWWbJJGBHrBd3kYcMrKXig-z3WtZkbOJyKfnAgQQre4rCUUVIDK5DGD62RZRgnALtEnhPEOU_owLDPyzGDV5gZd5viqXmT2SfvVKCSqPjawKqvRKXaWUmuWr-gM2OYnSCjFbKCk4vD5Qx9QjRKBFErlt8iBCtsi8CzrcvzsfVYWfe6kylpwdrkjtagU5j6mDEabdRHCehabwvekgLh6Xzjo7XicHGL0EZ9nMGUG4eAuSTvwuaazljSQcyKkMBl2-q3-uCbeeMp9N4G4APrO7tx2I-2pRlpSh8YbSKxYItu44KlwOPgG-P2T2xi9UrW8flGHUMXaU0psbOt2PJBZ1t4tblxqSqx6sbMBEDBqei5MRrslFaLC6t9CY-S0mBafVKil-Ly8GtB9g0dk5dq1hF6x11S5qocyeNwv_jz0CTayFfrg7qrgJo33BaR4lrL6BBZjOSW-JspXOmcQfBDif7zIqYxkoMJY5Uev7KXqCUBqWSv4AVLzNtxMo-78nGnOHoHyYJ6evNYFk424FCqy3lR2vzGhys5Kj0KLQGDMkpeUYNnwnDwilN1Tm_Rd6kl8WsEbBMFaB9LI8GfqFMjd5o4V_jjShgg-bVcVmOQ-tkoYFgOt7WJWSrOWExR0ZPL_VAzd8EjwEoR9m5_sWZbhzM45k2wpHpuyxGiLrgAYWR42fZpQOja8soHXHYAQev6yDDZTaZm6jrb7BhvcOLxCiyBU2fjI9K4IYcsvDD0OFaSWFW_spaLLyoDwl7L0HGla8hWaMFquJFJBd_UUmFbWMsSml0EJEsY2dx6bHKxIbosk0CkoHIg-6NnTJ5i9Ao2cLvkrwMGac1qohOPigIAlXtrRdjDOHnzSAYtVIBA6Br48Llf5GdrCPoOen0R4OIYLoOA9AEjkmixha6v4gc5NDEaRE9g9onNmBBiT4oDghdo2wSIwGtI0LmWzhUSsUjIaxHaDfW2mxh4PIieQHDyKuyjc#DSD
-//Last.Year.at.Marienbad.1961.720p.BluRay.Rus.French.HDCLUB.mkv ___http://media7.veleto.ru/media/files/s2/ru/lp/v-proshlom-godu-v-marienbade.jpg";
+            //            filenames = @"Его девушка Пятница        ___https://kinopoisk-ru.clstorage.net/1z4G6O223/1cbe98RE-zCm/PX9DNh72cZjg3OOWux-YFcI8y-WhRRu8p7pCyqvBO9fN8GBhCGuIJL9qseD9LQ3quyhA0aLY23TXBsbA5S_0g0kaVscPg9TdAb0Tpk4v6fE37N-EFcB__XaPl39ZMjlU72dCAvrpiuKrXvWRKPiYHrodwGDyLB8A4CUn8kGpUbevTRA3CtSx-3cMYxRozLnREswr4MGm6_gXy4DqGBLLdm-2MqGb-WgB2I7FpytI28zJTUJC4ltssYLk88BQSbOnrTwRJfl2sMlkXfGUCs-60eBfmrNjt7m6FGpCydmCyYVs1gKw2hjK0-g9FWU6mMg_y60SQ-EarDNRpLEBknuAV2yd8HeJNOP5VX5ABPtvmDHC_Rvh8fY4yfVKQhvKYNp3nnfTUwrLGtB4Xfalaoi7vomd8eKh2H5jgSRxkpDbAtUMD-L1-VTxeKSM8ybb_ssj8r7aQFEW2NikWqK7K4Gb9W4F4CJZeKjwaQ0EtFkbC195fHHRc6rvc4MWoFJCSIFUbR3CZjlGwnuHvNIHWx8rIfB-uGARZno6F9qy2wmBGSStxoAA23tIoWkcJnUIOBpsGg-yAyO4TgHhNLLRIMlg5v7_o7ULJmM7Vqzzlws_6ONBjTgBIhUJ-NY64GsaErlWr9WiIwqKekB63yVnq-hYbwvdgCJQO2wRQMZxgbC5E_dvX8NEOQTzSpafsyZ6XmrhUm5qQ8EkGDiV2FJoGIPZ9C02Q2N62ZkzSS00dKiaGEw7zqCj8BjMg8CHgqHCSoFmXo7DRliFkZumrNOmydypU2P-KaJT1Cir1yiACTiAS2TNV9KxuPupIQhdpeVqahoOmD1xgrI6HOGB5JDwwnhzRt2-cXQZlNN497_gx3n9O8GCngmzQ5dq6Lca8ogq4xkF7_TD8qgYyvLpH5WnCihbXwpfcHKTCk8BcEaDI4A4AVS8D9GEazQAyeUM43Yr3Qjxgu5ZM_EVKAg2CcNIyENZtC0VsnLKq2lzahzXxGpZOF3Z_LCT8qguQxHFgsIjmAE0DB2jJ2tUsvjkvDL3y66709O9qsJDJNuqlkpiafmTaFR_NGLhG0rK0MqfBeVKC1mfy79iIPCp7WIwl4CzEhoxNO8NYbVbt6HpZh0jxUpuWIIzXfgjEpU6KdZaoVv44as2vYWj8JsamDHaXfYkSskp71odQ7FD-gxTwyQDkaC5UwR9n7AFqqSDuPRe4Lc6_-gwgc-agSBWWuk2anGKS2D79k3EYlF6CFgDGM4VtIhZCmw7nbPhA8oMchNGILGw6XDHDP3C9Dsl40lUndAHCf8Z4KH_6GMSZHnKVDvCiUpRazTOJMHTm2p4g-m8lra56yhumF-Bg2EZ30EC54KRw4gARgyOMOV4xmN7lO4TNrl-i4BgHvshMwcJyRXIAMj7kup2zeRQo7ga6mLY7-WEiWqYjGpsQDNiOi8TIHWiwkGJoNR8HeKGWTcjaIW9Qzc5vYqyQa3r4ZOV-ihHaDJJCiN45gwX8qGJO7gSyoyFRkoZKmxqbKDCkYtdctN0w2OiKZNHvb3RVRuEkfk23lFGy7048nGP2TJgp6p6R4jguwtBO1Z8ZCGjaMlIUOp9JgWYOUqteD3DU-MIf6DhBCExwHgDpB2sACe7ZvEY1x8DRMjcasJRrxoR8pTZmNaLcXvKAQnH_STwo3soikC6_OYVGdk7_vveAMDTCmxy05WyoCLKMbSNPNAGORRQSOZvwTV7nKnTkr5a0WFViFpXGUEryLHp1__HgnGI2MlQOV_n1Mhq28yJ7yHzI-gdE5HkooCBe2Nk7Q-SBjp086uVH2EG-SyYw3Cs66MBh4iJJamAyLgzufZMJ7BjyAlZcOjsFcWrKtmPGw5i4NCKjEGRZuBjg4njBJ-uQ7U5V5Lo1t_AhLvMicBgfrrwEYeZWNSqUohr4GlUP6SQg5qpCNC6vtaXCisqXtguUMMxyK9hIoWCwdA7weesfwCUCgfSiQZdA3fI36vjYv2qYXNne9gWWbJJGBHrBd3kYcMrKXig-z3WtZkbOJyKfnAgQQre4rCUUVIDK5DGD62RZRgnALtEnhPEOU_owLDPyzGDV5gZd5viqXmT2SfvVKCSqPjawKqvRKXaWUmuWr-gM2OYnSCjFbKCk4vD5Qx9QjRKBFErlt8iBCtsi8CzrcvzsfVYWfe6kylpwdrkjtagU5j6mDEabdRHCehabwvekgLh6Xzjo7XicHGL0EZ9nMGUG4eAuSTvwuaazljSQcyKkMBl2-q3-uCbeeMp9N4G4APrO7tx2I-2pRlpSh8YbSKxYItu44KlwOPgG-P2T2xi9UrW8flGHUMXaU0psbOt2PJBZ1t4tblxqSqx6sbMBEDBqei5MRrslFaLC6t9CY-S0mBafVKil-Ly8GtB9g0dk5dq1hF6x11S5qocyeNwv_jz0CTayFfrg7qrgJo33BaR4lrL6BBZjOSW-JspXOmcQfBDif7zIqYxkoMJY5Uev7KXqCUBqWSv4AVLzNtxMo-78nGnOHoHyYJ6evNYFk424FCqy3lR2vzGhys5Kj0KLQGDMkpeUYNnwnDwilN1Tm_Rd6kl8WsEbBMFaB9LI8GfqFMjd5o4V_jjShgg-bVcVmOQ-tkoYFgOt7WJWSrOWExR0ZPL_VAzd8EjwEoR9m5_sWZbhzM45k2wpHpuyxGiLrgAYWR42fZpQOja8soHXHYAQev6yDDZTaZm6jrb7BhvcOLxCiyBU2fjI9K4IYcsvDD0OFaSWFW_spaLLyoDwl7L0HGla8hWaMFquJFJBd_UUmFbWMsSml0EJEsY2dx6bHKxIbosk0CkoHIg-6NnTJ5i9Ao2cLvkrwMGac1qohOPigIAlXtrRdjDOHnzSAYtVIBA6Br48Llf5GdrCPoOen0R4OIYLoOA9AEjkmixha6v4gc5NDEaRE9g9onNmBBiT4oDghdo2wSIwGtI0LmWzhUSsUjIaxHaDfW2mxh4PIieQHDyKuyjc#DSD
+            //Last.Year.at.Marienbad.1961.720p.BluRay.Rus.French.HDCLUB.mkv ___http://media7.veleto.ru/media/files/s2/ru/lp/v-proshlom-godu-v-marienbade.jpg";
             var lines = filenames.SplitByNewLine();
 
             var _rutracker = new RuTrackerUpdater(_config);
@@ -766,7 +852,7 @@ namespace FileStore.API.Controllers
             foreach (var line in lines)
             {
                 try
-                 {
+                {
                     var parts = line.Split("___", System.StringSplitOptions.RemoveEmptyEntries);
 
                     var name = parts[0].Trim();
@@ -849,11 +935,33 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("convertToAnotherPlace")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> ConvertToAnotherPlace()
+        {
+           await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\Суд времени\Кургинян");
+            return Ok();
+        }
+
+        private async Task ConvertToAnotherPlace(string folder)
+        {
+            foreach (var file in Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories))
+            {
+                var newFIle = DbUpdateManager.EncodeToMp4(file);
+
+                var newPath = newFIle.Replace(@"Z:\Smth\Bittorrent\СВ\Суд времени\Кургинян", @"F:\Видео\СВ\Суд времени");
+                var finfo = new FileInfo(newPath);
+                Directory.CreateDirectory(finfo.DirectoryName);
+                System.IO.File.Move(newFIle, newPath);
+            }
+        }
+
+        [HttpGet]
         [Route("convertOnline")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> ConvertNewOnline(int minId = 48354)
         {
-            var dbUpdater = new DbUpdateManager(_db);
+                var dbUpdater = new DbUpdateManager(_db);
 
             // Update online files.
             var ready = new List<VideoFile>();

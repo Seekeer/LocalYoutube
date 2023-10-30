@@ -212,7 +212,7 @@ export class BookListComponent implements OnInit {
     else if (this.seasonId != 0) {
       this.service.searchFilesWithSeason(this.seasonId, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     }
-    else if (this.serieId != 0) {
+    else if (this.serieId != 0 ) {
       let serie = this.series.filter(x => x.id == this.serieId)[0];
       this.seasons = serie.seasons;
       this.service.searchFilesWithSeries(serie.name, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
@@ -422,7 +422,7 @@ watchedChanged(event){
 
 
         if(this.counter == 0)
-            this.spinner.hide()
+            this.spinner.hide() 
       }, 5);
 
 }

@@ -13,5 +13,10 @@ namespace FileStore.Domain.Models
         public IEnumerable<DbFile> Files { get; set; }
         public int SeriesId { get; set; }
         public Series Series { get; set; }
+
+        public override string ToString()
+        {
+            return Name;
+        }
     }
 }
