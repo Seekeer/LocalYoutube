@@ -34,10 +34,11 @@ title="Добавить метку"
         </button>
 
         <div *ngIf="mark.isInEditMode">
-          
+
           <mat-form-field class="example-full-width" appearance="fill">
             <mat-label>Название метки</mat-label>
-            <input matInput  [(ngModel)]="mark.caption">
+            <input matInput  [(ngModel)]="mark.caption"
+              (keyup.enter)="stopEdit(mark, true)" (keyup.esc)="stopEdit(mark, false)"  >
           </mat-form-field>
 
           <button mat-icon-button color="primary" (click)="stopEdit(mark, true)">
