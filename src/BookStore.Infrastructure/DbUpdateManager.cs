@@ -15,6 +15,8 @@ using Id3;
 using System.Drawing.Drawing2D;
 using FileStore.Domain.Interfaces;
 using FileStore.Infrastructure.Repositories;
+using Azure.Core;
+using NLog;
 
 namespace Infrastructure
 {
@@ -480,9 +482,7 @@ namespace Infrastructure
             if (IsEncoded(path))
                 return null;
 
-            var fileInfo = new FileInfo(path);
-
-            var resultPath = path.Replace(fileInfo.Extension, ".mp4");
+            string resultPath = GetNewPath(path);
 
             if (File.Exists(resultPath))
                 return resultPath;
@@ -502,15 +502,23 @@ namespace Infrastructure
             //        .WithFastStart())
             //    .ProcessSynchronously();
 
-            //await FFMpegArguments
-            //    .FromPipeInput(new StreamPipeSource(inputStream))
-            //    .OutputToPipe(new StreamPipeSink(outputStream), options => options
-            //        .WithVideoCodec("vp9")
-            //        .ForceFormat("webm"))
-            //    .ProcessAsynchronously();
+            //FFMpegArguments
+            //   .FromPipeInput(new StreamPipeSource(inputStream))
+            //   .OutputToPipe(new StreamPipeSink(outputStream), options => options
+            //       .WithVideoCodec("vp9")
+            //       .WithVariableBitrate(1200)
+            //       .ForceFormat("webm"))
+            //   .ProcessSynchronously();
             FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.Faster,
                 FFMpegCore.Enums.VideoSize.Original, FFMpegCore.Enums.AudioQuality.VeryHigh, true);
 
+            return resultPath;
+        }
+
+        public static string GetNewPath(string path)
+        {
+            var fileInfo = new FileInfo(path);
+            var resultPath = path.Replace(fileInfo.Extension, ".mp4");
             return resultPath;
         }
 
@@ -732,10 +740,8 @@ namespace Infrastructure
 
             var online = ready.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type));
 
-#if !DEBUG
             foreach (var item in online)
                 Convert(item);
-#endif
 
             return ready;
         }
@@ -956,6 +962,86 @@ namespace Infrastructure
             catch (Exception ex)
             {
             }
+        }
+
+        public bool AddAudioFilesFromFolder(string folderPath, AudioType type, Origin origin)
+        {
+            try
+            {
+                var dirInfo = new DirectoryInfo(folderPath);
+                if (!dirInfo.Exists)
+                    return false;
+                var title = dirInfo.Name;
+
+                var voice = "";
+                var voiceParts = title.Split(new char[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
+                if (voiceParts.Length > 1)
+                    voice = voiceParts.Last();
+
+                var author = "";
+                var bookTitle = "";
+                var authorParts = title.Replace(voice, "").Split('-', StringSplitOptions.RemoveEmptyEntries);
+                if (authorParts.Length > 1)
+                {
+                    bookTitle = authorParts.Last().Split('(', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault().Trim();
+                    author = authorParts.First().Trim();
+                }
+
+                var files = dirInfo.GetFiles("*.mp3", SearchOption.AllDirectories);
+
+                var images = dirInfo.GetFiles("*.jp*", SearchOption.AllDirectories).OrderByDescending(x=>x.Length);
+                byte[] cover = null;
+                if (images.Any())
+                    cover = File.ReadAllBytes(images.FirstOrDefault().FullName);
+
+                return AddAudioFilesFromFolder(bookTitle, author, voice, files, type, origin, cover);
+            }
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                return false;
+            }
+        }
+
+        public bool AddAudioFilesFromFolder( string bookName, string bookAuthor, string voice, 
+            IEnumerable<FileInfo> filePaths, AudioType type, Origin origin, byte[] image)
+        {
+            var series = AddOrUpdateVideoSeries(bookAuthor);
+            var season = AddOrUpdateSeason(series, bookName);
+
+            var files = new List<AudioFile>();
+            foreach (var item in filePaths.Select((info, index) => (info, index)))
+            {
+                var finfo = item.info;
+                var filename = finfo.Name.Split("##").First().Replace(".mp3", "");
+
+                var audioFile = new AudioFile
+                {
+                    Season = season,
+                    Series = series,
+                    Path = finfo.FullName,
+                    Name = filename,
+                    Number = item.index + 1,
+                    Type = type,
+                    Origin = origin,
+                };
+
+                UpdateAudioInfo(audioFile);
+
+                audioFile.VideoFileExtendedInfo.Director = voice;
+                files.Add(audioFile);
+            }
+
+            if (image != null)
+            {
+                var file = files.First();
+                file.VideoFileExtendedInfo.SetCover(image);
+            }
+
+            _db.AudioFiles.AddRange(files);
+            _db.SaveChanges();
+
+            return true;
         }
 
         public void AddAudioFilesFromTg(string text, IEnumerable<string> enumerable, AudioType type, Origin origin, string coverImage)

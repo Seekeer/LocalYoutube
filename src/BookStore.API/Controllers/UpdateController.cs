@@ -443,22 +443,49 @@ namespace FileStore.API.Controllers
 
             var ff = extDb.Files.ToList();
             var ff2 = _db.Files.ToList();
-            var files = extDb.Files.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Include(x => x.Season).
-                Where(x => x.SeasonId == 171).ToList();
+            var missing = ff.Where(x => !ff2.Any(y => y.Path == x.Path)).ToList();
+            var str = string.Join(Environment.NewLine, missing.Select(x => x.Path));
 
-            files.First().Season.Id = 0;
-            files.First().SeasonId = 0;
-            files.ForEach(x =>
+            var files = extDb.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Include(x => x.Season).
+                Where(
+                    x => x.Id >= missing[558].Id && x.Id <= missing[565].Id
+                ).ToList();
+            var str2 = string.Join(Environment.NewLine, files.Select(x => x.Path));
+
+            var updateFiles = new List<VideoFile>();
+            files.ToList().ForEach(x =>
             {
+                if (!System.IO.File.Exists(x.Path))
+                {
+                    return;
+                }
+                updateFiles.Add(x);
                 foreach (var item in x.VideoFileUserInfos)
                 {
                     item.Id = 0;
                 }
                 x.VideoFileExtendedInfo.Id = 0;
                 x.Id = 0;
+
+                //var series = _db.Series.FirstOrDefault(serie => serie.Name == x.Series.Name);
+                //if (series != null)
+                //{
+                //    x.SeriesId = series.Id;
+                //    x.Series = null;
+                //}
+                //else
+                //    x.SeriesId = 0;
+                var season = _db.Seasons.FirstOrDefault(serie => serie.Name == x.Season.Name);
+                if (season != null)
+                {
+                    x.SeasonId = season.Id;
+                    x.Season = null;
+                }
+                else
+                    x.SeasonId = 0;
             });
 
-            _db.AddRange(files);
+            _db.AddRange(updateFiles);
             _db.SaveChanges();
         }
         [HttpDelete]
@@ -509,6 +536,17 @@ namespace FileStore.API.Controllers
             dbManager.RemoveSeriesCompletely(serieId);
 
             return Ok();
+        }
+
+        [HttpDelete]
+        [Route("removeSeveralFiles")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public void RemoveFiles() {
+
+
+            this.RemoveFile(50841, true);
+            this.RemoveFile(50843, true);
+            this.RemoveFile(50845, true);
         }
 
         [HttpDelete]
@@ -645,6 +683,18 @@ namespace FileStore.API.Controllers
 
                 _db.SaveChanges();
             }
+
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("addAudio")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> AddAudio()
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            dbUpdater.AddAudioFilesFromFolder("F:\\Видео\\Аудио\\Денис Фонвизин - Недоросль (Александр Алексеев-Валуа)", AudioType.RussianBook, Origin.Russian);
 
             return Ok();
         }
@@ -899,6 +949,38 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("removeDuplicate")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> RemoveDuplicate()
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            var files = _db.Files.ToList();
+
+            var duplicates = files.GroupBy(x => x.Path);
+
+            var filesToRemove = new List<DbFile>();
+
+            foreach (var duplicate in duplicates)
+            {
+                if (duplicate.Count() == 1)
+                    continue;
+
+                var toDelete = duplicate.Skip(1);
+                foreach (var file in toDelete)
+                {
+                    Remove(file);
+                    //_db.Files.Remove(file);
+                }
+
+                filesToRemove.AddRange(toDelete);
+            }
+            var str = string.Join(Environment.NewLine, filesToRemove);
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("test")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task Test()
@@ -939,7 +1021,12 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> ConvertToAnotherPlace()
         {
-           await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\Суд времени\Кургинян");
+           //await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\Суд времени\Кургинян");
+            await ConvertNewOnline();
+
+           await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\Школа сути\Школа сути");
+           await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\СВ\Суть времени (ЭТЦ), 2011");
+
             return Ok();
         }
 
@@ -947,13 +1034,45 @@ namespace FileStore.API.Controllers
         {
             foreach (var file in Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories))
             {
-                var newFIle = DbUpdateManager.EncodeToMp4(file);
+                try
+                {
+                    var fInfo = new FileInfo(file);
+                    var destFilepath = GetDestinationPath(DbUpdateManager.GetNewPath(file));
+                    if (fInfo.Extension != ".avi" || System.IO.File.Exists(destFilepath))
+                        continue;
 
-                var newPath = newFIle.Replace(@"Z:\Smth\Bittorrent\СВ\Суд времени\Кургинян", @"F:\Видео\СВ\Суд времени");
-                var finfo = new FileInfo(newPath);
-                Directory.CreateDirectory(finfo.DirectoryName);
-                System.IO.File.Move(newFIle, newPath);
+                    var newFIle = DbUpdateManager.EncodeToMp4(file);
+
+                    var copy = false;
+                    if (newFIle == null)
+                    {
+                        newFIle = file;
+                        copy = true;
+                    }
+
+                    string newPath = GetDestinationPath(newFIle);
+
+                    var finfo = new FileInfo(newPath);
+                    Directory.CreateDirectory(finfo.DirectoryName);
+                    if (!copy)
+                        System.IO.File.Move(newFIle, newPath);
+                    else
+                    {
+                        System.IO.File.Copy(newFIle, newPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                }
             }
+        }
+
+        private static string GetDestinationPath(string newFIle)
+        {
+            var newPath = newFIle.Replace(@"Z:\Smth\Bittorrent\СВ\Суд времени\Кургинян", @"F:\Видео\СВ\Суд времени");
+            newPath = newPath.Replace(@"Z:\Smth\Bittorrent\СВ\СВ\Суть времени (ЭТЦ), 2011", @"F:\Видео\СВ\Суть времени");
+            newPath = newPath.Replace(@"Z:\Smth\Bittorrent\СВ\Школа сути\Школа сути", @"F:\Видео\СВ\Школа сути");
+            return newPath;
         }
 
         [HttpGet]
@@ -961,14 +1080,49 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> ConvertNewOnline(int minId = 48354)
         {
-                var dbUpdater = new DbUpdateManager(_db);
-
+            var dbUpdater = new DbUpdateManager(_db);
             // Update online files.
-            var ready = new List<VideoFile>();
+            //var ready = new List<VideoFile>();
+
+            //var series = _db.Series.ToList();
+            //var onlineSeries = series.Where(x => !(new IsOnlineVideoAttribute()).HasAttribute(x.Type.Value)).ToList();
+            //foreach (var serie in onlineSeries)
+            //{
+            //    var files = _db.VideoFiles.Where(x => x.SeriesId == serie.Id).ToList();
+            //    files = files.Where(x =>  x.SeasonId != 13674 && x.SeasonId  != 13670).Reverse().ToList();
+            //    if (!files.Any())
+            //        continue;
+
+            //    foreach (var file in files)
+            //    {
+            //        file.Type = VideoType.Film;
+            //    }
+            //}
+            //_db.SaveChanges();
+
+
+            //var serie = _db.Series.Where(x => x.Id == 18).FirstOrDefault();
+            //var files = _db.VideoFiles.Where(x => x.SeriesId == serie.Id).ToList();
+            //files = files.Where(x => x.Type != serie.Type).ToList();
+
+            //foreach (var file in files)
+            //{
+            //    file.Type = serie.Type.Value;
+            //}
+
+
+            //var files = _db.VideoFiles.Where(x => x.SeasonId == 13674).ToList();
+            //foreach (var item in files)
+            //{
+            //    item.Type = VideoType.Animation;
+
+            //}
+            //_db.SaveChanges();
+
             IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos)
                 .Where(x => x.Id > minId).ToList();
 
-            var online = queue.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type)).ToList();
+            var online = queue.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type) && !x.Path.EndsWith("mp4")).Reverse().ToList();
             foreach (var item in online)
                 dbUpdater.Convert(item);
 
@@ -1099,7 +1253,39 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateAll()
         {
+
             var dbUpdater = new DbUpdateManager(_db);
+
+            var series = new Series { Name = "Советские не показывать", Origin = Origin.Soviet, IsChild = true, Type = VideoType.Animation };
+            _db.Series.Add(series);
+            _db.SaveChanges();
+            RemoveSeason(13683, false);
+            RemoveSeason(13684, false);
+
+            var ses = new Season { Name = "Советские не показывать", SeriesId = 6107 };
+            _db.Seasons.Add(ses);
+            _db.SaveChanges();
+
+            var filesU = new List<VideoFile>();
+            foreach (var serie in _db.Series.Where(x => x.Id == 18))
+            {
+                var files = _db.VideoFiles.Where(x => x.SeriesId == serie.Id).ToList();
+                //files = files.Where(x => x.Type != serie.Type).ToList();
+                foreach (var file in files)
+                {
+                    if (serie.Type.HasValue)
+                    {
+                        file.Type = VideoType.Film;
+                        filesU.Add(file);
+                    }
+                }
+            }
+            _db.SaveChanges();
+
+
+
+            RemoveSeries(new DbUpdateManager(_db), 34);
+
 
             RemoveFile(46305, false);
             RemoveFile(48310, 48510, false);

@@ -18,6 +18,7 @@ import { Serie } from '../_models/Category';
 import { Seasons } from '../_models/Seasons';
 import { AudioFileService } from '../_services/AudioFileService';
 import { SeriesService } from '../_services/series.service';
+import { MarkslistComponent } from '../markslist/markslist.component';
 
 @Component({
   selector: 'app-audio',
@@ -26,6 +27,8 @@ import { SeriesService } from '../_services/series.service';
 })
 export class AudioComponent implements OnInit {
   @ViewChild('audioElement') audio:ElementRef; 
+  @ViewChild('markslist') child: MarkslistComponent;
+  
   type: string;
   public isSelectSeries: boolean = true;
   public series: Serie[];
@@ -41,6 +44,9 @@ export class AudioComponent implements OnInit {
   audioURL: SafeHtml;
   seasons: Seasons[];
   fileId: number;
+  timer: any;
+  forwardSpeed: number = 0;
+  rewindSpeed: number = 0;
 
   constructor(
     private service: AudioFileService,
@@ -100,13 +106,7 @@ export class AudioComponent implements OnInit {
       this.toastr.error('Выберите название файла или сериала');
     }
   }
-
-  continueWatch() {
-    var film = this.filteredFiles.find((x) => !x.isFinished);
-
-    this.openVideo(film);
-  }
-
+  
   openVideo(film: AudioFile) {
     throw new Error('Method not implemented.');
   }
@@ -178,6 +178,38 @@ export class AudioComponent implements OnInit {
       this.position = -1;
     }
   }
+
+  forwardVideo() {
+    this.updateCurrentTime(10);
+  }
+  rewindVideo() {
+    this.updateCurrentTime(-10);
+  }
+
+  private updateCurrentTime(delta) {
+      let isRewinding = delta < 0;
+  
+      if (isRewinding) {
+        this.rewindSpeed = this.rewindSpeed + delta;
+        this.forwardSpeed = 0;
+      } else {
+        this.forwardSpeed = this.forwardSpeed + delta;
+        this.rewindSpeed = 0;
+      }
+  
+      //clear the timeout
+      clearTimeout(this.timer);
+  
+      let speed = isRewinding ? this.rewindSpeed : this.forwardSpeed;
+      this.getAudioElement().currentTime =
+        this.getAudioElement().currentTime + speed;
+  
+      //reset accumulator within 2 seconds of a double click
+      this.timer = setTimeout(function () {
+        this.rewindSpeed = 0;
+        this.forwardSpeed = 0;
+      }, 2000); // you can edit this delay value for the timeout, i have it set for 2 seconds
+  }
   
   public continue() {
     for (let index = 0; index < this.apiFiles.length; index++) {
@@ -185,8 +217,6 @@ export class AudioComponent implements OnInit {
       if(!element.isFinished && element.index)
       {
         this.setVideoByIndex(element.index);
-        this.position = element.currentPosition;
-        this.setPosition();
         return;
       }
     }
@@ -213,6 +243,9 @@ export class AudioComponent implements OnInit {
 
     var el = this.getAudioElement();
     el?.load();
+
+    this.position = this.selectedFile.currentPosition;
+    this.setPosition();
 
     return true;
   }

@@ -159,5 +159,10 @@ namespace FileStore.Domain.Services
         {
             return await _FileRepository.GetLatest(userId);
         }
+
+        public async Task<bool> MoveToSerie(int fileId, int serieId)
+        {
+            return await _FileRepository.MoveToSerie(fileId,  serieId);
+        }
     }
 }

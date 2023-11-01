@@ -154,6 +154,10 @@ export class MarkslistComponent implements OnInit, OnChanges {
   }
 
   public newMediaLoaded(fileId: number){
+
+    if(!fileId)
+      return;
+      
     this.videoId = fileId;
 
     this.service.getMarksByFile(this.videoId).subscribe((marks) => {

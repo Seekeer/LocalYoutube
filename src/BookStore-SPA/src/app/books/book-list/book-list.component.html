@@ -49,6 +49,7 @@
     <div>
 
     <mat-checkbox class="ml-2"  *ngIf="isSelectSeries && !showKPINfo"  [(ngModel)]="isRandom" >Случайный порядок</mat-checkbox>
+    <mat-checkbox class="ml-2"  *ngIf="showWatchedCheckbox"  [(ngModel)]="showWatched"  (change)="watchedChanged($event)">Показать просмотренное</mat-checkbox>
     <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showWatched"  (change)="watchedChanged($event)">Показать просмотренное</mat-checkbox>
     <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showOnlyWebSupported"  (change)="showFilteredBooks()">Только в браузере</mat-checkbox>
     <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showSelected"  (change)="watchedChanged($event)">Только отобранное</mat-checkbox>

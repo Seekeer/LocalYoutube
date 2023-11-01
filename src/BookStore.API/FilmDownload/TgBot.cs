@@ -162,7 +162,7 @@ namespace API.FilmDownload
             // Discard the result
             lock (_botClient)
             {
-               _ = DoAsyncPing();
+                //_ = DoAsyncPing();
             }
         }
 
@@ -445,7 +445,7 @@ namespace API.FilmDownload
             var file = new FileStore.Domain.Models.VideoFile
             {
                 SeriesId = 18,
-                SeasonId = 91
+                SeasonId = 91,
             };
             FillData(rutrackerId, info, downloadPath, file);
 
@@ -483,8 +483,10 @@ namespace API.FilmDownload
                 file.SeasonId = tgRecord.FilmSeasonId;
             }
             else if (type == VideoType.Animation && tgRecord != null)
-            {
-                var childDownloaded = manager.AddOrUpdateSeason(downloadSeries, "Детские мультики");
+            { 
+                var series = manager.AddOrUpdateVideoSeries("Полнометражные мультики скаченные", false, VideoType.Animation);
+                file.SeriesId = series.Id;
+                var childDownloaded = manager.AddOrUpdateSeason(series, "Детские мультики");
                 file.SeasonId = childDownloaded.Id;
             }
             else if (type == VideoType.FairyTale && tgRecord != null)

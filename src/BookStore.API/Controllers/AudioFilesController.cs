@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -56,8 +57,9 @@ namespace FileStore.API.Controllers
                 var file = await _fileService.GetById(fileId);
 
                 var path = file.Path;
+                var finfo = new FileInfo(path);
 
-                return PhysicalFile($"{path}", "application/octet-stream", enableRangeProcessing: true);
+                return PhysicalFile($"{path}", "application/octet-stream", finfo.Name, enableRangeProcessing: true);
             }
             catch (Exception ex)
             {

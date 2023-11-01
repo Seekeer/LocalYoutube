@@ -29,8 +29,8 @@ export class FailedConnectionInterceptor implements HttpInterceptor {
       retryWhen(error => 
         error.pipe(
           concatMap((error, count) => {
-            if (count <= retryCount && (error.status == 0 ||error.status == 502 || error.status == 503 || error.status == 504)) 
-            // if (error.url.includes('marks/add')  && count <= retryCount && (error.status == 0 ||error.status == 502 || error.status == 503 || error.status == 504)) 
+            // if (count <= retryCount && (error.status == 0 ||error.status == 502 || error.status == 503 || error.status == 504)) 
+            if ((error.url.includes('marks/add') || error.url.includes('files/updatePosition'))  && count <= retryCount && (error.status == 0 ||error.status == 502 || error.status == 503 || error.status == 504)) 
               return of(error);
             
             return throwError(error);

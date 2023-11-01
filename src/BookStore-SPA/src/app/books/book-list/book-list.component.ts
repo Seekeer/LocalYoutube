@@ -66,7 +66,8 @@ export class BookListComponent implements OnInit {
   public showSelected: boolean = false;
 
   public showOnlyWebSupported: boolean;
-
+  
+  public showWatchedCheckbox: boolean = false;
   public isSelectSeries: boolean = false;
   public isSelectSeason: boolean = false;
   public showKPINfo: boolean = false;
@@ -235,6 +236,8 @@ displayListForType() {
       case 'youtube':{
         this.isRandom = false;
         this.isSelectSeason = true;
+        this.showWatchedCheckbox = true;
+        this.showWatched = false;
         this.serieId = 6091;
         this.getSeries(VideoType.Youtube);
         this.episodeCount = 10;
@@ -454,6 +457,7 @@ counter : number =0 ;
       videosCount : this.episodeCount,
       isRandom : this.isRandom,
       seasonId : 0,
+      type: this.type,
       showDeleteButton: showDelete
     };
 
@@ -475,6 +479,21 @@ export class PlayerParameters {
   videosCount: number;
   isRandom: boolean;
   showDeleteButton: boolean;
+  type: string;
+
+  static parse(json: string){
+    var data = JSON.parse(json);
+    const obj: PlayerParameters = {
+    videoId:       Number(data.videoId),
+    seriesId:      Number(data.seriesId),
+    seasonId:      Number(data.seasonId),
+      videosCount: Number(data.videosCount),
+      isRandom: (data.isRandom === "true"),
+      showDeleteButton: (data.showDeleteButton=== "true"),
+      type: data.type,
+    };
+    return obj;
+  }
 }
 
 

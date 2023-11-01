@@ -35,10 +35,23 @@
 
     <div>
 
-      <button class="btn btn-outline-danger btn-sm" (click)="videoEnded()">Следующее</button>
-      <button class="btn btn-outline-danger btn-sm" (click)="continue()">Продолжить</button>
+      <button class="btn btn-outline-success btn-sm" (click)="continue()">Продолжить</button>
+      
+      <button mat-icon-button color="accent" (click)="rewindVideo()">
+        <mat-icon>fast_rewind</mat-icon>
+      </button>
+<!-- 
+      <button mat-icon-button color="accent" (click)="startPlay()">
+        <mat-icon>pause</mat-icon>
+      </button> -->
+
+      <button mat-icon-button color="accent" (click)="forwardVideo()">
+        <mat-icon>fast_forward</mat-icon>
+      </button>
+
+      <button class="btn btn-outline-danger btn-sm" (click)="videoEnded()">Следующий</button>
   
-      <app-markslist [videoId]="fileId"></app-markslist>
+      <app-markslist #markslist [videoId]="fileId"></app-markslist>
     </div>
     
     <ul class="list-group list-group-light">

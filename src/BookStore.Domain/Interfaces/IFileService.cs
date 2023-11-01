@@ -29,5 +29,6 @@ namespace FileStore.Domain.Interfaces
         Task SetRating(int videoId, double value);
         Task SetPosition(int videoId, string userId, double? value);
         Task<IEnumerable<T>> GetLatest(string userId);
+        Task<bool> MoveToSerie(int fileId, int serieId);
     }
 }

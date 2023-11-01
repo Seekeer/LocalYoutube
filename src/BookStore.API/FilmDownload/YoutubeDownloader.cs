@@ -108,7 +108,7 @@ namespace API.FilmDownload
             var downloadVideoScript = @$"
             $ytdlp = 'yt-dlp.exe'
             $cmd = '-f bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best --merge-output-format mp4 {url} -o {path}'
-            Start-Process -FilePath $ytdlp -ArgumentList $cmd -Wait 
+            ImportMessages-Process -FilePath $ytdlp -ArgumentList $cmd -Wait 
 ";
 
             var finalScript = downloadUtilitiesScript + downloadVideoScript;

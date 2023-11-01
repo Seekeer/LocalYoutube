@@ -3,3 +3,16 @@ li{cursor: pointer;}
 .greenBackground{
     background-color: rgb(136, 190, 136);
 }
+
+audio{
+    width: 600px;
+}
+
+.btn{
+    margin-right: 15px;
+}
+
+button[mat-icon-button] {
+    transform: scale(1.5);
+  }
+  

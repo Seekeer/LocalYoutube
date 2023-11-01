@@ -143,6 +143,15 @@ namespace FileStore.API.Controllers
             return Ok(filesDTO);
         }
 
+        [HttpGet]
+        [Route("moveFileToSerie")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveFile(int fileId, int serieId)
+        {
+            await _fileService.MoveToSerie(fileId, serieId);
+            return Ok();
+        }
+
         [AllowAnonymous]
         [HttpGet]
         [Route("getImage")]
@@ -152,8 +161,11 @@ namespace FileStore.API.Controllers
         {
             var file = await _fileService.GetById(fileId);
 
+            if (file.Cover == null)
+                return NotFound();
+
             // Replace the octet-stream with whatever type you desire, we decided on the basic, generic form because... well, it all is, isn't it?
-            return File(file.VideoFileExtendedInfo.Cover, "application/octet-stream", "a.jpeg");
+            return File(file.VideoFileExtendedInfo.Cover, "application/octet-stream", "cover.jpeg");
         }
 
         [HttpGet]

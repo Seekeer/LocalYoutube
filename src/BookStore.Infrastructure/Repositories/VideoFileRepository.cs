@@ -186,5 +186,21 @@ namespace FileStore.Infrastructure.Repositories
             Db.Update(file);
             Db.SaveChanges();
         }
+
+        public async Task<bool> MoveToSerie(int fileId, int serieId)
+        {
+            var file = await GetById(fileId);
+
+            var season = Db.Seasons.FirstOrDefault(x => x.SeriesId == file.SeriesId);
+
+            file.SeriesId = serieId;
+            file.SeasonId = season.Id;
+
+            Db.Attach(file);
+            Db.Update(file);
+            Db.SaveChanges();
+
+            return true;
+        }
     }
 }

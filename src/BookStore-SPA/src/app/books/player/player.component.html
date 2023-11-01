@@ -10,6 +10,20 @@
   </div>
 </dialog>
 
+<dialog id="moveDialog">
+  <div>Переместить фильм?</div>
+  <div class="mt-2" style="text-align: center">
+
+    <button class="btn btn-outline-warning btn-sm ml-2" (click)="moveFilm(true)">
+      В плохие
+    </button>
+    <button class="btn btn-outline-success btn-sm ml-2" (click)="moveFilm(false)">
+      В хорошие
+    </button>
+  </div>
+</dialog>
+
+
 <div>
   <div>
     <img
@@ -123,6 +137,15 @@
           <mat-icon>home</mat-icon>
         </button>
       </a>
+
+      <div  *ngIf="isSovietAnimation">
+        <button class="btn btn-outline-warning btn-sm ml-2" (click)="moveToBad()">
+          В плохие
+        </button>
+        <button class="btn btn-outline-success btn-sm ml-2" (click)="moveToGood()">
+          В хорошие
+        </button>
+      </div>
 
       <app-markslist #markslist [videoId]="videoId"></app-markslist>
 

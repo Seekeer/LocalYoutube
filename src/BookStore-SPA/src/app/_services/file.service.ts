@@ -14,6 +14,10 @@ import { Mark } from '../_models/Mark';
     providedIn: 'root'
 })
 export class FileService {
+    setSeriesId(serieId: number, videoId: number) {
+        return this.http.get<Mark[]>(`${this.baseUrl}files/moveFileToSerie?fileId=${videoId}&serieId=${serieId}`);
+    }
+    
     private baseUrl: string = environment.baseUrl + 'api/';
 
     constructor(private http: HttpClient) { }

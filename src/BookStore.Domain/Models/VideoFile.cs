@@ -72,7 +72,9 @@ namespace FileStore.Domain.Models
         Podcast,
         EoT,
         FairyTale,
-        Lessons
+        Lessons,
+        RussianBook,
+        ForeignBook
     }
 
     public class FileExtendedInfo : Entity
@@ -222,6 +224,11 @@ namespace FileStore.Domain.Models
             {
                 return Path.EndsWith("mp4") || Path.EndsWith(".m4v");
             }
+        }
+
+        public override string ToString()
+        {
+            return Name;
         }
     }
 

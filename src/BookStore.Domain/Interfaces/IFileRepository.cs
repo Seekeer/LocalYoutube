@@ -22,5 +22,6 @@ namespace FileStore.Domain.Interfaces
         Task<IEnumerable<T>> GetLatest(string userId);
         void RemoveFileCompletely(T file);
         void MarkFileToDelete(T file);
+        Task<bool> MoveToSerie(int fileId, int serieId);
     }
 }
