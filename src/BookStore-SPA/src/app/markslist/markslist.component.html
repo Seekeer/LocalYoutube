@@ -37,7 +37,7 @@ title="Добавить метку"
 
           <mat-form-field class="example-full-width" appearance="fill">
             <mat-label>Название метки</mat-label>
-            <input matInput  [(ngModel)]="mark.caption"
+            <input matInput  [(ngModel)]="mark.caption" autofocus
               (keyup.enter)="stopEdit(mark, true)" (keyup.esc)="stopEdit(mark, false)"  >
           </mat-form-field>
 
