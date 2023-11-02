@@ -43,15 +43,19 @@ export class MarkslistComponent implements OnInit, OnChanges {
   public addMark() {
     var element = this.getVideoElement();
 
+    const timeDifference = 5;
+    let position = element.currentTime - timeDifference;
+    if(position < 0)
+      position = 0;
+
     var mark = new Mark();
     mark.dbFileId = this.videoId;
-    mark.position = element.currentTime - 5;
+    mark.position = position;
     mark.isInEditMode = true;
 
     if(this.marks.find(x => Math.abs((x.position - mark.position)) < 5))
       return;
 
-    this.calculateDisplayTime(mark);
     this.createMark(mark);
     this.marks.push(mark);
   }
@@ -118,15 +122,6 @@ export class MarkslistComponent implements OnInit, OnChanges {
     }
   }
 
-  public calculateDisplayTime(mark: Mark) {
-    let minutes = Math.floor(mark.position / 60);
-    let seconds = Math.floor(mark.position - minutes * 60);
-
-    let minutesStr = minutes.toString().padStart(2, '0');
-    let secondsStr = seconds.toString().padStart(2, '0');
-
-    mark.displayTime = `${minutesStr}:${secondsStr}`;
-  }
 
   public markClicked(mark: Mark) {
     if(mark.isDeleted)
@@ -154,14 +149,12 @@ export class MarkslistComponent implements OnInit, OnChanges {
   public rewindMark(mark: Mark) {
 
     mark.position -= 10;
-    this.calculateDisplayTime(mark);
     this.service.updateMark(mark).subscribe();
 
   }
 
   public forwardMark(mark: Mark) {
     mark.position += 10;
-    this.calculateDisplayTime(mark);
 
     this.service.updateMark(mark).subscribe();
   }
@@ -186,7 +179,6 @@ export class MarkslistComponent implements OnInit, OnChanges {
 
     this.service.getMarksByFile(this.videoId).subscribe((marks) => {
       this.getVideoElement();
-      marks.forEach((x) => this.calculateDisplayTime(x));
       this.marks = marks.sort((a,b) =>  a.position - b.position);
     });
   }

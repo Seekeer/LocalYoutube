@@ -15,7 +15,6 @@ import * as moment from 'moment';
 import { Moment } from 'moment';
 import { ToastrService } from 'ngx-toastr';
 import { Book } from 'src/app/_models/Book';
-import { Mark } from 'src/app/_models/Mark';
 import { SeekPositionCollection } from 'src/app/_models/SeekPosition';
 import { FileService } from 'src/app/_services/file.service';
 import { SeriesService } from 'src/app/_services/series.service';
@@ -269,16 +268,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
     isRewinding
       ? this.notifications[0].classList.add('animate-in')
       : this.notifications[1].classList.add('animate-in');
-  }
-
-  public calculateDisplayTime(mark: Mark) {
-    let minutes = Math.floor(mark.position / 60);
-    let seconds = Math.floor(mark.position - minutes * 60);
-
-    let minutesStr = minutes.toString().padStart(2, '0');
-    let secondsStr = seconds.toString().padStart(2, '0');
-
-    mark.displayTime = `${minutesStr}:${secondsStr}`;
   }
 
   public showDeleteModal() {

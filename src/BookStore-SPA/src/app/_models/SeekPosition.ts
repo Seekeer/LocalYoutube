@@ -44,13 +44,11 @@ export class DurationDisplayPipe implements PipeTransform {
         const localOffset = new Date().getTimezoneOffset() * 60 * 1000;
         let date = new Date(duration*1000 + localOffset + oneDay) ;
         console.log(date);
-        return date.toLocaleTimeString();
+        let dateStr = date.toLocaleTimeString();
+
+        if(dateStr.startsWith('00:'))
+            dateStr = dateStr.substring(3);
+
+        return dateStr;
     }    
-    // transform(duration:number): Date {
-    //     const oneDay = 24 * 3600 * 1000;
-    //     const localOffset = new Date().getTimezoneOffset() * 60 * 1000;
-    //     let date = new Date(duration*1000 + localOffset + oneDay) ;
-    //     console.log(date.toLocaleTimeString());
-    //     return date;
-    // }
 }
