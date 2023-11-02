@@ -20,7 +20,7 @@ namespace API.TG
 {
     public interface ITgAPIClient
     {
-        public Task Start();
+        public Task ImportMessages();
     }
 
     internal class TgAPIClient : ITgAPIClient
@@ -56,12 +56,12 @@ namespace API.TG
             if (level == (int)LogLevel.Critical && logStr.Contains("SocketException TimedOut (10060):"))
             {
                 _messageProcessor.ClearAll();
-                Start();
+                ImportMessages();
             }
 
         }
 
-        public async Task Start()
+        public async Task ImportMessages()
         {
             var my = await _client.LoginUserIfNeeded();
 

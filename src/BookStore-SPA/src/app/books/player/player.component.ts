@@ -65,6 +65,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   );
   lastDoubleClickTime: Date;
   addMarkTimer: any;
+  videoInfo: Book;
   isSovietAnimation: boolean;
 
   constructor(
@@ -364,7 +365,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
     let currentId = this.videosList[++this.currentVideoIndex];
     this.videoId = currentId;
-    
+
     this.videoURL = this.service.getVideoURLById(currentId);
     //this.download();
     this.vlcPlayURL = `vlc://${this.videoURL}`;
@@ -381,7 +382,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.service.getBookById(currentId).subscribe(
       (videoInfo) => {
         this.name = videoInfo.displayName;
-        this.setPosition(videoInfo.currentPosition);
+        this.videoInfo = videoInfo;
+        // this.setPosition(videoInfo.currentPosition);
 
       },
       (err) => {
@@ -395,8 +397,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
   private updateStat() {
     var video = this.getVideoElement();
 
-
     if (!video || video.paused) return;
+
+    this.setPosition();
 
     this.totalDuration = moment(this.previousVideoTimePlayed);
     if (video) {
@@ -412,10 +415,19 @@ export class PlayerComponent implements OnInit, OnDestroy {
       )} ${this.playedVideoCount}/${this.parameters.videosCount}`;
   }
 
-  setPosition(position: number) {
+  setPosition() {
+    if(!this.videoInfo)
+      return;
+    const position = this.videoInfo.currentPosition;
     var video = this.getVideoElement();
-    if (position > 0 && video) {
+    if (video.duration && position > 0 && video) {
+
+      if(Math.abs(video.duration - position) < 30)
+      {
+        video.pause();
+      }
       video.currentTime = position;
+      this.videoInfo = null;
     }
   }
 }

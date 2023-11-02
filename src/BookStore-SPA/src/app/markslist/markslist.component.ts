@@ -1,6 +1,7 @@
 import {
   Component,
   ElementRef,
+  HostListener,
   Input,
   OnChanges,
   OnInit,
@@ -17,7 +18,7 @@ import { FileService } from '../_services/file.service';
   styleUrls: ['./markslist.component.css']
 })
 export class MarkslistComponent implements OnInit, OnChanges {
-  @ViewChild('audioElement') audio:ElementRef; 
+  @ViewChild('audioElement') audio:ElementRef;
   marks: Mark[] = [];
   @Input() videoId: number;
   lastVolumeChangedTime: Date;
@@ -32,12 +33,21 @@ export class MarkslistComponent implements OnInit, OnChanges {
     this.newMediaLoaded(this.videoId);
   }
 
+  @HostListener('window:keydown.control.m', ['$event'])
+  bigFont(event: KeyboardEvent) {
+    event.preventDefault();
+
+    this.addMark();
+  }
+
+
   public addMark() {
     var element = this.getVideoElement();
 
     var mark = new Mark();
     mark.dbFileId = this.videoId;
     mark.position = element.currentTime - 5;
+    mark.isInEditMode = true;
 
     if(this.marks.find(x => Math.abs((x.position - mark.position)) < 5))
       return;
@@ -54,13 +64,13 @@ export class MarkslistComponent implements OnInit, OnChanges {
       this.newMediaLoaded(this.videoId);
     }
   }
-  
+
   public paused() {
     if (this.getVideoElement().seeking) return;
 
     this.lastVolumeChangedTime = new Date();
   }
-  
+
   public played() {
     this.calculateTimeDiff(
       this.lastVolumeChangedTime,
@@ -68,7 +78,7 @@ export class MarkslistComponent implements OnInit, OnChanges {
       () => {}
     );
   }
-  
+
 
   private calculateTimeDiff(
     date: Date,
@@ -88,7 +98,7 @@ export class MarkslistComponent implements OnInit, OnChanges {
   }
 
   getVideoElement() {
-    // if (!this.mediaElement) 
+    // if (!this.mediaElement)
     {
       let audio = document.querySelector(
         '#player'
@@ -157,7 +167,7 @@ export class MarkslistComponent implements OnInit, OnChanges {
 
     if(!fileId)
       return;
-      
+
     this.videoId = fileId;
 
     this.service.getMarksByFile(this.videoId).subscribe((marks) => {

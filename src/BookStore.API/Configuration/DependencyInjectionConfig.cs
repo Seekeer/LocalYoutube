@@ -95,7 +95,7 @@ namespace FileStore.API.Configuration
                 await tg.Start();
 
                 //var tgAPI = scope.ServiceProvider.GetRequiredService<TgAPIClient>();
-                //await tgAPI.Start();
+                //await tgAPI.ImportMessages();
             }
             catch (Exception ex)
             {
