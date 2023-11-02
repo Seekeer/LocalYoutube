@@ -24,7 +24,6 @@ export class MarkslistComponent implements OnInit, OnChanges {
   lastVolumeChangedTime: Date;
   private _subscribed: any;
 
-  // @Input() item = ''; // decorate the property with @Input()
   constructor(
     public service: FileService,
   ) { }
@@ -53,10 +52,14 @@ export class MarkslistComponent implements OnInit, OnChanges {
       return;
 
     this.calculateDisplayTime(mark);
+    this.createMark(mark);
+    this.marks.push(mark);
+  }
+
+  private createMark(mark: Mark) {
     this.service.addMarkByFile(mark).subscribe((id) => {
       mark.id = id;
     });
-    this.marks.push(mark);
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -126,15 +129,26 @@ export class MarkslistComponent implements OnInit, OnChanges {
   }
 
   public markClicked(mark: Mark) {
+    if(mark.isDeleted)
+      return;
     var element = this.getVideoElement();
     element.currentTime = mark.position;
   }
 
   public deleteMark(mark: Mark) {
     this.service.deleteMark(mark.id).subscribe();
-    this.marks = this.marks.filter((obj) => {
-      return obj.id !== mark.id;
-    });
+    mark.isDeleted = true;
+    mark.isInEditMode = false;
+
+    // this.marks = this.marks.filter((obj) => {
+    //   return obj.id !== mark.id;
+    // });
+  }
+
+  public restoreMark(mark: Mark) {
+    mark.id = 0;
+    mark.isDeleted = false;
+    this.createMark(mark);
   }
 
   public rewindMark(mark: Mark) {
@@ -173,7 +187,7 @@ export class MarkslistComponent implements OnInit, OnChanges {
     this.service.getMarksByFile(this.videoId).subscribe((marks) => {
       this.getVideoElement();
       marks.forEach((x) => this.calculateDisplayTime(x));
-      this.marks = marks;
+      this.marks = marks.sort((a,b) =>  a.position - b.position);
     });
   }
 

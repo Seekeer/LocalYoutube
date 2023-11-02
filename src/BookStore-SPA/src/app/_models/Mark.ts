@@ -7,4 +7,5 @@ export class Mark {
 
     caption: string;
     isInEditMode: boolean;
+    isDeleted: boolean;
 }

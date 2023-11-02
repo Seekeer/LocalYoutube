@@ -11,3 +11,14 @@ a{
     overflow: auto;
     width: auto;
 }
+
+.deleted{
+    opacity: 0.5;
+}
+.inline{
+    display: inline;
+}
+
+.text-success{
+    opacity: 1;
+}
