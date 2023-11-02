@@ -654,25 +654,34 @@ namespace API.FilmDownload
                     try
                     {
                         var scope = _serviceScopeFactory.CreateScope();
-                        var fileService = scope.ServiceProvider.GetRequiredService<DbUpdateManager>();
-                        fileService.AddFromYoutube(record.Value, info.ChannelName, watchLater);
-
-                        var policy = Policy
-                            .Handle<Exception>()
-                            .WaitAndRetry(20, retryAttempt => TimeSpan.FromSeconds(10));
-
-                        await policy.Execute(async () =>
+                        using (var fileService = scope.ServiceProvider.GetRequiredService<DbUpdateManager>())
                         {
-                            record.Value.Path = record.Value.Path.Replace(" ", "");
-                            await YoutubeDownloader.Download(record.Key, record.Value.Path);
+                            fileService.AddFromYoutube(record.Value, info.ChannelName, watchLater);
 
-                            fileService.YoutubeFinished(record.Value);
+                            var policy = Policy
+                                .Handle<Exception>()
+                                .WaitAndRetry(20, retryAttempt => TimeSpan.FromSeconds(10));
 
-                            await NotifyDownloadEnded(fromId, record.Value);
-                        });
+                            await policy.Execute(async () =>
+                            {
+                                record.Value.Path = record.Value.Path.Replace(" ", "");
+                                await YoutubeDownloader.Download(record.Key, record.Value.Path);
+
+                                fileService.YoutubeFinished(record.Value);
+
+                                if (!System.IO.File.Exists(record.Value.Path))
+                                {
+                                    fileService.RemoveFileCompletely(record.Value);
+                                    throw new ArgumentException();
+                                }
+
+                                await NotifyDownloadEnded(fromId, record.Value);
+                            });
+                        }
                     }
                     catch (Exception ex)
                     {
+                        await _botClient.SendTextMessageAsync(new ChatId(fromId), "Ошибка, файл не скачан!", replyToMessageId: message.MessageId);
                         NLog.LogManager.GetCurrentClassLogger().Error(ex);
                     }
                 }

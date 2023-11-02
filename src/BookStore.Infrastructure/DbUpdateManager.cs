@@ -190,7 +190,7 @@ namespace Infrastructure
                 foreach (var season in folders)
                     AddSeason(series, season);
 
-                AddSeason(series, dir);
+                AddSeason(series, dir, null, false);
             }
         }
 
@@ -208,17 +208,18 @@ namespace Infrastructure
             return AddSeason(serie, dir, seasonName);
         }
 
-        public IEnumerable<VideoFile> AddSeason(Series series, DirectoryInfo dir, string seasonName = null)
+        public IEnumerable<VideoFile> AddSeason(Series series, DirectoryInfo dir, string seasonName = null, bool analyzeAll = true)
         {
             var season = AddOrUpdateSeason(series, seasonName ?? dir.Name);
 
-            return AddSeason(series, season, dir);
+            return AddSeason(series, season, dir, analyzeAll);
         }
 
-        private IEnumerable<VideoFile> AddSeason(Series series, Season season, DirectoryInfo dir)
+        private IEnumerable<VideoFile> AddSeason(Series series, Season season, DirectoryInfo dir, bool analyzeAll = true)
         {
             var result = new List<VideoFile>();
-            foreach (var file in dir.EnumerateFiles("", SearchOption.AllDirectories))
+            var files = analyzeAll ? dir.EnumerateFiles("", SearchOption.AllDirectories) : dir.EnumerateFiles("", SearchOption.TopDirectoryOnly);
+            foreach (var file in files)
                 result.Add(AddFile(file, series, season));
 
             return result;

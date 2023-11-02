@@ -1019,6 +1019,26 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("updateEpisodesName")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateEpisodesName(int seriesId)
+        {
+            var serie = _db.Series.Include(x => x.Seasons).ThenInclude(x => x.Files).First(x => x.Id == seriesId);
+            foreach (var season in serie.Seasons)
+            {
+                var startNumber = season.Files.First().Number - 1;
+                foreach (var file in season.Files)
+                {
+                    file.Name = $"{season.Name} - {file.Number - startNumber}";
+                }
+            }
+
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("convertToAnotherPlace")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> ConvertToAnotherPlace()
@@ -1029,7 +1049,7 @@ namespace FileStore.API.Controllers
             //await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\Школа сути\Школа сути");
             //await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\СВ\Суть времени (ЭТЦ), 2011");
 
-            //ImportSud("F:\\Видео\\СВ\\Суд времени", true);
+            ImportEoT("F:\\Видео\\СВ\\Суд времени", true);
             ImportEoT("F:\\Видео\\СВ\\Суть времени", false);
             ImportEoT("F:\\Видео\\СВ\\Школа сути", false);
 
@@ -1297,6 +1317,7 @@ namespace FileStore.API.Controllers
         {
 
             var dbUpdater = new DbUpdateManager(_db);
+            await RemoveSeries(6108, false);
 
             var series = new Series { Name = "Советские не показывать", Origin = Origin.Soviet, IsChild = true, Type = VideoType.Animation };
             _db.Series.Add(series);
