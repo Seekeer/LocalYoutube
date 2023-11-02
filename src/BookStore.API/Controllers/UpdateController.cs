@@ -20,6 +20,8 @@ using System.Runtime;
 using System.Security.AccessControl;
 using static System.Net.Mime.MediaTypeNames;
 using System.Diagnostics;
+using System.Xml.Serialization;
+using TL;
 
 namespace FileStore.API.Controllers
 {
@@ -1021,13 +1023,53 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> ConvertToAnotherPlace()
         {
-           //await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\Суд времени\Кургинян");
-            await ConvertNewOnline();
+            ////await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\Суд времени\Кургинян");
+            // await ConvertNewOnline();
 
-           await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\Школа сути\Школа сути");
-           await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\СВ\Суть времени (ЭТЦ), 2011");
+            //await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\Школа сути\Школа сути");
+            //await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\СВ\Суть времени (ЭТЦ), 2011");
+
+            //ImportSud("F:\\Видео\\СВ\\Суд времени", true);
+            ImportEoT("F:\\Видео\\СВ\\Суть времени", false);
+            ImportEoT("F:\\Видео\\СВ\\Школа сути", false);
 
             return Ok();
+        }
+
+        private void ImportEoT(string pathv, bool haveSubdir)
+        {
+            var directoryInfo = new DirectoryInfo(pathv);
+            if (haveSubdir)
+            {
+                foreach (var subDir in directoryInfo.GetDirectories())
+                    ClearSmallerDir(subDir);
+            }
+            else
+                ClearSmallerDir(directoryInfo);
+
+            var dbupdater = new DbUpdateManager(_db);
+            dbupdater.FillSeries(pathv, Origin.Russian, VideoType.EoT, false);
+        }
+
+        private void ClearSmallerDir(DirectoryInfo subDir)
+        {
+            var files = subDir.GetFiles("*.*");
+
+            var originalFiles = files.Where(x => !x.Name.Contains('(')).ToList();
+            var convertedFiles = files.Where(x => x.Name.Contains('(')).ToList();
+            foreach (var original in originalFiles)
+            {
+                var converted = convertedFiles.FirstOrDefault(x => x.Name.Substring(0, 1) == original.Name.Substring(0, 1));
+                if (converted == null)
+                {
+
+                }
+                else
+                {
+                    original.Delete();
+                }
+            }
+
         }
 
         private async Task ConvertToAnotherPlace(string folder)

@@ -65,6 +65,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   );
   lastDoubleClickTime: Date;
   addMarkTimer: any;
+  isSovietAnimation: boolean;
 
   constructor(
     public service: FileService,
@@ -84,13 +85,11 @@ export class PlayerComponent implements OnInit, OnDestroy {
       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent
       );
-    this.parameters = <PlayerParameters>(
-      JSON.parse(
-        JSON.stringify((<any>this.route.snapshot.queryParamMap).params)
-      )
-    );
+    this.parameters = PlayerParameters.parse(
+        JSON.stringify((<any>this.route.snapshot.queryParamMap).params));
 
     this.videoId = this.parameters.videoId;
+    this.isSovietAnimation = this.parameters.type == 'soviet';
     
     this.isRandom = String(this.parameters.isRandom) === 'true';
     this.videosList.push(this.videoId);
@@ -200,6 +199,34 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.updateCurrentTime(-10);
     this.animateNotificationIn(true);
   }
+  
+  
+  moveToGood() {
+    this.moveToSeries(14);
+  }
+  moveToBad() {
+    this.moveToSeries(6107);
+  }
+  moveToSeries(serieId: number) {
+    this.service.setSeriesId(serieId, this.videoId).subscribe();
+  }
+  
+  public showMoveModal() {
+    const dialog = <any>document.getElementById('moveDialog');
+    dialog.showModal();
+  }
+
+  public moveFilm(toBad: boolean) {
+    const dialog = <any>document.getElementById('moveDialog');
+    dialog.close();
+
+    if (toBad) {
+      this.moveToBad();
+    }
+    else
+      this.moveToGood();
+  }
+
   private animateNotificationOut(event: Event) {
     this.notifications.forEach((x) => x.classList.remove('animate-in'));
   }
@@ -328,8 +355,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
     if (this.parameters.videosCount <= this.playedVideoCount) {
       this.videoURL = null;
-      if(this.parameters.showDeleteButton)
-        this.showDeleteModal()
+      if(this.parameters.showDeleteButton == true)
+        this.showDeleteModal();
+      else if(this.isSovietAnimation)
+        this.showMoveModal();
       return false;
     }
 
