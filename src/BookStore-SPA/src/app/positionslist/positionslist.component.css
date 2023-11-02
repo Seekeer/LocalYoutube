@@ -1,0 +1,12 @@
+
+a{
+    color: rgb(0, 123, 255) !important;
+    text-decoration-style: solid;
+    cursor:pointer ;
+}
+
+#positionsList{
+    max-height: 120px;
+    overflow: auto;
+    width: auto;
+}

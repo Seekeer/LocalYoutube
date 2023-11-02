@@ -10,7 +10,7 @@
   </div>
 </dialog>
 
-<!-- <dialog id="moveDialog">
+<dialog id="moveDialog">
   <div>Переместить фильм?</div>
   <div class="mt-2" style="text-align: center">
 
@@ -21,7 +21,7 @@
       В хорошие
     </button>
   </div>
-</dialog> -->
+</dialog>
 
 
 <div>
@@ -32,12 +32,11 @@
       alt="Finish!"
       src="./assets/img/finish.jpg"
     />
-
-    <!--
-    <button class="btn btn-outline-danger btn-lg" *ngIf="parameters.showDeleteButton"        (click)="showDeleteModal()">
+    <!-- <button class="btn btn-outline-danger btn-lg" *ngIf="parameters.showDeleteButton"        (click)="showDeleteModal()">
       Удалить последнее видео?
     </button> -->
   </div>
+
   <div *ngIf="videoURL" class="video-container">
     <video
       *ngIf="isMobile"
@@ -51,6 +50,8 @@
       #videoElement
       id="player"
       (ended)="videoEnded()"
+      (seeked)="seeking($event)"
+
     >
       <source src="{{ videoURL }}" type="video/mp4" />
     </video>
@@ -64,6 +65,7 @@
       #videoElement
       id="player"
       (ended)="videoEnded()"
+      (seeked)="seeking($event)"
     >
       <source src="{{ videoURL }}" type="video/mp4" />
     </video>
@@ -138,16 +140,18 @@
         </button>
       </a>
 
-      <!-- <div  *ngIf="isSovietAnimation">
+      <div  *ngIf="isSovietAnimation">
         <button class="btn btn-outline-warning btn-sm ml-2" (click)="moveToBad()">
           В плохие
         </button>
         <button class="btn btn-outline-success btn-sm ml-2" (click)="moveToGood()">
           В хорошие
         </button>
-      </div> -->
+      </div>
 
       <app-markslist #markslist [videoId]="videoId"></app-markslist>
+
+      <app-positionslist #positionslist [positions]="seekPositions"></app-positionslist>
 
       <!-- <button type="button" class="btn btn-danger"         data-target="#deleteModal" data-toggle="modal">Delete Item</button> -->
 

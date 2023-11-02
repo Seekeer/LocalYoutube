@@ -1,0 +1,28 @@
+<div id="positionsList"  *ngIf="positions.seekPositions.length > 0">
+  <h4>История навигаций</h4>
+    <ul >
+      <li   *ngFor="let el of positions.seekPositions">
+        Скачок с 
+          <a (click)="clicked(el)" class="link-primary" >{{el.originalPosition | durationDisplay }}</a>
+           на {{ el.newPosition | durationDisplay  }}
+      </li>
+    </ul>
+
+    
+  <!-- <p>
+
+    <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+      Button with data-bs-target
+    </button>
+  </p>
+  <div class="collapse" id="collapseExample">
+    <div class="card card-body">
+      Some placeholder content for the collapse component. This panel is hidden by default but revealed when the user activates the relevant trigger.
+    </div>
+  </div> -->
+  <!-- <div class="linkContainer" *ngFor="let el of positions.seekPositions">
+    Скачок с 
+      <a (click)="clicked(el)" class="link-primary" >{{el.originalPosition | durationDisplay }}</a>
+       на {{ el.newPosition | durationDisplay  }}
+  </div> -->
+</div>

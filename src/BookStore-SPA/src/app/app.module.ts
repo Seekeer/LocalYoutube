@@ -29,6 +29,7 @@ import { ToastrModule } from 'ngx-toastr';
 
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
+import { DurationDisplayPipe } from './_models/SeekPosition';
 import { AudioFileService } from './_services/AudioFileService';
 import { AuthService } from './_services/auth.service';
 import {
@@ -56,8 +57,11 @@ import { NgbdDatepickerPopup } from './datepicker/datepicker-popup';
 import { FailedConnectionInterceptor } from './failedConnection.interceptor';
 import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './login/login.component';
-import { NavComponent } from './nav/nav.component';
 import { MarkslistComponent } from './markslist/markslist.component';
+import { NavComponent } from './nav/nav.component';
+import {
+  PositionslistComponent,
+} from './positionslist/positionslist.component';
 
 @NgModule({
   declarations: [
@@ -73,7 +77,9 @@ import { MarkslistComponent } from './markslist/markslist.component';
     ConfirmationDialogComponent,
     NgbdDatepickerPopup,
     AudioComponent,
-    MarkslistComponent
+    MarkslistComponent,
+    PositionslistComponent,
+    DurationDisplayPipe
   ],
   imports: [
     BrowserModule,

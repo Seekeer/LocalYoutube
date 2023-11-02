@@ -16,6 +16,7 @@ import { Moment } from 'moment';
 import { ToastrService } from 'ngx-toastr';
 import { Book } from 'src/app/_models/Book';
 import { Mark } from 'src/app/_models/Mark';
+import { SeekPositionCollection } from 'src/app/_models/SeekPosition';
 import { FileService } from 'src/app/_services/file.service';
 import { SeriesService } from 'src/app/_services/series.service';
 import { MarkslistComponent } from 'src/app/markslist/markslist.component';
@@ -67,6 +68,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
   addMarkTimer: any;
   videoInfo: Book;
   isSovietAnimation: boolean;
+  lastPosition: number;
+  seekPositions: SeekPositionCollection = new SeekPositionCollection();
 
   constructor(
     public service: FileService,
@@ -299,6 +302,13 @@ export class PlayerComponent implements OnInit, OnDestroy {
     // TODO - show end show screen
   }
 
+  public seeking(ev:any){
+    console.log(ev);
+    var video = this.getVideoElement();
+
+    this.seekPositions.TryAddPosition(this.lastPosition, video.currentTime);
+  }
+
   public download() {
     (window as any).open(this.videoURL,'_blank');
   }
@@ -406,7 +416,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
       this.totalDuration = this.totalDuration.add(video.currentTime, 'seconds');
 
       if (video.currentTime > 10)
+      {
+        this.lastPosition = video.currentTime;
         this.service.setPosition(this.videoId, video.currentTime);
+      }
     }
 
     if (this.totalDuration.seconds() - video.currentTime > 2)
