@@ -40,6 +40,15 @@ namespace FileStore.API.Controllers
             _seriesService = seriesService;
         }
 
+        //[AllowAnonymous]
+        //[HttpGet("pki-validation/500FFD61F19597364C13E9F8B80E0F0B.txt")]
+        //[ProducesResponseType(StatusCodes.Status200OK)]
+        //public async Task<IActionResult> GetById()
+        //{
+        //    return File(System.IO.File.ReadAllBytes(@"Z:\Smth\Downloads\500FFD61F19597364C13E9F8B80E0F0B.txt"), @"text/plain");
+        //}
+
+
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll()

@@ -692,11 +692,11 @@ namespace FileStore.API.Controllers
         [HttpGet]
         [Route("addAudio")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> AddAudio()
+        public async Task<IActionResult> AddAudio(string folderName, AudioType type)
         {
             var dbUpdater = new DbUpdateManager(_db);
 
-            dbUpdater.AddAudioFilesFromFolder("F:\\Видео\\Аудио\\Денис Фонвизин - Недоросль (Александр Алексеев-Валуа)", AudioType.RussianBook, Origin.Russian);
+            dbUpdater.AddAudioFilesFromFolder(folderName, type, Origin.Russian);
 
             return Ok();
         }
@@ -1049,9 +1049,10 @@ namespace FileStore.API.Controllers
             //await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\Школа сути\Школа сути");
             //await ConvertToAnotherPlace(@"Z:\Smth\Bittorrent\СВ\СВ\Суть времени (ЭТЦ), 2011");
 
-            ImportEoT("F:\\Видео\\СВ\\Суд времени", true);
-            ImportEoT("F:\\Видео\\СВ\\Суть времени", false);
+            //ImportEoT("F:\\Видео\\СВ\\Суд времени", true);
+            //ImportEoT("F:\\Видео\\СВ\\Суть времени", false);
             ImportEoT("F:\\Видео\\СВ\\Школа сути", false);
+            //RemoveSeries(6112, false);
 
             return Ok();
         }
@@ -1069,6 +1070,7 @@ namespace FileStore.API.Controllers
 
             var dbupdater = new DbUpdateManager(_db);
             dbupdater.FillSeries(pathv, Origin.Russian, VideoType.EoT, false);
+            RemoveSeries(6114, false);
         }
 
         private void ClearSmallerDir(DirectoryInfo subDir)

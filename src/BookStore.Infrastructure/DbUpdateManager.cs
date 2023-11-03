@@ -184,7 +184,7 @@ namespace Infrastructure
             var folders = dir.GetDirectories();
 
             if (!folders.Any())
-                AddSeason(series, dir);
+                AddSeason(series, dir,null, false);
             else
             {
                 foreach (var season in folders)
@@ -927,7 +927,9 @@ namespace Infrastructure
 
         public void RemoveSeriesCompletely(int seriesId)
         {
-            var files = _db.VideoFiles.Where(x => x.SeriesId == seriesId).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileExtendedInfo).ToList();
+            List<DbFile> files = new List<DbFile>();
+            files.AddRange(_db.VideoFiles.Where(x => x.SeriesId == seriesId).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileExtendedInfo));
+            files.AddRange(_db.AudioFiles.Where(x => x.SeriesId == seriesId).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileExtendedInfo));
             using var fileRepo = new DbFileRepository(_db);
             foreach (var file in files)
                 fileRepo.RemoveFileCompletely(file);
@@ -975,7 +977,7 @@ namespace Infrastructure
                 var title = dirInfo.Name;
 
                 var voice = "";
-                var voiceParts = title.Split(new char[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
+                var voiceParts = title.Split(new char[] { '(', ')', '[', ']' }, StringSplitOptions.RemoveEmptyEntries);
                 if (voiceParts.Length > 1)
                     voice = voiceParts.Last();
 
@@ -1008,6 +1010,7 @@ namespace Infrastructure
             IEnumerable<FileInfo> filePaths, AudioType type, Origin origin, byte[] image)
         {
             var series = AddOrUpdateVideoSeries(bookAuthor);
+            series.AudioType = type;
             var season = AddOrUpdateSeason(series, bookName);
 
             var files = new List<AudioFile>();
