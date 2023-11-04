@@ -31,6 +31,7 @@ export class AudioComponent implements OnInit {
   
   type: string;
   public isSelectSeries: boolean = true;
+  public isChild: boolean = false;
   public series: Serie[];
   searchTitle: string;
   seasonId: number;
@@ -57,7 +58,6 @@ export class AudioComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    console.log('audio');
     setTimeout(() => this.showSpinner(), 5);
 
     this.type = this.activatedRoute.snapshot.paramMap.get('type');
@@ -68,8 +68,13 @@ export class AudioComponent implements OnInit {
 
   displayListForType() {
     switch (this.type) {
-      case 'main': {
+      case 'child': {
+        this.isChild = true;
         this.getSeries(AudioType.FairyTale);
+        break;
+      }
+      case 'main': {
+        this.getSeries(null);
         break;
       }
     }
@@ -80,8 +85,13 @@ export class AudioComponent implements OnInit {
       this.series = series.sort((a, b) => {
         return a.name >= b.name ? 1 : -1;
       });
+
       this.hideSpinner();
     });
+  }
+
+  public toFavorite(){
+    this.seriesService.moveSeasonToFavorite(this.seasonId).subscribe();
   }
 
   public search() {
@@ -101,7 +111,7 @@ export class AudioComponent implements OnInit {
       this.seasons = serie.seasons;
       this.service
         .searchFilesWithSeries(serie.name, false)
-        .subscribe(this.processFiles.bind(this), this.getFilesError.bind(this));
+        .subscribe(() =>{this.hideSpinner()}, this.getFilesError.bind(this));
     } else {
       this.toastr.error('Выберите название файла или сериала');
     }

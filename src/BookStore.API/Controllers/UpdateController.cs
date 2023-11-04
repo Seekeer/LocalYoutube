@@ -32,7 +32,7 @@ namespace FileStore.API.Controllers
     public class UpdateController : MainController
     {
         private readonly TgBot _tgBot;
-        private readonly VideoCatalogDbContext _db;
+        private  VideoCatalogDbContext _db;
         private readonly AppConfig _config;
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
@@ -436,12 +436,14 @@ namespace FileStore.API.Controllers
         [HttpDelete]
         [Route("importFromDb")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public void RemoveSeason()
+        public void ImportFromAnotherDb()
         {
             var optionsBuilder = new DbContextOptionsBuilder<VideoCatalogDbContext>();
             optionsBuilder.UseSqlServer("Server=localhost;Database=res;Encrypt=False;Trusted_Connection=True;");
 
             var extDb = new VideoCatalogDbContext(optionsBuilder.Options);
+
+            var filesWithoutImage = _db.Files.Where(x => x.Cover == null);
 
             var ff = extDb.Files.ToList();
             var ff2 = _db.Files.ToList();
@@ -490,12 +492,13 @@ namespace FileStore.API.Controllers
             _db.AddRange(updateFiles);
             _db.SaveChanges();
         }
+
         [HttpDelete]
         [Route("removeSeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public void RemoveSeason(int seasonId, bool physicallyDeleteFile)
         {
-            var files = _db.Files.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeasonId == seasonId).ToList();
+                var files = _db.Files.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeasonId == seasonId).ToList();
 
             var manager = new DbUpdateManager(_db);
             foreach (var file in files)
@@ -519,12 +522,37 @@ namespace FileStore.API.Controllers
         }
 
         [HttpDelete]
+        [Route("removeManySeries")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> RemoveSeries(int startSerieId, int endSerieId, bool physicallyDeleteFile)
+        {
+            var dbManager = new DbUpdateManager(_db);
+            for (int i = startSerieId; i < endSerieId; i++)
+            {
+                await DeleteSerie(i, physicallyDeleteFile, new DbUpdateManager(_db));
+
+                var optionsBuilder = new DbContextOptionsBuilder<VideoCatalogDbContext>();
+                optionsBuilder.UseSqlServer("Server=localhost;Database=FileStore;Encrypt=False;Trusted_Connection=True;");
+
+                _db = new VideoCatalogDbContext(optionsBuilder.Options);
+            }
+            return Ok();
+        }
+
+        [HttpDelete]
         [Route("removeSeries")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> RemoveSeries(int serieId, bool deleteFile)
         {
             var dbManager = new DbUpdateManager(_db);
 
+            await DeleteSerie(serieId, deleteFile, dbManager);
+
+            return Ok();
+        }
+
+        private async Task DeleteSerie(int serieId, bool deleteFile, DbUpdateManager dbManager)
+        {
             if (deleteFile)
             {
                 var files = _db.Files.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).
@@ -536,8 +564,6 @@ namespace FileStore.API.Controllers
                 }
             }
             dbManager.RemoveSeriesCompletely(serieId);
-
-            return Ok();
         }
 
         [HttpDelete]

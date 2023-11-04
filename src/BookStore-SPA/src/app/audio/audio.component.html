@@ -11,7 +11,7 @@
   
       <mat-form-field appearance="fill"  *ngIf="isSelectSeries" >
         <mat-label>Сериал</mat-label>
-        <mat-select [(ngModel)]="serieId" (ngModelChange)="search()">
+        <mat-select [(ngModel)]="serieId" (ngModelChange)="search()"  [disabled]="serieId">
           <mat-option *ngFor="let data of series" value="{{data.id}}">
             {{data.name}}
           </mat-option>
@@ -31,11 +31,10 @@
 
     <div *ngIf="selectedFile">{{selectedFile.name}}</div>
     <audio id="player"  controls height="auto" autoplay  #audioElement (ended)="videoEnded()" src="{{audioURL}}"></audio>
-      <!-- <audio id="player" controls height="auto" autoplay  #audioElement (ended)="videoEnded()" src="https://file-examples.com/storage/fe1207564e65327fe9c8723/2017/11/file_example_MP3_700KB.mp3"></audio> -->
 
     <div>
 
-      <button class="btn btn-outline-success btn-sm" (click)="continue()">Продолжить</button>
+      <button class="btn btn-outline-success btn-sm" (click)="continue()">Возобновить</button>
       
       <button mat-icon-button color="accent" (click)="rewindVideo()">
         <mat-icon>fast_rewind</mat-icon>
@@ -51,7 +50,9 @@
 
       <button class="btn btn-outline-danger btn-sm" (click)="videoEnded()">Следующий</button>
   
-      <app-markslist #markslist [videoId]="fileId"></app-markslist>
+      <app-markslist *ngIf="!isChild" #markslist [videoId]="fileId"></app-markslist>
+
+      <button class="btn btn-outline-success btn-sm" (click)="toFavorite()">В избранное</button>
     </div>
     
     <ul class="list-group list-group-light">

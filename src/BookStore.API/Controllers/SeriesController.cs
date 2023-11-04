@@ -35,6 +35,15 @@ namespace FileStore.API.Controllers
             return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(Series));
         }
 
+        [HttpGet]
+        [Route("moveSeasonToFavorite")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveSeasonToFavorite(int seasonId)
+        {
+            await _SeriesService.MoveSeasonToFavorite(seasonId);
+
+            return Ok();
+        }
 
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]

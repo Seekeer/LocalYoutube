@@ -41,5 +41,38 @@ namespace FileStore.Infrastructure.Repositories
             var series = DbSet.Include(x => x.Seasons).Where(x => x.AudioType == type);
             return await series.ToListAsync();
         }
+
+        public async Task MoveSeasonToFavorite(int seasonId)
+        {
+            var season = Db.Seasons.FirstOrDefault(x => x.Id == seasonId);
+
+            var series = DbSet.FirstOrDefault(x => x.Id == season.SeriesId);
+            var typeStr = series.Type != null ? series.Type.ToString() : series.AudioType.ToString();
+            var newSeries = AddOrUpdateSeries($"Избранное {typeStr}", series.Type, series.AudioType);
+
+            season.SeriesId = newSeries.Id;
+            foreach (var file in Db.Files.Where(x => x.SeasonId == seasonId))
+            {
+                file.SeriesId = newSeries.Id;
+            }
+
+            Db.SaveChanges();
+        }
+
+        public Series AddOrUpdateSeries(string name, VideoType? type, AudioType? audioType)
+        {
+            var series = DbSet.FirstOrDefault(x => x.Name == name);
+            if (series == null)
+            {
+                series = new Series { Name = name };
+                series.Type = type;
+                series.AudioType = audioType;
+                DbSet.Add(series);
+
+                Db.SaveChanges();
+            }
+
+            return series;
+        }
     }
 }

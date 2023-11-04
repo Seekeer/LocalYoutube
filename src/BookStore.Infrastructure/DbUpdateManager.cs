@@ -938,6 +938,7 @@ namespace Infrastructure
             _db.Seasons.RemoveRange(seasons);
 
             var serie = _db.Series.FirstOrDefault(x => x.Id == seriesId);
+            if(serie != null)
             _db.Series.Remove(serie);
             _db.SaveChanges();
         }
@@ -1056,10 +1057,11 @@ namespace Infrastructure
             var albumName = rows.Count > 1 ? rows[1] : "Неизвестный";
 
             var isChild = type == AudioType.FairyTale;
-            var artist = AddOrUpdateSeries(artistName, false, isChild);
-            artist.AudioType = type;
+            var season = AddOrUpdateSeries("Неизвестное из Telegram", false, isChild);
+            season.AudioType = type;
 
-            var album = AddOrUpdateSeason(artist, albumName);
+            var seasonName = $"{artistName} - {albumName}";
+            var album = AddOrUpdateSeason(season, seasonName);
 
             var files = new List<AudioFile>();
             foreach (var item in enumerable.Select((path, index) => (path, index)))
@@ -1071,7 +1073,7 @@ namespace Infrastructure
                 var audioFile = new AudioFile
                 {
                     Season = album,
-                    Series = artist,
+                    Series = season,
                     Path = item.path,
                     Name = filename,
                     Number = item.index + 1,

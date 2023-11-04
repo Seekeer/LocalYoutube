@@ -63,20 +63,21 @@ namespace API.TG
 
         public async Task ImportMessages()
         {
-            var my = await _client.LoginUserIfNeeded();
+            //var my = await _client.LoginUserIfNeeded();
 
-            //_client.OnUpdate += Client_OnUpdate;
+            ////_client.OnUpdate += Client_OnUpdate;
 
-            var startDate = new DateTime(2023, 1, 1);
-            var finihsDate = new DateTime(2023, 3, 3);
+            //var startDate = new DateTime(2023, 1, 1);
+            //var finihsDate = new DateTime(2023, 3, 1);
+            ////var finihsDate = new DateTime(2023, 3, 3);
 
-            var currentDate = finihsDate;
-            while (currentDate > startDate)
-            {
-                var localFinishDate = currentDate;
-                currentDate = currentDate.AddDays(-3);
-                await AddOldMessages(1210302841, 0, currentDate, localFinishDate);
-            }
+            //var currentDate = finihsDate;
+            //while (currentDate > startDate)
+            //{
+            //    var localFinishDate = currentDate;
+            //    currentDate = currentDate.AddDays(-3);
+            //    await AddOldMessages(1210302841, 0, currentDate, localFinishDate);
+            //}
         }
 
         private async Task Client_OnUpdate(IObject arg)
@@ -186,7 +187,7 @@ namespace API.TG
                 using (var manager = new DbUpdateManager(db1))
                 {
                     manager.AddAudioFilesFromTg(message.Text, audio.Select(x => x.FilePath),
-                        FileStore.Domain.Models.AudioType.FairyTale, FileStore.Domain.Models.Origin.Soviet, image.FilePath);
+                        FileStore.Domain.Models.AudioType.FairyTale, FileStore.Domain.Models.Origin.Soviet, image?.FilePath);
                 }
             }
             catch (Exception)
@@ -391,7 +392,7 @@ namespace API.TG
                 case "verification_code":
                     {
                         Console.Write("Code: ");
-                        return "66431";
+                        return "56391";
                     }
                 case "first_name": return "John";      // if sign-up is required
                 case "last_name": return "Doe";        // if sign-up is required

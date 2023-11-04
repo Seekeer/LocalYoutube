@@ -75,5 +75,10 @@ namespace FileStore.Domain.Services
         {
             _seriesRepository?.Dispose();
         }
+
+        public async Task MoveSeasonToFavorite(int seasonId)
+        {
+            await _seriesRepository.MoveSeasonToFavorite(seasonId);
+        }
     }
 }
