@@ -2,7 +2,7 @@
 Web API Project using .NET Core 3.1 and SPA project using Angular 9
 
 ## Technologies
-- .NET Core 3.1
+- .NET Core 7
 - Entity Framework 3.1
 - Fluent API
 - AutoMapper
