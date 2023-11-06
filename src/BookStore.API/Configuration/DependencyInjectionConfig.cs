@@ -40,6 +40,8 @@ namespace FileStore.API.Configuration
             services.AddScoped<TgAPIClient, TgAPIClient>();
 
             services.AddHostedService<StartupService>();
+#if DEBUG
+#else
             services.AddQuartz(q =>
             {
                 q.ScheduleJob<BackuperJob>(trigger => trigger
@@ -67,6 +69,7 @@ namespace FileStore.API.Configuration
                 // when shutting down we want jobs to complete gracefully
                 options.WaitForJobsToComplete = true;
             });
+#endif
 
             services.AddTransient<BackuperJob>();
 

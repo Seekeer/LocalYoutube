@@ -46,10 +46,6 @@ namespace FileStore.API.Controllers
                 return BadRequest();
             }
             
-            //var managedUser = await _userManager.FindByNameAsync(request.UserName);
-            //_userManager.DeleteAsync(managedUser);
-            var user = new ApplicationUser { UserName = request.UserName };
-            //var createdUser = await _userManager.CreateAsync(user, request.Password);
 
             var managedUser = await _userManager.FindByNameAsync(request.UserName);
             if (managedUser == null)
@@ -66,7 +62,6 @@ namespace FileStore.API.Controllers
             if (userInDb is null)
                 return Unauthorized();
 
-            //var role = await _userManager.GetRolesAsync(userInDb);
             var claims = await _userManager.GetClaimsAsync(userInDb);
             if(!claims.Any())
             {

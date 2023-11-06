@@ -7,6 +7,7 @@
     "debug": "ng serve --port 4201",
     "build": "ng serve --host 192.168.1.55",
     "debugMobile": "ng build",
+    "publishGit": "ng build --output-hashing=all --configuration production --output-path ../../docs --base-href www",
     "publishLocal": "ng build --output-hashing=all --configuration local && npm run postbuild",
     "postbuild": "xcopy /s \"./dist\\BookStore-SPA\" \"C:\\inetpub\\LocalYoutube\" /Y",
     "publishExt": "ng build --output-hashing=all --configuration production && npm run postbuildExt",

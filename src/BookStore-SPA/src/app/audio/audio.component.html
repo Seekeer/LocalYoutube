@@ -10,7 +10,7 @@
       </mat-form-field>
   
       <mat-form-field appearance="fill"  *ngIf="isSelectSeries" >
-        <mat-label>Сериал</mat-label>
+        <mat-label>Автор или сборник</mat-label>
         <mat-select [(ngModel)]="serieId" (ngModelChange)="search()"  [disabled]="serieId">
           <mat-option *ngFor="let data of series" value="{{data.id}}">
             {{data.name}}
@@ -19,13 +19,36 @@
       </mat-form-field>
   
       <mat-form-field appearance="fill"  *ngIf="isSelectSeries" >
-        <mat-label>Сезон</mat-label>
+        <mat-label>Аудиокнига</mat-label>
         <mat-select [(ngModel)]="seasonId" (ngModelChange)="search()">
           <mat-option *ngFor="let data of seasons" value="{{data.id}}">
             {{data.name}}
           </mat-option>
         </mat-select>
       </mat-form-field>
+
+      <mat-form-field class="example-full-width"  *ngIf="isSelectSeries" appearance="fill">
+        <mat-label>Сколько еще файлов проиграть</mat-label>
+        <input matInput type="number"  [(ngModel)]="episodesLeft" >
+      </mat-form-field>
+
+      <mat-form-field class="example-full-width" appearance="fill">
+        <mat-label>Выключить через (минут)</mat-label>
+        <input
+          matInput
+          type="number"
+          [(ngModel)]="timerMinutes"
+          (keyup.enter)="setTimer()"
+        />
+      </mat-form-field>
+
+      <button mat-icon-button color="primary" (click)="setTimer()">
+        <mat-icon>alarm_on</mat-icon>
+      </button>
+
+      <div *ngIf="timeLeft">
+        Осталось до остановки: {{ timeLeft * 1000 | date : "mm:ss" }}
+      </div>
 
     </div>
 
@@ -53,6 +76,7 @@
       <app-markslist *ngIf="!isChild" #markslist [videoId]="fileId"></app-markslist>
 
       <button class="btn btn-outline-success btn-sm" (click)="toFavorite()">В избранное</button>
+      <button class="btn btn-outline-danger btn-sm" (click)="toBlackList()">В черный список</button>
     </div>
     
     <ul class="list-group list-group-light">

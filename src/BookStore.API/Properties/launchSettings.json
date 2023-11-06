@@ -23,7 +23,6 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "applicationUrl": "http://192.168.1.55:51951",
-      "sslPort": 51952
     },
     "Docker": {
       "commandName": "Docker",

@@ -15,7 +15,10 @@ import { Serie } from '../_models/Category';
 })
 export class SeriesService {
     moveSeasonToFavorite(seasonId: number) {
-        return this.http.get<Serie[]>(this.baseUrl + `series/moveSeasonToFavorite?seasonId=` + seasonId);
+        return this.http.get<Serie[]>(this.baseUrl + `series/moveSeasonToFavorite?seasonId=${seasonId}&favorite=true`);
+    }
+    moveSeasonToBlackList(seasonId: number) {
+        return this.http.get<Serie[]>(this.baseUrl + `series/moveSeasonToFavorite?seasonId=${seasonId}&favorite=false`);
     }
     private baseUrl: string = environment.baseUrl + 'api/';
 
@@ -26,9 +29,9 @@ export class SeriesService {
     }
     public getAllAudio(type:AudioType): Observable<Serie[]> {
         if(!type)
-        return this.http.get<Serie[]>(this.baseUrl + `series/getAllAudio`);
-else
-        return this.http.get<Serie[]>(this.baseUrl + `series/getAllAudio?type=` + <number>type);
+            return this.http.get<Serie[]>(this.baseUrl + `series/getAllAudio?exceptType=${AudioType.FairyTale}`);
+        else
+            return this.http.get<Serie[]>(this.baseUrl + `series/getAllAudio?type=` + <number>type);
         // return this.http.get<Serie[]>(this.baseUrl + `series/getAllAudio`);
     }
     getOther(): Observable<Serie[]> {

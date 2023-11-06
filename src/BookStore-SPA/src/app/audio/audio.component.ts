@@ -90,8 +90,31 @@ export class AudioComponent implements OnInit {
     });
   }
 
+  setTimer() {
+    if (this.interval) clearInterval(this.interval);
+
+    this.timeLeft = this.timerMinutes * 60;
+
+    this.interval = Number(
+      setInterval(() => {
+        if (this.timeLeft > 0) {
+          this.timeLeft--;
+        } else this.setNextVideo();
+      }, 1000)
+    );
+  }
+
+  timerMinutes: number;
+  timerStr: string;
+  timeLeft: number;
+  private interval: number;
+
   public toFavorite(){
     this.seriesService.moveSeasonToFavorite(this.seasonId).subscribe();
+  }
+
+  public toBlackList(){
+    this.seriesService.moveSeasonToBlackList(this.seasonId).subscribe();
   }
 
   public search() {
@@ -127,7 +150,9 @@ export class AudioComponent implements OnInit {
   }
 
   selectAudio(file: AudioFile) {
-    this.setVideoByIndex(file.index);
+    this.currentIndex = file.index - 1;
+    this.setNextVideo();
+    // this.setVideoByIndex(file.index);
   }
 
   showFilteredBooks() {
@@ -240,8 +265,13 @@ export class AudioComponent implements OnInit {
       this.getAudioElement().load();
   }
   
+  public episodesLeft: number = 1;
+  
   private setNextVideo() {
 
+    if(this.episodesLeft == 0)
+      return;
+      this.episodesLeft--;
     return this.setVideoByIndex(this.currentIndex+1);
   }
   private setVideoByIndex(index:number) {

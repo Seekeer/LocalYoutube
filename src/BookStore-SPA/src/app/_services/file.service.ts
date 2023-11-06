@@ -87,8 +87,13 @@ export class FileService {
     }
 
     public setPosition(id, position) {
-        var url = this.baseUrl + `files/updatePosition/${id}`;
+        var url = this.baseUrl + `files/setPosition/${id}`;
         return this.http.put(url, position).subscribe();
+    }
+
+    public getPosition(id): Observable<number> { 
+        var url = this.baseUrl + `files/getPosition/${id}`;
+        return this.http.get<number>(url);
     }
 
     public getBooks(): Observable<Book[]> {

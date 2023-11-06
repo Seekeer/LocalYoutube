@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoMapper;
 using FileStore.API.Dtos.Series;
@@ -28,19 +29,30 @@ namespace FileStore.API.Controllers
         [HttpGet]
         [Route("getAllAudio")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetAllAudio(AudioType? type = null)
+        public async Task<IActionResult> GetAllAudio(AudioType? type = null, AudioType? exceptType = null)
         {
-            var Series = await _SeriesService.GetAllByType(type);
+            var series = new List<Series>();
 
-            return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(Series));
+            if (type == null && exceptType != null)
+            {
+                foreach (AudioType enumType in Enum.GetValues(typeof(AudioType)))
+                {
+                    if (enumType != exceptType)
+                        series.AddRange(await _SeriesService.GetAllByType(enumType));
+                }
+            }
+            else
+                series.AddRange(await _SeriesService.GetAllByType(type));
+
+            return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(series));
         }
 
         [HttpGet]
         [Route("moveSeasonToFavorite")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> MoveSeasonToFavorite(int seasonId)
+        public async Task<IActionResult> MoveSeasonToFavorite(int seasonId, bool favorite)
         {
-            await _SeriesService.MoveSeasonToFavorite(seasonId);
+            await _SeriesService.MoveSeasonToFavorite(seasonId, favorite);
 
             return Ok();
         }

@@ -42,13 +42,14 @@ namespace FileStore.Infrastructure.Repositories
             return await series.ToListAsync();
         }
 
-        public async Task MoveSeasonToFavorite(int seasonId)
+        public async Task MoveSeasonToFavorite(int seasonId, bool favorite)
         {
             var season = Db.Seasons.FirstOrDefault(x => x.Id == seasonId);
 
             var series = DbSet.FirstOrDefault(x => x.Id == season.SeriesId);
             var typeStr = series.Type != null ? series.Type.ToString() : series.AudioType.ToString();
-            var newSeries = AddOrUpdateSeries($"Избранное {typeStr}", series.Type, series.AudioType);
+            var sereiesName = favorite ? $"Избранное {typeStr}" : $"Черный список {typeStr}";
+            var newSeries = AddOrUpdateSeries(sereiesName, series.Type, series.AudioType);
 
             season.SeriesId = newSeries.Id;
             foreach (var file in Db.Files.Where(x => x.SeasonId == seasonId))

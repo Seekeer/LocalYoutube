@@ -822,7 +822,8 @@ namespace Infrastructure
                     }
 
                     var dirDirectories = dir.EnumerateDirectories();
-                    if (dirDirectories.Any(x => x.Name == "VIDEO_TS") || dirFiles.Any(x => x.Name.Contains("VIDEO_TS")))
+                    if (dirDirectories.Any(x => x.Name == "VIDEO_TS") || dirFiles.Any(x => x.Name.Contains("VIDEO_TS"))
+                        || dirDirectories.Any(x => x.Name == "BDMV") || dirFiles.Any(x => x.FullName.Contains("BDMV")))
                         // TODO - message about wrong format
                         continue;
 

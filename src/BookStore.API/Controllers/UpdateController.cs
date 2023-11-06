@@ -22,6 +22,7 @@ using static System.Net.Mime.MediaTypeNames;
 using System.Diagnostics;
 using System.Xml.Serialization;
 using TL;
+using Microsoft.AspNetCore.Identity;
 
 namespace FileStore.API.Controllers
 {
@@ -31,13 +32,16 @@ namespace FileStore.API.Controllers
     [Route("api/[controller]")]
     public class UpdateController : MainController
     {
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly TgBot _tgBot;
         private  VideoCatalogDbContext _db;
         private readonly AppConfig _config;
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
-        public UpdateController(VideoCatalogDbContext dbContext, AppConfig config, IServiceScopeFactory serviceScopeFactory, TgBot tgBot)
+        public UpdateController(VideoCatalogDbContext dbContext, AppConfig config, 
+            IServiceScopeFactory serviceScopeFactory, TgBot tgBot, UserManager<ApplicationUser> userManager)
         {
+            _userManager = userManager;
             _tgBot = tgBot;
             _db = dbContext;
             _config = config;
@@ -827,6 +831,22 @@ namespace FileStore.API.Controllers
 
             return Ok();
         }
+
+        [HttpGet]
+        [Route("createUser")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> CreateUser(string login, string pass)
+        {
+            var managedUser = await _userManager.FindByNameAsync(login);
+            if (managedUser != null)
+               await  _userManager.DeleteAsync(managedUser);
+
+            var user = new ApplicationUser { UserName = login };
+            var createdUser = await _userManager.CreateAsync(user, pass);
+
+            return Ok();
+        }
+
 
         [HttpGet]
         [Route("reDownloadByRutracker")]

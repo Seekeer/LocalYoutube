@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Infrastructure.Scheduler;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -42,8 +44,15 @@ namespace FileStore.API
 #if DEBUG
 #else
                     // DT launchsettings doesnt work in prod for some reason
-                    webBuilder.ConfigureKestrel(options => { });
-                    webBuilder.UseUrls($"http://192.168.1.55:2022");
+                    webBuilder.ConfigureKestrel(options =>
+                    {
+                        options.ConfigureHttpsDefaults(listenOptions =>
+                        {
+                            listenOptions.ServerCertificate = new X509Certificate2(
+                                "C:\\Dev\\Certificate\\certificate_cert_out.pfx", "cert_mycertpass");
+                        });
+                    });
+                    webBuilder.UseUrls($"https://192.168.1.55:2022",$"https://192.168.1.55:51951");
 #endif
                 })
                 .ConfigureLogging(logging =>

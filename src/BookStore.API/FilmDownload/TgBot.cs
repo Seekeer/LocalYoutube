@@ -162,7 +162,10 @@ namespace API.FilmDownload
             // Discard the result
             lock (_botClient)
             {
-                //_ = DoAsyncPing();
+#if DEBUG
+#else
+                _ = DoAsyncPing();
+#endif
             }
         }
 

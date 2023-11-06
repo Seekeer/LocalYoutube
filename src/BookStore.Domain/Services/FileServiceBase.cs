@@ -150,6 +150,19 @@ namespace FileStore.Domain.Services
             await _FileRepository.Update(video);
         }
 
+        public async Task<double> GetPosition(int fileId, string userId)
+        {
+            if (string.IsNullOrEmpty(userId))
+                return 0;
+
+            var video = await _FileRepository.GetById(fileId);
+            var info = video.VideoFileUserInfos.FirstOrDefault(x => x.UserId == userId);
+            if (info == null)
+                return 0;
+
+            return info.Position;
+        }
+
         public async Task<IEnumerable<T>> SearchFileByType(V type)
         {
             return await _FileRepository.SearchFileByType(type);

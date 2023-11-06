@@ -14,6 +14,6 @@ namespace FileStore.Domain.Interfaces
         Task<Series> Update(Series Series);
         Task<bool> Remove(Series Series);
         Task<IEnumerable<Series>> Search(string SeriesName, int resultCount);
-        Task MoveSeasonToFavorite(int seasonId);
+        Task MoveSeasonToFavorite(int seasonId, bool favorite);
     }
 }
