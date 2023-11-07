@@ -450,7 +450,7 @@ counter : number =0 ;
       return;
     }
 
-    let showDelete = this.type != 'soviet' && this.type != 'sovietfairytale'&& this.type != 'series';
+    let showDelete = this.type != 'soviet' && this.type != 'sovietfairytale' && this.type != 'animation' && this.type != 'series';
     const queryParams: PlayerParameters = {
       seriesId : book.seriesId,
       videoId : book.id,

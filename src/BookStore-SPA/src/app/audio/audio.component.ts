@@ -99,7 +99,12 @@ export class AudioComponent implements OnInit {
       setInterval(() => {
         if (this.timeLeft > 0) {
           this.timeLeft--;
-        } else this.setNextVideo();
+        } else 
+        {
+          var el = this.getAudioElement();
+          el.pause();
+          this.setNextVideo();
+        }
       }, 1000)
     );
   }
@@ -271,14 +276,15 @@ export class AudioComponent implements OnInit {
 
     if(this.episodesLeft == 0)
       return;
-      this.episodesLeft--;
+
+    this.episodesLeft--;
     return this.setVideoByIndex(this.currentIndex+1);
   }
   private setVideoByIndex(index:number) {
     this.currentIndex = index;
-    this.fileId = this.selectedFile.id;
-
+    
     this.selectedFile = this.filteredFiles[this.currentIndex];
+    this.fileId = this.selectedFile.id;
     this.audioURL = this.selectedFile.PlayURL;
 
     var el = this.getAudioElement();

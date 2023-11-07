@@ -9,6 +9,7 @@ using FileStore.API.Configuration;
 using FileStore.API.Dtos.File;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
+using Infrastructure.Scheduler;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -55,9 +56,10 @@ namespace FileStore.API.Controllers
             try
             {
                 var file = await _fileService.GetById(fileId);
-
                 var path = file.Path;
                 var finfo = new FileInfo(path);
+
+                //return wait TryToDownload(file);
 
                 return PhysicalFile($"{path}", "application/octet-stream", finfo.Name, enableRangeProcessing: true);
             }
@@ -68,6 +70,21 @@ namespace FileStore.API.Controllers
 
                 throw;
             }
+        }
+
+        private async Task<FileResult> TryToDownload(T file)
+        {
+            var path = file.Path;
+            var finfo = new FileInfo(path);
+
+            var yadisk = new YandexDisc("AQAAAAABKm0kAAeaqT0Xy-23cEj1usRIZAcnhO0");
+
+            var filepath = @"Z:\Smth\Downloads\Не подтвержден 993352.crdownload";
+            await yadisk.Download(filepath, file.Path);
+
+            return PhysicalFile(filepath, "application/octet-stream", finfo.Name, enableRangeProcessing: true);
+
+            //return PhysicalFile(@"Z:\Smth\Downloads\Не подтвержден 993251.crdownload", "application/octet-stream", finfo.Name, enableRangeProcessing: true);
         }
 
         [HttpPatch]
@@ -122,13 +139,23 @@ namespace FileStore.API.Controllers
         }
 
         [HttpPut]
-        [Route("updatePosition/{id}")]
+        [Route("setPosition/{id}")]
         public async Task<IActionResult> SetPosition(int id, [FromBody] double value)
         {
             string userId = await GetUserId(_userManager);
             await _fileService.SetPosition(id, userId, value);
 
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("getPosition/{fileId}")]
+        public async Task<IActionResult> GetPosition(int fileId)
+        {
+            string userId = await GetUserId(_userManager);
+            var position = await _fileService.GetPosition(fileId, userId);
+
+            return Ok(position);
         }
 
         [HttpGet]

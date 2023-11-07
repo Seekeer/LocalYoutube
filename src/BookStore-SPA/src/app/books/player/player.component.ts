@@ -47,6 +47,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   intervalId: any;
   isRandom: boolean;
   isMobile: boolean;
+  needToUpdateCurrentPosition: boolean;
   timerMinutes: number;
   timerStr: string;
   totalDuration: moment.Moment;
@@ -69,6 +70,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   isSovietAnimation: boolean;
   lastPosition: number;
   seekPositions: SeekPositionCollection = new SeekPositionCollection();
+  checkPauseDurationTimer: any;
 
   constructor(
     public service: FileService,
@@ -170,6 +172,35 @@ export class PlayerComponent implements OnInit, OnDestroy {
       //   e.preventDefault(); });
       return videoEl;
     }
+  }
+  
+  public videoPaused() {
+    this.setTimerToCheckCurrentTimeOnBigStop(30);
+  }
+
+  setTimerToCheckCurrentTimeOnBigStop(numberOfSeconds:number){
+    let that = this;
+    that.checkPauseDurationTimer = setTimeout(function () {
+        that.needToUpdateCurrentPosition = true;
+    }, numberOfSeconds*1000);
+  }
+
+  public videoPlayed() {
+    this.updateCurrentPositionAfterResumeIfNeed();
+  }
+
+  updateCurrentPositionAfterResumeIfNeed() {
+    clearTimeout(this.checkPauseDurationTimer);
+    let video = this.getVideoElement();
+
+    if(!this.needToUpdateCurrentPosition)
+      return;
+
+    this.needToUpdateCurrentPosition = false;
+    this.service.getPosition(this.videoId).subscribe(position => 
+      {
+        video.currentTime = position;
+      });
   }
 
   public startPlay() {
@@ -407,7 +438,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
       if (video.currentTime > 10)
       {
         this.lastPosition = video.currentTime;
-        this.service.setPosition(this.videoId, video.currentTime);
+
+        if(!this.needToUpdateCurrentPosition)
+          this.service.setPosition(this.videoId, video.currentTime);
       }
     }
 

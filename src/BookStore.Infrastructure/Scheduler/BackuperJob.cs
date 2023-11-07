@@ -190,6 +190,19 @@ namespace Infrastructure.Scheduler
             return folderPath + (fileName);
         }
 
+        public async Task Download(string finaleFilePath, string filepath)
+        {
+            var api = new DiskHttpApi(_token);
+
+            var path = (@"1234.avi");
+
+            Task.Factory.StartNew(() =>
+            {
+                api.Files.DownloadFileAsync(path, finaleFilePath);
+                //await api.Files.DownloadFileAsync(path, finaleFilePath);
+            }, TaskCreationOptions.LongRunning);
+        }
+
         #region Private members
 
         private readonly string _token;

@@ -34,6 +34,9 @@ namespace API.TG
     {
         public MessageProcessor(AppConfig config, IServiceProvider provider)
         {
+            if (config.TelegramSettings.TgCredentials == null)
+                return;
+
             _settings = config.TelegramSettings.TgCredentials;
 
             Provider = provider;

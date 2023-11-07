@@ -32,9 +32,6 @@
       alt="Finish!"
       src="./assets/img/finish.jpg"
     />
-    <!-- <button class="btn btn-outline-danger btn-lg" *ngIf="parameters.showDeleteButton"        (click)="showDeleteModal()">
-      Удалить последнее видео?
-    </button> -->
   </div>
 
   <div *ngIf="videoURL" class="video-container">
@@ -49,6 +46,8 @@
       (click)="startPlay()"
       #videoElement
       id="player"
+      (pause)="videoPaused()"
+      (play)="videoPlayed()"
       (ended)="videoEnded()"
       (seeked)="seeking($event)"
 
@@ -64,6 +63,8 @@
       class="player__video viewer"
       #videoElement
       id="player"
+      (pause)="videoPaused()"
+      (play)="videoPlayed()"
       (ended)="videoEnded()"
       (seeked)="seeking($event)"
     >

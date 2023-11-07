@@ -31,7 +31,7 @@ export class AudioFileService {
     }
     
     public setPosition(id, position) {
-        var url = this.baseUrl + `AudioFiles/updatePosition/${id}`;
+        var url = this.baseUrl + `AudioFiles/setPosition/${id}`;
         return this.http.put(url, position).subscribe();
     }
 
