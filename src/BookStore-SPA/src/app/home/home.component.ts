@@ -19,7 +19,6 @@ export class HomeComponent implements OnInit {
           if (m.type == 'childList') {
               for (let k = 0; k < m.addedNodes.length; k++) {
                   const autofocuses = (<Element>m.addedNodes[k]).querySelectorAll("[autofocus]"); //Note: this ignores the fragment's root element
-                  console.log(autofocuses);
                   if (autofocuses.length) {
                       const a = autofocuses[autofocuses.length - 1] ; // focus last autofocus element
                       (a as HTMLElement)?.focus();

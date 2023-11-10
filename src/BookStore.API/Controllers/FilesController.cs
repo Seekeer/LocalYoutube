@@ -122,7 +122,6 @@ namespace FileStore.API.Controllers
         public async Task<ActionResult<List<VideoFile>>> GetAnimation(bool isSoviet)
         {
             var files = await _fileService.SearchFileByType(VideoType.Animation);
-
             if (isSoviet)
                 files = files.Where(x => x.Origin == Origin.Soviet).Take(30);
             else

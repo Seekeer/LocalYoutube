@@ -199,7 +199,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.needToUpdateCurrentPosition = false;
     this.service.getPosition(this.videoId).subscribe(position => 
       {
-        video.currentTime = position;
+        // If time changed for more then 10 seconds - update.
+        if(Math.abs(video.currentTime - position) > 10)
+          video.currentTime = position;
       });
   }
 

@@ -874,7 +874,7 @@ namespace Infrastructure
 
                         }
 
-                        using var fileRepo = new DbFileRepository(_db);
+                        var fileRepo = new DbFileRepository(_db);
                         if (moreFilesAdded)
                         {
                             fileRepo.RemoveFileCompletely(info);

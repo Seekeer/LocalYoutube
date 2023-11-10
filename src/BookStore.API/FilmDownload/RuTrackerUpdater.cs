@@ -341,11 +341,14 @@ namespace API.Controllers
                 yearStr = GetProperty("Год выхода", text);
             if (string.IsNullOrEmpty(yearStr))
                 yearStr = GetProperty("Год", text);
-            var yearStrDigits = yearStr.Length > 6 ? yearStr.Substring(0, 6).OnlyDigits() : yearStr.OnlyDigits();
-            if (int.TryParse(yearStrDigits, out int year))
+            if (!string.IsNullOrEmpty(yearStr))
             {
-                if (year > 1900 && year < 2030)
-                    info.Year = year;
+                var yearStrDigits = yearStr.Length > 6 ? yearStr.Substring(0, 6).OnlyDigits() : yearStr.OnlyDigits();
+                if (int.TryParse(yearStrDigits, out int year))
+                {
+                    if (year > 1900 && year < 2030)
+                        info.Year = year;
+                }
             }
             var urls = doc.QuerySelectorAll(".postImg").Select(x => x.GetAttributeValue("title", null));
 
@@ -436,7 +439,7 @@ namespace API.Controllers
                SortDirection: SearchTopicsSortDirection.Descending
            ));
 
-            long maxLimit = (long)20 * 1024 * 1024 * 1024;
+            long maxLimit = (long)30 * 1024 * 1024 * 1024;
             long minLimit = (long)1 * 1024 * 1024 * 1024;
 
             if (res.Topics.Count() < 5)

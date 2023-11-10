@@ -171,7 +171,7 @@ namespace API.FilmDownload
 
         private async Task DoAsyncPing()
         {
-            var db = _GetDb();
+            using var db = _GetDb();
             var manager = new DbUpdateManager(db);
 
             var updated = manager.UpdateDownloading((info) => info.IsDownloading);
