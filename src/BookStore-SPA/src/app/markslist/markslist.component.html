@@ -10,7 +10,7 @@ title="Добавить метку (ctrl+M)"
 <mat-icon>bookmark</mat-icon>
 </button>
 
-<div id="marksList">
+<div id="marksList" style="max-height:{{heightLimit}}px;" >
     <!-- <button style="width: 100px; height: 30px;" (click)="click()" >Reload marks</button> -->
     <div *ngFor="let mark of marks" [ngClass]="{'deleted' : mark.isDeleted}">
         {{mark.caption|| 'Метка' }} в <a (click)="markClicked(mark)" class="link-primary" >{{mark.position | durationDisplay }}</a>

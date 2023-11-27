@@ -5,10 +5,13 @@ a{
 }
 
 #marksList{
-    max-height: 280px;
     /* overscroll-behavior: none; */
     overflow: auto;
     width: auto;
+}
+
+.limitHeight{
+    max-height: 280px;
 }
 
 .deleted{
@@ -21,8 +24,4 @@ a{
 
 .text-success{
     opacity: 1;
-}
-
-button[mat-icon-button] {
-  transform: scale(1.5);
 }
