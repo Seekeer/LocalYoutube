@@ -442,7 +442,14 @@ namespace API.FilmDownload
             if (string.IsNullOrEmpty(downloadPath))
             {
                 downloadPath = Path.Combine(_config.RootDownloadFolder, rutrackerId.ToString());
-                await _rutracker.StartDownload(rutrackerId, downloadPath);
+                try
+                {
+                    await _rutracker.StartDownload(rutrackerId, downloadPath);
+                }
+                catch (Exception ex)
+                {
+                    await _botClient.SendTextMessageAsync(new ChatId(tgFromId), $"Ошибка при добавлении торрента в QBittorrent. Попробуйте еще раз позже");
+                }
             }
 
             var file = new FileStore.Domain.Models.VideoFile
