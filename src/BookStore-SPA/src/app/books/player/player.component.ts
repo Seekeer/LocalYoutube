@@ -35,6 +35,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   public categories: any;
   public videoURL: string;
   public statStr: string;
+  public isAdditionalBookmarksVisible: boolean;
   public name: string;
   private previousVideoTimePlayed: Moment = moment.unix(0);
 
@@ -376,6 +377,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   timeLeft: number;
   private interval: number;
+
+  public showAdditionalBookmarks() {
+    this.isAdditionalBookmarksVisible = ! this.isAdditionalBookmarksVisible;
+  }
 
   public switchToFullscreen() {
     var el = this.getVideoElement();

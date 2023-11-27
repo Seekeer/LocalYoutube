@@ -21,6 +21,7 @@ export class MarkslistComponent implements OnInit, OnChanges {
   @ViewChild('audioElement') audio:ElementRef;
   marks: Mark[] = [];
   @Input() videoId: number;
+  @Input() isHeightLimited: boolean = true;
   lastVolumeChangedTime: Date;
   private _subscribed: any;
 

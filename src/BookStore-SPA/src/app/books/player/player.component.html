@@ -74,7 +74,7 @@
     >
     <source src="{{ videoURL }}" type="video/mp4" />
   </video>
-      <app-markslist  *ngIf="isAdditionalBookmarksVisible" class="col-md-5 position-relative"  #markslist [videoId]="videoId" [heightLimit]='280'></app-markslist>
+      <app-markslist  *ngIf="isAdditionalBookmarksVisible" class="col-md-5 position-relative"  #markslist [videoId]="videoId" [isHeightLimited]='false'></app-markslist>
 
     </div>
 
@@ -161,7 +161,7 @@
         </button>
       </div>
 
-      <app-markslist *ngIf="!isAdditionalBookmarksVisible" #markslist [videoId]="videoId" [heightLimit]='280'></app-markslist>
+      <app-markslist *ngIf="!isAdditionalBookmarksVisible" #markslist [videoId]="videoId" ></app-markslist>
 
       <app-positionslist #positionslist [positions]="seekPositions"  ></app-positionslist>
 
