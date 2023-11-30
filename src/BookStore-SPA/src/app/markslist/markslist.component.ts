@@ -19,7 +19,7 @@ import { FileService } from '../_services/file.service';
 })
 export class MarkslistComponent implements OnInit, OnChanges {
   @ViewChild('audioElement') audio:ElementRef;
-  marks: Mark[] = [];
+  public marks: Mark[] = [];
   @Input() videoId: number;
   @Input() isHeightLimited: boolean = true;
   lastVolumeChangedTime: Date;

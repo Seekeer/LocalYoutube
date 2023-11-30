@@ -412,3 +412,5 @@ MigrationBackup/
 /src/BookStore.API/Assets/ffmpeg.exe
 /src/BookStore.API/Assets/yt-dlp.exe
 /src/BookStore-SPA/src/environments/environment.prod.ts
+/docs/CNAME
+/docs/CNAME
