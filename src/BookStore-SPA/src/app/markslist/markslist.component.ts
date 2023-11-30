@@ -73,12 +73,15 @@ export class MarkslistComponent implements OnInit, OnChanges {
   }
 
   public paused() {
+    console.log('paused');
+
     if (this.getVideoElement().seeking) return;
 
     this.lastVolumeChangedTime = new Date();
   }
 
   public played() {
+    console.log('played');
     this.calculateTimeDiff(
       this.lastVolumeChangedTime,
       () => this.addMark(),

@@ -93,9 +93,13 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.parameters = PlayerParameters.parse(
         JSON.stringify((<any>this.route.snapshot.queryParamMap).params));
 
+    let that = this;
+    window.addEventListener("blur", that.handleBrowserState.bind(that, false));
+    window.addEventListener("focus", that.handleBrowserState.bind(that, true));
+
     this.videoId = this.parameters.videoId;
     this.isSovietAnimation = this.parameters.type == 'soviet';
-    
+
     this.isRandom = String(this.parameters.isRandom) === 'true';
     this.videosList.push(this.videoId);
     this.setNextVideo(true);
@@ -150,6 +154,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.intervalId = setInterval(() => this.updateStat(), 1000);
   }
 
+  private handleBrowserState(isActive){
+    console.log(`browser ${isActive}`)
+  }
+
   private getVideoElement() {
     if (this.video) {
       var videoEl = this.video.nativeElement as HTMLMediaElement;
@@ -173,7 +181,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
       return videoEl;
     }
   }
-  
+
   public videoPaused() {
     this.setTimerToCheckCurrentTimeOnBigStop(30);
   }
@@ -197,7 +205,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
       return;
 
     this.needToUpdateCurrentPosition = false;
-    this.service.getPosition(this.videoId).subscribe(position => 
+    this.service.getPosition(this.videoId).subscribe(position =>
       {
         // If time changed for more then 10 seconds - update.
         if(Math.abs(video.currentTime - position) > 10)
@@ -235,8 +243,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.updateCurrentTime(-10);
     this.animateNotificationIn(true);
   }
-  
-  
+
+
   moveToGood() {
     this.moveToSeries(14);
   }
@@ -246,7 +254,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   moveToSeries(serieId: number) {
     this.service.setSeriesId(serieId, this.videoId).subscribe();
   }
-  
+
   public showMoveModal() {
     const dialog = <any>document.getElementById('moveDialog');
     dialog.showModal();
