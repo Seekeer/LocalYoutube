@@ -18,8 +18,8 @@ export class AudioFileService {
         return this.baseUrl +'AudioFiles/getFileById?fileId=' + id;
     }
 
-    public searchFilesWithSeries(searchedValue: string, isRandom: boolean): Observable<AudioFile[]> {
-        return this.http.get<AudioFile[]>(`${this.baseUrl}AudioFiles/search-file-with-series/${encodeURIComponent(searchedValue)}/${isRandom}`);
+    public searchFilesWithSeries(seriesId: number, isRandom: boolean): Observable<AudioFile[]> {
+        return this.http.get<AudioFile[]>( this.baseUrl +`Files/getFilesBySeries?id=${seriesId}&isRandom=${isRandom}`);
     }
 
     public searchFilesWithSeason(seasonId: number, isRandom: boolean): Observable<AudioFile[]> {

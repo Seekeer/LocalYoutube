@@ -112,11 +112,6 @@ export class FileService {
     public getBookById(id): Observable<Book> {
         return this.http.get<Book>(this.baseUrl + 'files/' + id);
     }
-
-    public searchFilesWithSeries(searchedValue: string, isRandom: boolean): Observable<Book[]> {
-        return this.http.get<Book[]>(`${this.baseUrl}files/search-file-with-series/${encodeURIComponent(searchedValue)}/${isRandom}`);
-    }
-
     public searchFilesWithSeason(seasonId: number, isRandom: boolean): Observable<Book[]> {
         return this.http.get<Book[]>(`${this.baseUrl}files/search-file-with-season/${seasonId}/${isRandom}`);
     }

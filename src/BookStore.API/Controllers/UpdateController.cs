@@ -375,6 +375,26 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("moveToBalley")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveToBalley(int fileId)
+        {
+            var file = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).
+                FirstOrDefault(x => x.Id == fileId);
+            file.Type = VideoType.Art;
+
+            var series = _db.Series.Where(x => x.Type == VideoType.Art);
+            if (series.Count() > 1)
+                series = series.Where(x => x.Name == "Балет");
+
+            var season = new Season { Name = file.Name, SeriesId = series.First().Id };
+
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("updateDownloaded")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> CheckDownloaded(string seriesName)

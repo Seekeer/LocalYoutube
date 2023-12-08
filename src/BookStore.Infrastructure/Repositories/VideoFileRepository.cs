@@ -94,12 +94,12 @@ namespace FileStore.Infrastructure.Repositories
                 return await Search(file => file.SeasonId == seasonId && file.Id > startId);
         }
 
-        public async Task<IEnumerable<T>> GetFilesBySeriesAsync(int seriesId, bool isRandom, int startId)
+        public async Task<IEnumerable<T>> GetFilesBySeriesAsync(int seriesId, int count, bool isRandom, int startId)
         {
             if(isRandom)
-                return await SearchRandom(b => b.SeriesId == seriesId);
+                return await SearchRandom(b => b.SeriesId == seriesId, count);
             else
-                return await Search(file => file.SeriesId == seriesId && file.Id > startId);
+                return (await Search(file => file.SeriesId == seriesId && file.Id > startId)).Take(count);
         }
 
         public async Task<T> GetRandomFileBySeriesId(int seriesId)
@@ -119,43 +119,6 @@ namespace FileStore.Infrastructure.Repositories
             //_FileRepository.SearchRandom
         }
 
-
-        public async Task<IEnumerable<T>> SearchFileWithSerieAsync(string searchedValue, bool isRandom, int resultCount)
-        {
-            var series = Db.Series.FirstOrDefault(x => EF.Functions.Like(x.Name, $"%{searchedValue.ToLower()}%"));
-
-            var result = new List<T>();
-            if (series == null)
-                return result;
-
-            var files = (GetFilesSet().Where(f => f.SeriesId == series.Id).ToList());
-
-            if(!files.Any()) 
-                return result;
-
-            var skipMax = files.Count() - resultCount;
-
-            result = files;
-            if (isRandom)
-            {
-                result = files.OrderBy(x => Guid.NewGuid()).Take(resultCount).ToList();
-            }
-            else if (skipMax > 0)
-            {
-                var skip = (new Random()).Next(skipMax);
-                result = files.OrderBy(x => x.Id).Skip(skip).Take(resultCount).ToList();
-            }
-
-            result.ToList().ForEach(
-                x =>
-                {
-                    //Db.Entry(x).Reference(x => x.VideoFileExtendedInfo).Load();
-                    x.SeriesId = series.Id;
-                });
-
-            return result;
-
-        }
         public async Task<IEnumerable<T>> GetLatest(string userId)
         {
             var filesInfo = Db.FilesUserInfo.Where(x => x.UserId == userId).OrderByDescending(x => x.UpdatedDate).Take(10);

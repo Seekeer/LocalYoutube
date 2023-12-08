@@ -71,20 +71,6 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
-        [Route("getFilesBySeries")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetFilesBySeries(int id, int count, bool isRandom, int startId)
-        {
-            var Files = await _fileService.GetFilesBySearies(id, isRandom, startId);
-
-            if (!Files.Any())
-                return NotFound();
-
-            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId(_userManager)));
-        }
-
-        [HttpGet]
         [Route("getFilesBySeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

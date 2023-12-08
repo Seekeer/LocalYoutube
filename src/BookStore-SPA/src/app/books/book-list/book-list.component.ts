@@ -216,7 +216,7 @@ export class BookListComponent implements OnInit {
     else if (this.serieId != 0 ) {
       let serie = this.series.filter(x => x.id == this.serieId)[0];
       this.seasons = serie.seasons;
-      this.service.searchFilesWithSeries(serie.name, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
+      this.service.getVideosBySeries(serie.id, this.type == "other" ? 1000:10, this.isRandom, 0).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     }
     else {
       this.hideSpinner();
@@ -228,6 +228,8 @@ displayListForType() {
     let that = this;
     switch (this.type){
       case 'series':{
+        this.isRandom = true;
+
         this.selectSeries(true);
 
         this.getSeries(VideoType.ChildEpisode);

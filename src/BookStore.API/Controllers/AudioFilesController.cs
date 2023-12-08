@@ -111,17 +111,17 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
-        [Route("search-File-with-Series/{searchedValue}/{isRandom}")]
+        [Route("getFilesBySeries")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<List<DTO>>> SearchFileWithSeries(string searchedValue, bool isRandom)
+        public async Task<IActionResult> GetFilesBySeries(int id, int count, bool isRandom, int startId)
         {
-            var Files = _mapper.Map<List<T>>(await _fileService.SearchFileWithSeries(searchedValue, isRandom));
+            var Files = await _fileService.GetFilesBySearies(id, count, isRandom, startId);
 
             if (!Files.Any())
-                return NotFound("None File was founded");
+                return NotFound();
 
-            return Ok(_mapper.GetFiles<T,DTO>(Files, await GetUserId(_userManager)));
+            return Ok(_mapper.GetFiles<T, DTO>(Files, await GetUserId(_userManager)));
         }
 
         [HttpGet]

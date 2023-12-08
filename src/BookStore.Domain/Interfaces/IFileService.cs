@@ -20,11 +20,10 @@ namespace FileStore.Domain.Interfaces
         Task<T> Update(T File);
         Task<bool> Remove(T File);
         Task<bool> Remove(int fileId);
-        Task<IEnumerable<T>> GetFilesBySearies(int seriesId, bool isRandom, int startId);
+        Task<IEnumerable<T>> GetFilesBySearies(int seriesId, int count, bool isRandom, int startId);
         Task<IEnumerable<T>> GetFilesBySeason(int seriesId, bool isRandom, int count, int startId);
         Task<IEnumerable<T>> Search(string FileName);
         Task<IEnumerable<T>> SearchFileByType(V type);
-        Task<IEnumerable<T>> SearchFileWithSeries(string searchedValue, bool isRandom);
         Task<T> GetRandomFileBySeriesId(int seriesId);
         Task SetRating(int videoId, double value);
         Task SetPosition(int videoId, string userId, double? value);

@@ -92,9 +92,9 @@ namespace FileStore.Domain.Services
             return await Remove(file);
         }
 
-        public async Task<IEnumerable<T>> GetFilesBySearies(int SeriesId, bool isRandom, int startId)
+        public async Task<IEnumerable<T>> GetFilesBySearies(int SeriesId, int count, bool isRandom, int startId)
         {
-            return await _FileRepository.GetFilesBySeriesAsync(SeriesId, isRandom, startId);
+            return await _FileRepository.GetFilesBySeriesAsync(SeriesId, count, isRandom, startId);
         }
 
         public async Task<IEnumerable<T>> GetFilesBySeason(int seasonId, bool isRandom, int count, int startId)
@@ -105,11 +105,6 @@ namespace FileStore.Domain.Services
         public async Task<IEnumerable<T>> Search(string FileName)
         {
             return await _FileRepository.SearchByName((FileName));
-        }
-
-        public async Task<IEnumerable<T>> SearchFileWithSeries(string searchedValue, bool isRandom)
-        {
-            return await _FileRepository.SearchFileWithSerieAsync(searchedValue, isRandom);
         }
 
         public void Dispose()

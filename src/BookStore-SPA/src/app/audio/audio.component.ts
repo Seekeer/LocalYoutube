@@ -138,7 +138,7 @@ export class AudioComponent implements OnInit {
       let serie = this.series.filter((x) => x.id == this.serieId)[0];
       this.seasons = serie.seasons;
       this.service
-        .searchFilesWithSeries(serie.name, false)
+        .searchFilesWithSeries(serie.id, false)
         .subscribe(() =>{this.hideSpinner()}, this.getFilesError.bind(this));
     } else {
       this.toastr.error('Выберите название файла или сериала');

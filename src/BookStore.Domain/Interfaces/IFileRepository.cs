@@ -14,8 +14,7 @@ namespace FileStore.Domain.Interfaces
         new Task<List<T>> GetAll();
         new Task<T> GetById(int id);
         Task<IEnumerable<T>> SearchFileByType(V type);
-        Task<IEnumerable<T>> GetFilesBySeriesAsync(int seriesId, bool isRandom, int startId);
-        Task<IEnumerable<T>> SearchFileWithSerieAsync(string searchedValue, bool isRandom, int resultCount =10);
+        Task<IEnumerable<T>> GetFilesBySeriesAsync(int seriesId, int count, bool isRandom, int startId);
         Task<T> GetRandomFileBySeriesId(int seriesId);
         Task<IEnumerable<T>> SearchByName(string fileName);
         Task<IEnumerable<T>> GetFilesBySeason(int seriesId, bool isRandom, int count, int startId);
