@@ -317,7 +317,7 @@ namespace Infrastructure
             return AddOrUpdateSeason(serie, name);
         }
 
-        public Season AddOrUpdateSeason(Series series, string name)
+        public Season AddOrUpdateSeason(Series series, string name, bool doNotIgnoreSeriesId = true)
         {
             //var seasons = _db.Seasons.ToList();
             //foreach (var season1 in seasons)
@@ -329,7 +329,7 @@ namespace Infrastructure
             //}
 
             var season = _db.Seasons.FirstOrDefault(x => x.Name == name);
-            if (season == null || season.SeriesId != series.Id)
+            if (season == null || (season.SeriesId != series.Id && doNotIgnoreSeriesId))
             {
                 season = new Season { Name = name, Series = series };
                 _db.Seasons.Add(season);
@@ -423,10 +423,10 @@ namespace Infrastructure
         {
             var series = AddOrUpdateVideoSeries("Youtube", false);
             series.Type = VideoType.Youtube;
-            var season = watchLater ? AddOrUpdateSeason(series, "На один раз с ютуба") : AddOrUpdateSeason(series, seasonName);
+            var season = watchLater ? AddOrUpdateSeason(series, "На один раз с ютуба") : AddOrUpdateSeason(series, seasonName, false);
 
             file.Season = season;
-            file.Series = series;
+            file.SeriesId = season.SeriesId;
             file.Type = VideoType.Youtube;
 
             _db.SaveChanges();

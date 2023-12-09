@@ -1,15 +1,47 @@
 <div class="container text-center">
-    <div class="btn-group-vertical">
-        <button class="btn btn-success btn-lg" [routerLink]="['/books/series']"  >Мультсериалы</button>
-        <button class="btn btn-success btn-lg" [routerLink]="['/books/soviet']"  >Советские мультики</button>
-        <button class="btn btn-success btn-lg" [routerLink]="['/books/sovietfairytale']" >Советские сказки</button>
-        <button class="btn btn-success btn-lg" [routerLink]="['/books/animation']" >Зарубежные мультики</button>
-        <button class="btn btn-success btn-lg" [routerLink]="['/audio/child']" >Аудиосказки</button>
-        <button class="btn btn-success btn-lg" [routerLink]="['/books/balley']" >Балет</button>
-        <button class="btn btn-info btn-lg" [routerLink]="['/books/film']" >Фильмы</button>
-        <button class="btn btn-info btn-lg" [routerLink]="['/books/other']"  >Сериалы и курсы</button>
-        <button class="btn btn-info btn-lg" [routerLink]="['/books/youtube']" >Youtube</button>
-        <button class="btn btn-info btn-lg" [routerLink]="['/audio/main']" >Аудио</button>
-        <button class="btn btn-info btn-lg" [routerLink]="['/books/latest']" >Недавнее</button>
+
+    <div class="btn-group-vertical" *ngIf="!isMobile">
+        <button class="btn btn-success btn-lg" [routerLink]="['/books/childSeries']">Мультсериалы</button>
+        <button class="btn btn-success btn-lg" [routerLink]="['/books/sovietAnimation']">Советские мультики</button>
+        <button class="btn btn-success btn-lg" [routerLink]="['/books/sovietfairytale']">Советские сказки</button>
+        <button class="btn btn-success btn-lg" [routerLink]="['/books/animation']">Зарубежные мультики</button>
+        <button class="btn btn-success btn-lg" [routerLink]="['/audio/audioFairyTale']">Аудиосказки</button>
+        <button class="btn btn-success btn-lg" [routerLink]="['/books/balley']">Балет</button>
+        <button class="btn btn-info btn-lg" [routerLink]="['/books/film']">Фильмы</button>
+        <button class="btn btn-info btn-lg" [routerLink]="['/books/adultSeries']">Сериалы</button>
+        <button class="btn btn-info btn-lg" [routerLink]="['/books/courses']">Курсы</button>
+        <button class="btn btn-info btn-lg" [routerLink]="['/books/special']">Видео</button>
+        <button class="btn btn-info btn-lg" [routerLink]="['/books/youtube']">Youtube</button>
+        <button class="btn btn-info btn-lg" [routerLink]="['/audio/main']">Аудио</button>
+        <button class="btn btn-info btn-lg" [routerLink]="['/books/latest']">Недавнее</button>
     </div>
+
+    <mat-tab-group mat-align-tabs="center" *ngIf="isMobile" [selectedIndex]="isActiveTab">
+
+        <mat-tab label="Детские">
+
+            <div class="btn-group-vertical">
+                <button class="btn btn-success btn-lg" [routerLink]="['/books/childSeries']">Мультсериалы</button>
+                <button class="btn btn-success btn-lg" [routerLink]="['/books/sovietAnimation']">Советские
+                    мультики</button>
+                <button class="btn btn-success btn-lg" [routerLink]="['/books/sovietfairytale']">Советские
+                    сказки</button>
+                <button class="btn btn-success btn-lg" [routerLink]="['/books/animation']">Зарубежные мультики</button>
+                <button class="btn btn-success btn-lg" [routerLink]="['/audio/audioFairyTale']">Аудиосказки</button>
+                <button class="btn btn-success btn-lg" [routerLink]="['/books/balley']">Балет</button>
+            </div>
+        </mat-tab>
+
+        <mat-tab label="Взрослые">
+            <div class="btn-group-vertical">
+                <button class="btn btn-info btn-lg" [routerLink]="['/books/film']">Фильмы</button>
+                <button class="btn btn-info btn-lg" [routerLink]="['/books/adultSeries']">Сериалы</button>
+                <button class="btn btn-info btn-lg" [routerLink]="['/books/courses']">Курсы</button>
+                <button class="btn btn-info btn-lg" [routerLink]="['/books/special']">Видео</button>
+                <button class="btn btn-info btn-lg" [routerLink]="['/books/youtube']">Youtube</button>
+                <button class="btn btn-info btn-lg" [routerLink]="['/audio/main']">Аудио</button>
+                <button class="btn btn-info btn-lg" [routerLink]="['/books/latest']">Недавнее</button>
+            </div>
+        </mat-tab>
+    </mat-tab-group>
 </div>

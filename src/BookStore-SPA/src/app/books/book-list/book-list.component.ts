@@ -37,6 +37,23 @@ export class YearsRange  {
   public end:number;
 }
 
+export enum MenuVideoType {
+  childSeries,
+  sovietAnimation,
+  sovietfairytale,
+  animation,
+  audioFairyTale,
+  balley,
+
+  film,
+  adultSeries,
+  courses,
+  audio,
+  latest,
+  youtube,
+  special,
+}
+
 @Component({
   selector: 'app-book-list',
   templateUrl: './book-list.component.html',
@@ -71,7 +88,7 @@ export class BookListComponent implements OnInit {
   public isSelectSeries: boolean = false;
   public isSelectSeason: boolean = false;
   public showKPINfo: boolean = false;
-  public serieId: number = 0;
+  public serieId: number;
   public seasonId: number = 0;
   public searchTitle: string = '';
   public episodeCount: number = 1;
@@ -90,7 +107,7 @@ export class BookListComponent implements OnInit {
     {start : 2001, end : 2010},
     {start : 2011, end : 2030}].reverse();
   public genres: string[] = ['комедия', 'драма', 'боевик', 'детектив', 'фантастика', 'биография', 'фэнтези', 'приключения','мелодрама'];
-  type: string;
+  type: MenuVideoType;
   apibooks: Book[];
   _numberOfTry = 0;
   public isAndroid: boolean;
@@ -117,7 +134,7 @@ export class BookListComponent implements OnInit {
   ngOnInit() {
     setTimeout(() => this.showSpinner(), 5);
 
-    this.type = (this.activatedRoute.snapshot.paramMap.get('type'));
+    this.type = MenuVideoType[(this.activatedRoute.snapshot.paramMap.get('type'))];
 
     this.displayListForType();
 
@@ -213,10 +230,12 @@ export class BookListComponent implements OnInit {
     else if (this.seasonId != 0) {
       this.service.searchFilesWithSeason(this.seasonId, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     }
-    else if (this.serieId != 0 ) {
+    else if (this.serieId ) {
       let serie = this.series.filter(x => x.id == this.serieId)[0];
       this.seasons = serie.seasons;
-      this.service.getVideosBySeries(serie.id, this.type == "other" ? 1000:10, this.isRandom, 0).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
+
+      let showAllVideos =  this.type == MenuVideoType.courses ||this.type == MenuVideoType.special || this.type == MenuVideoType.adultSeries ||this.type == MenuVideoType.youtube; 
+      this.service.getVideosBySeries(serie.id, showAllVideos ? 1000:10, this.isRandom, 0).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     }
     else {
       this.hideSpinner();
@@ -227,7 +246,7 @@ export class BookListComponent implements OnInit {
 displayListForType() {
     let that = this;
     switch (this.type){
-      case 'series':{
+      case MenuVideoType.childSeries:{
         this.isRandom = true;
 
         this.selectSeries(true);
@@ -235,7 +254,7 @@ displayListForType() {
         this.getSeries(VideoType.ChildEpisode);
         break;
       }
-      case 'youtube':{
+      case MenuVideoType.youtube:{
         this.isRandom = false;
         this.isSelectSeason = true;
         this.showWatchedCheckbox = true;
@@ -246,7 +265,7 @@ displayListForType() {
 
         break;
       }
-      case 'soviet':{
+      case MenuVideoType.sovietAnimation:{
         this.selectSeries(true);
         this.series = [];
         this.series.push( {id : 13, name : 'Известные', seasons: []});
@@ -256,29 +275,33 @@ displayListForType() {
         this.service.getSovietAnimation().subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
         break;
       }
-      case 'other':{
-          this.seriesService.getOther().subscribe(series => {
-            this.series = series;
-            this.selectSeries(true);
-            this.hideSpinner();
-            this.isRandom = false;
-            this.episodeCount = 10;
-            // Harcode for Youtube
-            // this.serieId = 6091;
-            // this.seasonId = 13469;
-            // this.searchBooks();
+      case MenuVideoType.courses:{
+          this.seriesService.getCourses().subscribe(series => {
+            this.showManyEpisodes(series, 10);
           });
         break;
       }
-      case 'sovietfairytale':{
+      case MenuVideoType.adultSeries:{
+          this.seriesService.getAdultEpisode().subscribe(series => {
+            this.showManyEpisodes(series, 10);
+          });
+        break;
+      }
+      case MenuVideoType.special:{
+          this.seriesService.getSpecial().subscribe(series => {            
+            this.showManyEpisodes(series, 10);
+          });
+        break;
+      }
+      case  MenuVideoType.sovietfairytale:{
         this.service.getFilmsByType(VideoType.FairyTale).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
         break;
       }
-      case 'animation':{
+      case MenuVideoType.animation:{
         this.service.getBigAnimation().subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
         break;
       }
-      case 'balley':{
+      case MenuVideoType.balley:{
         this.videoType = VideoType.Art;
         this.isRandom = false;
         this.episodeCount = 1000;
@@ -286,7 +309,7 @@ displayListForType() {
         this.service.getFilmsByTypeUniqueSeason(VideoType.Art).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
         break;
       }
-      case 'film':{
+      case MenuVideoType.film:{
         this.showSpinner();
         this.selectSeries(true);
         this.showWatched  = false;
@@ -299,7 +322,7 @@ displayListForType() {
         this.showKPINfo = true;
         break;
       }
-      case 'latest':{
+      case MenuVideoType.latest:{
         this.showSpinner();
         this.selectSeries(false);
         this.showWatched  = true;
@@ -315,6 +338,13 @@ displayListForType() {
       }
     }
 }
+  showManyEpisodes(series: Serie[],count: number) {
+    this.series = series;
+    this.selectSeries(true);
+    this.hideSpinner();
+    this.isRandom = false;
+    this.episodeCount = count;
+  }
 
 selectSeries(value:boolean){
   this.isSelectSeries = value;
@@ -349,7 +379,7 @@ watchedChanged(event){
     if(!this.showWatched)
       books = books.filter(x => !x.isFinished);
 
-    if(this.type != 'film')
+    if(this.type != MenuVideoType.film)
       this.books = books;
     else
     {
@@ -452,7 +482,7 @@ counter : number =0 ;
       return;
     }
 
-    let showDelete = this.type != 'soviet' && this.type != 'sovietfairytale' && this.type != 'animation' && this.type != 'series';
+    let showDelete = this.type != MenuVideoType.sovietAnimation && this.type != MenuVideoType.sovietfairytale && this.type != MenuVideoType.animation && this.type != MenuVideoType.adultSeries;
     const queryParams: PlayerParameters = {
       seriesId : book.seriesId,
       videoId : book.id,
@@ -481,7 +511,7 @@ export class PlayerParameters {
   videosCount: number;
   isRandom: boolean;
   showDeleteButton: boolean;
-  type: string;
+  type: MenuVideoType;
 
   static parse(json: string){
     var data = JSON.parse(json);

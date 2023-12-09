@@ -11,7 +11,7 @@
 
     <mat-form-field appearance="fill"  *ngIf="isSelectSeries" >
       <mat-label>Сериал</mat-label>
-      <mat-select [(ngModel)]="serieId" (ngModelChange)="searchBooks()">
+      <mat-select [(ngModel)]="serieId" (ngModelChange)="searchBooks()" [disabled]="serieId">
         <mat-option *ngFor="let data of series" value="{{data.id}}">
           {{data.name}}
         </mat-option>

@@ -56,28 +56,27 @@ namespace API.TG
             if (level == (int)LogLevel.Critical && logStr.Contains("SocketException TimedOut (10060):"))
             {
                 _messageProcessor.ClearAll();
-                ImportMessages();
             }
 
         }
 
         public async Task ImportMessages()
         {
-            //var my = await _client.LoginUserIfNeeded();
+            var my = await _client.LoginUserIfNeeded();
 
-            ////_client.OnUpdate += Client_OnUpdate;
+            //_client.OnUpdate += Client_OnUpdate;
 
-            //var startDate = new DateTime(2023, 1, 1);
-            //var finihsDate = new DateTime(2023, 3, 1);
+            var startDate = new DateTime(2023, 2, 1);
+            var finihsDate = new DateTime(2023, 2, 24);
             ////var finihsDate = new DateTime(2023, 3, 3);
 
-            //var currentDate = finihsDate;
-            //while (currentDate > startDate)
-            //{
-            //    var localFinishDate = currentDate;
-            //    currentDate = currentDate.AddDays(-3);
-            //    await AddOldMessages(1210302841, 0, currentDate, localFinishDate);
-            //}
+            var currentDate = finihsDate;
+            while (currentDate > startDate)
+            {
+                var localFinishDate = currentDate;
+                currentDate = currentDate.AddDays(-3);
+                await AddOldMessages(1210302841, 0, currentDate, localFinishDate);
+            }
         }
 
         private async Task Client_OnUpdate(IObject arg)
@@ -146,6 +145,9 @@ namespace API.TG
                 var res = await _client.Messages_GetHistory(peer, limit: count);
                 messages = res.Messages;
             }
+
+            if (!messages.Any())
+                return;
 
             var list = new List<ChannelPost>();
             foreach (var message in messages.Reverse())

@@ -835,6 +835,27 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("moveSeasonToSeason")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveToSeason(int oldSeasonId, int newSeasonId)
+        {
+            var newSeason = _db.Seasons.First(x => x.Id == newSeasonId);
+
+            var files = _db.Files.Where(x => x.SeasonId == oldSeasonId);
+            foreach (var file in files)
+            {
+                file.SeasonId = newSeasonId;
+                file.SeriesId = newSeason.SeriesId;
+            }
+
+            var oldSeason = _db.Seasons.First(x => x.Id == oldSeasonId);
+            _db.Seasons.Remove(oldSeason);
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("moveToSeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> MoveToSeason(int startId, int finishId, int seasonId, int seriesId = 0,
@@ -1392,49 +1413,92 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("moveToNewType")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveToNewType()
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            //var files = _db.VideoFiles.Where(x => x.SeriesId == 6100);
+            //foreach (var file in files)
+            //{
+            //    file.Type = VideoType.Special;
+            //}
+
+            var series = dbUpdater.AddOrUpdateSeries("История", false, false);
+            _db.SaveChanges();
+            series.Type = VideoType.Special;
+            var season = _db.Seasons.Include(x => x.Files).FirstOrDefault(x => x.Id == 13477);
+            foreach (var file in season.Files)
+            {
+                file.SeriesId = series.Id;
+            }
+            season.SeriesId = series.Id;
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("updateAll")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateAll()
         {
+            //var dbUpdater = new DbUpdateManager(_db);
 
-            var dbUpdater = new DbUpdateManager(_db);
-            await RemoveSeries(6108, false);
+            //var files = _db.VideoFiles.Where(x => x.SeriesId == 6100);
+            //foreach (var file in files)
+            //{
+            //    file.Type = VideoType.Special;
+            //}
 
-            var series = new Series { Name = "Советские не показывать", Origin = Origin.Soviet, IsChild = true, Type = VideoType.Animation };
-            _db.Series.Add(series);
-            _db.SaveChanges();
-            RemoveSeason(13683, false);
-            RemoveSeason(13684, false);
-
-            var ses = new Season { Name = "Советские не показывать", SeriesId = 6107 };
-            _db.Seasons.Add(ses);
-            _db.SaveChanges();
-
-            var filesU = new List<VideoFile>();
-            foreach (var serie in _db.Series.Where(x => x.Id == 18))
-            {
-                var files = _db.VideoFiles.Where(x => x.SeriesId == serie.Id).ToList();
-                //files = files.Where(x => x.Type != serie.Type).ToList();
-                foreach (var file in files)
-                {
-                    if (serie.Type.HasValue)
-                    {
-                        file.Type = VideoType.Film;
-                        filesU.Add(file);
-                    }
-                }
-            }
-            _db.SaveChanges();
+            //var series = dbUpdater.AddOrUpdateSeries("История", false, false);
+            //series.Type = VideoType.Special;
+            //var season = _db.Seasons.Include(x => x.Files).FirstOrDefault(x => x.Id == 13477);
+            //foreach (var file in season.Files)
+            //{
+            //    file.SeriesId = series.Id;
+            //}
+            //_db.SaveChanges();
 
 
+            //await RemoveSeries(6108, false);
 
-            RemoveSeries(new DbUpdateManager(_db), 34);
+            //var series = new Series { Name = "Советские не показывать", Origin = Origin.Soviet, IsChild = true, Type = VideoType.Animation };
+            //_db.Series.Add(series);
+            //_db.SaveChanges();
+            //RemoveSeason(13683, false);
+            //RemoveSeason(13684, false);
+
+            //var ses = new Season { Name = "Советские не показывать", SeriesId = 6107 };
+            //_db.Seasons.Add(ses);
+            //_db.SaveChanges();
+
+            //var filesU = new List<VideoFile>();
+            //foreach (var serie in _db.Series.Where(x => x.Id == 18))
+            //{
+            //    var files = _db.VideoFiles.Where(x => x.SeriesId == serie.Id).ToList();
+            //    //files = files.Where(x => x.Type != serie.Type).ToList();
+            //    foreach (var file in files)
+            //    {
+            //        if (serie.Type.HasValue)
+            //        {
+            //            file.Type = VideoType.Film;
+            //            filesU.Add(file);
+            //        }
+            //    }
+            //}
+            //_db.SaveChanges();
 
 
-            RemoveFile(46305, false);
-            RemoveFile(48310, 48510, false);
 
-            dbUpdater.FillSeries(@"F:\Видео\Фильмы\Загрузки\6293131\София Прекрасная (2012-2018)", Origin.Foreign, VideoType.ChildEpisode, false, "София Прекрасная");
+            //RemoveSeries(new DbUpdateManager(_db), 34);
+
+
+            //RemoveFile(46305, false);
+            //RemoveFile(48310, 48510, false);
+
+            //dbUpdater.FillSeries(@"F:\Видео\Фильмы\Загрузки\6293131\София Прекрасная (2012-2018)", Origin.Foreign, VideoType.ChildEpisode, false, "София Прекрасная");
             //// Update online files.
             //var ready = new List<VideoFile>();
             //IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfo)
@@ -1477,9 +1541,9 @@ namespace FileStore.API.Controllers
 
             ////_db.SaveChanges();
 
-            dbUpdater.AddSeason(8, new DirectoryInfo(@"F:\Анюта\Мульты\Мультсериалы российские\Три кота.2015.WEBRip 1080p\04\Три кота.s04.2021.WEB-DL 1080p"), "04");
+            //dbUpdater.AddSeason(8, new DirectoryInfo(@"F:\Анюта\Мульты\Мультсериалы российские\Три кота.2015.WEBRip 1080p\04\Три кота.s04.2021.WEB-DL 1080p"), "04");
 
-            dbUpdater.AddSeason(3, new DirectoryInfo(@"F:\Анюта\Мульты\Мультсериалы российские\Мимимишки.2015.WEBRip 720p\s09-1080\Ми-ми-мишки.s09.2021.WEB-DL 1080p"), "09");
+            //dbUpdater.AddSeason(3, new DirectoryInfo(@"F:\Анюта\Мульты\Мультсериалы российские\Мимимишки.2015.WEBRip 720p\s09-1080\Ми-ми-мишки.s09.2021.WEB-DL 1080p"), "09");
             //dbUpdater.FillSeries(@"F:\Анюта\Мульты\Мультсериалы российские", Origin.Russian, VideoType.ChildEpisode, true);
             //dbUpdater.FillSeries(@"F:\Анюта\Фильмы\В гостях у сказки", Origin.Soviet, VideoType.FairyTale, false);
 

@@ -67,14 +67,35 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
-        [Route("other")]
+        [Route("special")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> SeriesOther()
+        public async Task<IActionResult> Special()
+        {
+            var series = new List<Series>();
+            series.AddRange(await _SeriesService.GetAllByType(VideoType.Special));
+            series.AddRange(await _SeriesService.GetAllByType(VideoType.EoT));
+
+            return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(series));
+        }
+
+        [HttpGet]
+        [Route("courses")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> Courses()
+        {
+            var series = new List<Series>();
+            series.AddRange(await _SeriesService.GetAllByType(VideoType.Courses));
+
+            return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(series));
+        }
+
+        [HttpGet]
+        [Route("adultEpisode")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> AdultEpisode()
         {
             var series = new List<Series>();
             series.AddRange(await _SeriesService.GetAllByType(VideoType.AdultEpisode));
-            series.AddRange(await _SeriesService.GetAllByType(VideoType.Courses));
-            series.AddRange(await _SeriesService.GetAllByType(VideoType.EoT));
 
             return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(series));
         }

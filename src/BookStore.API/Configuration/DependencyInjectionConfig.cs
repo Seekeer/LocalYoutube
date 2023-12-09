@@ -97,8 +97,8 @@ namespace FileStore.API.Configuration
                 var tg = scope.ServiceProvider.GetRequiredService<TgBot>();
                 await tg.Start();
 
-                var tgAPI = scope.ServiceProvider.GetRequiredService<TgAPIClient>();
-                await tgAPI.ImportMessages();
+                //var tgAPI = scope.ServiceProvider.GetRequiredService<TgAPIClient>();
+                //await tgAPI.ImportMessages();
             }
             catch (Exception ex)
             {

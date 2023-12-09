@@ -20,7 +20,10 @@ import { FileService } from 'src/app/_services/file.service';
 import { SeriesService } from 'src/app/_services/series.service';
 import { MarkslistComponent } from 'src/app/markslist/markslist.component';
 
-import { PlayerParameters } from '../book-list/book-list.component';
+import {
+  MenuVideoType,
+  PlayerParameters,
+} from '../book-list/book-list.component';
 
 @Component({
   selector: 'app-player',
@@ -95,7 +98,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
         JSON.stringify((<any>this.route.snapshot.queryParamMap).params));
 
     this.videoId = this.parameters.videoId;
-    this.isSovietAnimation = this.parameters.type == 'soviet';
+    this.isSovietAnimation = this.parameters.type == MenuVideoType.sovietAnimation;
     
     this.isRandom = String(this.parameters.isRandom) === 'true';
     this.videosList.push(this.videoId);

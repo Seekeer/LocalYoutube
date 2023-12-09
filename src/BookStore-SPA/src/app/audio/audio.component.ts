@@ -20,6 +20,11 @@ import { AudioFileService } from '../_services/AudioFileService';
 import { SeriesService } from '../_services/series.service';
 import { MarkslistComponent } from '../markslist/markslist.component';
 
+enum MenuAudioType {
+  main,
+  child,
+}
+
 @Component({
   selector: 'app-audio',
   templateUrl: './audio.component.html',
@@ -29,7 +34,7 @@ export class AudioComponent implements OnInit {
   @ViewChild('audioElement') audio:ElementRef; 
   @ViewChild('markslist') child: MarkslistComponent;
   
-  type: string;
+  type: MenuAudioType;
   public isSelectSeries: boolean = true;
   public isChild: boolean = false;
   public series: Serie[];
@@ -60,7 +65,7 @@ export class AudioComponent implements OnInit {
   ngOnInit(): void {
     setTimeout(() => this.showSpinner(), 5);
 
-    this.type = this.activatedRoute.snapshot.paramMap.get('type');
+    this.type = MenuAudioType[this.activatedRoute.snapshot.paramMap.get('type')];
 
     this.displayListForType();
     this.intervalId = setInterval(() => this.updateStat(), 1000);
@@ -68,12 +73,12 @@ export class AudioComponent implements OnInit {
 
   displayListForType() {
     switch (this.type) {
-      case 'child': {
+      case MenuAudioType.child: {
         this.isChild = true;
         this.getSeries(AudioType.FairyTale);
         break;
       }
-      case 'main': {
+      case MenuAudioType.main: {
         this.getSeries(null);
         break;
       }

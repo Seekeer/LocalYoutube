@@ -41,7 +41,8 @@ namespace FileStore.Domain.Models
         Courses,
         Downloaded,
         Youtube,
-        EoT
+        EoT,
+        Special
     }
     [System.AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
     public sealed class IsOnlineVideoAttribute : Attribute

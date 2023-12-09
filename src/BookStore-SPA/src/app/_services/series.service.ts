@@ -34,8 +34,14 @@ export class SeriesService {
             return this.http.get<Serie[]>(this.baseUrl + `series/getAllAudio?type=` + <number>type);
         // return this.http.get<Serie[]>(this.baseUrl + `series/getAllAudio`);
     }
-    getOther(): Observable<Serie[]> {
-        return this.http.get<Serie[]>(this.baseUrl + `series/other`);
+    getCourses(): Observable<Serie[]> {
+        return this.http.get<Serie[]>(this.baseUrl + `series/courses`);
+    }
+    getAdultEpisode(): Observable<Serie[]> {
+        return this.http.get<Serie[]>(this.baseUrl + `series/adultEpisode`);
+    }
+    getSpecial(): Observable<Serie[]> {
+        return this.http.get<Serie[]>(this.baseUrl + `series/special`);
     }
 
     public getCategories(): Observable<Serie[]> {

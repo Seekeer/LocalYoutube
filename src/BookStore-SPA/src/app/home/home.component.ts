@@ -2,6 +2,7 @@ import {
   Component,
   OnInit,
 } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-home',
@@ -10,9 +11,33 @@ import {
 })
 export class HomeComponent implements OnInit {
 
-  constructor() { }
+  public isMobile: boolean;
+  public isActiveTab:number;
+  
+  constructor(
+    private route: ActivatedRoute,
+  ) {
+   }
+
 
   ngOnInit(): void {
+    
+    this.isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+      
+    const type = this.route.snapshot.queryParamMap.get('type');
+    switch(type){
+      case 'child':
+        this.isActiveTab = 0;
+        break;
+      default:
+        this.isActiveTab = 1;
+        break;
+    }
+
+
     (new MutationObserver(function (mutations, observer) {
       for (let i = 0; i < mutations.length; i++) {
           const m = mutations[i];
