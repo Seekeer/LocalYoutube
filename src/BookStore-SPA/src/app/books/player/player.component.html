@@ -35,7 +35,10 @@
   </div>
 
   <div *ngIf="videoURL" class="video-container">
+    
+    <div  class=" row">
     <video
+      [ngClass]="{'col-md-7': isAdditionalBookmarksVisible}"
       *ngIf="isMobile"
       controls
       height="auto"
@@ -57,10 +60,11 @@
 
     <video
       *ngIf="!isMobile"
+      [ngClass]="{'col-md-7': isAdditionalBookmarksVisible}"
       controls
       height="auto"
       autoplay
-      class="player__video viewer"
+      class="player__video viewer "
       #videoElement
       id="player"
       (pause)="videoPaused()"
@@ -68,8 +72,11 @@
       (ended)="videoEnded()"
       (seeked)="seeking($event)"
     >
-      <source src="{{ videoURL }}" type="video/mp4" />
-    </video>
+    <source src="{{ videoURL }}" type="video/mp4" />
+  </video>
+      <app-markslist  *ngIf="isAdditionalBookmarksVisible" class="col-md-5 position-relative"  #markslist [videoId]="videoId" [isHeightLimited]='false'></app-markslist>
+
+    </div>
 
     <div class="video-rewind-notify rewind notification">
       <div class="rewind-icon icon">
@@ -135,6 +142,10 @@
         <mat-icon>fullscreen</mat-icon>
       </button>
 
+      <button mat-icon-button color="accent" (click)="showAdditionalBookmarks()">
+        <mat-icon>chrome_reader_mode</mat-icon>
+      </button>
+
       <a href="#">
         <button mat-icon-button>
           <mat-icon>home</mat-icon>
@@ -150,11 +161,9 @@
         </button>
       </div>
 
-      <app-markslist #markslist [videoId]="videoId"></app-markslist>
+      <app-markslist *ngIf="!isAdditionalBookmarksVisible" #markslist [videoId]="videoId" ></app-markslist>
 
-      <app-positionslist #positionslist [positions]="seekPositions"></app-positionslist>
-
-      <!-- <button type="button" class="btn btn-danger"         data-target="#deleteModal" data-toggle="modal">Delete Item</button> -->
+      <app-positionslist #positionslist [positions]="seekPositions"  ></app-positionslist>
 
       <h2>{{ name }}</h2>
       <div>{{ statStr }}</div>

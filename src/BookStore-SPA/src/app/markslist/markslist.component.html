@@ -1,19 +1,14 @@
-
-<button
-mat-icon-button
-color="primary"
-data-toggle="tooltip"
-data-placement="top"
-title="Добавить метку (ctrl+M)"
-(click)="addMark()"
->
-<mat-icon>bookmark</mat-icon>
+<button mat-icon-button color="primary" data-toggle="tooltip" data-placement="top" title="Добавить метку (ctrl+M)"
+  (click)="addMark()">
+  <mat-icon>bookmark</mat-icon>
 </button>
 
-<div id="marksList">
-    <!-- <button style="width: 100px; height: 30px;" (click)="click()" >Reload marks</button> -->
-    <div *ngFor="let mark of marks" [ngClass]="{'deleted' : mark.isDeleted}">
-        {{mark.caption|| 'Метка' }} в <a (click)="markClicked(mark)" class="link-primary" >{{mark.position | durationDisplay }}</a>
+<div id="marksList" class="parent" [ngClass]="{'limitHeight': isHeightLimited && marks.length > 0}">
+  <div class="flex-content">
+    <div class="scrollable-content-wrapper">
+      <div *ngFor="let mark of marks" [ngClass]="{'deleted' : mark.isDeleted}">
+        {{mark.caption|| 'Метка' }} в <a (click)="markClicked(mark)" class="link-primary">{{mark.position |
+          durationDisplay }}</a>
 
         <button mat-icon-button class="text-success" *ngIf="mark.isDeleted">
           <mat-icon (click)="restoreMark(mark)">refresh</mat-icon>
@@ -21,29 +16,29 @@ title="Добавить метку (ctrl+M)"
 
         <div class="inline" *ngIf="!mark.isDeleted">
 
-        <button mat-icon-button color="accent" >
-          <mat-icon (click)="deleteMark(mark)">delete</mat-icon>
-        </button>
+          <button mat-icon-button color="accent">
+            <mat-icon (click)="deleteMark(mark)">delete</mat-icon>
+          </button>
 
-        <button mat-icon-button color="primary" (click)="rewindMark(mark)">
-          <mat-icon>fast_rewind</mat-icon>
-        </button>
+          <button mat-icon-button color="primary" (click)="rewindMark(mark)">
+            <mat-icon>fast_rewind</mat-icon>
+          </button>
 
-        <button mat-icon-button color="primary" (click)="forwardMark(mark)">
-          <mat-icon>fast_forward</mat-icon>
-        </button>
+          <button mat-icon-button color="primary" (click)="forwardMark(mark)">
+            <mat-icon>fast_forward</mat-icon>
+          </button>
 
-        <button mat-icon-button color="primary" (click)="edit(mark)">
-          <mat-icon>edit</mat-icon>
-        </button>
+          <button mat-icon-button color="primary" (click)="edit(mark)">
+            <mat-icon>edit</mat-icon>
+          </button>
         </div>
 
         <div *ngIf="mark.isInEditMode">
 
           <mat-form-field class="example-full-width" appearance="fill">
             <mat-label>Название метки</mat-label>
-            <input matInput  [(ngModel)]="mark.caption" autofocus
-              (keyup.enter)="stopEdit(mark, true)" (keyup.esc)="stopEdit(mark, false)"  >
+            <input matInput [(ngModel)]="mark.caption" autofocus (keyup.enter)="stopEdit(mark, true)"
+              (keyup.esc)="stopEdit(mark, false)">
           </mat-form-field>
 
           <button mat-icon-button color="primary" (click)="stopEdit(mark, true)">
@@ -54,5 +49,6 @@ title="Добавить метку (ctrl+M)"
             <mat-icon>cancel</mat-icon>
           </button>
         </div>
-      </div>
+    </div>
+  </div>
 </div>

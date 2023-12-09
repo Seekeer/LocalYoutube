@@ -359,6 +359,19 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("moveSeason")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveSeason(int seasonId, int newSeriesId)
+        {
+            var season = _db.Seasons.FirstOrDefault(x => x.Id == seasonId);
+
+            season.SeriesId = newSeriesId; 
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("markComplete")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> MarkComplete(int fileId, string filePath)
