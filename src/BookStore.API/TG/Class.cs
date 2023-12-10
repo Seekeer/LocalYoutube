@@ -13,8 +13,8 @@ namespace API.TG
         SetupVLC,
         [CommandName(TgBot.SHOW_ALL_SEARCH_RESULT_Message)]
         ShowAllSearchResult,
-        YoutubeWatchLater,
-        YoutubeAsDesigned,
+        DownloadWatchLater,
+        DownloadAsDesigned,
         [CommandName("Сериал")]
         Series,
         [CommandName("Фильм")]

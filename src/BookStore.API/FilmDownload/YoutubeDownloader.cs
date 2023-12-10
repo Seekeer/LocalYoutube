@@ -18,28 +18,15 @@ using YoutubeExplode.Videos.Streams;
 
 namespace API.FilmDownload
 {
-    public class DownloadInfo
+    public class YoutubeDownloader : DownloaderBase
     {
-        public string ChannelName { get; set; }
-        public string ListName { get; set; }
-        public bool IsList { get; set; }
-
-        public Dictionary<string, VideoFile> Records { get; set; } = new Dictionary<string, VideoFile>();
-    }
-
-    public class YoutubeDownloader
-    {
-        private AppConfig _config;
-
-        public async static Task<DownloadInfo> GetInfo(string url, string rootDownloadFolder)
+        public YoutubeDownloader(AppConfig config)
         {
-            if (url.Contains("playlist"))
-                return await GetPlaylistInfo(url, rootDownloadFolder);
-            else
-                return await GetVideoInfo(url, rootDownloadFolder) ;
+            this._config = config;
+            _name = "Youtube";
         }
 
-        private static async Task<DownloadInfo> GetVideoInfo(string url, string rootDownloadFolder)
+        protected override async Task<DownloadInfo> GetVideoInfo(string url, string rootDownloadFolder)
         {
             var result = new DownloadInfo();
 
@@ -84,7 +71,7 @@ namespace API.FilmDownload
             return file;
         }
 
-        private static async Task<DownloadInfo> GetPlaylistInfo(string url, string rootDownloadFolder)
+        protected override async Task<DownloadInfo> GetPlaylistInfo(string url, string rootDownloadFolder)
         {
             var youtube = new YoutubeClient();
             var result = new DownloadInfo();
@@ -101,7 +88,7 @@ namespace API.FilmDownload
             return result;
         }
 
-        internal async static Task Download(string url, string path)
+        public override async Task Download(string url, string path)
         {
             //$path = '{path.Replace(" ", "")}'
             var downloadUtilitiesScript = File.ReadAllText(@"Assets\downloadScript.txt");
@@ -126,6 +113,11 @@ namespace API.FilmDownload
             process.Start();
             await process.WaitForExitAsync();
             string output = process.StandardOutput.ReadToEnd();
+        }
+
+        protected override bool IsPlaylist(string url)
+        {
+            return url.Contains("playlist");
         }
     }
 }

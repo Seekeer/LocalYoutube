@@ -6,6 +6,7 @@ namespace FileStore.Domain
     public class AppConfig
     {
         public TelegramSettings TelegramSettings { get; set; }
+        public Credentials VkontakteSettings { get; set; }
 
         public int YD_Upload_Threads_Count { get; set; }
         public string RP_Pass { get; set; }

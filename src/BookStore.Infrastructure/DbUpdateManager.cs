@@ -419,11 +419,11 @@ namespace Infrastructure
             return TrimDots(result);
         }
 
-        public void AddFromYoutube(VideoFile file, string seasonName, bool watchLater)
+        public void AddFromYoutube(VideoFile file, string seriesName, string seasonName)
         {
-            var series = AddOrUpdateVideoSeries("Youtube", false);
+            var series = AddOrUpdateVideoSeries(seriesName, false);
             series.Type = VideoType.Youtube;
-            var season = watchLater ? AddOrUpdateSeason(series, "На один раз с ютуба") : AddOrUpdateSeason(series, seasonName, false);
+            var season = AddOrUpdateSeason(series, seasonName, false); 
 
             file.Season = season;
             file.SeriesId = season.SeriesId;
