@@ -584,10 +584,11 @@ namespace API.FilmDownload
         private async Task ProcessUserInput(Message message, bool filterThemes)
         {
             var text = message.Text;
-            if (text.Contains("youtube") || text.Contains("youtu.be"))
-                await ShowDownloadChoice(message, DownloadType.Youtube );
-            //else if (text.Contains("vk.com"))
-            //    await ShowDownloadChoice(message, DownloadType.VK );
+
+            var task = new DownloadTask(message.MessageId, message.Text);
+
+            if (DownloaderFabric.CanDownload(task))
+                await ShowDownloadChoice(message, task);
             else
                 await ProcessUserInput(text, message.From.Id, filterThemes);
         }
@@ -631,14 +632,8 @@ namespace API.FilmDownload
 
         private Dictionary<string, DownloadTask> _downloadTasks = new Dictionary<string, DownloadTask>();
 
-        private async Task ShowDownloadChoice(Message message, DownloadType type)
+        private async Task ShowDownloadChoice(Message message, DownloadTask task)
         {
-            var task = new DownloadTask
-            {
-                OriginalMessageId = message.MessageId,
-                Text = message.Text,
-                Type = type,
-            };
             _downloadTasks.Add(task.Id, task);
 
             var originalText = message.Text;
@@ -649,7 +644,7 @@ namespace API.FilmDownload
                     new InlineKeyboardButton("Как положено") { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadAsDesigned, task.Id) },
                     }};
 
-            var messageText = $"Как храним скачанное с ютуба?";
+            var messageText = $"Как храним скачанное?";
             var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(message.From.Id),
                 messageText, replyMarkup: new InlineKeyboardMarkup(keyboard), replyToMessageId:message.MessageId);
 
@@ -666,12 +661,13 @@ namespace API.FilmDownload
         public async Task ProcessYoutubeVideo(string taskId, long fromId, Message message, bool watchLater)
         {
             var task = _downloadTasks[taskId];
-            var downloader = DownloaderFabric.CreateDownloader(task.Type, _config);
+            task.WatchLater = watchLater;
+            var downloader = DownloaderFabric.CreateDownloader(task, _config);
+            task.DownloadType = downloader.DownloadType;
 
-            string text = task.GetDownloadUrl();
             try
             {
-                var info = await downloader.GetInfo(text);
+                var info = await downloader.GetInfo(task.Uri.ToString());
 
                 foreach (var record in info.Records)
                 {
@@ -680,7 +676,7 @@ namespace API.FilmDownload
                         var scope = _serviceScopeFactory.CreateScope();
                         using (var fileService = scope.ServiceProvider.GetRequiredService<DbUpdateManager>())
                         {
-                            fileService.AddFromYoutube(record.Value, task.Type.ToString(), task.GetFolderName(info.ChannelName, watchLater));
+                            fileService.AddFromSiteDownload(record.Value, task.GetSeriesName(), task.GetFolderName(info.ChannelName));
 
                             var policy = Policy
                                 .Handle<Exception>()
@@ -691,7 +687,7 @@ namespace API.FilmDownload
                                 record.Value.Path = record.Value.Path.Replace(" ", "");
                                 await downloader.Download(record.Key, record.Value.Path);
 
-                                fileService.YoutubeFinished(record.Value);
+                                fileService.DownloadFinished(record.Value, downloader.IsVideoPropertiesFilled);
 
                                 if (!System.IO.File.Exists(record.Value.Path))
                                 {

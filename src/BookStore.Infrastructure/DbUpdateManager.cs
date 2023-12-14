@@ -17,6 +17,7 @@ using FileStore.Domain.Interfaces;
 using FileStore.Infrastructure.Repositories;
 using Azure.Core;
 using NLog;
+using static MediaToolkit.Model.Metadata;
 
 namespace Infrastructure
 {
@@ -177,7 +178,7 @@ namespace Infrastructure
             }
         }
 
-        private void AddSeries(DirectoryInfo dir, string seriesName = null)
+        public void AddSeries(DirectoryInfo dir, string seriesName = null)
         {
             var series = AddOrUpdateVideoSeries(seriesName ?? dir.Name);
 
@@ -419,7 +420,7 @@ namespace Infrastructure
             return TrimDots(result);
         }
 
-        public void AddFromYoutube(VideoFile file, string seriesName, string seasonName)
+        public void AddFromSiteDownload(VideoFile file, string seriesName, string seasonName)
         {
             var series = AddOrUpdateVideoSeries(seriesName, false);
             series.Type = VideoType.Youtube;
@@ -432,8 +433,11 @@ namespace Infrastructure
             _db.SaveChanges();
         }
 
-        public void YoutubeFinished(VideoFile file)
+        public void DownloadFinished(VideoFile file, bool isVideoPropertiesFilled)
         {
+            if(!isVideoPropertiesFilled)
+                FillVideoProperties(file);
+
             _db.Files.Add(file);
             _db.SaveChanges();
         }

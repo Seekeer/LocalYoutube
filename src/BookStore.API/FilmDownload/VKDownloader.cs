@@ -19,6 +19,9 @@ namespace API.FilmDownload
 {
     public class VKDownloader : DownloaderBase
     {
+        public override DownloadType DownloadType { get => DownloadType.VK; }
+        public override bool IsVideoPropertiesFilled => true;
+
         private VkApi _api;
 
         public VKDownloader(AppConfig config)
@@ -26,18 +29,13 @@ namespace API.FilmDownload
             _config = config;
         }
 
-        public override Task Download(string url, string path)
-        {
-            throw new System.NotImplementedException();
-        }
-
         private VkApi _GetApi()
         {
             if (_api == null)
             {
                 var services = new ServiceCollection();
-                services.AddAudioBypass();
-                services.AddSingleton<ICaptchaSolver, Solver>();
+                //services.AddAudioBypass();
+                //services.AddSingleton<ICaptchaSolver, Solver>();
 
                 var api = new VkApi(services);
 
@@ -76,12 +74,13 @@ namespace API.FilmDownload
         {
             //https://vk.com/video-220754053_456239513
 
-            url = @"https://vk.com/video-136292562_456239672";
+            //url = @"https://vk.com/video-136292562_456239672";
 
             var idString = url.Replace("https://vk.com/video", "");
-            var parts = idString.Split('_');
+            idString = url.Replace("https://vk.com/video?z=video", "");
+            var parts = idString.Split('_','%');
             var groupId = long.Parse(parts.First());
-            var videoId = long.Parse(parts.Last());
+            var videoId = long.Parse(parts.ElementAt(1));
             var videos = _GetApi().Video.Get(new VideoGetParams
             {
                 Extended = true,
@@ -132,6 +131,8 @@ namespace API.FilmDownload
 
         private Uri _GetFileUrl(Video video)
         {
+            return video.Player;
+
             var files = video.Files;
             return files.Mp4_2160 ?? files.Mp4_1440 ?? files.Mp4_1080 ?? files.Mp4_720 ?? files.Mp4_480 ?? files.Mp4_360 ?? files.Mp4_240 ?? files.External;
         }

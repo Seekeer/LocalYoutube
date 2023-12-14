@@ -46,10 +46,10 @@ namespace FileStore.API.Controllers
                 return BadRequest();
             }
             
-
             var managedUser = await _userManager.FindByNameAsync(request.UserName);
             if (managedUser == null)
             {
+                //await _userManager.CreateAsync(new ApplicationUser { UserName = request.UserName}, request.Password);
                 return BadRequest("Bad credentials");
             }
             var isPasswordValid = await _userManager.CheckPasswordAsync(managedUser, request.Password);

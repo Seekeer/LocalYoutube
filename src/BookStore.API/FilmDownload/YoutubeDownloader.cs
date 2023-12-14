@@ -20,16 +20,17 @@ namespace API.FilmDownload
 {
     public class YoutubeDownloader : DownloaderBase
     {
+        public override DownloadType DownloadType { get => DownloadType.Youtube; }
+        public override bool IsVideoPropertiesFilled => true;
+
         public YoutubeDownloader(AppConfig config)
         {
             this._config = config;
-            _name = "Youtube";
         }
 
         protected override async Task<DownloadInfo> GetVideoInfo(string url, string rootDownloadFolder)
         {
             var result = new DownloadInfo();
-
             var youtube = new YoutubeClient();
 
             // You can specify both video ID or URL
@@ -86,33 +87,6 @@ namespace API.FilmDownload
                 result.Records.Add(video.Url, await GetFileFromVideo(video, rootDownloadFolder, result.ChannelName, youtube));
 
             return result;
-        }
-
-        public override async Task Download(string url, string path)
-        {
-            //$path = '{path.Replace(" ", "")}'
-            var downloadUtilitiesScript = File.ReadAllText(@"Assets\downloadScript.txt");
-            var downloadVideoScript = @$"
-            $ytdlp = 'yt-dlp.exe'
-            $cmd = '-f bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best --merge-output-format mp4 {url} -o {path}'
-            Start-Process -FilePath $ytdlp -ArgumentList $cmd -Wait 
-";
-
-            var finalScript = downloadUtilitiesScript + downloadVideoScript;
-
-            var processStartInfo = new ProcessStartInfo();
-            processStartInfo.FileName = "powershell.exe";
-            processStartInfo.Arguments = $"-Command \"{finalScript}\"";
-            processStartInfo.UseShellExecute = false;
-            processStartInfo.RedirectStandardOutput = true;
-            processStartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Assets");
-            processStartInfo.UseShellExecute = false; // causes consoles to share window 
-
-            using var process = new Process();
-            process.StartInfo = processStartInfo;
-            process.Start();
-            await process.WaitForExitAsync();
-            string output = process.StandardOutput.ReadToEnd();
         }
 
         protected override bool IsPlaylist(string url)

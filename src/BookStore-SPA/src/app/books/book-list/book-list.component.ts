@@ -257,9 +257,9 @@ displayListForType() {
       case MenuVideoType.youtube:{
         this.isRandom = false;
         this.isSelectSeason = true;
+        this.isSelectSeries = true;
         this.showWatchedCheckbox = true;
         this.showWatched = false;
-        this.serieId = 6091;
         this.getSeries(VideoType.Youtube);
         this.episodeCount = 10;
 
@@ -482,7 +482,7 @@ counter : number =0 ;
       return;
     }
 
-    let showDelete = this.type != MenuVideoType.sovietAnimation && this.type != MenuVideoType.sovietfairytale && this.type != MenuVideoType.animation && this.type != MenuVideoType.adultSeries;
+    let showDelete = !isChild(this.type) && this.type != MenuVideoType.adultSeries;
     const queryParams: PlayerParameters = {
       seriesId : book.seriesId,
       videoId : book.id,
@@ -528,4 +528,9 @@ export class PlayerParameters {
   }
 }
 
+
+function isChild(type: MenuVideoType) {
+  return type == MenuVideoType.sovietAnimation || type == MenuVideoType.sovietfairytale || 
+  type == MenuVideoType.animation || type == MenuVideoType.childSeries ;
+}
 

@@ -1444,7 +1444,23 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateAll()
         {
+            RemoveSeason(13469, true);
+            RemoveSeason(13868, true);
+            RemoveSeason(13875, true);
+            RemoveSeason(13876, true);
+
+            RemoveSeries(6148, true);
+            
             //var dbUpdater = new DbUpdateManager(_db);
+
+            //dbUpdater.AddSeries(new DirectoryInfo(@"F:\Анюта\Мульты\Мультсериалы российские\Три кота 1080"), "Три кота");
+
+            //RemoveSeason(7445, false);
+            //dbUpdater.AddSeason(3, new DirectoryInfo(@"F:\Анюта\Мульты\Мультсериалы российские\Мимимишки.2015.WEBRip 720p\s09-1080\Ми-ми-мишки.s09.2021.WEB-DL 1080p"), "s09");
+
+            //dbUpdater.AddSeason(9, new DirectoryInfo(@"F:\Анюта\Мульты\Мультсериалы российские\Фиксики Сезоны 1-3 720p 4 1080p\04 сезон"), "04 сезон");
+            //dbUpdater.AddSeason(9, new DirectoryInfo(@"F:\Анюта\Мульты\Мультсериалы российские\Фиксики Сезоны 1-3 720p 4 1080p\05 сезон"), "05 сезон");
+
 
             //var files = _db.VideoFiles.Where(x => x.SeriesId == 6100);
             //foreach (var file in files)
