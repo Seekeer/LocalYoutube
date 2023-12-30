@@ -77,8 +77,8 @@ namespace API.FilmDownload
             //url = @"https://vk.com/video-136292562_456239672";
 
             var idString = url.Replace("https://vk.com/video", "");
-            idString = url.Replace("https://vk.com/video?z=video", "");
-            var parts = idString.Split('_','%');
+            idString = idString.Replace("https://vk.com/video?z=video", "");
+            var parts = idString.Split('_', '%', '?');
             var groupId = long.Parse(parts.First());
             var videoId = long.Parse(parts.ElementAt(1));
             var videos = _GetApi().Video.Get(new VideoGetParams

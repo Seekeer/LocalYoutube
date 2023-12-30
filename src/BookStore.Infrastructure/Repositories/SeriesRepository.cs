@@ -11,7 +11,11 @@ namespace FileStore.Infrastructure.Repositories
 {
     public class SeriesRepository : Repository<Series>, ISeriesRepository
     {
-        public SeriesRepository(VideoCatalogDbContext context) : base(context) { }
+        private readonly IDbFileRepository _fileRepository;
+
+        public SeriesRepository(VideoCatalogDbContext context, IDbFileRepository fileRepository) : base(context) {
+            _fileRepository = fileRepository;
+        }
 
         public async Task<IEnumerable<VideoFile>> SearchFileWithSeries(string searchedValue, int resultCount)
         {
@@ -40,6 +44,20 @@ namespace FileStore.Infrastructure.Repositories
 
             var series = DbSet.Include(x => x.Seasons).Where(x => x.AudioType == type);
             return await series.ToListAsync();
+        }
+
+        public async Task<bool> RemoveSeasonById(int seasonId)
+        {
+            var season = await Db.Seasons.FirstOrDefaultAsync(x => x.Id == seasonId);
+            if(season == null) return false;
+
+            var files = await Db.Files.Where(x => x.SeasonId == seasonId).ToListAsync();
+            foreach (var file in files)
+                _fileRepository.RemoveFileCompletely(file.Id);
+
+            Db.Seasons.Remove(season);
+            await Db.SaveChangesAsync();
+            return true;
         }
 
         public async Task MoveSeasonToFavorite(int seasonId, bool favorite)

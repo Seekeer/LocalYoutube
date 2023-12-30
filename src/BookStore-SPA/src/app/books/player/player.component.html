@@ -160,15 +160,26 @@
           В хорошие
         </button>
       </div>
-
+      
       <app-markslist *ngIf="!isAdditionalBookmarksVisible" #markslist [videoId]="videoId" ></app-markslist>
+
+      <mat-card *ngIf="description">
+          <button mat-button *ngIf="!descriptionCollapsed" (click)="descriptionCollapsed=true">Скрыть описание</button>
+          <button mat-button *ngIf="descriptionCollapsed" (click)="descriptionCollapsed=false">Показать описание</button>
+      
+        <mat-card-content *ngIf="!descriptionCollapsed">
+
+          <div *ngFor="let row of description" >
+            <a (click)="markClicked(row)" class="link-primary">{{row.timestamp }}</a> {{row.caption}}
+          </div>
+        </mat-card-content>
+      </mat-card> 
 
       <app-positionslist #positionslist [positions]="seekPositions"  ></app-positionslist>
 
       <h2>{{ name }}</h2>
       <div>{{ statStr }}</div>
-      <div></div>
-
+      
       <mat-form-field class="example-full-width" appearance="fill">
         <mat-label>Выключить через (минут)</mat-label>
         <input

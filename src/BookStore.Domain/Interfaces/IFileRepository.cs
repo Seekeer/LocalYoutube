@@ -19,7 +19,7 @@ namespace FileStore.Domain.Interfaces
         Task<IEnumerable<T>> SearchByName(string fileName);
         Task<IEnumerable<T>> GetFilesBySeason(int seriesId, bool isRandom, int count, int startId);
         Task<IEnumerable<T>> GetLatest(string userId);
-        void RemoveFileCompletely(T file);
+        void RemoveFileCompletely(int fileId);
         void MarkFileToDelete(T file);
         Task<bool> MoveToSerie(int fileId, int serieId);
     }

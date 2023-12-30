@@ -159,3 +159,7 @@ img.bg {
     margin-left: -512px;   /* 50% */
   }
 }
+
+mat-card{
+  width: fit-content;
+}

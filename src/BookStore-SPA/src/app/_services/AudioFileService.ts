@@ -19,7 +19,7 @@ export class AudioFileService {
     }
 
     public searchFilesWithSeries(seriesId: number, isRandom: boolean): Observable<AudioFile[]> {
-        return this.http.get<AudioFile[]>( this.baseUrl +`Files/getFilesBySeries?id=${seriesId}&isRandom=${isRandom}`);
+        return this.http.get<AudioFile[]>( this.baseUrl +`AudioFiles/getFilesBySeries?id=${seriesId}&isRandom=${isRandom}`);
     }
 
     public searchFilesWithSeason(seasonId: number, isRandom: boolean): Observable<AudioFile[]> {
@@ -34,5 +34,10 @@ export class AudioFileService {
         var url = this.baseUrl + `AudioFiles/setPosition/${id}`;
         return this.http.put(url, position).subscribe();
     }
+
+    public deleteTrackById(id: number) {
+        return this.http.delete(this.baseUrl + 'AudioFiles/' + id);
+    }
+
 
 }

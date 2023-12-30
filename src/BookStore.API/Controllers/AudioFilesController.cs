@@ -87,6 +87,26 @@ namespace FileStore.API.Controllers
             //return PhysicalFile(@"Z:\Smth\Downloads\Не подтвержден 993251.crdownload", "application/octet-stream", finfo.Name, enableRangeProcessing: true);
         }
 
+        [HttpDelete("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Remove(int id)
+        {
+            var file = await _fileService.GetById(id);
+
+            if (file == null) return NotFound();
+
+            await DoActionBeforeDelete(file);
+
+            await _fileService.Remove(file);
+
+            return Ok();
+        }
+
+        protected virtual async Task DoActionBeforeDelete(T file)
+        {
+        }
+
         [HttpPatch]
         [Route("filmStarted")]
         public async Task<ActionResult> FilmStarted([FromBody]int fileId)

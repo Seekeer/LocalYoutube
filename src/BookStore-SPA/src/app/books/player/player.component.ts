@@ -54,6 +54,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
   needToUpdateCurrentPosition: boolean;
   timerMinutes: number;
   timerStr: string;
+  description: DescriptionRow[];
+  descriptionCollapsed: boolean;
   totalDuration: moment.Moment;
   subscribed: boolean;
   lastVolumeChangedTime: Date = new Date(1);
@@ -150,7 +152,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
         );
     }
 
-    setTimeout(() => this.switchToFullscreen(), 2000);
+    if(!this.isMobile)
+      setTimeout(() => this.switchToFullscreen(), 2000);
+      
     this.intervalId = setInterval(() => this.updateStat(), 1000);
   }
 
@@ -423,7 +427,16 @@ export class PlayerComponent implements OnInit, OnDestroy {
       (videoInfo) => {
         this.name = videoInfo.displayName;
         this.videoInfo = videoInfo;
-        // this.setPosition(videoInfo.currentPosition);
+        this.description = this.parseDescription(videoInfo.description);
+
+        // this.description = this.parseDescription(`
+        // 0:00 - Что будет?
+        // 0:50 - Представление гостьи
+        // 3:07 - Выросла в многодетной семье
+        // 7:00 - Отношения с деньгами в детстве
+        // 9:40 - Первые заработки
+        // 18:40 - На что тратила деньги и реакция отца
+        // 22:15 - В чем мотивация зарабатыва`);
 
       },
       (err) => {
@@ -433,6 +446,40 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
     return true;
   }
+
+  public markClicked(row: DescriptionRow) {
+    this.child.rowClicked(row);
+  }
+
+  parseDescription(description: string): DescriptionRow[] {
+    let paragraphs = description.split(/\r\n|\n\r|\n|\r/).map(paragraph => {
+      let convertedWords = paragraph.trim().split(" ");
+      const firstWord = convertedWords[0];
+      if(firstWord.indexOf(':') == -1)
+        return new DescriptionRow( paragraph, null);
+      
+      return new DescriptionRow( paragraph.replace(firstWord,''), firstWord) ;
+  });
+
+  return paragraphs;
+}
+  
+  convertDescriptionToHtml(description: string): string {
+    let paragraphs = description.split(/\r\n|\n\r|\n|\r/).map(paragraph => {
+      let convertedWords = paragraph.split(" ").map(word => {
+        if(word.indexOf(':') == -1)
+          return word;
+
+        return `<a  (click)="markClicked(${word})">${word}</a>`;
+
+      });
+
+      return convertedWords.join(' ');
+    
+  });
+  return paragraphs.join('\n\r');
+}
+  
 
   private updateStat() {
     var video = this.getVideoElement();
@@ -476,3 +523,23 @@ export class PlayerComponent implements OnInit, OnDestroy {
     }
   }
 }
+
+export class DescriptionRow {
+
+  constructor(public caption: string, public timestamp: string) {}
+
+  getPosition(): number {
+    let hours: string = '0', minutes: string, seconds: string;
+    if(this.countInstances(this.timestamp, ':') == 2)
+      [hours, minutes, seconds] = this.timestamp.split(':');
+    else
+      [minutes, seconds] = this.timestamp.split(':');
+
+    return +seconds + +minutes * 60 + +hours * 60 * 60;
+  }
+  
+  countInstances(string, substring) {
+    return string.split(substring).length - 1;
+ }
+}
+

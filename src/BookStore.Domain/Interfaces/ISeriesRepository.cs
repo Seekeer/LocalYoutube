@@ -10,5 +10,6 @@ namespace FileStore.Domain.Interfaces
         Task<List<Series>> GetAll(VideoType? type);
         Task<IEnumerable<Series>> GetAll(AudioType? type);
         Task MoveSeasonToFavorite(int seasonId, bool favorite);
+        Task<bool> RemoveSeasonById(int id);
     }
 }

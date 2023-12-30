@@ -67,7 +67,7 @@
         <mat-icon>pause</mat-icon>
       </button> -->
 
-      <button mat-icon-button color="accent" (click)="forwardVideo()">
+      <button class="btn" mat-icon-button color="accent" (click)="forwardVideo()">
         <mat-icon>fast_forward</mat-icon>
       </button>
 
@@ -77,6 +77,7 @@
 
       <button class="btn btn-outline-success btn-sm" (click)="toFavorite()">В избранное</button>
       <button class="btn btn-outline-danger btn-sm" (click)="toBlackList()">В черный список</button>
+      <button class="btn btn-outline-danger btn-sm" (click)="deleteSeries()">Удалить</button>
     </div>
     
     <ul class="list-group list-group-light">
@@ -84,7 +85,20 @@
         [ngClass]="{'greenBackground' : file.id==selectedFile.id}"
         *ngFor="let file of filteredFiles">
         {{file.name}}
-        <span class="badge badge-primary rounded-pill">{{file.durationMinutes}}</span>
+
+        <div>
+
+          <span class="badge badge-primary rounded-pill">{{file.durationMinutes}}</span>
+        
+          <button
+            mat-icon-button
+            color="warn"
+            (click)="deleteTrack(file);$event.stopPropagation()"
+            >
+            <!-- *ngIf="parameters.showDeleteButton" -->
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
       </li>
     </ul>
 

@@ -39,7 +39,7 @@ namespace FileStore.Domain.Models
         AdultEpisode,
         [IsOnlineVideoAttribute]
         Courses,
-        Downloaded,
+        RutrackerDownloaded,
         Youtube,
         EoT,
         Special

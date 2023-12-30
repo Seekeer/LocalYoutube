@@ -23,6 +23,8 @@ using System.Diagnostics;
 using System.Xml.Serialization;
 using TL;
 using Microsoft.AspNetCore.Identity;
+using FileStore.Infrastructure.Repositories;
+using VkNet.Model;
 
 namespace FileStore.API.Controllers
 {
@@ -719,6 +721,22 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("moveFileToSeason")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveFileToSeason(int fileId, int newSeasonId)
+        {
+            var season = _db.Seasons.Where(x => x.Id == newSeasonId).First();
+
+            var file = _db.Files.FirstOrDefault(x => x.Id == fileId);
+            file.SeasonId = season.Id;
+            file.SeriesId = season.SeriesId;
+
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("addFolder")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> AddFolder(string path, VideoType? type = null, bool severalSeriesInFolder = false, string seriesName = null)
@@ -1046,6 +1064,60 @@ namespace FileStore.API.Controllers
             _rutracker.FillFileInfo(file, info);
 
             _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("removeAudioNameDuplicate")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> RemoveAudioNameDuplicate()
+        {
+            var duplicates = _db.Seasons.Where(x => x.Series.AudioType != null).ToList().GroupBy(x => x.Name);
+
+            var removeSeason = new List<Season>();
+            foreach (var duplicate in duplicates)
+            {
+                if (duplicate.Count() == 1)
+                    continue;
+
+                removeSeason.AddRange(duplicate.Skip(1));
+            }
+
+            var manager = new DbUpdateManager(_db);
+            var fileRepo = new DbFileRepository(_db);
+            var seriesRepo = new SeriesRepository(_db, fileRepo);
+
+            foreach (var season in removeSeason)
+            {
+                await seriesRepo.RemoveSeasonById(season.Id);
+            }
+
+            await _db.SaveChangesAsync();
+
+            var removeFiles = new List<DbFile>();
+            var seasons = _db.Files.Where(x => x.Series.AudioType != null).ToList()
+                .GroupBy(x => x.SeasonId);
+            foreach (var season in seasons)
+            {
+                var duplicatesFiles = season.ToList().GroupBy(x => x.Name);
+
+                foreach (var duplicate in duplicatesFiles)
+                {
+                    if (duplicate.Count() == 1)
+                        continue;
+
+                    removeFiles.AddRange(duplicate.Skip(1));
+                }
+            }
+
+            foreach (var season in removeFiles)
+            {
+                fileRepo.RemoveFileCompletely(season.Id);
+            }
+
+            await _db.SaveChangesAsync();
+
 
             return Ok();
         }
@@ -1413,28 +1485,51 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
-        [Route("moveToNewType")]
+        [Route("moveSeasonToNewType")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> MoveToNewType()
+        public async Task<IActionResult> MovestartSeasonToNewType(string seriesName, int startSeasonId, int endSeasonId)
         {
             var dbUpdater = new DbUpdateManager(_db);
 
-            //var files = _db.VideoFiles.Where(x => x.SeriesId == 6100);
-            //foreach (var file in files)
-            //{
-            //    file.Type = VideoType.Special;
-            //}
-
-            var series = dbUpdater.AddOrUpdateSeries("История", false, false);
+            var series = dbUpdater.AddOrUpdateSeries(seriesName, false, false);
             _db.SaveChanges();
             series.Type = VideoType.Special;
-            var season = _db.Seasons.Include(x => x.Files).FirstOrDefault(x => x.Id == 13477);
+
+            var seasonIds = _db.Seasons.Where(x => x.Id>=startSeasonId && x.Id <= endSeasonId).Select(x => x.Id).ToList();
+
+            foreach (var seasonId in seasonIds)
+                _MoveSeasonToSpecial(seasonId, series.Id);
+
+            return Ok();
+        }
+
+        private void _MoveSeasonToSpecial(int seasonId, int seriesId)
+        {
+            var season = _db.Seasons.Include(x => x.Files).FirstOrDefault(x => x.Id == seasonId);
             foreach (var file in season.Files)
             {
-                file.SeriesId = series.Id;
+                file.SeriesId = seriesId;
             }
-            season.SeriesId = series.Id;
+            season.SeriesId = seriesId;
             _db.SaveChanges();
+        }
+
+        [HttpGet]
+        [Route("removeEmptySeasons")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> RemoveEmptySeasons()
+        {
+            //var series = _db.Series.Where(x => !x.Files.Any()).ToList();
+            //foreach (var serie in series)
+            //{
+            //    await RemoveSeries(serie.Id, false);
+            //}
+
+            var seasons = _db.Seasons.Where(x => !x.Files.Any()).ToList();
+            foreach (var serie in seasons)
+            {
+                 RemoveSeason(serie.Id, false);
+            }
 
             return Ok();
         }
@@ -1444,12 +1539,32 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateAll()
         {
-            RemoveSeason(13469, true);
-            RemoveSeason(13868, true);
-            RemoveSeason(13875, true);
-            RemoveSeason(13876, true);
+            //var files = _db.VideoFiles.Where(x => x.Id >= 52217 && x.Id <= 53217).ToList();
 
-            RemoveSeries(6148, true);
+            //var dbManager = new DbUpdateManager(_db);
+            //var series = dbManager.AddOrUpdateSeries("Германия", false, false);
+            //series.Type = VideoType.Special;
+            //_db.SaveChanges();
+            //var season = dbManager.AddOrUpdateSeason(series.Id, "История большие ролики");
+            ////season.Type = VideoType.Special;
+            //_db.SaveChanges();
+
+            //foreach (var file in files)
+            //{
+            //    file.SeriesId = series.Id;
+            //    file.SeasonId = season.Id;
+            //    file.Type = VideoType.Special;
+            //}
+            //_db.SaveChanges();
+
+            //MoveFileToSeason(48603, 13469);
+
+            ////RemoveSeason(13469, true);
+            //RemoveSeason(13868, true);
+            //RemoveSeason(13875, true);
+            //RemoveSeason(13876, true);
+
+            //RemoveSeries(6148, true);
             
             //var dbUpdater = new DbUpdateManager(_db);
 

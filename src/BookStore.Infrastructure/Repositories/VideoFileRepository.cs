@@ -91,7 +91,10 @@ namespace FileStore.Infrastructure.Repositories
             if (isRandom)
                 return await SearchRandom(b => b.SeasonId == seasonId, count);
             else
-                return await Search(file => file.SeasonId == seasonId && file.Id > startId);
+            {
+                var result = await Search(file => file.SeasonId == seasonId && file.Id > startId);
+                return OrderByNumber(result);
+            }
         }
 
         public async Task<IEnumerable<T>> GetFilesBySeriesAsync(int seriesId, int count, bool isRandom, int startId)
@@ -99,7 +102,15 @@ namespace FileStore.Infrastructure.Repositories
             if(isRandom)
                 return await SearchRandom(b => b.SeriesId == seriesId, count);
             else
-                return (await Search(file => file.SeriesId == seriesId && file.Id > startId)).Take(count);
+            {
+                var result = (await Search(file => file.SeriesId == seriesId && file.Id > startId)).Take(count);
+                return OrderByNumber(result);
+            }
+        }
+
+        private IEnumerable<T> OrderByNumber(IEnumerable<T> result)
+        {
+            return result.OrderBy(x => x.Number).ThenBy(x => x.Id);
         }
 
         public async Task<T> GetRandomFileBySeriesId(int seriesId)
@@ -131,13 +142,20 @@ namespace FileStore.Infrastructure.Repositories
             return files;
         }
 
-        public void RemoveFileCompletely(T file)
+        public void RemoveFileCompletely(int fileId)
         {
-            file.VideoFileUserInfos.ToList().ForEach(x => Db.FilesUserInfo.Remove(x));
-            var marks = Db.FileMarks.Where(x => x.DbFileId == file.Id);
+            var fileToDelete = Db.Files.FirstOrDefault(x => x.Id == fileId);
+
+            var userInfos = Db.FilesUserInfo.Where(x => x.VideoFileId == fileId);
+            Db.FilesUserInfo.RemoveRange(userInfos);
+
+            var marks = Db.FileMarks.Where(x => x.DbFileId == fileId);
             Db.FileMarks.RemoveRange(marks);
-            Db.FilesInfo.Remove(file.VideoFileExtendedInfo);
-            Db.Files.Remove(file);
+
+            var extendedInfos = Db.FilesInfo.Where(x => x.VideoFileId == fileId);
+            Db.FilesInfo.RemoveRange(extendedInfos);
+
+            Db.Files.Remove(fileToDelete);
 
             Db.SaveChanges();
         }

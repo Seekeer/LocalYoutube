@@ -116,6 +116,11 @@ namespace Infrastructure.Scheduler
             if (!File.Exists(filepath))
                 return false;
 
+            long length = new System.IO.FileInfo(filepath).Length;
+
+            if (length > (long)4 * 1024 * 1024 * 1024)
+                return false;
+
             return await UploadToDirectory(filepath, GetFolderName(filepath));
         }
 

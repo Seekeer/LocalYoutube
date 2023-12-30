@@ -273,7 +273,7 @@ namespace Infrastructure
         public void MoveDownloadedToAnotherSeries(VideoType type, string seriesName)
         {
             //var files = _db.VideoFiles.Where(x => x.Type == VideoType.Film).OrderByDescending(x =>x.Id).ToList();
-            var files = _db.VideoFiles.Where(x => x.Type == VideoType.Downloaded && !x.IsDownloading ).ToList();
+            var files = _db.VideoFiles.Where(x => x.Type == VideoType.RutrackerDownloaded && !x.IsDownloading ).ToList();
             foreach (var file in files)
             {
                 MoveToAnotherSeries(file, type, seriesName);
@@ -881,7 +881,7 @@ namespace Infrastructure
                         var fileRepo = new DbFileRepository(_db);
                         if (moreFilesAdded)
                         {
-                            fileRepo.RemoveFileCompletely(info);
+                            fileRepo.RemoveFileCompletely(info.Id);
                             _db.SaveChanges();
                             continue;
                         }
@@ -937,7 +937,7 @@ namespace Infrastructure
             files.AddRange(_db.AudioFiles.Where(x => x.SeriesId == seriesId).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileExtendedInfo));
             using var fileRepo = new DbFileRepository(_db);
             foreach (var file in files)
-                fileRepo.RemoveFileCompletely(file);
+                fileRepo.RemoveFileCompletely(file.Id);
 
             var seasons = _db.Seasons.Where(x => x.SeriesId == seriesId);
             _db.Seasons.RemoveRange(seasons);
@@ -951,7 +951,7 @@ namespace Infrastructure
         public void RemoveFileCompletely(DbFile file)
         {
             var fileRepo = new DbFileRepository(_db) ;
-            fileRepo.RemoveFileCompletely(file);
+            fileRepo.RemoveFileCompletely(file.Id);
         }
 
         public void UpdateAudioInfo(AudioFile audioFile)

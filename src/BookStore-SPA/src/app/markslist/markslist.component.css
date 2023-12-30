@@ -8,6 +8,7 @@ a{
     /* overscroll-behavior: none; */
     overflow: auto;
     width: auto;
+    margin-bottom: 10px;
 }
 
 .limitHeight{

@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using VkNet.Exception;
 using YoutubeExplode;
 using YoutubeExplode.Common;
 using YoutubeExplode.Converter;
@@ -49,6 +50,7 @@ namespace API.FilmDownload
             file.Name = video.Title; // "Collections - Blender 2.80 Fundamentals"
             file.Duration = video.Duration ?? TimeSpan.Zero; // 00:07:20
             file.VideoFileExtendedInfo = new FileExtendedInfo();
+            file.VideoFileExtendedInfo.Description = (video as Video)?.Description;
 
             byte[] imageAsByteArray;
             using (var webClient = new WebClient())
@@ -61,8 +63,8 @@ namespace API.FilmDownload
             // Get highest quality muxed stream
             var streamInfo = streamManifest.GetMuxedStreams().GetWithHighestVideoQuality();
 
-            var path = Path.Combine(rootDownloadFolder, new string(channelName.Where(ch => !Path.InvalidPathChars.Contains(ch)).ToArray()));
-            Directory.CreateDirectory(path);
+            var path = Path.Combine(rootDownloadFolder, new string(channelName.Where(ch => !Path.InvalidPathChars.Contains(ch) && !Path.GetInvalidFileNameChars().Contains(ch)).ToArray()));
+            //Directory.CreateDirectory(path);
 
             var validFilename = new string(video.Title.Where(ch => !Path.GetInvalidFileNameChars().Contains(ch)).ToArray());
 
@@ -84,7 +86,7 @@ namespace API.FilmDownload
             // Get all playlist videos
             var videos = await youtube.Playlists.GetVideosAsync(url);
             foreach (var video in videos)
-                result.Records.Add(video.Url, await GetFileFromVideo(video, rootDownloadFolder, result.ChannelName, youtube));
+                result.Records.Add(video.Url, await GetFileFromVideo(video, rootDownloadFolder, playlist.Author.ChannelTitle, youtube));
 
             return result;
         }

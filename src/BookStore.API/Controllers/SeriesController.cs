@@ -156,6 +156,18 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
+        [HttpDelete("season/{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> RemoveSeason(int id)
+        {
+            var result = await  _SeriesService.RemoveSeasonById(id);
+
+            if (!result) return BadRequest();
+
+            return Ok();
+        }
+
         [HttpGet]
         [Route("search/{Series}")]
         [ProducesResponseType(StatusCodes.Status200OK)]

@@ -15,5 +15,6 @@ namespace FileStore.Domain.Interfaces
         Task<bool> Remove(Series Series);
         Task<IEnumerable<Series>> Search(string SeriesName, int resultCount);
         Task MoveSeasonToFavorite(int seasonId, bool favorite);
+        Task<bool> RemoveSeasonById(int id);
     }
 }

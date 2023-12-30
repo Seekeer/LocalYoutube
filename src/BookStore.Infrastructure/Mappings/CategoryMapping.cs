@@ -78,7 +78,7 @@ namespace FileStore.Infrastructure.Context
             builder.HasMany(c => c.Seasons)
                 .WithOne(b => b.Series)
                 .HasForeignKey(b => b.SeriesId);
-
+            
             builder.ToTable("Series");
         }
     }

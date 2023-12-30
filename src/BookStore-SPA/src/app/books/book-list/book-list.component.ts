@@ -42,7 +42,6 @@ export enum MenuVideoType {
   sovietAnimation,
   sovietfairytale,
   animation,
-  audioFairyTale,
   balley,
 
   film,

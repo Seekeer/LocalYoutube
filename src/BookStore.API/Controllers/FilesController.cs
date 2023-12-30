@@ -84,22 +84,12 @@ namespace FileStore.API.Controllers
             return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId(_userManager)));
         }
 
-        [HttpDelete("{id:int}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Remove(int id)
+        protected override async Task DoActionBeforeDelete(VideoFile file)
         {
-            var file = await _fileService.GetById(id);
-
-            if (file == null) return NotFound();
-
             await _ruTrackerUpdater.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
 
-            await _fileService.Remove(file);
-
-            return Ok();
+            await base.DoActionBeforeDelete(file);
         }
-
 
         [HttpGet]
         [Route("getAnimation")]

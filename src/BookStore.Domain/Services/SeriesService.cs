@@ -80,5 +80,10 @@ namespace FileStore.Domain.Services
         {
             await _seriesRepository.MoveSeasonToFavorite(seasonId, favorite);
         }
+
+        public async Task<bool> RemoveSeasonById(int id)
+        {
+            return await _seriesRepository.RemoveSeasonById(id);
+        }
     }
 }

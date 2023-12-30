@@ -31,7 +31,7 @@ namespace API.FilmDownload
 
         public int OriginalMessageId { get; set; }
         public int QuestionMessageId { get; set; }
-        public string Name { get; set; }
+        public string SeasonName { get; set; }
         public Uri Uri { get; set; }
         public bool WatchLater { get; internal set; }
         public DownloadType DownloadType { get; internal set; }
@@ -40,17 +40,17 @@ namespace API.FilmDownload
         {
             var parts = text.Split(' ');
             if (parts.Length > 1)
-                Name = string.Join(" ", parts.Take(parts.Length - 1));
+                SeasonName = string.Join(" ", parts.Take(parts.Length - 1));
 
             var url = parts.Last();
             if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
                 Uri = uri;
         }
 
-        internal string GetFolderName(string channelName)
+        internal string GetSeasonName(string channelName)
         {
-            if (!string.IsNullOrEmpty(Name))
-                return Name;
+            if (!string.IsNullOrEmpty(SeasonName))
+                return SeasonName;
 
             return !WatchLater || DownloadType == DownloadType.Common ? channelName : $"{DownloadType}" ;
         }

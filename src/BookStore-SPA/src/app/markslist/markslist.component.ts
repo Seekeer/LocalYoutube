@@ -11,6 +11,7 @@ import {
 
 import { Mark } from '../_models/Mark';
 import { FileService } from '../_services/file.service';
+import { DescriptionRow } from '../books/player/player.component';
 
 @Component({
   selector: 'app-markslist',
@@ -123,6 +124,10 @@ export class MarkslistComponent implements OnInit, OnChanges {
     }
   }
 
+  public rowClicked(row: DescriptionRow) {
+    var element = this.getVideoElement();
+    element.currentTime = row.getPosition();
+  }
 
   public markClicked(mark: Mark) {
     if(mark.isDeleted)

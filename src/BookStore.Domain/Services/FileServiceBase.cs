@@ -81,7 +81,7 @@ namespace FileStore.Domain.Services
                 }
             }
 
-            _FileRepository.RemoveFileCompletely(file);
+            _FileRepository.RemoveFileCompletely(file.Id);
 
             return true;
         }

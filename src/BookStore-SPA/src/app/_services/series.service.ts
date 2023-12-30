@@ -60,6 +60,10 @@ export class SeriesService {
         return this.http.delete(this.baseUrl + 'series/' + id);
     }
 
+    public deleteSeason(id: number) {
+        return this.http.delete(this.baseUrl + 'series/season/' + id);
+    }
+
     public getSerieById(id): Observable<Serie> {
         return this.http.get<Serie>(this.baseUrl + 'series/' + id);
     }

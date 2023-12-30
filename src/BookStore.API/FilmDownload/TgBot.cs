@@ -553,7 +553,7 @@ namespace API.FilmDownload
             file.Name = _rutracker.ClearFromForeignOption(info.Name);
             file.IsDownloading = true;
             file.Path = downloadPath;
-            file.Type = FileStore.Domain.Models.VideoType.Downloaded;
+            file.Type = FileStore.Domain.Models.VideoType.RutrackerDownloaded;
             file.VideoFileExtendedInfo.RutrackerId = id;
         }
 
@@ -636,6 +636,8 @@ namespace API.FilmDownload
         {
             _downloadTasks.Add(task.Id, task);
 
+            //await ProcessYoutubeVideo(task.Id, message.From.Id, message, false);
+
             var originalText = message.Text;
             var keyboard = new List<List<InlineKeyboardButton>>
                 {
@@ -646,7 +648,7 @@ namespace API.FilmDownload
 
             var messageText = $"Как храним скачанное?";
             var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(message.From.Id),
-                messageText, replyMarkup: new InlineKeyboardMarkup(keyboard), replyToMessageId:message.MessageId);
+                messageText, replyMarkup: new InlineKeyboardMarkup(keyboard), replyToMessageId: message.MessageId);
 
             task.QuestionMessageId = tgMessage.MessageId;
         }
@@ -676,7 +678,7 @@ namespace API.FilmDownload
                         var scope = _serviceScopeFactory.CreateScope();
                         using (var fileService = scope.ServiceProvider.GetRequiredService<DbUpdateManager>())
                         {
-                            fileService.AddFromSiteDownload(record.Value, task.GetSeriesName(), task.GetFolderName(info.ChannelName));
+                            fileService.AddFromSiteDownload(record.Value, task.GetSeriesName(), task.GetSeasonName(info.ChannelName));
 
                             var policy = Policy
                                 .Handle<Exception>()
@@ -684,7 +686,9 @@ namespace API.FilmDownload
 
                             await policy.Execute(async () =>
                             {
-                                record.Value.Path = record.Value.Path.Replace(" ", "");
+                                record.Value.Path = record.Value.Path.Replace(" ", "")
+                                // ' is breaking powershell script
+                                    .Replace("'","");
                                 await downloader.Download(record.Key, record.Value.Path);
 
                                 fileService.DownloadFinished(record.Value, downloader.IsVideoPropertiesFilled);
@@ -716,7 +720,7 @@ namespace API.FilmDownload
 
         private async Task NotifyBotDownloadEnded(long telegramId, VideoFile item, DownloadTask task)
         {
-            await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Открыть: http://192.168.1.55:2022/api/Files/getFileById?fileId={item.Id}");
+            await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {Environment.NewLine}{item.Name} {Environment.NewLine}{task.Uri} {Environment.NewLine}Открыть: http://192.168.1.55:2022/api/Files/getFileById?fileId={item.Id}");
 
             await _botClient.DeleteMessageAsync(new ChatId(telegramId), task.OriginalMessageId);
             await _botClient.DeleteMessageAsync(new ChatId(telegramId), task.QuestionMessageId);

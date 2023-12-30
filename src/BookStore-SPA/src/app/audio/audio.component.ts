@@ -13,6 +13,7 @@ import { ToastrService } from 'ngx-toastr';
 import {
   AudioFile,
   AudioType,
+  Book,
 } from '../_models/Book';
 import { Serie } from '../_models/Category';
 import { Seasons } from '../_models/Seasons';
@@ -21,8 +22,8 @@ import { SeriesService } from '../_services/series.service';
 import { MarkslistComponent } from '../markslist/markslist.component';
 
 enum MenuAudioType {
+  audioFairyTale,
   main,
-  child,
 }
 
 @Component({
@@ -73,7 +74,7 @@ export class AudioComponent implements OnInit {
 
   displayListForType() {
     switch (this.type) {
-      case MenuAudioType.child: {
+      case MenuAudioType.audioFairyTale: {
         this.isChild = true;
         this.getSeries(AudioType.FairyTale);
         break;
@@ -125,6 +126,22 @@ export class AudioComponent implements OnInit {
 
   public toBlackList(){
     this.seriesService.moveSeasonToBlackList(this.seasonId).subscribe();
+    window.location.reload()
+  }
+
+  public deleteSeries(){
+    this.seriesService.deleteSeason(this.seasonId).subscribe();
+    this.seasons = this.seasons.filter(x => x.id != +this.seasonId);
+    let serie = this.series.filter((x) => x.id == this.serieId)[0];
+    serie.seasons = serie.seasons.filter(x => x.id != +this.seasonId);
+    this.seasonId = null;
+
+    this.search();
+    // window.location.reload()
+  }
+
+  public deleteTrack(file: Book){
+    this.service.deleteTrackById(file.id).subscribe(this.search.bind(this));
   }
 
   public search() {
