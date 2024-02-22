@@ -32,12 +32,19 @@ namespace API.FilmDownload
         public int OriginalMessageId { get; set; }
         public int QuestionMessageId { get; set; }
         public string SeasonName { get; set; }
+        public string VideoName { get; set; }
         public Uri Uri { get; set; }
         public bool WatchLater { get; internal set; }
         public DownloadType DownloadType { get; internal set; }
 
         private void ParseMessageText(string text)
         {
+            var namePart = text.Split("||");
+            if (namePart.Length > 1)
+            {
+                VideoName = namePart[0];
+                text = namePart[1];
+            }
             var parts = text.Split(' ');
             if (parts.Length > 1)
                 SeasonName = string.Join(" ", parts.Take(parts.Length - 1));
@@ -72,8 +79,10 @@ namespace API.FilmDownload
     {
         public static DownloaderBase CreateDownloader(DownloadTask task, AppConfig config)
         {
-            var url = task.Uri?.ToString();
-
+            return CreateDownloader(task.Uri?.ToString(), config);
+        }
+        public static DownloaderBase CreateDownloader(string url, AppConfig config)
+        {
             if (url == null || url.Contains("rutracker.org"))
                 return null;
 
@@ -109,13 +118,13 @@ namespace API.FilmDownload
                 return await GetVideoInfo(url, rootDownloadFolder);
         }
 
-        public virtual async Task Download(string url, string path)
+        public virtual async Task<string> Download(string url, string path)
         {
             //$path = '{path.Replace(" ", "")}'
             var downloadUtilitiesScript = File.ReadAllText(@"Assets\downloadScript.txt");
             var downloadVideoScript = @$"
             $ytdlp = 'yt-dlp.exe'
-            $cmd = '-f bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best --merge-output-format mp4 {url} -o {path}'
+            $cmd = '-f bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best --merge-output-format mp4 {url} -o """"{path}""""'
             Start-Process -FilePath $ytdlp -ArgumentList $cmd -Wait 
 ";
 
@@ -134,6 +143,11 @@ namespace API.FilmDownload
             process.Start();
             await process.WaitForExitAsync();
             string output = process.StandardOutput.ReadToEnd();
+
+            if (File.Exists(path + '#'))
+                File.Move(path + '#', path);
+
+            return path;
         }
 
         protected abstract bool IsPlaylist(string url);

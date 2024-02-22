@@ -82,11 +82,11 @@ namespace Infrastructure
 
     public class DbUpdateManager : IDisposable
     {
-        private VideoCatalogDbContext _db;
         private Origin _origin;
         private VideoType _type;
         private int _episodeNumber;
         private bool _ignoreNonCyrillic = true;
+        private VideoCatalogDbContext _db;
 
         static DbUpdateManager()
         {
@@ -132,7 +132,7 @@ namespace Infrastructure
             AddSeason(series, season, dir);
         }
 
-        public void FillSeries(string rootPath, Origin origin, VideoType type, bool severalSeries = true, string seriesName = null)
+        public void AddSeries(string rootPath, Origin origin, VideoType type, bool severalSeries = true, string seriesName = null)
         {
             _origin = origin;
             _type = type;
@@ -152,26 +152,37 @@ namespace Infrastructure
             _db.SaveChanges();
         }
 
-        public void Convert(VideoFile file)
+        public void Convert(VideoFile file, bool encodeAlways = false)
         {
             try
             {
                 var oldFile = file.Path;
-                var newFilePath = EncodeToMp4(file.Path);
+                var newFilePath = VideoHelper.EncodeToMp4(file.Path, encodeAlways);
 
                 if (newFilePath == null)
                     return;
 
-                if(file.VideoFileExtendedInfo.Cover == null)
-                    DbUpdateManager.FillVideoProperties(file);
+                if (file.VideoFileExtendedInfo.Cover == null)
+                    VideoHelper.FillVideoProperties(file);
 
                 file.Path = newFilePath;
                 _db.VideoFiles.Update(file);
-                _db.SaveChanges();
 
                 var updatedFile = _db.VideoFiles.FirstOrDefault(x => x.Id == file.Id);
 
-                File.Delete(oldFile);
+                var fileToDelete = new VideoFile
+                {
+                    IsDownloading = true,
+                    NeedToDelete = true,
+                    Path = oldFile,
+                    Name = "DELETE",
+                    SeasonId = file.SeasonId,
+                    SeriesId = file.SeriesId
+                };
+                _db.VideoFiles.Add(fileToDelete);
+
+                _db.SaveChanges();
+
             }
             catch (Exception ex)
             {
@@ -244,6 +255,7 @@ namespace Infrastructure
             }
             catch (Exception ex)
             {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }
 
             return null;
@@ -345,12 +357,12 @@ namespace Infrastructure
             return AddOrUpdateVideoSeries("Загрузки", false);
         }
 
-        public Series AddOrUpdateVideoSeries(string folderName, bool analyzeFolderName = true, VideoType? type = null)
+        public Series AddOrUpdateVideoSeries(string folderName, bool analyzeNameLikeFolderName = true, VideoType? type = null)
         {
             if (type == null)
                 type = _type;
 
-            var series = AddOrUpdateSeries(folderName, analyzeFolderName, type == VideoType.ChildEpisode || type == VideoType.FairyTale || type == VideoType.Animation);
+            var series = AddOrUpdateSeries(folderName, analyzeNameLikeFolderName, type == VideoType.ChildEpisode || type == VideoType.FairyTale || type == VideoType.Animation);
             series.Type = type;
 
             _db.SaveChanges();
@@ -436,7 +448,7 @@ namespace Infrastructure
         public void DownloadFinished(VideoFile file, bool isVideoPropertiesFilled)
         {
             if(!isVideoPropertiesFilled)
-                FillVideoProperties(file);
+                VideoHelper.FillVideoProperties(file);
 
             _db.Files.Add(file);
             _db.SaveChanges();
@@ -470,61 +482,9 @@ namespace Infrastructure
                 video.Number = GetSeriesNumberFromName(file.Name);
             }
 
-            FillVideoProperties(video);
+            VideoHelper.FillVideoProperties(video);
 
             return video;
-        }
-
-        public static bool IsEncoded(string path)
-        {
-            var fileInfo = new FileInfo(path);
-
-            return (fileInfo.Extension == ".mp4" || fileInfo.Extension == ".webm");
-        }
-
-        public static string EncodeToMp4(string path)
-        {
-            if (IsEncoded(path))
-                return null;
-
-            string resultPath = GetNewPath(path);
-
-            if (File.Exists(resultPath))
-                return resultPath;
-
-            var format = FFMpeg.GetContainerFormat("mp4");
-
-            //FFMpegArguments
-            //    .FromFileInput(path)
-            //    .OutputToFile(resultPath, false, options => options
-            //        .WithVideoCodec("libx264")
-            //        //.WithConstantRateFactor(21)
-            //        .WithAudioCodec(FFMpegCore.Enums.AudioCodec.Aac)
-            //        //.WithVariableBitrate(4)
-            //        .UsingMultithreading(true)
-            //        //.WithVideoFilters(filterOptions => filterOptions
-            //        //    .Scale(VideoSize.Hd))
-            //        .WithFastStart())
-            //    .ProcessSynchronously();
-
-            //FFMpegArguments
-            //   .FromPipeInput(new StreamPipeSource(inputStream))
-            //   .OutputToPipe(new StreamPipeSink(outputStream), options => options
-            //       .WithVideoCodec("vp9")
-            //       .WithVariableBitrate(1200)
-            //       .ForceFormat("webm"))
-            //   .ProcessSynchronously();
-            FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.Faster,
-                FFMpegCore.Enums.VideoSize.Original, FFMpegCore.Enums.AudioQuality.VeryHigh, true);
-
-            return resultPath;
-        }
-
-        public static string GetNewPath(string path)
-        {
-            var fileInfo = new FileInfo(path);
-            var resultPath = path.Replace(fileInfo.Extension, ".mp4");
-            return resultPath;
         }
 
         public static async Task CombineStreams(string path)
@@ -580,52 +540,6 @@ namespace Infrastructure
             throw new NotImplementedException();
         }
 
-        public static string EncodeFile(string path, string resultFolder, FFMpegCore.Enums.VideoSize size)
-        {
-            try
-            {
-                Directory.CreateDirectory(resultFolder);
-                var fileInfo = new FileInfo(path);
-                //var resultPath = Path.Combine(resultFolder, fileInfo.Name.Replace(fileInfo.Extension, ".mp4"));
-                //var format = FFMpeg.GetContainerFormat("mp4");
-                //FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.Medium,
-                //    size, FFMpegCore.Enums.AudioQuality.Normal, true);
-
-                var resultPath = Path.Combine(resultFolder, fileInfo.Name.Replace(fileInfo.Extension, ".mkv"));
-                FFMpegArguments
-                    .FromFileInput(path)
-                    .OutputToFile(resultPath, false, options => options
-                        .WithVideoCodec(FFMpegCore.Enums.VideoCodec.LibX264)
-                        .WithConstantRateFactor(28)
-                        .WithAudioCodec(FFMpegCore.Enums.AudioCodec.Aac)
-                        .WithVariableBitrate(4)
-                        .UsingMultithreading(true)
-                        .WithVideoFilters(filterOptions => filterOptions
-                        .Scale(FFMpegCore.Enums.VideoSize.Hd))
-                        .WithFastStart())
-                        .ProcessSynchronously();
-
-                //format = FFMpeg.GetContainerFormat("mkv");
-                //FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.Medium,
-                //    size, FFMpegCore.Enums.AudioQuality.Normal, true);
-
-                //resultPath = Path.Combine(resultFolder, fileInfo.Name.Replace(fileInfo.Extension, "sf.mp4"));
-                //format = FFMpeg.GetContainerFormat("mp4");
-                //FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.SuperFast,
-                //    size, FFMpegCore.Enums.AudioQuality.Normal, true);
-
-                //resultPath = Path.Combine(resultFolder, fileInfo.Name.Replace(fileInfo.Extension, "sf.mkv"));
-                //format = FFMpeg.GetContainerFormat("mkv");
-                //FFMpeg.Convert(path, resultPath, format, FFMpegCore.Enums.Speed.SuperFast,
-                //    size, FFMpegCore.Enums.AudioQuality.Normal, true);
-
-                return resultPath;
-            }
-            catch (Exception ex)
-            {
-                return "";
-            }
-        }
         public static TimeSpan GetDuration(string path)
         {
             try
@@ -653,68 +567,6 @@ namespace Infrastructure
                 {
 
                 }
-            }
-        }
-
-
-        public static void FillVideoProperties(VideoFile videoFile)
-        {
-            try
-            {
-                var probe = FFProbe.Analyse(videoFile.Path);
-                videoFile.Duration = probe.Duration;
-
-                var bitmap = videoFile.Duration.TotalSeconds > 65 ?
-                    videoFile.Duration.TotalMinutes > 10 ? 
-                        FFMpeg.Snapshot(videoFile.Path, null, TimeSpan.FromMinutes(4)) :
-                        FFMpeg.Snapshot(videoFile.Path, null, TimeSpan.FromMinutes(1)) :
-                    FFMpeg.Snapshot(videoFile.Path, null, TimeSpan.FromSeconds(2));
-                videoFile.Quality = DetectQuality(bitmap);
-
-                using (MemoryStream memoryStream = new MemoryStream())
-                {
-                    bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Jpeg);
-
-                    videoFile.VideoFileExtendedInfo.SetCover(memoryStream.ToArray());
-                }
-            }
-            catch (Exception ex)
-            {
-            }
-
-            //var objMediaInfo = new MediaInfo.MediaInfo();
-
-            //objMediaInfo.Open(@"TheFullPathOf\test.mp4");
-            //string result = objMediaInfo.Inform();
-            //string duration = objMediaInfo.Option("Duration");
-            //objMediaInfo.Close();
-
-            //return File.ReadAllBytes(@"C:\Dev\_Smth\BookStore-master\src\BookStore.Infrastructure\bin\Debug\netcoreapp3.1\photo_2021-12-10_10-47-35.jpg");
-            //var inputFile = new MediaFile { Filename = file.FullName };
-            //var outputFile = new MediaFile { Filename = @"temp.jpg" };
-
-            //using (var engine = new Engine())
-            //{
-            //    engine.GetMetadata(inputFile);
-
-            //    // Saves the frame located on the 15th second of the video.
-            //    var options = new ConversionOptions { Seek = TimeSpan.FromSeconds(65) };
-            //    engine.GetThumbnail(inputFile, outputFile, options);
-            //}
-
-            //return File.ReadAllBytes(outputFile.Filename);
-        }
-
-        private static Quality DetectQuality(Bitmap bitmap)
-        {
-            switch (bitmap.Height)
-            {
-                case 1080:
-                    return Quality.FullHD;
-                case 720:
-                    return Quality.HD;
-                default:
-                    return Quality.Unknown;
             }
         }
 
@@ -789,7 +641,7 @@ namespace Infrastructure
 
                     addedFile.Type = type;
                     addedFile.IsDownloading = false;
-                    FillVideoProperties(addedFile);
+                    VideoHelper.FillVideoProperties(addedFile);
                     result.Add(addedFile);
                 }
 
@@ -973,51 +825,59 @@ namespace Infrastructure
             }
         }
 
-        public bool AddAudioFilesFromFolder(string folderPath, AudioType type, Origin origin)
+        public void AddAudioFilesFromFolder(string folderPath, AudioType type, Origin origin, bool severalSeriesInFolder = false, string bookTitle = null)
         {
             try
             {
                 var dirInfo = new DirectoryInfo(folderPath);
                 if (!dirInfo.Exists)
-                    return false;
+                    return ;
                 var title = dirInfo.Name;
 
-                var voice = "";
-                var voiceParts = title.Split(new char[] { '(', ')', '[', ']' }, StringSplitOptions.RemoveEmptyEntries);
-                if (voiceParts.Length > 1)
-                    voice = voiceParts.Last();
-
-                var author = "";
-                var bookTitle = "";
-                var authorParts = title.Replace(voice, "").Split('-', StringSplitOptions.RemoveEmptyEntries);
-                if (authorParts.Length > 1)
+               
+                if (severalSeriesInFolder)
                 {
-                    bookTitle = authorParts.Last().Split('(', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault().Trim();
-                    author = authorParts.First().Trim();
+                    foreach (var dir in dirInfo.GetDirectories())
+                        AddAudioFilesFromFolder(dir.Name, dir.GetFiles(), type, origin);
                 }
-
-                var files = dirInfo.GetFiles("*.mp3", SearchOption.AllDirectories);
-
-                var images = dirInfo.GetFiles("*.jp*", SearchOption.AllDirectories).OrderByDescending(x=>x.Length);
-                byte[] cover = null;
-                if (images.Any())
-                    cover = File.ReadAllBytes(images.FirstOrDefault().FullName);
-
-                return AddAudioFilesFromFolder(bookTitle, author, voice, files, type, origin, cover);
+                else
+                     AddAudioFilesFromFolder(dirInfo.Name, dirInfo.GetFiles(), type, origin);
             }
             catch (Exception ex)
             {
                 NLog.LogManager.GetCurrentClassLogger().Error(ex);
-                return false;
             }
         }
 
-        public bool AddAudioFilesFromFolder( string bookName, string bookAuthor, string voice, 
-            IEnumerable<FileInfo> filePaths, AudioType type, Origin origin, byte[] image)
+        public bool AddAudioFilesFromFolder(string folderName, IEnumerable<FileInfo> filePaths, AudioType type, Origin origin)
         {
-            var series = AddOrUpdateVideoSeries(bookAuthor);
+            var voice = "";
+            var voiceParts = folderName.Split(new char[] { '(', ')', '[', ']', '_' }, StringSplitOptions.RemoveEmptyEntries);
+            if (voiceParts.Length > 1)
+            {
+                voice = voiceParts.Last();
+            }
+
+            var author = "";
+            var bookTitle = "";
+
+            var removedVoice = !string.IsNullOrEmpty(voice) ? folderName.Replace(voice, "") : folderName; 
+            var authorParts = removedVoice.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            if (authorParts.Length > 1)
+            {
+                bookTitle = authorParts.Last().Split('(', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault().Trim();
+
+                author = authorParts.First().Trim();
+            }
+
+            var images = filePaths.Where(x => x.FullName.Contains(".jp")).OrderByDescending(x => x.Length);
+            byte[] cover = null;
+            if (images.Any())
+                cover = File.ReadAllBytes(images.FirstOrDefault().FullName);
+
+            var series = AddOrUpdateVideoSeries(author);
             series.AudioType = type;
-            var season = AddOrUpdateSeason(series, bookName);
+            var season = AddOrUpdateSeason(series, bookTitle);
 
             var files = new List<AudioFile>();
             foreach (var item in filePaths.Select((info, index) => (info, index)))
@@ -1042,10 +902,10 @@ namespace Infrastructure
                 files.Add(audioFile);
             }
 
-            if (image != null)
+            if (cover != null)
             {
                 var file = files.First();
-                file.VideoFileExtendedInfo.SetCover(image);
+                file.VideoFileExtendedInfo.SetCover(cover);
             }
 
             _db.AudioFiles.AddRange(files);

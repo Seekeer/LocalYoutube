@@ -27,7 +27,7 @@ namespace Infrastructure.Scheduler
     }
 
     [DisallowConcurrentExecution]
-    public class BackuperJob : IJob
+    public class BackuperJob : NightJob
     {
         private readonly IServiceProvider _service;
         private readonly YandexDisc _client;
@@ -40,22 +40,15 @@ namespace Infrastructure.Scheduler
             _config = appConfig;
         }
 
-        public async Task Execute(IJobExecutionContext context)
+        protected override async Task Execute()
         {
             NLog.LogManager.GetCurrentClassLogger().Debug($"BackuperJob");
-
-#if DEBUG
-            return;
-#endif
-
-            if (DateTime.Now.Hour > 8 || DateTime.Now.Hour < 1)
-                return;
 
             var stack = new ConcurrentBag<UploadFile>();
 
             using (var fileRepo = GetFileRepo())
             {
-                var nonBackupedFiles = await fileRepo.Search(x => !x.IsBackedup);
+                var nonBackupedFiles = await fileRepo.Search(x => !x.IsBackedup && !x.NeedToDelete);
                 nonBackupedFiles.ToList().ForEach(x => stack.Add(new UploadFile { Id = x.Id, Path = x.Path }));
             }
 
@@ -104,6 +97,7 @@ namespace Infrastructure.Scheduler
             return _service.CreateScope().ServiceProvider.GetService<IDbFileRepository>();
         }
     }
+
     public class YandexDisc
     {
         public YandexDisc(string token)

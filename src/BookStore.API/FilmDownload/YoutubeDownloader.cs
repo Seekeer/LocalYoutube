@@ -51,6 +51,7 @@ namespace API.FilmDownload
             file.Duration = video.Duration ?? TimeSpan.Zero; // 00:07:20
             file.VideoFileExtendedInfo = new FileExtendedInfo();
             file.VideoFileExtendedInfo.Description = (video as Video)?.Description;
+            file.VideoFileExtendedInfo.ExternalLink = video.Url;
 
             byte[] imageAsByteArray;
             using (var webClient = new WebClient())

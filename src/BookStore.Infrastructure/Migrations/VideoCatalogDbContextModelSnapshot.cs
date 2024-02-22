@@ -151,6 +151,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Director")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ExternalLink")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Genres")
                         .HasColumnType("nvarchar(max)");
 
@@ -244,6 +247,9 @@ namespace Infrastructure.Migrations
                     b.Property<TimeSpan>("IntroDuration")
                         .HasColumnType("time");
 
+                    b.Property<bool>("IsOrderMatter")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
@@ -278,6 +284,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsChild")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsOrderMatter")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")

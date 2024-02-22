@@ -34,7 +34,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
   @ViewChild('videoElement') video: ElementRef;
   @ViewChild('markslist') child: MarkslistComponent;
 
-  public formData: Book;
   public categories: any;
   public videoURL: string;
   public statStr: string;
@@ -246,9 +245,11 @@ export class PlayerComponent implements OnInit, OnDestroy {
   
   
   moveToGood() {
+    // TODO - HARDCODE
     this.moveToSeries(14);
   }
   moveToBad() {
+    // TODO - HARDCODE
     this.moveToSeries(6107);
   }
   moveToSeries(serieId: number) {

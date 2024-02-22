@@ -27,12 +27,16 @@ namespace FileStore.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<List<Series>> GetAll(VideoType? type)
+        public async Task<List<Series>> GetAll(VideoType? type, Origin? origin = null)
         {
-            if (type == null)
+            if (type == null && origin == null)
                 return await DbSet.Include(x => x.Seasons).Where(x => !x.IsArchived && x.Type != null).ToListAsync();
 
-            var series =  DbSet.Include(x => x.Seasons).Where(x => !x.IsArchived && x.Type == type);
+            var series = DbSet.Include(x => x.Seasons).Where(x => !x.IsArchived);
+            if (type != null)
+                series = series.Where(x =>x.Type == type);
+            if(origin != null)
+                series = series.Where(x => x.Origin == origin);
 
             return await series.ToListAsync();
         }

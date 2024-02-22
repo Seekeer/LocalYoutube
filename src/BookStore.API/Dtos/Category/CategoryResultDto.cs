@@ -7,6 +7,7 @@ namespace FileStore.API.Dtos.Series
         public int Id { get; set; }
 
         public string Name { get; set; }
+        public bool IsOrderMatter { get; set; }
         public IEnumerable<SeasonResultDto> Seasons { get; set; }
     }
 
@@ -15,5 +16,6 @@ namespace FileStore.API.Dtos.Series
         public int Id { get; set; }
 
         public string Name { get; set; }
+        public bool IsOrderMatter { get; set; }
     }
 }

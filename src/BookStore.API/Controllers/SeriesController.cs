@@ -58,10 +58,24 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("getAllByType")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll(VideoType? type = null)
         {
-            var Series = await _SeriesService.GetAllByType(type);
+            return await GetAll(type, null);
+        }
+
+        [HttpGet]
+        [Route("getAllByOrigin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAll(Origin? origin = null)
+        {
+            return await GetAll(null, origin);
+        }
+
+        private async Task<IActionResult> GetAll(VideoType? type = null, Origin? origin = null)
+        {
+            var Series = await _SeriesService.GetAllByType(type, origin);
 
             return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(Series));
         }
@@ -72,8 +86,8 @@ namespace FileStore.API.Controllers
         public async Task<IActionResult> Special()
         {
             var series = new List<Series>();
-            series.AddRange(await _SeriesService.GetAllByType(VideoType.Special));
-            series.AddRange(await _SeriesService.GetAllByType(VideoType.EoT));
+            series.AddRange(await _SeriesService.GetAllByType(VideoType.Special, null));
+            series.AddRange(await _SeriesService.GetAllByType(VideoType.EoT, null));
 
             return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(series));
         }
@@ -84,7 +98,7 @@ namespace FileStore.API.Controllers
         public async Task<IActionResult> Courses()
         {
             var series = new List<Series>();
-            series.AddRange(await _SeriesService.GetAllByType(VideoType.Courses));
+            series.AddRange(await _SeriesService.GetAllByType(VideoType.Courses, null));
 
             return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(series));
         }
@@ -95,7 +109,7 @@ namespace FileStore.API.Controllers
         public async Task<IActionResult> AdultEpisode()
         {
             var series = new List<Series>();
-            series.AddRange(await _SeriesService.GetAllByType(VideoType.AdultEpisode));
+            series.AddRange(await _SeriesService.GetAllByType(VideoType.AdultEpisode, null));
 
             return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(series));
         }

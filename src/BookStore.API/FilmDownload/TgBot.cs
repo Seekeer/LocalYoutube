@@ -136,8 +136,6 @@ namespace API.FilmDownload
                 cancellationToken: cts.Token);
 
             await _rutracker.Init();
-
-            _timer = new Timer(TimerCallback, null, 0, (int)TimeSpan.FromMinutes(2).TotalMilliseconds);
         }
 
         private async Task ReAddExistingTopics()
@@ -155,36 +153,6 @@ namespace API.FilmDownload
                 catch (Exception ex)
                 {
                 }
-            }
-        }
-
-        private void TimerCallback(Object o)
-        {
-            // Discard the result
-            lock (_botClient)
-            {
-#if DEBUG
-#else
-                _ = DoAsyncPing();
-#endif
-            }
-        }
-
-        private async Task DoAsyncPing()
-        {
-            using var db = _GetDb();
-            var manager = new DbUpdateManager(db);
-
-            var updated = manager.UpdateDownloading((info) => info.IsDownloading);
-
-            foreach (var item in updated)
-            {
-                var telegramId = _config.TelegramSettings.InfoGroupId;
-                var telegramLink = _tgSeasonDict.FirstOrDefault(x => x.FilmSeasonId == item.SeriesId);
-                if (telegramLink != null)
-                    telegramId = telegramLink.TgId;
-
-                await NotifyDownloadEnded(telegramId, item);
             }
         }
 
@@ -449,7 +417,9 @@ namespace API.FilmDownload
                 }
                 catch (Exception ex)
                 {
+                    NLog.LogManager.GetCurrentClassLogger().Error(ex);
                     await _botClient.SendTextMessageAsync(new ChatId(tgFromId), $"Ошибка при добавлении торрента в QBittorrent. Попробуйте еще раз позже");
+                    return;
                 }
             }
 
@@ -688,8 +658,11 @@ namespace API.FilmDownload
                             {
                                 record.Value.Path = record.Value.Path.Replace(" ", "")
                                 // ' is breaking powershell script
-                                    .Replace("'","");
+                                    .Replace("'", "");
                                 await downloader.Download(record.Key, record.Value.Path);
+
+                                if (!string.IsNullOrEmpty(task.VideoName))
+                                    record.Value.Name = task.VideoName;
 
                                 fileService.DownloadFinished(record.Value, downloader.IsVideoPropertiesFilled);
 
@@ -750,8 +723,21 @@ namespace API.FilmDownload
             foreach (var file in filesToUpdateCoverByTg.Take(count))
             {
                 await SearchCoverForFile(file, tgId);
-                DbUpdateManager.FillVideoProperties(file);
+                //DbUpdateManager.FillVideoProperties(file);
                 await db.SaveChangesAsync();
+            }
+        }
+
+        internal async Task NotifyDownloaded(IEnumerable<VideoFile> updated)
+        {
+            foreach (var item in updated)
+            {
+                var telegramId = _config.TelegramSettings.InfoGroupId;
+                var telegramLink = _tgSeasonDict.FirstOrDefault(x => x.FilmSeasonId == item.SeriesId);
+                if (telegramLink != null)
+                    telegramId = telegramLink.TgId;
+
+                await NotifyDownloadEnded(telegramId, item);
             }
         }
     }

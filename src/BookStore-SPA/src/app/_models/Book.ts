@@ -39,6 +39,13 @@ export enum VideoType {
     Youtube
 }
 
+export enum VideoOrigin {
+    Unknown,
+    Soviet,
+    Russian,
+    Foreign
+}
+
 
 export class AudioFile extends Book {
     index : number;

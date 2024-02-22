@@ -75,7 +75,8 @@ namespace API.TG
             {
                 var localFinishDate = currentDate;
                 currentDate = currentDate.AddDays(-3);
-                await AddOldMessages(1210302841, 0, currentDate, localFinishDate);
+                await AddOldMessages(2084249373, 0, DateTime.Now.Date, DateTime.Now);
+                //await AddOldMessages(1210302841, 0, currentDate, localFinishDate);
             }
         }
 

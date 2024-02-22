@@ -6,11 +6,10 @@ namespace FileStore.Domain
     public class AppConfig
     {
         public TelegramSettings TelegramSettings { get; set; }
+        public TorrentSettings TorrentSettings { get; set; }
         public Credentials VkontakteSettings { get; set; }
 
         public int YD_Upload_Threads_Count { get; set; }
-        public string RP_Pass { get; set; }
-        public string RP_Login { get; set; }
         public string RootFolder { get; set; }
         public string RootDownloadFolder { get; set; }
 
@@ -23,6 +22,14 @@ namespace FileStore.Domain
         }
 
         public string YandexToken { get; set; }
+    }
+
+    public class TorrentSettings
+    {
+        public string RP_Pass { get; set; }
+        public string RP_Login { get; set; }
+        public string QBittorrentPath { get; set; }
+        public string QBittorrentWebUI { get; set; }
     }
 
     public class TelegramSettings

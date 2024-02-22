@@ -75,8 +75,7 @@ namespace FileStore.Domain.Models
         EoT,
         FairyTale,
         Lessons,
-        RussianBook,
-        ForeignBook
+        AudioBook,
     }
 
     public class FileExtendedInfo : Entity
@@ -88,6 +87,7 @@ namespace FileStore.Domain.Models
         public string Genres { get; set; }
         public int Year { get; set; }
         public string Description { get; set; }
+        public string ExternalLink { get; set; }
         public int RutrackerId { get; set; }
         public string Director { get; set; }
     }

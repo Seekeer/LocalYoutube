@@ -10,7 +10,9 @@ using Infrastructure.Scheduler;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Quartz;
+using Quartz.Plugin.Interrupt;
 using System;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using TL;
@@ -60,6 +62,14 @@ namespace FileStore.API.Configuration
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(5)).RepeatForever())
                     .WithDescription("my awesome trigger configured for a job with single call")
+                );
+            });
+            services.AddQuartz(q =>
+            {
+                q.ScheduleJob<MoveDownloadedJob>(trigger => trigger
+                    .WithIdentity("trigger3", "group3")
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(5)).RepeatForever())
                 );
             });
 

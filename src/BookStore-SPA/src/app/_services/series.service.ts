@@ -6,6 +6,7 @@ import { environment } from 'src/environments/environment';
 
 import {
   AudioType,
+  VideoOrigin,
   VideoType,
 } from '../_models/Book';
 import { Serie } from '../_models/Category';
@@ -24,8 +25,11 @@ export class SeriesService {
 
     constructor(private http: HttpClient) { }
 
-    public getAll(type:VideoType): Observable<Serie[]> {
-        return this.http.get<Serie[]>(this.baseUrl + `series?type=` + <number>type);
+    public getAll(type:VideoType|null, origin:VideoOrigin|null = null): Observable<Serie[]> {
+        if(type == null)
+            return this.http.get<Serie[]>(this.baseUrl + `series/getAllByOrigin?origin=${<number>origin}`);
+        else
+            return this.http.get<Serie[]>(this.baseUrl + `series/getAllByType?type=${<number>type}`);
     }
     public getAllAudio(type:AudioType): Observable<Serie[]> {
         if(!type)

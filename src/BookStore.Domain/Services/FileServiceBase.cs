@@ -67,6 +67,7 @@ namespace FileStore.Domain.Services
 
         public async Task<bool> Remove( T file)
         {
+
             if (System.IO.File.Exists(file.Path))
             {
                 try
@@ -75,6 +76,7 @@ namespace FileStore.Domain.Services
                 }
                 catch (Exception ex)
                 {
+                    NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger().Error(ex);
                     _FileRepository.MarkFileToDelete(file);
 
                     return false;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Claims;
@@ -53,8 +54,11 @@ namespace FileStore.API.Controllers
         {
             var logger = NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger();
 
+            var stopwatch = Stopwatch.StartNew();
+
             try
             {
+
                 var file = await _fileService.GetById(fileId);
                 var path = file.Path;
                 var finfo = new FileInfo(path);
@@ -69,6 +73,11 @@ namespace FileStore.API.Controllers
                 logger.Error(ex);
 
                 throw;
+            }
+            finally
+            {
+                stopwatch.Stop();
+                logger.Debug($"getFileById {stopwatch.ElapsedMilliseconds}");
             }
         }
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
@@ -89,10 +90,10 @@ namespace FileStore.Infrastructure.Repositories
         public async Task<IEnumerable<T>> GetFilesBySeason(int seasonId, bool isRandom, int count, int startId)
         {
             if (isRandom)
-                return await SearchRandom(b => b.SeasonId == seasonId, count);
+                return await SearchRandomFile(b => b.SeasonId == seasonId, count);
             else
             {
-                var result = await Search(file => file.SeasonId == seasonId && file.Id > startId);
+                var result = await SearchFile(file => file.SeasonId == seasonId && file.Id > startId);
                 return OrderByNumber(result);
             }
         }
@@ -100,10 +101,10 @@ namespace FileStore.Infrastructure.Repositories
         public async Task<IEnumerable<T>> GetFilesBySeriesAsync(int seriesId, int count, bool isRandom, int startId)
         {
             if(isRandom)
-                return await SearchRandom(b => b.SeriesId == seriesId, count);
+                return await SearchRandomFile(b => b.SeriesId == seriesId, count);
             else
             {
-                var result = (await Search(file => file.SeriesId == seriesId && file.Id > startId)).Take(count);
+                var result = (await SearchFile(file => file.SeriesId == seriesId && file.Id > startId));
                 return OrderByNumber(result);
             }
         }
@@ -115,9 +116,19 @@ namespace FileStore.Infrastructure.Repositories
 
         public async Task<T> GetRandomFileBySeriesId(int seriesId)
         {
-            var result = await SearchRandom(b => b.SeriesId == seriesId, 1);
+            var result = await SearchRandomFile(b => b.SeriesId == seriesId, 1);
 
             return result.FirstOrDefault();
+        }
+
+        private async Task<IEnumerable<T>> SearchRandomFile(Expression<Func<T, bool>> predicate, int resultCount = 10)
+        {
+            return (await base.SearchRandom(predicate, resultCount)).Where(x => !x.NeedToDelete);
+        }
+
+        private async Task<IEnumerable<T>> SearchFile(Expression<Func<T, bool>> predicate)
+        {
+            return (await base.Search(predicate)).Where(x => !x.NeedToDelete);
         }
 
         public async Task<IEnumerable<T>> SearchByName(string searchedValue)
@@ -126,8 +137,6 @@ namespace FileStore.Infrastructure.Repositories
                 EF.Functions.Like(x.Name, $"%{searchedValue.ToLower()}%") || EF.Functions.Like(x.VideoFileExtendedInfo.Director, $"%{searchedValue.ToLower()}%") ).Include(x => x.VideoFileExtendedInfo).Include(x =>x.VideoFileUserInfos);
 
             return files;
-
-            //_FileRepository.SearchRandom
         }
 
         public async Task<IEnumerable<T>> GetLatest(string userId)

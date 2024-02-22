@@ -164,7 +164,7 @@ namespace FileStore.API.Controllers
             if (!files.Any())
                 return NotFound("None file was founded");
 
-            var seasons = (await _seriesService.GetAllByType(VideoType.Art)).SelectMany(x => x.Seasons);
+            var seasons = (await _seriesService.GetAllByType(VideoType.Art, null)).SelectMany(x => x.Seasons);
             var unique = files.OrderBy(x => x.Id).GroupBy(x => x.SeasonId).Select(x =>
             {
                 var file = x.First();

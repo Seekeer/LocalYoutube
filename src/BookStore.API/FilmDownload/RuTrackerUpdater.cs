@@ -6,6 +6,7 @@ using FileStore.Domain.Models;
 using HtmlAgilityPack;
 using HtmlAgilityPack.CssSelectors.NetCore;
 using Infrastructure;
+using Microsoft.Win32;
 using QBittorrent.Client;
 using RuTracker.Client;
 using RuTracker.Client.Model.SearchTopics.Request;
@@ -48,6 +49,7 @@ namespace API.Controllers
         Task<VideoInfo> FillInfo(int topicId);
         Task<IEnumerable<SearchTopicInfo>> FindTheme(string name, bool filterThemes);
         Task Init();
+        Task<bool> MoveTorrent(int id, string newFolder);
         Task ParseInfo(string html, VideoInfo info);
         Task StartDownload(int id, string rootDownloadFolder);
         Task UpdateVideoFile(bool updateCover, VideoFile file);
@@ -59,16 +61,16 @@ namespace API.Controllers
         private QBittorrentClient _qclient;
         private WebProxy _proxy;
         private HttpClient _httpClient;
-        private readonly AppConfig _config;
+        private readonly TorrentSettings _config;
 
         public RuTrackerUpdater(AppConfig config)
         {
-            _config = config;
+            _config = config.TorrentSettings;
         }
 
         public async Task Init()
         {
-            _qclient = new QBittorrentClient(new Uri("http://localhost:124"));
+            _qclient = new QBittorrentClient(new Uri(_config.QBittorrentWebUI));
 
             _proxy = new WebProxy
             {
@@ -474,24 +476,75 @@ namespace API.Controllers
             request.TorrentFiles.Add(temp);
             request.DownloadFolder = rootDownloadFolder;
             request.Tags = new List<string> { id.ToString() };
-            await _qclient.AddTorrentsAsync(request);
 
-            //var args = $"--save-path=\"{rootDownloadFolder}\" --skip-dialog=true {temp}";
+            try
+            {
+                await _qclient.AddTorrentsAsync(request);
+            }
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                StartQBittorrent();
+                await _qclient.AddTorrentsAsync(request);
+            }
+        }
 
-            //var process = Process.Start(@"C:\Program Files\qBittorrent\qbittorrent.exe", args);
+        private void StartQBittorrent()
+        {
+            if (!string.IsNullOrEmpty(_config.QBittorrentPath))
+            {
+                Process.Start(_config.QBittorrentPath);
+                Thread.Sleep(TimeSpan.FromSeconds(10));
+            } 
+        }
+
+        public async Task<bool> MoveTorrent(int id, string newFolder)
+        {
+            try
+            {
+                TorrentInfo torrent = await GetTorrent(id.ToString());
+
+                if (torrent != null)
+                {
+                    await _qclient.SetLocationAsync(new string[] { torrent.Hash }, newFolder);
+
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+            }
+
+            return false;
         }
 
         public async Task DeleteTorrent(string id)
         {
-           var torrents = await _qclient.GetTorrentListAsync();
-
-            var torrent = torrents.FirstOrDefault(x => x.Tags.Contains(id));
-
-            if (torrent != null)
+            if (id == "0")
+                return;
+            try
             {
-                await _qclient.PauseAsync(torrent.Hash);
-                await _qclient.DeleteAsync(torrent.Hash, true);
+                TorrentInfo torrent = await GetTorrent(id);
+
+                if (torrent != null)
+                {
+                    await _qclient.PauseAsync(torrent.Hash);
+                    await _qclient.DeleteAsync(torrent.Hash, true);
+                }
+
             }
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+            }
+        }
+
+        private async Task<TorrentInfo> GetTorrent(string id)
+        {
+            var torrents = await _qclient.GetTorrentListAsync();
+            var torrent = torrents.FirstOrDefault(x => x.Tags.Contains(id));
+            return torrent;
         }
     }
 }

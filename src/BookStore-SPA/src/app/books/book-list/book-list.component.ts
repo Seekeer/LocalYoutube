@@ -20,6 +20,7 @@ import { debounceTime } from 'rxjs/operators';
 import {
   Book,
   Book as VideoFile,
+  VideoOrigin,
   VideoType,
 } from 'src/app/_models/Book';
 import { Serie } from 'src/app/_models/Category';
@@ -80,7 +81,8 @@ export class BookListComponent implements OnInit {
   public videoType: VideoType;
   public showWatched: boolean = true;
   public showSelected: boolean = false;
-
+  public showOnlineButtons: boolean = false;
+  
   public showOnlyWebSupported: boolean;
   
   public showWatchedCheckbox: boolean = false;
@@ -110,6 +112,7 @@ export class BookListComponent implements OnInit {
   apibooks: Book[];
   _numberOfTry = 0;
   public isAndroid: boolean;
+  private readonly defaultEpisodesCount: number = 10;
 
   constructor(private router: Router,
               private service: FileService,
@@ -158,17 +161,25 @@ export class BookListComponent implements OnInit {
     for (i = 0; i < os.length; i++) if (new RegExp(os[i],'i').test(uA)) return os[i];
   }
 
-  getSeries(type:VideoType) {
-    this.seriesService.getAll(type).subscribe(series => {
+  getSeries(type:VideoType|null, origin:VideoOrigin|null = null) {
+    this.seriesService.getAll(type, origin).subscribe(series => {
       this.series = series.sort((a, b) => {
         return a.name >= b.name
           ? 1
           : -1
       });
+
+      series.forEach(x => this.sortSeasons(x));
       this.hideSpinner();
       // this.serieId = 6091;
       this.searchBooks();
     });
+  }
+  sortSeasons(serie: Serie): void {
+    serie.seasons = serie.seasons.sort((a, b) => {
+      return a.name >= b.name
+      ? 1
+      : -1});
   }
 
   public addBook() {
@@ -227,14 +238,17 @@ export class BookListComponent implements OnInit {
       this.service.searchFilesWithTitle(this.searchTitle).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     }
     else if (this.seasonId != 0) {
+      this.isRandom = this.isRandom && !this.seasons.filter(x => x.id == this.seasonId)[0].isOrderMatter;
+
       this.service.searchFilesWithSeason(this.seasonId, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     }
     else if (this.serieId ) {
       let serie = this.series.filter(x => x.id == this.serieId)[0];
       this.seasons = serie.seasons;
+      this.isRandom = this.isRandom && !serie.isOrderMatter;
 
       let showAllVideos =  this.type == MenuVideoType.courses ||this.type == MenuVideoType.special || this.type == MenuVideoType.adultSeries ||this.type == MenuVideoType.youtube; 
-      this.service.getVideosBySeries(serie.id, showAllVideos ? 1000:10, this.isRandom, 0).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
+      this.service.getVideosBySeries(serie.id, showAllVideos ? 1000:this.defaultEpisodesCount, this.isRandom, 0).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     }
     else {
       this.hideSpinner();
@@ -257,38 +271,39 @@ displayListForType() {
         this.isRandom = false;
         this.isSelectSeason = true;
         this.isSelectSeries = true;
+        this.showOnlineButtons = true;
         this.showWatchedCheckbox = true;
         this.showWatched = false;
         this.getSeries(VideoType.Youtube);
-        this.episodeCount = 10;
+        this.episodeCount = this.defaultEpisodesCount;
+        this.service.getFilmsByType(VideoType.Youtube).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
 
         break;
       }
       case MenuVideoType.sovietAnimation:{
         this.selectSeries(true);
-        this.series = [];
-        this.series.push( {id : 13, name : 'Известные', seasons: []});
-        this.series.push( {id : 14, name : 'Разные', seasons: []});
-        this.series.push( {id : 16, name : 'Мультсериалы', seasons: []});
 
+        this.getSeries(null, VideoOrigin.Soviet);
         this.service.getSovietAnimation().subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
         break;
       }
       case MenuVideoType.courses:{
           this.seriesService.getCourses().subscribe(series => {
-            this.showManyEpisodes(series, 10);
+            this.showManyEpisodes(series, this.defaultEpisodesCount);
           });
         break;
       }
       case MenuVideoType.adultSeries:{
           this.seriesService.getAdultEpisode().subscribe(series => {
-            this.showManyEpisodes(series, 10);
+            this.showManyEpisodes(series, this.defaultEpisodesCount);
           });
         break;
       }
       case MenuVideoType.special:{
+        this.showOnlineButtons = true;
+
           this.seriesService.getSpecial().subscribe(series => {            
-            this.showManyEpisodes(series, 10);
+            this.showManyEpisodes(series, this.defaultEpisodesCount);
           });
         break;
       }
@@ -487,7 +502,7 @@ counter : number =0 ;
       videoId : book.id,
       videosCount : this.episodeCount,
       isRandom : this.isRandom,
-      seasonId : 0,
+      seasonId : book.seasonId,
       type: this.type,
       showDeleteButton: showDelete
     };

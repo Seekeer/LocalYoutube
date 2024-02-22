@@ -12,6 +12,7 @@ namespace FileStore.Domain.Models
         public AudioType? AudioType { get; set; }
         public bool IsChild{ get; set; }
         public bool IsArchived{ get; set; }
+        public bool IsOrderMatter { get; set; }
 
         public TimeSpan IntroDuration { get; set; }
 
