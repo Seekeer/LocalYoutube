@@ -82,7 +82,7 @@
     
     <ul class="list-group list-group-light">
       <li class="list-group-item d-flex justify-content-between align-items-center" (click)="selectAudio(file)"
-        [ngClass]="{'greenBackground' : file.id==selectedFile.id}"
+        [ngClass]="{'greenBackground' : file.id==selectedFile.id, 'orangeBackground' : file.isFinished }"
         *ngFor="let file of filteredFiles">
         {{file.name}}
 

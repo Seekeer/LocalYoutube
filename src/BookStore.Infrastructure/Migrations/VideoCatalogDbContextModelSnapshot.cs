@@ -67,6 +67,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<long>("TgId")
+                        .HasColumnType("bigint");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit");
 
@@ -99,6 +102,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("time");
 
                     b.Property<bool>("IsBackedup")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDownloading")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
@@ -406,9 +412,6 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("FileStore.Domain.Models.VideoFile", b =>
                 {
                     b.HasBaseType("FileStore.Domain.Models.DbFile");
-
-                    b.Property<bool>("IsDownloading")
-                        .HasColumnType("bit");
 
                     b.Property<int>("Quality")
                         .HasColumnType("int");

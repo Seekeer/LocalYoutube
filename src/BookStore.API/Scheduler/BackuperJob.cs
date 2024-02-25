@@ -127,6 +127,7 @@ namespace Infrastructure.Scheduler
 
         public async Task<bool> UploadToDirectory(string filepath, string folderName)
         {
+            return false;
             NLog.LogManager.GetCurrentClassLogger().Warn($"Trying to upload{filepath}");
 
             var api = new DiskHttpApi(_token);

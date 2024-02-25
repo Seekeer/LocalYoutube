@@ -4,6 +4,10 @@ li{cursor: pointer;}
     background-color: rgb(136, 190, 136);
 }
 
+.orangeBackground{
+    background-color: rgb(240, 192, 129);
+}
+
 audio{
     width: 100%;
 }

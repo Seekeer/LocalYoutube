@@ -169,7 +169,7 @@ namespace API.FilmDownload
         public async Task SearchCoverForFile(DbFile file, long tgAccountId)
         {
             var search = new SearchEngine("f228f7e30451842e8", "AIzaSyB9gRWRoQRXZiLcX7ZUACwi-Smm5L8R-Mg");
-            var results = search.Search($"фильм {file.Name} {file.VideoFileExtendedInfo.Year}", file.Name);
+            var results = await search.Search($"фильм {file.Name} {file.VideoFileExtendedInfo.Year}", file.Name);
 
             if (!results.Any())
                 await _botClient.SendTextMessageAsync(tgAccountId, $"Ничего не найдено для фильма {file.Name} {file.Id}");
@@ -253,8 +253,6 @@ namespace API.FilmDownload
 
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            
-
             try
             {
                 switch (update.Type)
@@ -299,7 +297,8 @@ namespace API.FilmDownload
                                 await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Art);
                                 break;
                             case CommandType.AudioFairyTale:
-                                //await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.FairyTale);
+                                throw new NotSupportedException();
+                                //await AddTorrent(command.Data, update.CallbackQuery.From.Id,null, VideoType.FairyTale);
                                 break;
                             case CommandType.ShowAllSearchResult:
                                 await ProcessUserInput(command.Data, update.CallbackQuery.From.Id, false);
@@ -410,7 +409,7 @@ namespace API.FilmDownload
 
             if (string.IsNullOrEmpty(downloadPath))
             {
-                downloadPath = Path.Combine(_config.RootDownloadFolder, rutrackerId.ToString());
+                downloadPath = Path.Combine(_config.RootDownloadFolder, "Rutracker", rutrackerId.ToString());
                 try
                 {
                     await _rutracker.StartDownload(rutrackerId, downloadPath);
@@ -423,6 +422,7 @@ namespace API.FilmDownload
                 }
             }
 
+            // TODO hardcode
             var file = new FileStore.Domain.Models.VideoFile
             {
                 SeriesId = 18,
@@ -430,7 +430,7 @@ namespace API.FilmDownload
             };
             FillData(rutrackerId, info, downloadPath, file);
 
-            FillFilePropertiesByType(tgFromId, type, info, file);
+            FillVideoFilePropertiesByType(tgFromId, type, info, file);
 
             await _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IVideoFileRepository>().Add(file);
 
@@ -440,7 +440,7 @@ namespace API.FilmDownload
                 await SearchCoverForFile(file, tgFromId);
         }
 
-        private void FillFilePropertiesByType(long tgFromId, VideoType type, VideoInfo info, VideoFile file)
+        private void FillVideoFilePropertiesByType(long tgFromId, VideoType type, VideoInfo info, VideoFile file)
         {
             var db = _GetDb();
             var manager = new DbUpdateManager(db);
@@ -451,12 +451,14 @@ namespace API.FilmDownload
             {
                 var series = manager.AddOrUpdateVideoSeries(info.Name, false, VideoType.AdultEpisode);
                 file.SeriesId = series.Id;
+                // TODO hardcode
                 file.SeasonId = 91;
             }
             else if (type == VideoType.ChildEpisode)
             {
                 var series = manager.AddOrUpdateVideoSeries(info.Name, false, VideoType.ChildEpisode);
                 file.SeriesId = series.Id;
+                // TODO hardcode
                 file.SeasonId = 91;
             }
             else if (type == VideoType.Film && tgRecord != null)
@@ -472,11 +474,13 @@ namespace API.FilmDownload
             }
             else if (type == VideoType.FairyTale && tgRecord != null)
             {
+                // TODO hardcode
                 file.SeriesId = 11;
                 file.SeasonId = manager.AddOrUpdateSeason(11, "Сказки скаченные").Id;
             }
             else if (type == VideoType.Art && tgRecord != null)
             {
+                // TODO hardcode
                 file.SeriesId = 2038;
                 file.SeasonId = manager.AddOrUpdateSeason(2038, file.Name).Id;
             }
@@ -509,7 +513,7 @@ namespace API.FilmDownload
         }
 
         private void FillData(int id, VideoInfo info, 
-            string downloadPath, FileStore.Domain.Models.VideoFile file)
+            string downloadPath, FileStore.Domain.Models.DbFile file)
         {
             try
             {
@@ -523,7 +527,6 @@ namespace API.FilmDownload
             file.Name = _rutracker.ClearFromForeignOption(info.Name);
             file.IsDownloading = true;
             file.Path = downloadPath;
-            file.Type = FileStore.Domain.Models.VideoType.RutrackerDownloaded;
             file.VideoFileExtendedInfo.RutrackerId = id;
         }
 
@@ -553,14 +556,20 @@ namespace API.FilmDownload
 
         private async Task ProcessUserInput(Message message, bool filterThemes)
         {
-            var text = message.Text;
+            if(string.IsNullOrEmpty(message.Text)) 
+                return;
 
-            var task = new DownloadTask(message.MessageId, message.Text);
+            foreach (var line in message.Text.SplitByNewLine())
+            {
+                var text = line;
 
-            if (DownloaderFabric.CanDownload(task))
-                await ShowDownloadChoice(message, task);
-            else
-                await ProcessUserInput(text, message.From.Id, filterThemes);
+                var task = new DownloadTask(message.MessageId, message.Text);
+
+                if (DownloaderFabric.CanDownload(task))
+                    await ShowDownloadChoice(message, task);
+                else
+                    await ProcessUserInput(text, message.From.Id, filterThemes);
+            }
         }
 
         private async Task ProcessUserInput(string text, long fromId, bool filterThemes)
@@ -583,7 +592,8 @@ namespace API.FilmDownload
                     new InlineKeyboardButton("мультсериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.ChildSeries, info.Id.ToString()) },
                     new InlineKeyboardButton("длинный мульт") { CallbackData = CommandParser.GetMessageFromData(CommandType.Animation, info.Id.ToString()) },
                     new InlineKeyboardButton("сказка") { CallbackData = CommandParser.GetMessageFromData(CommandType.FairyTale, info.Id.ToString()) },
-                    new InlineKeyboardButton("аудиосказка") { CallbackData = CommandParser.GetMessageFromData(CommandType.AudioFairyTale, info.Id.ToString()) },
+                    // TODO audio download from tracker
+                    //new InlineKeyboardButton("аудиосказка") { CallbackData = CommandParser.GetMessageFromData(CommandType.AudioFairyTale, info.Id.ToString()) },
                 } };
                 var size = decimal.Round(info.SizeInBytes / 1024 / 1024 / 1024, 2, MidpointRounding.AwayFromZero);
                 var title = info.Title;
@@ -625,9 +635,17 @@ namespace API.FilmDownload
 
         private async Task AddSearchAllButton(string text, long fromId)
         {
-            var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(fromId),
-                "Нет ничего подходящего?", replyMarkup: new InlineKeyboardMarkup(new InlineKeyboardButton("Показать без фильтрации") { 
-                    CallbackData = CommandParser.GetMessageFromData(CommandType.ShowAllSearchResult, text) }));
+            try
+            {
+                var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(fromId),
+                    "Нет ничего подходящего?", replyMarkup: new InlineKeyboardMarkup(new InlineKeyboardButton("Показать без фильтрации")
+                    {
+                        CallbackData = CommandParser.GetMessageFromData(CommandType.ShowAllSearchResult, text)
+                    }));
+            }
+            catch (Exception ex)
+            {
+            }
         }
 
         public async Task ProcessYoutubeVideo(string taskId, long fromId, Message message, bool watchLater)

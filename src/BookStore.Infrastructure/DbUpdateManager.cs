@@ -18,6 +18,8 @@ using FileStore.Infrastructure.Repositories;
 using Azure.Core;
 using NLog;
 using static MediaToolkit.Model.Metadata;
+using System.IO.Compression;
+using FileStore.Domain;
 
 namespace Infrastructure
 {
@@ -234,7 +236,7 @@ namespace Infrastructure
             foreach (var file in files)
                 result.Add(AddFile(file, series, season));
 
-            return result;
+            return result.Where(x => x != null);
         }
 
         private VideoFile AddFile(FileInfo file, Series series, Season season)
@@ -345,6 +347,7 @@ namespace Infrastructure
             if (season == null || (season.SeriesId != series.Id && doNotIgnoreSeriesId))
             {
                 season = new Season { Name = name, Series = series };
+                season.IsOrderMatter = _type == VideoType.Courses;
                 _db.Seasons.Add(season);
                 _db.SaveChanges();
             }
@@ -378,6 +381,7 @@ namespace Infrastructure
             if (series == null)
             {
                 series = new Series { Name = name, Origin = _origin };
+                series.IsOrderMatter = _type == VideoType.Courses;
                 series.IsChild = isChild;
                 _db.Series.Add(series);
             }
@@ -416,7 +420,7 @@ namespace Infrastructure
 
                 return name;
             }
-            name = name.Replace("_", " ").Replace("1080p.m4v", " ").Replace("HD", " ").Replace("720p", " ");
+            name = name.Replace("_", " ").Replace("1080p.m4v", " ").Replace("HD", " ").Replace("720p", " ").Replace(".mkv", "");
 
             var result = "";
             string pattern = @"\p{IsCyrillic}";
@@ -950,8 +954,8 @@ namespace Infrastructure
                 files.Add(audioFile);
             }
 
-            var start = new string[] { "Читает", "В ролях", "Исполнители", "Рассказчик" };
-            var voice = rows.FirstOrDefault(x => start.Any(y => x.Contains(y)));
+            var start = new string[] { "читает", "читают", "чит.", "в ролях", "исполнител", "исп.", "рассказчик" };
+            var voice = rows.FirstOrDefault(x => start.Any(y => x.ToLower().Contains(y)));
             if (voice != null)
             {
                 start.ToList().ForEach(x => voice = voice.Replace(x, ""));
@@ -974,6 +978,72 @@ namespace Infrastructure
         public void Dispose()
         {
             _db.Dispose();
+        }
+
+        public async Task AddAllCourcesFromFolder(string folder, AppConfig config)
+        {
+            foreach (var file in Directory.GetFiles(folder, "*zip"))
+            {
+                await AddSingleCourceFromArchive(file, config);
+            }
+        }
+
+        public async Task AddSingleCourceFromArchive(string archivePath, AppConfig config)
+        {
+            try
+            {
+                _origin = Origin.Russian;
+                _type = VideoType.Courses;
+
+                var fInfo = new FileInfo(archivePath);
+
+                const string watermark = "[SW.BAND] ";
+                var cleared = fInfo.Name.Replace(watermark, "").Replace(".zip", "");
+
+                var parts = cleared.Split(']', '(');
+                var author = parts.First().Trim('[');
+                var courseName = parts.ElementAt(1).Trim();
+
+                var folder = new DirectoryInfo(fInfo.FullName.Replace(".zip", ""));
+                ZipFile.ExtractToDirectory(archivePath, folder.Parent.FullName);
+                foreach (var file in folder.GetFiles())
+                {
+                    if (file.Name == "[SW.BAND] Прочти перед изучением!.docx" || file.Name == "SHAREWOOD_ZERKALO_COM_90000_курсов_на_нашем_форуме!.url")
+                    {
+                        file.Delete();
+                        continue;
+                    }
+
+                    var newPath = Path.Combine(file.DirectoryName, file.Name.Replace(watermark, ""));
+                    if (newPath != file.FullName)
+                        file.MoveTo(newPath);
+                }
+
+                var series = AddOrUpdateVideoSeries(author);
+                var files = AddSeason(series, folder, courseName, false);
+
+                var notAddedFiles = folder.GetFiles().Select(x => x.FullName).Except(files.Select(x => x.Path)).ToList();
+
+                var fileManager = new FileManager(_db, new FileManagerSettings(folder.FullName, Path.Combine(config.RootFolder,"Курсы", courseName), true));
+                var newFilePath = "";
+                foreach (var file in files)
+                    newFilePath = await fileManager.MoveFile(file);
+
+                if (!string.IsNullOrEmpty(newFilePath))
+                {
+                    var newDirectory = new FileInfo(newFilePath).DirectoryName;
+                    foreach (var file in notAddedFiles)
+                    {
+                        var notMovedFI = new FileInfo(file);
+                        var newFileName = Path.Combine(newDirectory, notMovedFI.Name);
+                        File.Move(file, newFileName);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+            }
         }
     }
 }

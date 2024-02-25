@@ -14,6 +14,11 @@ import { Mark } from '../_models/Mark';
     providedIn: 'root'
 })
 export class FileService {
+
+    updateCover(film: Book) {
+        var url = this.baseUrl + `files/updateCover/${film.id}`;
+        return this.http.put(url, null).subscribe();
+    }
     setSeriesId(serieId: number, videoId: number) {
         return this.http.get<Mark[]>(`${this.baseUrl}files/moveFileToSerie?fileId=${videoId}&serieId=${serieId}`);
     }

@@ -56,6 +56,7 @@ namespace FileStore.Domain.Models
     public class ApplicationUser : IdentityUser
     {
         public IList<FileUserInfo> VideoFileUserInfos { get; set; } = new List<FileUserInfo>();
+        public long TgId { get; set; }
     }
 
     public class UserRefreshTokens : Entity
@@ -123,6 +124,7 @@ namespace FileStore.Domain.Models
         public Series Series { get; set; }
         public bool IsBackedup{ get; set; }
         public bool NeedToDelete{ get; set; }
+        public bool IsDownloading { get; set; }
 
         public IList<FileUserInfo> VideoFileUserInfos { get; set; } = new List<FileUserInfo>();
         public IList<FileMark> Marks { get; set; } = new List<FileMark>();
@@ -238,7 +240,6 @@ namespace FileStore.Domain.Models
     {
         public VideoType Type { get; set; }
         public Quality Quality { get; set; }
-        public bool IsDownloading { get; set; }
     }
 
     public class AudioFile : DbFile

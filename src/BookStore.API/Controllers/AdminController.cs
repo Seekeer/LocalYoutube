@@ -15,6 +15,12 @@ using Microsoft.AspNetCore.Identity;
 using System.IO;
 using System.Collections.Generic;
 using API.Controllers;
+using API.TG;
+using System;
+using TL;
+using AngleSharp.Io;
+using Microsoft.Identity.Client;
+using Infrastructure.Scheduler;
 
 namespace FileStore.API.Controllers
 {
@@ -22,7 +28,7 @@ namespace FileStore.API.Controllers
     [EnableCors("CorsPolicy")]
     [AllowAnonymous]
     [Route("api/[controller]")]
-    public class MaintainDBController : MainController
+    public class AdminController : MainController
     {
         private  VideoCatalogDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
@@ -30,7 +36,7 @@ namespace FileStore.API.Controllers
         private readonly AppConfig _config;
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
-        public MaintainDBController(VideoCatalogDbContext dbContext, AppConfig config, 
+        public AdminController(VideoCatalogDbContext dbContext, AppConfig config, 
             IServiceScopeFactory serviceScopeFactory, TgBot tgBot, UserManager<ApplicationUser> userManager)
         {
             _userManager = userManager;
@@ -38,6 +44,93 @@ namespace FileStore.API.Controllers
             _db = dbContext;
             _config = config;
             _serviceScopeFactory = serviceScopeFactory;
+        }
+
+        [HttpGet]
+        [Route("updateAll")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateAll()
+        {
+            //RemoveSeason(14973, false);
+
+            //// Move not converted.
+            //var fileManager = new FileManager(_db, new FileManagerSettings(_config.RootFolder, _config.RootDownloadFolder, false));
+            //var manager = new FileManager(_db, new FileManagerSettings());
+            //var filesToConvert = _db.VideoFiles.ToList().Where(x => VideoHelper.ShouldConvert(x as VideoFile)).ToList();
+            //foreach (var file in filesToConvert)
+            //    await fileManager.MoveFile(file);
+
+            // Get Fairy tales
+            //var tgAPI = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TgAPIClient>();
+            //await tgAPI.ImportMessages();
+
+            // Add courses
+            var dbUpdater = new DbUpdateManager(_db);
+            await dbUpdater.AddAllCourcesFromFolder(@"C:\Users\Dim\Documents\Курсы", _config);
+
+            // TODO - move for rutracker
+            //var files = db.VideoFiles.Where(x => x.Path.Contains(@"D:\VideoServer\")).Include(x => x.VideoFileExtendedInfo).ToList();
+            //var rutrackerIds = files.GroupBy(x => x.VideoFileExtendedInfo.RutrackerId);
+            //foreach (var item in rutrackerIds)
+            //{
+            //    await MoveFileInRutracker(db, torrentManager, item.First());
+            //}
+
+
+            return Ok();
+        }
+
+        [HttpDelete]
+        [Route("removeSeason")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public void RemoveSeason(int seasonId, bool physicallyDeleteFile)
+        {
+            var files = _db.Files
+                .Include(x => x.VideoFileUserInfos)
+                .Include(x => x.VideoFileExtendedInfo)
+                .Where(x => x.SeasonId == seasonId).ToList();
+
+            var manager = new DbUpdateManager(_db);
+            foreach (var file in files)
+            {
+                manager.RemoveFileCompletely(file);
+
+                if (physicallyDeleteFile)
+                    System.IO.File.Delete(file.Path);
+            }
+
+            var season = _db.Seasons.First(x => x.Id == seasonId);
+            _db.Seasons.Remove(season);
+            if (!_db.Seasons.Any(x => x.SeriesId == season.SeriesId))
+            {
+                var serie = _db.Series.First(x => x.Id == season.SeriesId);
+                _db.Series.Remove(serie);
+            }
+
+            _db.SaveChanges();
+        }
+
+        [HttpGet]
+        [Route("createVideoSeason")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> CreateSeason(string seriesName, string seasonName, int startId, int finishId, bool isChild)
+        {
+            var manager = new DbUpdateManager(_db);
+
+            var files = _db.VideoFiles.Where(x => x.Id >= startId && x.Id <= finishId).ToList();
+
+            var series = manager.AddOrUpdateSeries(seriesName, false, isChild);
+            series.Type = files.FirstOrDefault().Type;
+            var season = manager.AddOrUpdateSeason(series, seasonName);
+            foreach (var item in files)
+            {
+                item.SeriesId = series.Id;
+                item.SeasonId = season.Id;
+            }
+
+            _db.SaveChanges();
+
+            return Ok();
         }
 
         [HttpGet]

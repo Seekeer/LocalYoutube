@@ -14,6 +14,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using API.Controllers;
+using AngleSharp.Media;
 
 namespace Infrastructure.Scheduler
 {
@@ -23,10 +24,6 @@ namespace Infrastructure.Scheduler
         private readonly IServiceProvider _service;
         private readonly AppConfig _appConfig;
 
-        private readonly long FILE_BUFFER_LIMIT = (long)15 * 1024 * 1024 * 1024;
-        private readonly TimeSpan BufferWaitTime = TimeSpan.FromMinutes(2);
-        private long _bufferFileSize;
-
         public MoveDownloadedJob(IServiceProvider service, AppConfig appConfig)
         {
             _service = service;
@@ -35,104 +32,36 @@ namespace Infrastructure.Scheduler
 
         protected override async Task Execute()
         {
-            var counter = 0;
             var db = _service.GetService<VideoCatalogDbContext>();
+            var fileManager = new FileManager(db, new FileManagerSettings(_appConfig.RootDownloadFolder, _appConfig.RootFolder,  true));
+            var counter = 0;
             var torrentManager = _service.GetService<IRuTrackerUpdater>();
 
-            //var files = db.VideoFiles.Where(x => x.Path.Contains(@"D:\VideoServer\")).Include(x => x.VideoFileExtendedInfo).ToList();
-            //var rutrackerIds = files.GroupBy(x => x.VideoFileExtendedInfo.RutrackerId);
-            //foreach (var item in rutrackerIds)
-            //{
-            //    await MoveFileInRutracker(db, torrentManager, item.First());
-            //}
-
-            var files = db.Files.Where(x => x.Path.Contains(_appConfig.RootDownloadFolder)).OrderBy(x => x.Duration).ToList();
+            var files = db.Files.Where(x => x.Path.Contains(_appConfig.RootDownloadFolder) && !x.IsDownloading)
+                .Include(x => x.VideoFileExtendedInfo).OrderBy(x => x.Duration).ToList();
             foreach (var file in files)
             {
                 try
                 {
-                    var newPath = CopyFile(file);
-                    if (newPath != null)
+                    await torrentManager.PauseTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
+
+                    if (!string.IsNullOrEmpty(await fileManager.MoveFile(file)))
                     {
-                        NLog.LogManager.GetCurrentClassLogger().Info($"MoveDownloadedJob {file.Id} from {file.Path} to {newPath}");
-
-                        file.Path = newPath;
-                        db.Update(file);
-                        await db.SaveChangesAsync();
-
-                        await MoveFileInRutracker(db, torrentManager, file);
+                        await MoveFileInRutracker( torrentManager, file);
+                        counter++;
                     }
-
-                    counter++;
                 }
                 catch (Exception ex)
                 {
-                    NLog.LogManager.GetCurrentClassLogger().Error($"MoveDownloadedJob", ex);
+                    NLog.LogManager.GetCurrentClassLogger().Error(ex);
                 }
             }
         }
 
-        private async Task MoveFileInRutracker(VideoCatalogDbContext db, IRuTrackerUpdater torrentManager, DbFile file)
+        private async Task MoveFileInRutracker(IRuTrackerUpdater torrentManager, DbFile file)
         {
-            var videoInfo = db.FilesInfo.FirstOrDefault(x => x.DbFile == file);
-
-            if(videoInfo != null)
-            {
-                var fi = new FileInfo(file.Path);
-                await torrentManager.MoveTorrent(videoInfo.RutrackerId, fi.DirectoryName);
-            }
-        }
-
-        private string CopyFile(DbFile file)
-        {
-            var path = file.Path;
-
-            var finfo = new FileInfo(path);
-
-            if (!finfo.Exists)
-                return null;
-
-            var newPath = path.Replace(_appConfig.RootDownloadFolder, _appConfig.RootFolder);
-
-            var newFInfo = new FileInfo(newPath);
-
-            if (newFInfo.Exists)
-                return newPath;
-
-            WaitIfNeeded(finfo);
-
-            var dir = newFInfo.Directory;
-
-            if (!dir.Exists)
-                Directory.CreateDirectory(dir.FullName);
-
-            _bufferFileSize += finfo.Length;
-
-            return Move(file, newPath);
-        }
-
-        private string Move(DbFile file, string newPath)
-        {
-            if (VideoHelper.ShouldConvert(file as VideoFile))
-                newPath = VideoHelper.EncodeToMp4(file.Path, false, newPath);
-            else
-                File.Move(file.Path, newPath);
-
-            return newPath;
-        }
-
-        private void WaitIfNeeded(FileInfo finfo)
-        {
-            if (!OverLimit(finfo))
-                return;
-
-            Thread.Sleep(BufferWaitTime);
-            _bufferFileSize = 0;
-        }
-
-        private bool OverLimit(FileInfo finfo)
-        {
-            return _bufferFileSize + finfo.Length > FILE_BUFFER_LIMIT;
+            var fi = new FileInfo(file.Path);
+            await torrentManager.MoveTorrent(file.VideoFileExtendedInfo.RutrackerId, fi.DirectoryName);
         }
     }
 }

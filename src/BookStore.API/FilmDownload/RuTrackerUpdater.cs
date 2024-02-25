@@ -51,6 +51,7 @@ namespace API.Controllers
         Task Init();
         Task<bool> MoveTorrent(int id, string newFolder);
         Task ParseInfo(string html, VideoInfo info);
+        Task PauseTorrent(string id);
         Task StartDownload(int id, string rootDownloadFolder);
         Task UpdateVideoFile(bool updateCover, VideoFile file);
     }
@@ -251,7 +252,7 @@ namespace API.Controllers
             return imageAsByteArray;
         }
 
-        internal void FillFileInfo(VideoFile file, VideoInfo info)
+        internal void FillFileInfo(DbFile file, VideoInfo info)
         {
             file.VideoFileExtendedInfo.Description = info.Description;
 
@@ -531,6 +532,27 @@ namespace API.Controllers
                 {
                     await _qclient.PauseAsync(torrent.Hash);
                     await _qclient.DeleteAsync(torrent.Hash, true);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+            }
+        }
+
+        public async Task PauseTorrent(string id)
+        {
+            if (id == "0")
+                return;
+
+            try
+            {
+                TorrentInfo torrent = await GetTorrent(id);
+
+                if (torrent != null)
+                {
+                    await _qclient.PauseAsync(torrent.Hash);
                 }
 
             }

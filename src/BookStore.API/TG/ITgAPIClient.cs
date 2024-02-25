@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TL;
 using WTelegram;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace API.TG
 {
@@ -25,15 +26,18 @@ namespace API.TG
 
     internal class TgAPIClient : ITgAPIClient
     {
-        public TgAPIClient(IMessageProcessor messageProcessor, AppConfig config)
+        public TgAPIClient(IMessageProcessor messageProcessor, AppConfig config, VideoCatalogDbContext db)
         {
             InitLogging();
 
+            _db = db;
             _config = config;
             _credentials = config.TelegramSettings.TgCredentials;
             _messageProcessor = messageProcessor;
             _client = new WTelegram.Client(Config);
         }
+
+        private string[] IGNORE_WORDS = new string[] { "сборник", "Колобок" };
 
         private void InitLogging()
         {
@@ -66,8 +70,10 @@ namespace API.TG
 
             //_client.OnUpdate += Client_OnUpdate;
 
-            var startDate = new DateTime(2023, 2, 1);
-            var finihsDate = new DateTime(2023, 2, 24);
+            var startDate = new DateTime(2023, 1, 1);
+            var finihsDate = new DateTime(2023, 2, 3);
+            var abooksChannelId = 1210302841;
+            //var abooksChannelId = 2084249373;
             ////var finihsDate = new DateTime(2023, 3, 3);
 
             var currentDate = finihsDate;
@@ -75,8 +81,7 @@ namespace API.TG
             {
                 var localFinishDate = currentDate;
                 currentDate = currentDate.AddDays(-3);
-                await AddOldMessages(2084249373, 0, DateTime.Now.Date, DateTime.Now);
-                //await AddOldMessages(1210302841, 0, currentDate, localFinishDate);
+                await AddOldMessages(abooksChannelId, 0, currentDate, localFinishDate);
             }
         }
 
@@ -124,6 +129,14 @@ namespace API.TG
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="channelId"></param>
+        /// <param name="count"></param>
+        /// <param name="startDateTime"></param>
+        /// <param name="finishDateTime">Not include finish date!</param>
+        /// <returns></returns>
         public async Task AddOldMessages(long channelId, int count, DateTime startDateTime, DateTime? finishDateTime)
         {
             var chats = await _client.Messages_GetAllChats();
@@ -131,10 +144,10 @@ namespace API.TG
             IEnumerable<MessageBase> messages = null;
             if (count == 0)
             {
-                var finishDate = finishDateTime?? DateTime.Now;
+                var finishDate = finishDateTime ?? DateTime.Now;
                 var history1 = await _client.Messages_GetHistory(peer, 
-                    limit: 100 * (int)(DateTime.UtcNow - startDateTime).TotalDays,
-                    offset_date: finishDate                    );
+                    limit: 100 * (int)(finishDate - startDateTime).TotalDays,
+                    offset_date: finishDate);
 
                 messages = history1.Messages.Where(x => x.Date > startDateTime);
 
@@ -156,20 +169,22 @@ namespace API.TG
                 list.Add(await ProcessBatchMessageAsync(message));
             }
 
+            var dbManager = new DbUpdateManager(_db);
             var combinedPosts = new List<ChannelPost>();
-            var currentPost = list.First();
-            for (int i = 1; i < list.Count; i++)
+            var i = 0;
+            do
             {
-                if (!TryToUpdateWithNewPost(currentPost, list[i]))
-                {
-                    AddFileToDb(currentPost);
-                    currentPost = list[i];
-                }
+                var currentPost = list[i++];
+                while (i < list.Count && TryToUpdateWithNewPost(currentPost, list[i]))
+                    i++;
+
+                AddFileToDb(currentPost, dbManager);
             }
+            while (i < list.Count);
         }
 
 
-        private bool AddFileToDb(ChannelPost message)
+        private bool AddFileToDb(ChannelPost message, DbUpdateManager manager)
         {
             var audio = message.Attaches.Where(x => x.Type == AttachType.Audio);
             var image = message.Attaches.FirstOrDefault(x => x.Type == AttachType.Photo);
@@ -177,32 +192,25 @@ namespace API.TG
             if (!audio.Any())
                 return false;
 
-            if(message.Text.Contains("Колобок"))
+            if (IGNORE_WORDS.Any(x => message.Text.ToLower().Contains(x)))
                 return false;
-
-            var optionsBuilder = new DbContextOptionsBuilder<VideoCatalogDbContext>();
-            optionsBuilder.UseSqlServer("Server=localhost;Database=FileStore;Encrypt=False;Trusted_Connection=True;");
-
-            var db1 = new VideoCatalogDbContext(optionsBuilder.Options);
 
             try
             {
-                using (var manager = new DbUpdateManager(db1))
-                {
-                    manager.AddAudioFilesFromTg(message.Text, audio.Select(x => x.FilePath),
-                        FileStore.Domain.Models.AudioType.FairyTale, FileStore.Domain.Models.Origin.Soviet, image?.FilePath);
-                }
+                manager.AddAudioFilesFromTg(message.Text, audio.Select(x => x.FilePath),
+                    FileStore.Domain.Models.AudioType.FairyTale, FileStore.Domain.Models.Origin.Soviet, image?.FilePath);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }
 
             return true;
         }
 
-            internal bool TryToUpdateWithNewPost(ChannelPost original, ChannelPost channelPost)
+        internal bool TryToUpdateWithNewPost(ChannelPost original, ChannelPost channelPost)
         {
-            if (channelPost.Text.Length > 50)
+            if (channelPost.Text.Length > 50 && channelPost.MessageGroupId < 0)
                 return false;
 
             original.Attaches.AddRange(channelPost.Attaches);
@@ -395,7 +403,7 @@ namespace API.TG
                 case "verification_code":
                     {
                         Console.Write("Code: ");
-                        return "56391";
+                        return "90914";
                     }
                 case "first_name": return "John";      // if sign-up is required
                 case "last_name": return "Doe";        // if sign-up is required
@@ -411,6 +419,7 @@ namespace API.TG
         static readonly Dictionary<long, User> Users = new();
         static readonly Dictionary<long, ChatBase> Chats = new();
         private readonly string TELEGRAM_DOWNLOAD_FOLDER = "Telegram";
+        private readonly VideoCatalogDbContext _db;
 
         private static string User(long id) => Users.TryGetValue(id, out var user) ? user.ToString() : $"User {id}";
         private static string Chat(Peer peer)

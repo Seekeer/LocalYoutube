@@ -25,6 +25,7 @@ using TL;
 using Microsoft.AspNetCore.Identity;
 using FileStore.Infrastructure.Repositories;
 using VkNet.Model;
+using API.TG;
 
 namespace FileStore.API.Controllers
 {
@@ -39,6 +40,43 @@ namespace FileStore.API.Controllers
         private  VideoCatalogDbContext _db;
         private readonly AppConfig _config;
         private readonly IServiceScopeFactory _serviceScopeFactory;
+
+        [HttpGet]
+        [Route("updateAll")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateAll()
+        {
+            //var dbManager = new DbUpdateManager(_db);
+
+            //RemoveSeasons(14940, 14967, true);
+
+            //string log = null;
+            //var files = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).ToList();
+            //foreach (var file in files)
+            //{
+            //    if ((!System.IO.File.Exists(file.Path) && !file.IsDownloading))
+            //    {
+            //        dbManager.RemoveFileCompletely(file);
+            //        log += file.Path + Environment.NewLine;
+            //    }
+            //}
+            //_db.SaveChanges();
+
+            //IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos)
+            //    .Where(x => x.Id > 1 && !x.NeedToDelete && !x.IsDownloading).ToList();
+
+            //var online = queue.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type) && !x.Path.EndsWith("mp4") && !x.Path.EndsWith("webm")).ToList();
+            //foreach (var item in online)
+            //    dbManager.Convert(item);
+
+            //dbManager.AddAudioFilesFromFolder(@"D:\VideoServer\Аудио\Александр Пушкин - Евгений Онегин (Смоктуновский)", AudioType.AudioBook, Origin.Russian, false);
+            //dbManager.AddAudioFilesFromFolder(@"D:\VideoServer\Аудио\Александр Пушкин - История Пугачёвского бунта", AudioType.AudioBook, Origin.Russian, false);
+            //dbManager.AddAudioFilesFromFolder(@"D:\VideoServer\Аудио\Джек Лондон - Зов предков (Литвинов)", AudioType.AudioBook, Origin.Foreign, false);
+            //dbManager.AddAudioFilesFromFolder(@"D:\VideoServer\Аудио\Терри Пратчетт - Ночная стража (Макс Потёмкин)", AudioType.AudioBook, Origin.Foreign, false);
+            //dbManager.AddAudioFilesFromFolder(@"D:\VideoServer\Аудио\Терри Пратчетт - Патриот (Макс Потёмкин)", AudioType.AudioBook, Origin.Foreign, false);
+
+            return Ok();
+        }
 
         [HttpGet]
         [Route("updateSeasonFileTypeToSeries")]
@@ -569,7 +607,7 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public void RemoveSeason(int seasonId, bool physicallyDeleteFile)
         {
-                var files = _db.Files.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeasonId == seasonId).ToList();
+            var files = _db.Files.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).Where(x => x.SeasonId == seasonId).ToList();
 
             var manager = new DbUpdateManager(_db);
             foreach (var file in files)
@@ -590,6 +628,23 @@ namespace FileStore.API.Controllers
             }
 
             _db.SaveChanges();
+        }
+
+        [HttpDelete]
+        [Route("removeSeasons")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public void RemoveSeasons(int startSeasonId, int endSeasonId, bool physicallyDeleteFile)
+        {
+            for (int i = startSeasonId; i <= endSeasonId; i++)
+            {
+                try
+                {
+                    this.RemoveSeason(i, physicallyDeleteFile);
+                }
+                catch (Exception ex)
+                {
+                }
+            }
         }
 
         [HttpDelete]
@@ -1511,41 +1566,6 @@ namespace FileStore.API.Controllers
             {
                  RemoveSeason(serie.Id, false);
             }
-
-            return Ok();
-        }
-
-        [HttpGet]
-        [Route("updateAll")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> UpdateAll()
-        {
-            var dbManager = new DbUpdateManager(_db);
-
-            //string log = null;
-            //var files = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).ToList();
-            //foreach (var file in files)
-            //{
-            //    if ((!System.IO.File.Exists(file.Path) && !file.IsDownloading))
-            //    {
-            //        dbManager.RemoveFileCompletely(file);
-            //        log += file.Path + Environment.NewLine;
-            //    }
-            //}
-            //_db.SaveChanges();
-
-            IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos)
-                .Where(x => x.Id > 1 && !x.NeedToDelete && !x.IsDownloading).ToList();
-
-            var online = queue.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type) && !x.Path.EndsWith("mp4") && !x.Path.EndsWith("webm")).ToList();
-            foreach (var item in online)
-                dbManager.Convert(item);
-
-            //dbManager.AddAudioFilesFromFolder(@"D:\VideoServer\Аудио\Александр Пушкин - Евгений Онегин (Смоктуновский)", AudioType.AudioBook, Origin.Russian, false);
-            //dbManager.AddAudioFilesFromFolder(@"D:\VideoServer\Аудио\Александр Пушкин - История Пугачёвского бунта", AudioType.AudioBook, Origin.Russian, false);
-            //dbManager.AddAudioFilesFromFolder(@"D:\VideoServer\Аудио\Джек Лондон - Зов предков (Литвинов)", AudioType.AudioBook, Origin.Foreign, false);
-            //dbManager.AddAudioFilesFromFolder(@"D:\VideoServer\Аудио\Терри Пратчетт - Ночная стража (Макс Потёмкин)", AudioType.AudioBook, Origin.Foreign, false);
-            //dbManager.AddAudioFilesFromFolder(@"D:\VideoServer\Аудио\Терри Пратчетт - Патриот (Макс Потёмкин)", AudioType.AudioBook, Origin.Foreign, false);
 
             return Ok();
         }

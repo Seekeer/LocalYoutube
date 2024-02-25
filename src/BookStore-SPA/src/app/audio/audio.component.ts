@@ -70,6 +70,10 @@ export class AudioComponent implements OnInit {
 
     this.displayListForType();
     this.intervalId = setInterval(() => this.updateStat(), 1000);
+
+    this.service
+      .searchRecentAudioFiles()
+      .subscribe(this.processFiles.bind(this), this.getFilesError.bind(this));
   }
 
   displayListForType() {
@@ -84,6 +88,10 @@ export class AudioComponent implements OnInit {
         break;
       }
     }
+  }
+
+  isFairyTaleMode(){
+    return this.type == MenuAudioType.audioFairyTale;
   }
 
   getSeries(type: AudioType) {
@@ -161,7 +169,7 @@ export class AudioComponent implements OnInit {
       this.seasons = serie.seasons;
       this.service
         .searchFilesWithSeries(serie.id, false)
-        .subscribe(() =>{this.hideSpinner()}, this.getFilesError.bind(this));
+        .subscribe(this.sortFilesByDuration.bind(this), this.getFilesError.bind(this));
     } else {
       this.toastr.error('Выберите название файла или сериала');
     }
@@ -169,6 +177,11 @@ export class AudioComponent implements OnInit {
   
   openVideo(film: AudioFile) {
     throw new Error('Method not implemented.');
+  }
+
+  sortFilesByDuration(files: AudioFile[]) {
+    this.apiFiles = files.sort( (x,y) => x.durationMinutes - y.durationMinutes );
+    this.showFilteredBooks();
   }
 
   processFiles(files: AudioFile[]) {
@@ -276,7 +289,7 @@ export class AudioComponent implements OnInit {
   public continue() {
     for (let index = 0; index < this.apiFiles.length; index++) {
       const element = this.apiFiles[index];
-      if(!element.isFinished && element.index)
+      if(!element.isFinished)
       {
         this.setVideoByIndex(element.index);
         return;
@@ -297,7 +310,10 @@ export class AudioComponent implements OnInit {
   private setNextVideo() {
 
     if(this.episodesLeft == 0)
+    {
+      alert('Нельзя выбрать ещё одну сказку!');
       return;
+    }
 
     this.episodesLeft--;
     return this.setVideoByIndex(this.currentIndex+1);
@@ -312,7 +328,9 @@ export class AudioComponent implements OnInit {
     var el = this.getAudioElement();
     el?.load();
 
-    this.position = this.selectedFile.currentPosition;
+    if(!this.selectedFile.isFinished)
+      this.position = this.selectedFile.currentPosition;
+
     this.setPosition();
 
     return true;

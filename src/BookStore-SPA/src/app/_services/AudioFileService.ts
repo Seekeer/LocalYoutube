@@ -29,6 +29,10 @@ export class AudioFileService {
     public searchFilesWithTitle(searchedValue: string): Observable<AudioFile[]> {
         return this.http.get<AudioFile[]>(`${this.baseUrl}AudioFiles/search/${searchedValue}`);
     }
+
+    public searchRecentAudioFiles(): Observable<AudioFile[]> {
+        return this.http.get<AudioFile[]>(`${this.baseUrl}AudioFiles/getLatest`);
+    }
     
     public setPosition(id, position) {
         var url = this.baseUrl + `AudioFiles/setPosition/${id}`;

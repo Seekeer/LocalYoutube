@@ -196,7 +196,5 @@ namespace FileStore.API.Controllers
 
             return Ok(_mapper.GetFiles<T, DTO>(files, await GetUserId(_userManager)));
         }
-
-        
     }
 }

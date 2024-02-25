@@ -6,6 +6,8 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using API.Controllers;
+using API.FilmDownload;
+using API.TG;
 using AutoMapper;
 using FileStore.API.Configuration;
 using FileStore.API.Dtos.File;
@@ -31,13 +33,15 @@ namespace FileStore.API.Controllers
     {
         private readonly IRuTrackerUpdater _ruTrackerUpdater;
         private readonly ISeriesService _seriesService;
+        private readonly TgBot _tgBot;
         private readonly static Dictionary<string, int> _randomFileDict = new Dictionary<string, int>();
 
         public FilesController(UserManager<ApplicationUser> userManager, IMapper mapper, IVideoFileService FileService, 
-            ISeriesService seriesService, IRuTrackerUpdater ruTrackerUpdater) : base(userManager, mapper, FileService)
+            ISeriesService seriesService, IRuTrackerUpdater ruTrackerUpdater, TgBot tgBot) : base(userManager, mapper, FileService)
         {
             _ruTrackerUpdater = ruTrackerUpdater;
             _seriesService = seriesService;
+            _tgBot = tgBot;
         }
 
         //[AllowAnonymous]
@@ -81,7 +85,27 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound();
 
-            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId(_userManager)));
+            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files, await GetUserId(_userManager)));
+        }
+
+        [HttpPut]
+        [Route("updateCover/{videoId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateCover(int videoId)
+        {
+            var file = await _fileService.GetById(videoId);
+
+            if (file == null)
+                return NotFound();
+
+            var user = await GetUser(_userManager);
+
+            if(user.TgId == 0)
+                return NotFound();
+
+            await _tgBot.SearchCoverForFile(file, user.TgId);
+            return Ok();
         }
 
         protected override async Task DoActionBeforeDelete(VideoFile file)

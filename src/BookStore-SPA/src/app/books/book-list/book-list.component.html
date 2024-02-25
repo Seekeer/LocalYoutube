@@ -126,6 +126,7 @@
 
               <button class="btn btn-outline-danger btn-sm mt-2" (click)="deleteFilm(content, book)">Удалить фильм</button>
               <button class="btn btn-outline-success btn-sm mt-2" (click)="filmWatched( book)">Фильм просмотрен</button>
+              <button class="btn btn-outline-success btn-sm mt-2" (click)="updateCover( book)">Обновить постер</button>
               <br>
 
               <mat-checkbox class="mt-2" [(ngModel)]="book.isSelected" >Отобрать</mat-checkbox>

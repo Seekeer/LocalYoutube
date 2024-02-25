@@ -14,9 +14,15 @@ namespace FileStore.API.Controllers
     {
         protected async Task<string> GetUserId(UserManager<ApplicationUser> userManager)
         {
+            var user = await GetUser(userManager);
+            return user.Id;
+        }
+
+        protected async Task<ApplicationUser> GetUser(UserManager<ApplicationUser> userManager)
+        {
             var name = HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Name);
             var user = await userManager.FindByNameAsync(name.Value);
-            return user.Id;
+            return user;
         }
     }
 }

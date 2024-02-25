@@ -39,12 +39,12 @@ namespace API.FilmDownload
 
         }
 
-        internal IEnumerable<SearchResult> Search(string searchTerm, string searchTerm2)
+        internal async Task<IEnumerable<SearchResult>> Search(string searchTerm, string searchTerm2)
         {
-            var resultItems = _Search(searchTerm);
+            var resultItems = await _Search(searchTerm);
 
             if (!resultItems.Any())
-                resultItems = _Search(searchTerm2);
+                resultItems = await _Search(searchTerm2);
 
             try
             {
@@ -104,7 +104,7 @@ namespace API.FilmDownload
             }
         }
 
-        private IEnumerable<Result> _Search(string searchTerm)
+        private async Task<IEnumerable<Result>> _Search(string searchTerm)
         {
             var listRequest = _service.Cse.List();
 
@@ -116,7 +116,7 @@ namespace API.FilmDownload
 
             // Result set 1
             listRequest.Start = 1;
-            var search = listRequest.Execute();
+            var search = await listRequest.ExecuteAsync();
 
             return (search.Items);
         }

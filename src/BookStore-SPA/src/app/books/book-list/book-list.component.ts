@@ -229,6 +229,10 @@ export class BookListComponent implements OnInit {
       alert(text);
     }
   }
+  
+  public updateCover(film:Book) {
+    this.service.updateCover(film);
+  }
 
   private search() {
 
@@ -453,7 +457,7 @@ watchedChanged(event){
   }
 
   getFilmsError(error) {
-    if(this._numberOfTry++< 10)
+    if(this._numberOfTry++< 1)
       this.displayListForType();
     else{
       this.hideSpinner();

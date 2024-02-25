@@ -72,6 +72,14 @@ namespace FileStore.API.Configuration
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(5)).RepeatForever())
                 );
             });
+            services.AddQuartz(q =>
+            {
+                q.ScheduleJob<CheckDownloadedJob>(trigger => trigger
+                    .WithIdentity("trigger4", "group4")
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5)).RepeatForever())
+                );
+            });
 
             // Quartz.Extensions.Hosting allows you to fire background service that handles scheduler lifecycle
             services.AddQuartzHostedService(options =>
@@ -83,9 +91,12 @@ namespace FileStore.API.Configuration
 
             services.AddTransient<BackuperJob>();
 
+
             var rutracker = new RuTrackerUpdater(config);
-            rutracker.Init().GetAwaiter().GetResult();
             services.AddSingleton<IRuTrackerUpdater>(rutracker);
+            Task.Factory.StartNew(() => { 
+                rutracker.Init().GetAwaiter().GetResult();
+            });
 
             return services;
         }
@@ -106,9 +117,6 @@ namespace FileStore.API.Configuration
                 using var scope = services.CreateScope();
                 var tg = scope.ServiceProvider.GetRequiredService<TgBot>();
                 await tg.Start();
-
-                //var tgAPI = scope.ServiceProvider.GetRequiredService<TgAPIClient>();
-                //await tgAPI.ImportMessages();
             }
             catch (Exception ex)
             {
