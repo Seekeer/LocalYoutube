@@ -62,7 +62,7 @@ namespace FileStore.Infrastructure.Repositories
         }
     }
 
-    public abstract class FileRepositoryBase<T,V> : Repository<T>, IFileRepository<T,V>
+    public abstract class FileRepositoryBase<T, V> : Repository<T>, IFileRepository<T, V>
         where T : DbFile
     {
         public FileRepositoryBase(VideoCatalogDbContext context) : base(context) { }
@@ -183,12 +183,36 @@ namespace FileStore.Infrastructure.Repositories
 
             var season = Db.Seasons.FirstOrDefault(x => x.SeriesId == file.SeriesId);
 
+            Db.Attach(file);
+
             file.SeriesId = serieId;
             file.SeasonId = season.Id;
 
-            Db.Attach(file);
-            Db.Update(file);
             Db.SaveChanges();
+
+            return true;
+        }
+
+        public async Task<bool> MoveToSeason(int fileId, int seasonId)
+        {
+            var file = await GetById(fileId);
+
+            var oldSeasonId = file.SeasonId;
+            var season = await Db.Seasons.FirstOrDefaultAsync(x => x.Id == seasonId);    
+
+            Db.Attach(file);
+            file.SeasonId = seasonId;
+            file.SeriesId = season.SeriesId;
+
+            await Db.SaveChangesAsync();
+
+            var oldSeasonFiles = await Db.Files.CountAsync(x => x.SeasonId == oldSeasonId);
+            if (oldSeasonFiles == 0)
+            {
+                var oldSeason = await Db.Seasons.FirstOrDefaultAsync(x => x.Id == oldSeasonId);
+                Db.Seasons.Remove(oldSeason);
+                await Db.SaveChangesAsync();
+            }
 
             return true;
         }

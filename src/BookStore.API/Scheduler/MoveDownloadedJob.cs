@@ -30,7 +30,7 @@ namespace Infrastructure.Scheduler
             _appConfig = appConfig;
         }
 
-        protected override async Task Execute()
+        protected override async Task ExecuteNightJob()
         {
             var db = _service.GetService<VideoCatalogDbContext>();
             var fileManager = new FileManager(db, new FileManagerSettings(_appConfig.RootDownloadFolder, _appConfig.RootFolder,  true));
@@ -61,7 +61,7 @@ namespace Infrastructure.Scheduler
         private async Task MoveFileInRutracker(IRuTrackerUpdater torrentManager, DbFile file)
         {
             var fi = new FileInfo(file.Path);
-            await torrentManager.MoveTorrent(file.VideoFileExtendedInfo.RutrackerId, fi.DirectoryName);
+            await torrentManager.MoveTorrent(file.VideoFileExtendedInfo.RutrackerId, fi.Directory.Parent.FullName);
         }
     }
 }

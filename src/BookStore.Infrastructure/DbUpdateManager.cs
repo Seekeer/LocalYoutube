@@ -445,6 +445,7 @@ namespace Infrastructure
             file.Season = season;
             file.SeriesId = season.SeriesId;
             file.Type = VideoType.Youtube;
+            file.IsDownloading = true;
 
             _db.SaveChanges();
         }
@@ -454,6 +455,7 @@ namespace Infrastructure
             if(!isVideoPropertiesFilled)
                 VideoHelper.FillVideoProperties(file);
 
+            file.IsDownloading = false;
             _db.Files.Add(file);
             _db.SaveChanges();
         }
@@ -599,10 +601,10 @@ namespace Infrastructure
             //ready.AddRange(UpdateEpisodes(queue, VideoType.AdultEpisode));
             //queue = queue.Except(ready);
 
-            var online = ready.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type));
+            //var online = ready.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type));
 
-            foreach (var item in online)
-                Convert(item);
+            //foreach (var item in online)
+            //    Convert(item);
 
             return ready;
         }
@@ -664,6 +666,15 @@ namespace Infrastructure
             {
                 try
                 {
+                    if(info.Path.EndsWith("!qB"))
+                    {
+                        var fInfo = new FileInfo(info.Path);
+                        if (fInfo.Exists)
+                            continue;
+
+                        info.Path = fInfo.DirectoryName;
+                    }
+
                     var dir = new DirectoryInfo(info.Path);
 
                     if (!dir.Exists)

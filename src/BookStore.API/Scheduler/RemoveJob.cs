@@ -12,7 +12,7 @@ using TL;
 namespace Infrastructure.Scheduler
 {
     [DisallowConcurrentExecution]
-    public class RemoveJob : IJob
+    public class RemoveJob : JobBase
     {
         private readonly IServiceProvider _service;
 
@@ -21,7 +21,7 @@ namespace Infrastructure.Scheduler
             _service = service;
         }
 
-        public async Task Execute(IJobExecutionContext context)
+        protected override async Task Execute()
         {
             NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger().Debug("Remove job started");
 
@@ -44,15 +44,9 @@ namespace Infrastructure.Scheduler
                     {
                         NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger().Debug($"Deleting {file.Id}:{file.Path}");
 
-                        Action deleteAction = async () =>
-                        {
-                            await rutracker.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
+                        await rutracker.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
 
-                            await fileService.Remove(file);
-                        };
-
-                        if(!TaskHelper.WaitforExit(deleteAction, TimeSpan.FromSeconds(10)))
-                            NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger().Error($"Interrupted deleting of {file.Id}:{file.Path}");
+                        await fileService.Remove(file);
                     }
                     catch (Exception ex)
                     {

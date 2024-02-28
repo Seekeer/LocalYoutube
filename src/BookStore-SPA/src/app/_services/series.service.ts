@@ -31,7 +31,8 @@ export class SeriesService {
         else
             return this.http.get<Serie[]>(this.baseUrl + `series/getAllByType?type=${<number>type}`);
     }
-    public getAllAudio(type:AudioType): Observable<Serie[]> {
+
+    public getAllAudioSeries(type:AudioType): Observable<Serie[]> {
         if(!type)
             return this.http.get<Serie[]>(this.baseUrl + `series/getAllAudio?exceptType=${AudioType.FairyTale}`);
         else

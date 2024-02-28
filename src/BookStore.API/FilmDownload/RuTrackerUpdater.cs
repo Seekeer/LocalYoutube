@@ -52,7 +52,7 @@ namespace API.Controllers
         Task<bool> MoveTorrent(int id, string newFolder);
         Task ParseInfo(string html, VideoInfo info);
         Task PauseTorrent(string id);
-        Task StartDownload(int id, string rootDownloadFolder);
+        Task<IReadOnlyList<TorrentContent>> StartDownload(int id, string rootDownloadFolder);
         Task UpdateVideoFile(bool updateCover, VideoFile file);
     }
 
@@ -66,7 +66,7 @@ namespace API.Controllers
 
         public RuTrackerUpdater(AppConfig config)
         {
-            _config = config.TorrentSettings;
+            _config = config?.TorrentSettings;
         }
 
         public async Task Init()
@@ -285,25 +285,29 @@ namespace API.Controllers
 
             var title = doc.QuerySelector("#topic-title").InnerText;
             info.SeasonName = title.StartingFrom("Сезон", true)?.EndingBefore("/")?.Trim();
-
-            info.Name = text.SplitByNewLine().First();
-            if (info.Name.Contains("||") || info.Name.Contains("все релизы") || info.Name.Contains("Rip"))
+            if(!title.Contains("Сезон"))
+                info.Name = title.EndingBefore("/")?.Trim();
+            else
             {
-                var prev = "";
-                foreach (var str in text.SplitByNewLine())
+                info.Name = text.SplitByNewLine().First();
+                if (info.Name.Contains("||") || info.Name.Contains("все релизы") || info.Name.Contains("Rip"))
                 {
-                    if (str.Contains("Год выпуска"))
+                    var prev = "";
+                    foreach (var str in text.SplitByNewLine())
                     {
-                        info.Name = prev;
-                        break;
-                    }
-                    else if (prev == "P R E S E N T S")
-                    {
-                        info.Name = str;
-                        break;
-                    }
+                        if (str.Contains("Год выпуска"))
+                        {
+                            info.Name = prev;
+                            break;
+                        }
+                        else if (prev == "P R E S E N T S")
+                        {
+                            info.Name = str;
+                            break;
+                        }
 
-                    prev = str;
+                        prev = str;
+                    }
                 }
             }
 
@@ -463,7 +467,7 @@ namespace API.Controllers
             //return topics.OrderByDescending(x => x.SizeInBytes).Take(10);
         }
 
-        public async Task StartDownload(int id, string rootDownloadFolder)
+        public async Task<IReadOnlyList<TorrentContent>> StartDownload(int id, string rootDownloadFolder)
         {
             NLog.LogManager.GetCurrentClassLogger().Info($"Start download to {rootDownloadFolder}");
 
@@ -471,9 +475,14 @@ namespace API.Controllers
 
             var temp = Path.Combine(rootDownloadFolder, $"{rootDownloadFolder}.torrent");
 
+            var fInfo = new FileInfo(temp);
+            if (!Directory.Exists(fInfo.DirectoryName))
+                Directory.CreateDirectory(fInfo.DirectoryName);
+
             File.WriteAllBytes(temp, torrent);
 
             var request = new AddTorrentFilesRequest();
+            request.SequentialDownload = true;
             request.TorrentFiles.Add(temp);
             request.DownloadFolder = rootDownloadFolder;
             request.Tags = new List<string> { id.ToString() };
@@ -481,6 +490,8 @@ namespace API.Controllers
             try
             {
                 await _qclient.AddTorrentsAsync(request);
+
+                return await _qclient.GetTorrentContentsAsync(await GetTorrentHash(id.ToString()));
             }
             catch (Exception ex)
             {
@@ -488,6 +499,8 @@ namespace API.Controllers
                 StartQBittorrent();
                 await _qclient.AddTorrentsAsync(request);
             }
+
+            return null;
         }
 
         private void StartQBittorrent()
@@ -508,6 +521,7 @@ namespace API.Controllers
                 if (torrent != null)
                 {
                     await _qclient.SetLocationAsync(new string[] { torrent.Hash }, newFolder);
+                    await _qclient.ResumeAsync(torrent.Hash);
 
                     return true;
                 }
@@ -560,6 +574,11 @@ namespace API.Controllers
             {
                 NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }
+        }
+
+        private async Task<string> GetTorrentHash(string id)
+        {
+            return (await GetTorrent(id))?.Hash;
         }
 
         private async Task<TorrentInfo> GetTorrent(string id)

@@ -50,7 +50,9 @@ export class AudioComponent implements OnInit {
   selectedFile: AudioFile;
   audioURL: SafeHtml;
   seasons: Seasons[];
+  allSeasons: Seasons[];
   fileId: number;
+  newSeasonId: number;
   timer: any;
   forwardSpeed: number = 0;
   rewindSpeed: number = 0;
@@ -95,8 +97,12 @@ export class AudioComponent implements OnInit {
   }
 
   getSeries(type: AudioType) {
-    this.seriesService.getAllAudio(type).subscribe((series) => {
+    this.seriesService.getAllAudioSeries(type).subscribe((series) => {
       this.series = series.sort((a, b) => {
+        return a.name >= b.name ? 1 : -1;
+      });
+
+      this.allSeasons = series.reduce((pr, cur) => [...pr, ...cur.seasons], []).sort((a, b) => {
         return a.name >= b.name ? 1 : -1;
       });
 
@@ -123,18 +129,37 @@ export class AudioComponent implements OnInit {
     );
   }
 
+  public fileChanged(newValue:string){
+    this.selectedFile.name = newValue;
+
+    this.service.updateTrack(this.selectedFile);
+  }
+
+  public changeSeason(){
+
+    this.service.moveToSeason(this.selectedFile, this.newSeasonId);
+  }
+
   timerMinutes: number;
   timerStr: string;
   timeLeft: number;
   private interval: number;
 
   public toFavorite(){
-    this.seriesService.moveSeasonToFavorite(this.seasonId).subscribe();
+    this.moveToFavorite(this.selectedFile);
   }
 
   public toBlackList(){
-    this.seriesService.moveSeasonToBlackList(this.seasonId).subscribe();
-    window.location.reload()
+    this.moveToBlacklist(this.selectedFile);
+  }
+
+  public moveToFavorite(file: Book){
+    this.seriesService.moveSeasonToFavorite(file.seasonId).subscribe();
+  }
+
+  public moveToBlacklist(file: Book){
+    this.seriesService.moveSeasonToBlackList(file.seasonId).subscribe();
+    window.location.reload();
   }
 
   public deleteSeries(){
@@ -146,10 +171,6 @@ export class AudioComponent implements OnInit {
 
     this.search();
     // window.location.reload()
-  }
-
-  public deleteTrack(file: Book){
-    this.service.deleteTrackById(file.id).subscribe(this.search.bind(this));
   }
 
   public search() {
@@ -166,7 +187,9 @@ export class AudioComponent implements OnInit {
         .subscribe(this.processFiles.bind(this), this.getFilesError.bind(this));
     } else if (this.serieId) {
       let serie = this.series.filter((x) => x.id == this.serieId)[0];
-      this.seasons = serie.seasons;
+      this.seasons = serie.seasons.sort((a, b) => {
+        return a.name >= b.name ? 1 : -1;
+      });
       this.service
         .searchFilesWithSeries(serie.id, false)
         .subscribe(this.sortFilesByDuration.bind(this), this.getFilesError.bind(this));
@@ -180,17 +203,27 @@ export class AudioComponent implements OnInit {
   }
 
   sortFilesByDuration(files: AudioFile[]) {
-    this.apiFiles = files.sort( (x,y) => x.durationMinutes - y.durationMinutes );
-    this.showFilteredBooks();
+    this.processFilesBase(files, true);
   }
 
   processFiles(files: AudioFile[]) {
-    this.apiFiles = files;
+    this.processFilesBase(files, false);
+  }
+
+  updateSeasonNames(apiFiles: AudioFile[]) {
+    apiFiles.forEach(file => file.seasoName = this.allSeasons.filter(x => x.id == file.seasonId)[0].name);
+  }
+
+  processFilesBase(files: AudioFile[],  sortByDuration: boolean) {
+    this.apiFiles = sortByDuration ? files.sort( (x,y) => x.durationMinutes - y.durationMinutes ) : files;
+    this.updateSeasonNames(this.apiFiles);
+    
     this.showFilteredBooks();
   }
 
   selectAudio(file: AudioFile) {
     this.currentIndex = file.index - 1;
+    this.newSeasonId = file.seasonId;
     this.setNextVideo();
     // this.setVideoByIndex(file.index);
   }

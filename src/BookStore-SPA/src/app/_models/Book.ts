@@ -8,6 +8,7 @@ export class Book {
     displayName: string;
     cover: string;
     seriesName: string;
+    seasoName: string;
     currentPosition:number;
     durationMinutes:number;
     isFinished:boolean;

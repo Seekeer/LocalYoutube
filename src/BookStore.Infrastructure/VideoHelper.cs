@@ -170,6 +170,16 @@ namespace Infrastructure
             return (fileInfo.Extension == ".mp4" || fileInfo.Extension == ".webm");
         }
 
+        public static bool IsVideo(string path)
+        {
+            return videoExtensions.Any(x => path.ToUpper().EndsWith(x));
+        }
+
+        static string[] videoExtensions = {
+            ".WEBM", ".MKV", ".MPG", ".MPEG", ".GIF", 
+            ".AVI", ".MP4", ".DIVX", ".WMV", 
+        };
+
         private static Quality DetectQuality(Bitmap bitmap)
         {
             switch (bitmap.Height)

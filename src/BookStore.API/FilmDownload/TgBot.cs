@@ -28,6 +28,8 @@ using static System.Net.Mime.MediaTypeNames;
 using FileStore.Domain;
 using FileStore.Domain.Services;
 using static API.FilmDownload.TgBot;
+using QBittorrent.Client;
+using Google.Apis.CustomSearchAPI.v1.Data;
 //using Polly;
 
 namespace API.FilmDownload
@@ -407,12 +409,13 @@ namespace API.FilmDownload
         {
             var info = await _rutracker.FillInfo(rutrackerId);
 
+            IReadOnlyList<TorrentContent> torrentFiles = null;
             if (string.IsNullOrEmpty(downloadPath))
             {
                 downloadPath = Path.Combine(_config.RootDownloadFolder, "Rutracker", rutrackerId.ToString());
                 try
                 {
-                    await _rutracker.StartDownload(rutrackerId, downloadPath);
+                    torrentFiles = await _rutracker.StartDownload(rutrackerId, downloadPath);
                 }
                 catch (Exception ex)
                 {
@@ -428,9 +431,12 @@ namespace API.FilmDownload
                 SeriesId = 18,
                 SeasonId = 91,
             };
+
             FillData(rutrackerId, info, downloadPath, file);
 
             FillVideoFilePropertiesByType(tgFromId, type, info, file);
+
+            await AnalyzeTorrentData(file, tgFromId, type, torrentFiles);
 
             await _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IVideoFileRepository>().Add(file);
 
@@ -438,6 +444,19 @@ namespace API.FilmDownload
 
             if (file.Cover == null || file.Cover?.Length < 20 * 1024)
                 await SearchCoverForFile(file, tgFromId);
+        }
+
+        private async Task AnalyzeTorrentData(VideoFile file, long tgFromId, VideoType type, IReadOnlyList<TorrentContent> torrentFiles)
+        {
+            var videos = torrentFiles;
+            if((type == VideoType.Film || type == VideoType.Animation ) && videos.Count() > 1)
+            {
+                file.DoNotAutoFinish = true;
+                await _botClient.SendTextMessageAsync(tgFromId, $"⚠️ В раздаче {file.Name} {videos.Count()} много файлов. Возможны проблемы, проверьте.");
+            }
+
+            // Direct path to biggest file so it can be watched during downloading. 
+            file.Path = Path.Combine(file.Path, videos.OrderBy(x => x.Size).First().Name + ".!qB");
         }
 
         private void FillVideoFilePropertiesByType(long tgFromId, VideoType type, VideoInfo info, VideoFile file)
@@ -494,6 +513,7 @@ namespace API.FilmDownload
         {
             var result = @$"Название: {file.Name}
 Длительность: {file.Duration}
+Посмотреть: vlc://http://192.168.1.55:2022/api/Files/getFileById?fileId={file.Id}
 Год: {file.Year}
 Режиссер: {info.Director}
 Описание: {file.Description}";

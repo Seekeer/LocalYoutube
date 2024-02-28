@@ -32,19 +32,42 @@ namespace FileStore.API.Controllers
     [Authorize]
     [Microsoft.AspNetCore.Cors.EnableCors("CorsPolicy")]
     [Route("api/[controller]")]
-    public abstract class FilesControllerBase<T,V, DTO> : MainController
-        where T : DbFile
+    public abstract class FilesControllerBase<F,V, DTO> : MainController
+        where F : DbFile
+        where DTO : IDtoId
     {
         protected readonly UserManager<ApplicationUser> _userManager;
         protected readonly IMapper _mapper;
-        protected readonly IFileService<T, V> _fileService;
+        protected readonly IFileService<F, V> _fileService;
 
         public FilesControllerBase(UserManager<ApplicationUser> userManager, IMapper mapper, 
-            IFileService<T, V> FileService)
+            IFileService<F, V> FileService)
         {
             _userManager = userManager;
             _mapper = mapper;
             _fileService = FileService;
+        }
+
+        [HttpPost]
+        [Route("updateFile")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> Update([FromBody] DTO dto)
+        {
+            var file = await _fileService.GetById(dto.Id);
+
+            file.Name = dto.Name;
+
+            await _fileService.Update(file);
+
+            return Ok();
+        }
+
+        [HttpPost]
+        [Route("move-file-to-season/{fileId}/{seasonId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveToSeason(int fileId, int seasonId)
+        {
+            return Ok(await _fileService.MoveToSeason(fileId, seasonId));
         }
 
         [HttpGet]
@@ -81,21 +104,6 @@ namespace FileStore.API.Controllers
             }
         }
 
-        private async Task<FileResult> TryToDownload(T file)
-        {
-            var path = file.Path;
-            var finfo = new FileInfo(path);
-
-            var yadisk = new YandexDisc("AQAAAAABKm0kAAeaqT0Xy-23cEj1usRIZAcnhO0");
-
-            var filepath = @"Z:\Smth\Downloads\Не подтвержден 993352.crdownload";
-            await yadisk.Download(filepath, file.Path);
-
-            return PhysicalFile(filepath, "application/octet-stream", finfo.Name, enableRangeProcessing: true);
-
-            //return PhysicalFile(@"Z:\Smth\Downloads\Не подтвержден 993251.crdownload", "application/octet-stream", finfo.Name, enableRangeProcessing: true);
-        }
-
         [HttpDelete("{id:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -112,7 +120,7 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
-        protected virtual async Task DoActionBeforeDelete(T file)
+        protected virtual async Task DoActionBeforeDelete(F file)
         {
         }
 
@@ -131,11 +139,11 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<List<DTO>>> Search(string FileName)
         {
-            var Files = _mapper.Map<List<T>>(await _fileService.Search(FileName));
+            var Files = _mapper.Map<List<F>>(await _fileService.Search(FileName));
 
             if (Files == null || Files.Count == 0) return NotFound("None File was founded");
 
-            var resultDTO = _mapper.GetFiles<T, DTO>(Files, await GetUserId(_userManager));
+            var resultDTO = _mapper.GetFiles<F, DTO>(Files, await GetUserId(_userManager));
             return Ok(resultDTO);
         }
 
@@ -150,7 +158,7 @@ namespace FileStore.API.Controllers
             if (!Files.Any())
                 return NotFound();
 
-            return Ok(_mapper.GetFiles<T, DTO>(Files, await GetUserId(_userManager)));
+            return Ok(_mapper.GetFiles<F, DTO>(Files, await GetUserId(_userManager)));
         }
 
         [HttpGet]
@@ -159,12 +167,12 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<List<DTO>>> SearchFileWithSeason(int seasonId, bool isRandom)
         {
-            var Files = _mapper.Map<List<T>>(await _fileService.GetFilesBySeason(seasonId, isRandom, 0, 0));
+            var Files = _mapper.Map<List<F>>(await _fileService.GetFilesBySeason(seasonId, isRandom, 0, 0));
 
             if (!Files.Any())
                 return NotFound("None File was founded");
 
-            return Ok(_mapper.GetFiles<T, DTO>(Files, await GetUserId(_userManager)));
+            return Ok(_mapper.GetFiles<F, DTO>(Files, await GetUserId(_userManager)));
         }
 
         [HttpPut]
@@ -192,9 +200,9 @@ namespace FileStore.API.Controllers
         public async Task<ActionResult<List<DTO>>> GetLatest()
         {
             string userId = await GetUserId(_userManager);
-            var files = _mapper.Map<List<T>>(await _fileService.GetLatest(userId));
+            var files = _mapper.Map<List<F>>(await _fileService.GetLatest(userId));
 
-            return Ok(_mapper.GetFiles<T, DTO>(files, await GetUserId(_userManager)));
+            return Ok(_mapper.GetFiles<F, DTO>(files, await GetUserId(_userManager)));
         }
     }
 }

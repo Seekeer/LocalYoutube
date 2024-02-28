@@ -69,6 +69,9 @@
     <None Update="Resources\trud.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Resources\Wind_5937963.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Resources\witch1-2.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

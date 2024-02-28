@@ -10,6 +10,16 @@ import { AudioFile } from '../_models/Book';
     providedIn: 'root'
 })
 export class AudioFileService {
+    
+    moveToSeason(selectedFile: AudioFile, newId: number) {
+      return this.http.post(`${this.baseUrl}AudioFiles/move-file-to-season/${selectedFile.id}/${newId}`, null).subscribe();
+    }
+
+    public updateTrack(audio: AudioFile) {
+
+        const url = this.baseUrl +'AudioFiles/updateFile' ;
+        this.http.post(url, audio).subscribe();
+    }
     private baseUrl: string = environment.baseUrl + 'api/';
 
     constructor(private http: HttpClient) { }

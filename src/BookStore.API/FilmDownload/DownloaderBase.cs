@@ -147,6 +147,9 @@ namespace API.FilmDownload
             if (File.Exists(path + '#'))
                 File.Move(path + '#', path);
 
+            if (File.Exists(path + "#.mp4"))
+                File.Move(path + "#.mp4", path);
+
             return path;
         }
 

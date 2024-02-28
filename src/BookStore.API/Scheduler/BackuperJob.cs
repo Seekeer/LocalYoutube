@@ -36,11 +36,11 @@ namespace Infrastructure.Scheduler
         public BackuperJob(IServiceProvider service, AppConfig appConfig) 
         {
             _service = service;
-            _client = new YandexDisc(appConfig.YandexToken);
+            _client = new YandexDisc(appConfig);
             _config = appConfig;
         }
 
-        protected override async Task Execute()
+        protected override async Task ExecuteNightJob()
         {
             NLog.LogManager.GetCurrentClassLogger().Debug($"BackuperJob");
 
@@ -48,21 +48,22 @@ namespace Infrastructure.Scheduler
 
             using (var fileRepo = GetFileRepo())
             {
-                var nonBackupedFiles = await fileRepo.Search(x => !x.IsBackedup && !x.NeedToDelete);
+                var nonBackupedFiles = await fileRepo.Search(x => !x.IsBackedup && !x.NeedToDelete && !x.IsDownloading);
                 nonBackupedFiles.ToList().ForEach(x => stack.Add(new UploadFile { Id = x.Id, Path = x.Path }));
             }
 
-            Parallel.For(0, _config.YD_Upload_Threads_Count, new ParallelOptions(), async i =>
+            foreach (var item in stack.ToList())
+            //Parallel.For(0, _config.YD_Upload_Threads_Count, new ParallelOptions(), async i =>
             {
-                do
-                {
-                    if ( !stack.TryTake(out var file))
-                        return;
-                    await UploadAndSaveStatus(file);
+                //do
+                //{
+                if (!stack.TryTake(out var file))
+                    return;
+                await UploadAndSaveStatus(file);
 
-                } while (true);
             }
-            );
+                //} while (true);
+            //);
 
         }
 
@@ -79,12 +80,6 @@ namespace Infrastructure.Scheduler
                         dbFile.IsBackedup = true;
                         await db.SaveChangesAsync();
                     }
-                    //using (var fileRepo = GetFileRepo())
-                    //{
-                    //var dbFile = await fileRepo.GetById(file.Id);
-                    //dbFile.IsBackedup = true;
-                    //await fileRepo.Update(dbFile);
-                    //}
                 }
             }
             catch (Exception)
@@ -100,9 +95,10 @@ namespace Infrastructure.Scheduler
 
     public class YandexDisc
     {
-        public YandexDisc(string token)
+        public YandexDisc(AppConfig appConfig)
         {
-            _token = token;
+            this.appConfig = appConfig;
+            _token = appConfig.YandexToken;
         }
 
         public async Task<bool> UploadFile(string filepath)
@@ -121,13 +117,12 @@ namespace Infrastructure.Scheduler
         private  string GetFolderName(string filepath)
         {
             var directory = new DirectoryInfo(filepath);
-            var path = @"Backup/LocalTube/" + directory.Parent.FullName.Replace(@"F:\", "");
+            var path = @"Backup/LocalTube" + directory.Parent.FullName.Replace(appConfig.RootFolder, "");
             return path.Replace(@"\", @"/");
         }
 
         public async Task<bool> UploadToDirectory(string filepath, string folderName)
         {
-            return false;
             NLog.LogManager.GetCurrentClassLogger().Warn($"Trying to upload{filepath}");
 
             var api = new DiskHttpApi(_token);
@@ -147,28 +142,26 @@ namespace Infrastructure.Scheduler
                     {
                         if (ex.Message.Contains("doesn't exists"))
                         {
-                            try
+                            var folders = folderName.Split(@"/");
+                            var folderPath = "";
+                            foreach (var pathF in folders)
                             {
-                                var folders = folderName.Split(@"/");
-                                var folderPath = "";
-                                foreach (var pathF in folders)
+                                folderPath = $"{folderPath}/{pathF}";
+                                try
                                 {
-                                    folderPath = $"{folderPath}/{pathF}";
-                                    try
-                                    {
-                                        await api.Commands.CreateDictionaryAsync(folderPath);
-                                    }
-                                    catch (Exception)
-                                    {
-                                    }
+                                    await api.Commands.CreateDictionaryAsync(folderPath);
                                 }
-                            }
-                            catch (System.Exception)
-                            {
+                                catch (Exception)
+                                {
+                                }
                             }
 
                             await api.Files.UploadFileAsync(path, false, fs, CancellationToken.None);
                         }
+                        else if (ex.Message.Contains("already exists"))
+                            return true;
+                        else
+                            return false;
                     }
 
                     NLog.LogManager.GetCurrentClassLogger().Warn($"Uploaded");
@@ -206,6 +199,7 @@ namespace Infrastructure.Scheduler
         #region Private members
 
         private readonly string _token;
+        private AppConfig appConfig;
 
         #endregion
     }

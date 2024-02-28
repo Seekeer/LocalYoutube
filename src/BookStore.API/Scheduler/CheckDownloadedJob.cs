@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Infrastructure.Scheduler
 {
     [DisallowConcurrentExecution]
-    public class CheckDownloadedJob : IJob
+    public class CheckDownloadedJob : JobBase
     {
         private readonly IServiceProvider _service;
 
@@ -17,12 +17,12 @@ namespace Infrastructure.Scheduler
             _service = service;
         }
 
-        public async Task Execute(IJobExecutionContext context)
+        protected override async Task Execute()
         {
             var manager = _service.GetService<DbUpdateManager>();
             var tgBot = _service.GetService<TgBot>();
 
-            var updated = manager.UpdateDownloading((info) => info.IsDownloading);
+            var updated = manager.UpdateDownloading((info) => info.IsDownloading && !info.DoNotAutoFinish);
             await tgBot.NotifyDownloaded(updated);
         }
     }

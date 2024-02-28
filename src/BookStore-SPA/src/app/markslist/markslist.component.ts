@@ -23,6 +23,7 @@ export class MarkslistComponent implements OnInit, OnChanges {
   public marks: Mark[] = [];
   @Input() videoId: number;
   @Input() isHeightLimited: boolean = true;
+  @Input() showAddButton: boolean = true;
   lastVolumeChangedTime: Date;
   private _subscribed: any;
 
@@ -114,7 +115,7 @@ export class MarkslistComponent implements OnInit, OnChanges {
       );
       var mediaEl = audio as HTMLMediaElement;
 
-      if(!this._subscribed){
+      if(!this._subscribed && mediaEl){
         mediaEl.onpause = (event: Event) => this.paused();
         mediaEl.onplay = (event: Event) => this.played();
         this._subscribed = true;

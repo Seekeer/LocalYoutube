@@ -2,7 +2,7 @@
 
 namespace FileStore.API.Dtos.File
 {
-    public class VideoFileResultDto
+    public class VideoFileResultDto : IDtoId
     {
         public int Id { get; set; }
 

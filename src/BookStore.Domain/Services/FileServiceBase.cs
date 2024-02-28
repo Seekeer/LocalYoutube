@@ -174,5 +174,10 @@ namespace FileStore.Domain.Services
         {
             return await _FileRepository.MoveToSerie(fileId,  serieId);
         }
+
+        public async Task<bool> MoveToSeason(int fileId, int seasonId)
+        {
+            return await _FileRepository.MoveToSeason(fileId, seasonId);
+        }
     }
 }

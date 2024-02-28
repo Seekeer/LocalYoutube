@@ -22,5 +22,6 @@ namespace FileStore.Domain.Interfaces
         void RemoveFileCompletely(int fileId);
         void MarkFileToDelete(T file);
         Task<bool> MoveToSerie(int fileId, int serieId);
+        Task<bool> MoveToSeason(int fileId, int serieId);
     }
 }

@@ -26,7 +26,7 @@ namespace API.Controllers.Tests
             Assert.AreEqual("Ю Гэ, Гун Ли, Бен Ниу, Ксяо Конг, Ден Фэй, Тао Гуо", videoInfo.Artist);
             Assert.AreEqual("Чжан Имоу / Yimou Zhang", videoInfo.Director);
             Assert.AreEqual("Драма", videoInfo.Genres);
-            Assert.AreEqual("Жить / Huo zhe / Lifetimes / Living / To Live", videoInfo.Name);
+            Assert.AreEqual("Жить", videoInfo.Name);
             Assert.AreEqual(new TimeSpan(2, 12, 35), videoInfo.Duration);
             Assert.AreEqual(1994, videoInfo.Year);
 
@@ -47,6 +47,23 @@ namespace API.Controllers.Tests
 
             Assert.AreEqual("Питер Уир / Peter Weir", videoInfo.Director);
             Assert.AreEqual(@"Девятилетний мальчик становится свидетелем зверского убийства: прямо на его глазах в туалете филадельфийского вокзала два человека безжалостно зарезали молодого мужчину. Оказывается, убитый был тайным агентом отдела по борьбе с наркотиками. Теперь мальчик- единственный свидетель, который может помочь детективу Джону Буку найти преступников.Лица убийц навсегда впечатались в детскую память. И мальчик увидел их снова, когда его привезли для дачи показаний в местный полицейский участок - он увидел фото убийц на доске почета полицейского управления. С этой минуты за маленьким свидетелем и его единственным защитником, инспектором Буком, начинается охота.", videoInfo.Description);
+            Assert.IsNotNull(videoInfo.Cover);
+        }
+
+        [Test()]
+        public async Task ParseInfo_Wind()
+        {
+            var updater = new RuTrackerUpdater(null);
+
+            var videoInfo = new VideoInfo();
+
+            string page = GetPage(@"Resources\Wind_5937963.html");
+
+            await updater.ParseInfo(page, videoInfo);
+
+            Assert.AreEqual("Ветер крепчает", videoInfo.Name);
+            Assert.AreEqual("Хаяо Миядзаки", videoInfo.Director);
+            Assert.IsTrue(videoInfo.Description.Contains("Мечта о полётах всегда преследовала человека. Вот и "));
             Assert.IsNotNull(videoInfo.Cover);
         }
 
@@ -94,7 +111,7 @@ namespace API.Controllers.Tests
 
             await updater.ParseInfo(page, videoInfo);
 
-            Assert.AreEqual("Покидая Лас-Вегас / Leaving Las Vegas", videoInfo.Name);
+            Assert.AreEqual("Покидая Лас-Вегас", videoInfo.Name);
             Assert.IsNotNull(videoInfo.Cover);
         }
 
@@ -123,7 +140,7 @@ namespace API.Controllers.Tests
 
             await updater.ParseInfo(page, videoInfo);
 
-            Assert.AreEqual("Рапунцель: Запутанная история / Tangled", videoInfo.Name);
+            Assert.AreEqual("Рапунцель: Запутанная история", videoInfo.Name);
         }
 
         [Test()]
@@ -137,7 +154,7 @@ namespace API.Controllers.Tests
 
             await updater.ParseInfo(page, videoInfo);
 
-            Assert.AreEqual("Холодное сердце / Frozen", videoInfo.Name);
+            Assert.AreEqual("Холодное сердце", videoInfo.Name);
         }
 
 
@@ -200,7 +217,7 @@ namespace API.Controllers.Tests
             Assert.IsNull(videoInfo.Artist);
             Assert.AreEqual(@"Разъяренные фермеры, уставшие от постоянных нападок хитрого лиса на их курятники, готовятся уничтожить своего врага и его «хитрое» семейство.Рип от CtrlHD!", videoInfo.Description);
             Assert.AreEqual("комедия, приключения, семейный", videoInfo.Genres);
-            Assert.AreEqual("Бесподобный мистер Фокс / Fantastic Mr. Fox", videoInfo.Name);
+            Assert.AreEqual("Бесподобный мистер Фокс", videoInfo.Name);
             Assert.AreEqual(new TimeSpan(1, 26, 44), videoInfo.Duration);
             Assert.AreEqual(2009, videoInfo.Year);
 
@@ -222,7 +239,7 @@ namespace API.Controllers.Tests
             Assert.AreEqual(@"Дастин Хоффман, Том Круз, Валерия Голино, Джералд Р. Молен, Джек Мёрдок, Майкл Д. Робертс, Ральф Сеймур, Люсинда Дженни, Бонни Хант, Ким Робиллард", videoInfo.Artist);
             Assert.AreEqual("Барри Левинсон / Barry Levinson", videoInfo.Director);
             Assert.AreEqual("драма", videoInfo.Genres);
-            Assert.AreEqual("Человек дождя / Rain Man", videoInfo.Name);
+            Assert.AreEqual("Человек дождя", videoInfo.Name);
             Assert.AreEqual(new TimeSpan(2, 13, 46), videoInfo.Duration);
             Assert.AreEqual(1988, videoInfo.Year);
 
@@ -288,7 +305,7 @@ namespace API.Controllers.Tests
             Assert.AreEqual(@"Кейт Уинслет, Джош Бролин, Гэттлин Гриффит, Тоби Магуайр, Том Липински, Майка Монро, Кларк Грегг, Джеймс Ван Дер Бик, Дж.К. Симмонс, Брук Смит", videoInfo.Artist);
             Assert.AreEqual("Джейсон Райтман / Jason Reitman", videoInfo.Director);
             Assert.AreEqual("драма", videoInfo.Genres);
-            Assert.AreEqual("День труда / Labor Day", videoInfo.Name);
+            Assert.AreEqual("День труда", videoInfo.Name);
             Assert.AreEqual(new TimeSpan(1, 51, 13), videoInfo.Duration);
             Assert.AreEqual(2013, videoInfo.Year);
 
@@ -310,7 +327,7 @@ namespace API.Controllers.Tests
             Assert.AreEqual(@"Ширли МакЛейн, Дебра Уингер, Джек Николсон, Дэнни ДеВито, Джефф Дэниелс, Джон Литгоу, Лиза Харт Кэрролл, Бетти Кинг, Huckleberry Fox, Трой Бишоп", videoInfo.Artist);
             Assert.AreEqual("Джеймс Л. Брукс / James L. Brooks", videoInfo.Director);
             Assert.AreEqual("драма, мелодрама, комедия", videoInfo.Genres);
-            Assert.AreEqual("Язык нежности / Terms of Endearment", videoInfo.Name);
+            Assert.AreEqual("Язык нежности", videoInfo.Name);
             Assert.AreEqual(new TimeSpan(2, 11, 51), videoInfo.Duration);
             Assert.AreEqual(1983, videoInfo.Year);
 

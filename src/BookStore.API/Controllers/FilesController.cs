@@ -59,7 +59,7 @@ namespace FileStore.API.Controllers
         {
             var Files = await _fileService.GetAll();
 
-            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files,await GetUserId(_userManager)));
+            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files, await GetUserId(_userManager)));
         }
 
         [HttpGet("{id:int}")]

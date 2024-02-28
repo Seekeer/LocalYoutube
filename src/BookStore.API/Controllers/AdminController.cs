@@ -47,12 +47,28 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
-        [Route("updateAll")]
+        [Route("doAction")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> UpdateAll()
+        public async Task<IActionResult> DoAction()
         {
-            //RemoveSeason(14973, false);
+            await CombineSeasons("Ганс христиан Андерсон", 14994, 15016);
+            //await CombineSeasons("Сказки на ночь, которые помогут малышам спокойно заснуть", 15007, 15021);
+            //RemoveFile(54665, true);
 
+            //CreateSeason("Списки", "Список Жаринова", 54656, 54658, false);
+            //CreateSeason("Списки", "Список Жаринова", 54651, 54651, false);
+            //CreateSeason("Списки", "Список Жаринова", 54642, 54648, false);
+
+            //var filesList = "";
+            //var ids = new List<int>();
+            //foreach (var file in _db.Files.ToList())
+            //{
+            //    if (!System.IO.File.Exists(file.Path))
+            //    {
+            //        filesList += Environment.NewLine + file.Path;
+            //        ids.Add(file.Id);
+            //    }
+            //}
             //// Move not converted.
             //var fileManager = new FileManager(_db, new FileManagerSettings(_config.RootFolder, _config.RootDownloadFolder, false));
             //var manager = new FileManager(_db, new FileManagerSettings());
@@ -65,8 +81,8 @@ namespace FileStore.API.Controllers
             //await tgAPI.ImportMessages();
 
             // Add courses
-            var dbUpdater = new DbUpdateManager(_db);
-            await dbUpdater.AddAllCourcesFromFolder(@"C:\Users\Dim\Documents\Курсы", _config);
+            //var dbUpdater = new DbUpdateManager(_db);
+            //await dbUpdater.AddAllCourcesFromFolder(@"C:\Users\Dim\Documents\Курсы", _config);
 
             // TODO - move for rutracker
             //var files = db.VideoFiles.Where(x => x.Path.Contains(@"D:\VideoServer\")).Include(x => x.VideoFileExtendedInfo).ToList();
@@ -76,6 +92,24 @@ namespace FileStore.API.Controllers
             //    await MoveFileInRutracker(db, torrentManager, item.First());
             //}
 
+
+            return Ok();
+        }
+
+        [HttpDelete]
+        [Route("removeFile")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> RemoveFile(int fileId, bool deleteFile)
+        {
+            var file = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).First(x => x.Id == fileId);
+
+            if (deleteFile)
+                await PhisicallyRemoveFile(file);
+
+            var manager = new DbUpdateManager(_db);
+            manager.RemoveFileCompletely(file);
+
+            _db.SaveChanges();
 
             return Ok();
         }
@@ -108,6 +142,32 @@ namespace FileStore.API.Controllers
             }
 
             _db.SaveChanges();
+        }
+
+        [HttpGet]
+        [Route("combineSeasons")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> CombineSeasons(string seasonName, int firstId, int secondId)
+        {
+            var manager = new DbUpdateManager(_db);
+
+            var season = _db.Seasons.FirstOrDefault(x => x.Id == firstId);
+
+            var files = _db.Files.Where(x => x.SeasonId == secondId).ToList();
+            foreach (var item in files)
+            {
+                item.SeriesId = season.SeriesId;
+                item.SeasonId = season.Id;
+            }
+
+            season.Name = seasonName;
+
+            var secondSeason = _db.Seasons.FirstOrDefault(x => x.Id == secondId);
+            _db.Seasons.Remove(secondSeason);
+
+            _db.SaveChanges();
+
+            return Ok();
         }
 
         [HttpGet]
@@ -371,7 +431,8 @@ namespace FileStore.API.Controllers
                 await _rutracker.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
             }
             else
-                System.IO.File.Delete(file.Path);
+                if(System.IO.File.Exists(file.Path))
+                    System.IO.File.Delete(file.Path);
         }
 
         [HttpGet]

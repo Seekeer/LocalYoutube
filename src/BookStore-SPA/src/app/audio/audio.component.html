@@ -52,7 +52,22 @@
 
     </div>
 
-    <div *ngIf="selectedFile">{{selectedFile.name}}</div>
+
+    <mat-form-field style="width: 50%;" *ngIf="selectedFile">
+      <mat-label>Название трека</mat-label>
+      <input matInput (change)="fileChanged($event.target.value)" value="{{selectedFile.name}}">
+    </mat-form-field>
+
+    <mat-form-field style="width: 50%;" *ngIf="selectedFile">        
+      <mat-label>Поменять аудиокнигу</mat-label>
+      <mat-select [(ngModel)]="newSeasonId" (ngModelChange)="changeSeason()">
+        <mat-option *ngFor="let data of allSeasons" value="{{data.id}}">
+          {{data.name}}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+
     <audio id="player"  controls height="auto" autoplay  #audioElement (ended)="videoEnded()" src="{{audioURL}}"></audio>
 
     <div>
@@ -80,26 +95,48 @@
       <button class="btn btn-outline-danger btn-sm" (click)="deleteSeries()">Удалить</button>
     </div>
     
+    <!-- <div >
+      <div *ngFor="let file of filteredFiles">
+        <mat-card class="mat-elevation-z4 mt-2">
+          <mat-card-header>
+            <mat-icon matBadge="{{file.durationMinutes}}" matBadgeColor="warn">home</mat-icon>
+            <mat-card-title>{{file.name}}</mat-card-title>
+            <mat-card-subtitle>{{file.name}}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-actions>
+            <button mat-button color="success">В избранное</button>
+            <button mat-button color="danger">В черный список</button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+    </div> -->
+
     <ul class="list-group list-group-light">
       <li class="list-group-item d-flex justify-content-between align-items-center" (click)="selectAudio(file)"
         [ngClass]="{'greenBackground' : file.id==selectedFile.id, 'orangeBackground' : file.isFinished }"
         *ngFor="let file of filteredFiles">
-        {{file.name}}
+        <div>
+          {{file.name}} / {{file.seasoName}}
+        </div>
 
         <div>
-
           <span class="badge badge-primary rounded-pill">{{file.durationMinutes}}</span>
-        
+       
+          <button
+            mat-icon-button
+            class="text-success"
+            (click)="moveToFavorite(file);$event.stopPropagation()" >
+            <mat-icon>done_outline</mat-icon>
+          </button>
           <button
             mat-icon-button
             color="warn"
-            (click)="deleteTrack(file);$event.stopPropagation()"
-            >
-            <!-- *ngIf="parameters.showDeleteButton" -->
-            <mat-icon>delete</mat-icon>
+            (click)="moveToBlacklist(file);$event.stopPropagation()" >
+            <mat-icon>block</mat-icon>
           </button>
         </div>
       </li>
     </ul>
+
 
 </div>  

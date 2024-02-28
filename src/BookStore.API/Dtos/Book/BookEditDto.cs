@@ -3,7 +3,13 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FileStore.API.Dtos.File
 {
-    public class FileEditDto
+    public interface IDtoId
+    {
+        int Id { get; set; }
+        string Name { get; set; }
+    }
+
+    public class FileEditDto : IDtoId
     {
         [Key]
         public int Id { get; set; }

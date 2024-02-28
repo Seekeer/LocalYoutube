@@ -98,6 +98,9 @@ namespace Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("DoNotAutoFinish")
+                        .HasColumnType("bit");
+
                     b.Property<TimeSpan>("Duration")
                         .HasColumnType("time");
 

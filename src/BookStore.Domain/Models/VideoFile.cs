@@ -125,6 +125,7 @@ namespace FileStore.Domain.Models
         public bool IsBackedup{ get; set; }
         public bool NeedToDelete{ get; set; }
         public bool IsDownloading { get; set; }
+        public bool DoNotAutoFinish { get; set; }
 
         public IList<FileUserInfo> VideoFileUserInfos { get; set; } = new List<FileUserInfo>();
         public IList<FileMark> Marks { get; set; } = new List<FileMark>();

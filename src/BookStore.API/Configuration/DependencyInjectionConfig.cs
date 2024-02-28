@@ -42,15 +42,14 @@ namespace FileStore.API.Configuration
             services.AddScoped<TgAPIClient, TgAPIClient>();
 
             services.AddHostedService<StartupService>();
-#if DEBUG
-#else
+
             services.AddQuartz(q =>
             {
                 q.ScheduleJob<BackuperJob>(trigger => trigger
                     .WithIdentity("trigger1", "group1")
                     .StartNow()
                     //.StartAt(DateBuilder.EvenSecondDate(DateTimeOffset.UtcNow.AddSeconds(7)))
-                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(5)).RepeatForever())
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5)).RepeatForever())
                     //.WithDailyTimeIntervalSchedule(x => x.WithIntervalInMinutes(10))
                     .WithDescription("my awesome trigger configured for a job with single call")
                 );
@@ -87,10 +86,8 @@ namespace FileStore.API.Configuration
                 // when shutting down we want jobs to complete gracefully
                 options.WaitForJobsToComplete = true;
             });
-#endif
 
             services.AddTransient<BackuperJob>();
-
 
             var rutracker = new RuTrackerUpdater(config);
             services.AddSingleton<IRuTrackerUpdater>(rutracker);
