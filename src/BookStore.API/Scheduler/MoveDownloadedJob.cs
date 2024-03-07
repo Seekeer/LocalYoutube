@@ -34,7 +34,7 @@ namespace Infrastructure.Scheduler
         {
             var db = _service.GetService<VideoCatalogDbContext>();
             var fileManager = new FileManager(db, new FileManagerSettings(_appConfig.RootDownloadFolder, _appConfig.RootFolder,  true));
-            var counter = 0;
+            var movedFiles = 0;
             var torrentManager = _service.GetService<IRuTrackerUpdater>();
 
             var files = db.Files.Where(x => x.Path.Contains(_appConfig.RootDownloadFolder) && !x.IsDownloading)
@@ -45,11 +45,15 @@ namespace Infrastructure.Scheduler
                 {
                     await torrentManager.PauseTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
 
-                    if (!string.IsNullOrEmpty(await fileManager.MoveFile(file)))
-                    {
+                    var moveResult = await fileManager.MoveFile(file);
+
+                    if (moveResult.HasBeenConverted)
+                        await torrentManager.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
+                    else if(moveResult.HasBeenMoved)
                         await MoveFileInRutracker( torrentManager, file);
-                        counter++;
-                    }
+
+                    if(moveResult.HasBeenMoved)
+                        movedFiles++;
                 }
                 catch (Exception ex)
                 {
@@ -61,7 +65,7 @@ namespace Infrastructure.Scheduler
         private async Task MoveFileInRutracker(IRuTrackerUpdater torrentManager, DbFile file)
         {
             var fi = new FileInfo(file.Path);
-            await torrentManager.MoveTorrent(file.VideoFileExtendedInfo.RutrackerId, fi.Directory.Parent.FullName);
+            await torrentManager.MoveTorrent(file.VideoFileExtendedInfo.RutrackerId, fi.Directory.FullName);
         }
     }
 }

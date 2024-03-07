@@ -516,6 +516,9 @@ namespace API.Controllers
         {
             try
             {
+                if (id == 0)
+                    return false;
+
                 TorrentInfo torrent = await GetTorrent(id.ToString());
 
                 if (torrent != null)

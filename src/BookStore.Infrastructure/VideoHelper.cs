@@ -1,4 +1,5 @@
 ﻿using FFMpegCore;
+using FileStore.Domain;
 using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using System;
@@ -8,8 +9,13 @@ using System.Linq;
 
 namespace Infrastructure
 {
-    public static class VideoHelper
+    public class VideoHelper
     {
+        public VideoHelper(FileManagerSettings config) { 
+        
+            _config = config;
+        }
+
         public static string ChangeQuality(string path, string resultFolder, FFMpegCore.Enums.VideoSize size)
         {
             try
@@ -58,7 +64,7 @@ namespace Infrastructure
             }
         }
 
-        public static string EncodeToMp4(string path, bool encodeAlways = false, string destinationPath = null)
+        public string EncodeToMp4(string path, bool encodeAlways = false, string destinationPath = null)
         {
             if (IsEncoded(path) && !encodeAlways)
                 return null;
@@ -146,12 +152,12 @@ namespace Infrastructure
             //return File.ReadAllBytes(outputFile.Filename);
         }
 
-        public static string GetNewPath(string path)
+        public string GetNewPath(string path)
         {
             var fileInfo = new FileInfo(path);
             var resultPath = path.Replace(fileInfo.Extension, ".mp4");
 
-            resultPath = resultPath.Replace(@"D:\VideoServer\\", @"C:\VideoServer\");
+            resultPath = resultPath.Replace(_config.FromFolder, _config.ToFolder);
             return resultPath;
         }
 
@@ -179,6 +185,7 @@ namespace Infrastructure
             ".WEBM", ".MKV", ".MPG", ".MPEG", ".GIF", 
             ".AVI", ".MP4", ".DIVX", ".WMV", 
         };
+        private readonly FileManagerSettings _config;
 
         private static Quality DetectQuality(Bitmap bitmap)
         {

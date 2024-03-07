@@ -81,6 +81,7 @@ namespace API.FilmDownload
             var manager = new DbUpdateManager(db);
             var seriesDownload = db.Series.First(x => x.Id == 18);
 
+            // TODO hardcodes
             // Helen
             _tgSeasonDict.Add(new TgLink { TgId = 360495063, FilmSeasonId = manager.AddOrUpdateSeason(seriesDownload, "Алена").Id});
             // DIMA
@@ -448,6 +449,9 @@ namespace API.FilmDownload
 
         private async Task AnalyzeTorrentData(VideoFile file, long tgFromId, VideoType type, IReadOnlyList<TorrentContent> torrentFiles)
         {
+            if (torrentFiles == null)
+                return;
+
             var videos = torrentFiles;
             if((type == VideoType.Film || type == VideoType.Animation ) && videos.Count() > 1)
             {
@@ -576,7 +580,9 @@ namespace API.FilmDownload
 
         private async Task ProcessUserInput(Message message, bool filterThemes)
         {
-            if(string.IsNullOrEmpty(message.Text)) 
+            NLog.LogManager.GetCurrentClassLogger().Info(message.Text);
+
+            if (string.IsNullOrEmpty(message.Text)) 
                 return;
 
             foreach (var line in message.Text.SplitByNewLine())

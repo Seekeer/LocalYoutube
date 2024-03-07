@@ -46,6 +46,8 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateAll()
         {
+            await MoveToCurrentFolder();
+
             //var dbManager = new DbUpdateManager(_db);
 
             //RemoveSeasons(14940, 14967, true);
@@ -76,6 +78,18 @@ namespace FileStore.API.Controllers
             //dbManager.AddAudioFilesFromFolder(@"D:\VideoServer\Аудио\Терри Пратчетт - Патриот (Макс Потёмкин)", AudioType.AudioBook, Origin.Foreign, false);
 
             return Ok();
+        }
+
+        private async Task MoveToCurrentFolder()
+        {
+            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Where(x => !x.IsDownloading);
+            var torrentManager = _serviceScopeFactory.CreateScope().ServiceProvider.GetService<IRuTrackerUpdater>();
+            foreach (var file in files)
+            {
+                var fi = new FileInfo(file.Path);
+                await torrentManager.MoveTorrent(file.VideoFileExtendedInfo.RutrackerId, fi.Directory.FullName);
+
+            }
         }
 
         [HttpGet]
@@ -260,108 +274,6 @@ namespace FileStore.API.Controllers
         {
             var dbUpdater = new DbUpdateManager(_db);
             dbUpdater.UpdateAllImages();
-            return Ok();
-        }
-
-        [HttpGet]
-        [Route("checkDB")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> CheckDatabase()
-        {
-            var dbUpdater = new DbUpdateManager(_db);
-
-            var files = _db.VideoFiles.Include(x => x.Season).ToList();
-
-            //var finfo = files.Where(f =>
-            //    //f.Type == VideoType.Animation
-            //    //&& 
-            //    f.Origin != Origin.Russian
-            //    &&
-            //    !System.IO.File.Exists(f.Path)
-            //    )
-            //    .Select(x => new FileInfo(x.Path))
-            //    //.Reverse();
-            //    ;
-            var finfo = files
-                .Where(f =>
-                //    f.SeriesId == 28)
-                    !System.IO.File.Exists(f.Path)
-                )
-                //.Select(x => new FileInfo(x.Path))
-                ;
-
-            var badSeasons = finfo.GroupBy(x => x.Season.Name);
-
-            foreach (var badSeason in badSeasons)
-            {
-                //foreach (var file in badSeason)
-                //{
-                //    Remove(file);
-                //}
-
-                RemoveSeason(badSeason.First().SeasonId, false);
-            }
-
-            var emptySeasons = _db.Seasons.Where(x => !x.Files.Any()).ToList();
-            foreach (var season in emptySeasons)
-            {
-                RemoveSeason(season.Id, false);
-            }
-
-            this.RemoveSeason(13656, true);
-
-            var badPaths = new List<VideoFile>();
-
-            //var folders = finfo.GroupBy(x => x.DirectoryName);TryToFindFile
-            foreach (var x in finfo)
-            {
-                var file = new FileInfo(x.Path);
-                var path = await TryToFindFile(file.DirectoryName, file.FullName);
-
-                if (!string.IsNullOrEmpty(path))
-                {
-                    var converted = VideoHelper.EncodeToMp4(path);
-
-                    if (file.FullName != converted)
-                    {
-                        System.IO.File.Move(converted, file.FullName);
-                    }
-                    else
-                        System.IO.File.Delete(path);
-                }
-                else
-                {
-                    badPaths.Add(x);
-                }
-            }
-
-
-            //this.RemoveFile(3632798, 3632798, true);
-            //this.RemoveFile(6352695, 6352695, true);
-
-            //for (int i = 2041; i < 2086; i++)
-            //{
-            //    RemoveSeries(dbUpdater, i);
-
-            //}
-
-            //this.RemoveSeries(dbUpdater, 2086);
-            //this.RemoveSeries(dbUpdater, 32);
-            //this.RemoveSeries(dbUpdater, 22);
-            //this.RemoveSeries(dbUpdater, 25);
-
-            //this.RemoveSeries(dbUpdater, 3090);
-            //this.RemoveSeries(dbUpdater, 2090);
-            //this.RemoveSeries(dbUpdater, 4090);
-
-            //this.RemoveSeason(4345, true);
-            //this.RemoveSeason(330, true);
-            //this.RemoveSeason(324, true);
-            //this.RemoveSeason(13468, true);
-            //this.RemoveSeason(7446, false);
-            //this.RemoveSeason(7441, false);
-            //this.RemoveSeason(7386, false);
-
             return Ok();
         }
 
@@ -793,16 +705,6 @@ namespace FileStore.API.Controllers
 
             //await this.RemoveSeries(6093, false );
             //await this.AddFolder(@"F:\Видео\Курсы\IT", VideoType.Courses, true);
-
-            return Ok();
-        }
-
-        [HttpGet]
-        [Route("changeDownloadedType")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> ChangeDownloadedType(string seriesName)
-        {
-            new DbUpdateManager(_db).MoveDownloadedToAnotherSeries(VideoType.Film, seriesName ?? "Добавленные фильмы");
 
             return Ok();
         }
@@ -1320,42 +1222,6 @@ namespace FileStore.API.Controllers
 
         }
 
-        private async Task ConvertToAnotherPlace(string folder)
-        {
-            foreach (var file in Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories))
-            {
-                try
-                {
-                    var fInfo = new FileInfo(file);
-                    var destFilepath = GetDestinationPath(VideoHelper.GetNewPath(file));
-                    if (fInfo.Extension != ".avi" || System.IO.File.Exists(destFilepath))
-                        continue;
-
-                    var newFIle = VideoHelper.EncodeToMp4(file);
-
-                    var copy = false;
-                    if (newFIle == null)
-                    {
-                        newFIle = file;
-                        copy = true;
-                    }
-
-                    string newPath = GetDestinationPath(newFIle);
-
-                    var finfo = new FileInfo(newPath);
-                    Directory.CreateDirectory(finfo.DirectoryName);
-                    if (!copy)
-                        System.IO.File.Move(newFIle, newPath);
-                    else
-                    {
-                        System.IO.File.Copy(newFIle, newPath);
-                    }
-                }
-                catch (Exception ex)
-                {
-                }
-            }
-        }
 
         private static string GetDestinationPath(string newFIle)
         {
@@ -1363,84 +1229,6 @@ namespace FileStore.API.Controllers
             newPath = newPath.Replace(@"Z:\Smth\Bittorrent\СВ\СВ\Суть времени (ЭТЦ), 2011", @"F:\Видео\СВ\Суть времени");
             newPath = newPath.Replace(@"Z:\Smth\Bittorrent\СВ\Школа сути\Школа сути", @"F:\Видео\СВ\Школа сути");
             return newPath;
-        }
-
-        [HttpGet]
-        [Route("convertOnline")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> ConvertNewOnline(int minId = 48354)
-        {
-            var dbUpdater = new DbUpdateManager(_db);
-            // Update online files.
-            //var ready = new List<VideoFile>();
-
-            //var series = _db.Series.ToList();
-            //var onlineSeries = series.Where(x => !(new IsOnlineVideoAttribute()).HasAttribute(x.Type.Value)).ToList();
-            //foreach (var serie in onlineSeries)
-            //{
-            //    var files = _db.VideoFiles.Where(x => x.SeriesId == serie.Id).ToList();
-            //    files = files.Where(x =>  x.SeasonId != 13674 && x.SeasonId  != 13670).Reverse().ToList();
-            //    if (!files.Any())
-            //        continue;
-
-            //    foreach (var file in files)
-            //    {
-            //        file.Type = VideoType.Film;
-            //    }
-            //}
-            //_db.SaveChanges();
-
-
-            //var serie = _db.Series.Where(x => x.Id == 18).FirstOrDefault();
-            //var files = _db.VideoFiles.Where(x => x.SeriesId == serie.Id).ToList();
-            //files = files.Where(x => x.Type != serie.Type).ToList();
-
-            //foreach (var file in files)
-            //{
-            //    file.Type = serie.Type.Value;
-            //}
-
-
-            //var files = _db.VideoFiles.Where(x => x.SeasonId == 13674).ToList();
-            //foreach (var item in files)
-            //{
-            //    item.Type = VideoType.Animation;
-
-            //}
-            //_db.SaveChanges();
-
-            IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos)
-                .Where(x => x.Id > minId).ToList();
-
-            var online = queue.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type) && !x.Path.EndsWith("mp4")).ToList();
-            foreach (var item in online)
-                dbUpdater.Convert(item);
-
-            return Ok();
-        }
-
-        [HttpGet]
-        [Route("convertChild")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public void Convert()
-        {
-            var dbUpdater = new DbUpdateManager(_db);
-            var childMovies = _db.VideoFiles.Where(x => x.Type == VideoType.ChildEpisode || x.Type == VideoType.Animation || x.Type == VideoType.FairyTale);
-
-            var convert = childMovies.Where(x => !x.Path.EndsWith("mp4") && !x.Path.EndsWith(".m4v")).ToList();
-
-            //var sovietToConvert = _db.Files.Where(x => x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //var nonSovietToConvert = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //Parallel.ForEach(convert, file =>
-            foreach (var file in convert)
-            {
-                dbUpdater.Convert(file);
-            }
-            //);
-
-            //var nonSovietToConvertList = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList();
-            //var totalDuration = _db.Files.Where(x => !x.Path.Contains("Советские мультфильмы") && !x.Path.EndsWith("mp4")).ToList().Sum(x => x.Duration.TotalMinutes);
-
         }
 
         [HttpGet]

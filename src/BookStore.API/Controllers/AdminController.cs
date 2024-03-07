@@ -51,9 +51,8 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> DoAction()
         {
-            await CombineSeasons("Ганс христиан Андерсон", 14994, 15016);
+            RemoveFile(54671, true);
             //await CombineSeasons("Сказки на ночь, которые помогут малышам спокойно заснуть", 15007, 15021);
-            //RemoveFile(54665, true);
 
             //CreateSeason("Списки", "Список Жаринова", 54656, 54658, false);
             //CreateSeason("Списки", "Список Жаринова", 54651, 54651, false);
@@ -205,7 +204,7 @@ namespace FileStore.API.Controllers
 
             var online = queue.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type) && !x.Path.EndsWith("mp4") && !x.Path.EndsWith("webm")).ToList();
             foreach (var item in online)
-                dbUpdater.Convert(item);
+                dbUpdater.Convert(item, _config);
 
             return Ok();
         }
@@ -307,7 +306,7 @@ namespace FileStore.API.Controllers
             var dbUpdater = new DbUpdateManager(_db);
             var file = _db.VideoFiles.First(x => x.Id == fileId);
 
-            dbUpdater.Convert(file, true);
+            dbUpdater.Convert(file, _config, true);
         }
 
         [HttpGet]

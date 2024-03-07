@@ -1,4 +1,5 @@
-﻿using FileStore.Domain.Models;
+﻿using FileStore.Domain;
+using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using Microsoft.AspNetCore.Identity;
 using System;
@@ -14,6 +15,12 @@ namespace Infrastructure
 {
     public struct FileManagerSettings
     {
+        public FileManagerSettings(AppConfig config) : this()
+        {
+            FromFolder = config.RootDownloadFolder;
+            ToFolder = config.RootFolder;
+        }
+
         public FileManagerSettings(string rootDownloadFolder, string rootFolder, bool convertFilesIfNeeded) : this()
         {
             FromFolder = rootDownloadFolder;
@@ -28,53 +35,65 @@ namespace Infrastructure
         public bool ConvertFilesIfNeeded { get; }
     }
 
+    public class MoveResult
+    {
+        public string NewPath { get; set; }
+        public bool HasBeenConverted { get; set; }
+        public bool HasBeenMoved { get
+            { return !string.IsNullOrEmpty(NewPath); }
+        }
+    }
+
     public class FileManager
     {
         public FileManager(VideoCatalogDbContext db, FileManagerSettings settings)
         {
+            _helper = new VideoHelper(settings);
             _settings = settings;
             _db = db;
         }
 
-        public async Task<string> MoveFile(DbFile file)
+        public async Task<MoveResult> MoveFile(DbFile file)
         {
             try
             {
-                var newPath = _MoveFilePhysically(file);
-                if (newPath != null)
+                var moveResult = _MoveFilePhysically(file);
+                if (moveResult.HasBeenMoved)
                 {
-                    NLog.LogManager.GetCurrentClassLogger().Info($"FileManager {file.Id} from {file.Path} to {newPath}");
+                    NLog.LogManager.GetCurrentClassLogger().Info($"FileManager {file.Id} from {file.Path} to {moveResult.NewPath}");
 
-                    file.Path = newPath;
+                    file.Path = moveResult.NewPath;
                     _db.Update(file);
                     await _db.SaveChangesAsync();
                 }
 
-                return newPath;
+                return moveResult;
             }
             catch (Exception ex)
             {
                 NLog.LogManager.GetCurrentClassLogger().Error($"FileManager", ex);
             }
 
-            return null;
+            return new MoveResult { };
         }
 
-        private string _MoveFilePhysically(DbFile file)
+        private MoveResult _MoveFilePhysically(DbFile file)
         {
+            var result = new MoveResult();
+
             var finfo = new FileInfo(file.Path);
 
             if (!finfo.Exists)
-                return null;
+                return result;
 
-            ConvertIfNeeded(file);
+            result.HasBeenConverted = ConvertIfNeeded(file);
 
             var newPath = file.Path.Replace(_settings.FromFolder, _settings.ToFolder);
 
             var newFInfo = new FileInfo(newPath);
 
             if (newFInfo.Exists)
-                return newPath;
+                return result;
 
             WaitIfNeeded(finfo);
 
@@ -86,19 +105,21 @@ namespace Infrastructure
 
             File.Move(file.Path, newPath);
 
-            return newPath;
+            result.NewPath = newPath;
+            return result;
         }
 
-        private void ConvertIfNeeded(DbFile file)
+        private bool ConvertIfNeeded(DbFile file)
         {
             if (!_settings.ConvertFilesIfNeeded || !VideoHelper.ShouldConvert(file as VideoFile))
-                return;
+                return false;
 
             var oldFile = file.Path;
-            file.Path = VideoHelper.EncodeToMp4(file.Path, false);
+            file.Path = _helper.EncodeToMp4(file.Path, false);
             _db.Update(file);
             _db.SaveChanges();
             File.Delete(oldFile);
+            return true;
         }
 
         private void WaitIfNeeded(FileInfo finfo)
@@ -115,6 +136,7 @@ namespace Infrastructure
             return _bufferFileSize + finfo.Length > _settings.FileBufferLimit;
         }
 
+        private readonly VideoHelper _helper;
         private readonly FileManagerSettings _settings;
         private readonly VideoCatalogDbContext _db;
         private long _bufferFileSize;

@@ -20,6 +20,7 @@ using NLog;
 using static MediaToolkit.Model.Metadata;
 using System.IO.Compression;
 using FileStore.Domain;
+using System.Diagnostics;
 
 namespace Infrastructure
 {
@@ -154,12 +155,13 @@ namespace Infrastructure
             _db.SaveChanges();
         }
 
-        public void Convert(VideoFile file, bool encodeAlways = false)
+        public void Convert(VideoFile file, AppConfig config, bool encodeAlways = false)
         {
             try
             {
                 var oldFile = file.Path;
-                var newFilePath = VideoHelper.EncodeToMp4(file.Path, encodeAlways);
+                var helper = new VideoHelper(new FileManagerSettings(config));
+                var newFilePath = helper.EncodeToMp4(file.Path, encodeAlways);
 
                 if (newFilePath == null)
                     return;
@@ -284,16 +286,6 @@ namespace Infrastructure
                                 (file.FullName.Contains("Конспект") && _type == VideoType.Courses);
         }
 
-        public void MoveDownloadedToAnotherSeries(VideoType type, string seriesName)
-        {
-            //var files = _db.VideoFiles.Where(x => x.Type == VideoType.Film).OrderByDescending(x =>x.Id).ToList();
-            var files = _db.VideoFiles.Where(x => x.Type == VideoType.RutrackerDownloaded && !x.IsDownloading ).ToList();
-            foreach (var file in files)
-            {
-                MoveToAnotherSeries(file, type, seriesName);
-            }
-        }
-
         public void MoveToFolder(VideoFile file)
         {
             {
@@ -307,24 +299,6 @@ namespace Infrastructure
             }
         }
 
-        public void MoveToAnotherSeries(VideoFile file, VideoType type, string seriesName)
-        {
-            _type = type;
-
-            var series = AddOrUpdateVideoSeries(seriesName);
-            var season = AddOrUpdateSeason(series, seriesName);
-            //var series = _db.Series.FirstOrDefault(x => x.Type == type);
-            //var season = _db.Seasons.FirstOrDefault(x => x.SeriesId == series.Id);
-
-            file.SeriesId = series.Id;
-            file.SeasonId = season.Id;
-            file.Type = type;
-
-            if ((new IsOnlineVideoAttribute()).HasAttribute(type))
-                Convert(file);
-
-            _db.SaveChanges();
-        }
         public Season AddOrUpdateSeason(int seriesId, string name)
         {
             var serie = _db.Series.FirstOrDefault(x => x.Id == seriesId);
@@ -1035,10 +1009,11 @@ namespace Infrastructure
 
                 var notAddedFiles = folder.GetFiles().Select(x => x.FullName).Except(files.Select(x => x.Path)).ToList();
 
-                var fileManager = new FileManager(_db, new FileManagerSettings(folder.FullName, Path.Combine(config.RootFolder,"Курсы", courseName), true));
+                var fileManager = new FileManager(_db, 
+                    new FileManagerSettings(folder.FullName, Path.Combine(config.RootFolder,"Курсы", courseName), true));
                 var newFilePath = "";
                 foreach (var file in files)
-                    newFilePath = await fileManager.MoveFile(file);
+                    newFilePath = (await fileManager.MoveFile(file)).NewPath;
 
                 if (!string.IsNullOrEmpty(newFilePath))
                 {
