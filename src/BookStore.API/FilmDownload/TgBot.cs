@@ -30,6 +30,7 @@ using FileStore.Domain.Services;
 using static API.FilmDownload.TgBot;
 using QBittorrent.Client;
 using Google.Apis.CustomSearchAPI.v1.Data;
+using API.Resources;
 //using Polly;
 
 namespace API.FilmDownload
@@ -307,10 +308,13 @@ namespace API.FilmDownload
                                 await ProcessUserInput(command.Data, update.CallbackQuery.From.Id, false);
                                 break;
                             case CommandType.DownloadAsDesigned:
-                                await ProcessYoutubeVideo(command.Data, update.CallbackQuery.From.Id, update.CallbackQuery.Message, false);
+                                // Do nothign
                                 break;
-                            case CommandType.DownloadWatchLater:
-                                await ProcessYoutubeVideo(command.Data, update.CallbackQuery.From.Id, update.CallbackQuery.Message, true);
+                            case CommandType.DownloadIndia:
+                                await MoveToSeries(command.Data, SeasonNames.India);
+                                break;
+                            case CommandType.DownloadOneTime:
+                                await MoveToSeries(command.Data, SeasonNames.OneTime);
                                 break;
                             case CommandType.Delete:
                                 await DeleteFile(update.CallbackQuery.Id, command.Data);
@@ -589,10 +593,11 @@ namespace API.FilmDownload
             {
                 var text = line;
 
-                var task = new DownloadTask(message.MessageId, message.Text);
+                var task = new DownloadTask(message.MessageId, message.From.Id, message.Text);
+                _downloadTasks.Add(task.Id, task);
 
                 if (DownloaderFabric.CanDownload(task))
-                    await ShowDownloadChoice(message, task);
+                    await ProcessYoutubeVideo(task.Id, message);
                 else
                     await ProcessUserInput(text, message.From.Id, filterThemes);
             }
@@ -638,27 +643,6 @@ namespace API.FilmDownload
 
         private Dictionary<string, DownloadTask> _downloadTasks = new Dictionary<string, DownloadTask>();
 
-        private async Task ShowDownloadChoice(Message message, DownloadTask task)
-        {
-            _downloadTasks.Add(task.Id, task);
-
-            //await ProcessYoutubeVideo(task.Id, message.From.Id, message, false);
-
-            var originalText = message.Text;
-            var keyboard = new List<List<InlineKeyboardButton>>
-                {
-                 new List<InlineKeyboardButton>{
-                    new InlineKeyboardButton("Посмотреть на один раз") { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadWatchLater, task.Id) },
-                    new InlineKeyboardButton("Как положено") { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadAsDesigned, task.Id) },
-                    }};
-
-            var messageText = $"Как храним скачанное?";
-            var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(message.From.Id),
-                messageText, replyMarkup: new InlineKeyboardMarkup(keyboard), replyToMessageId: message.MessageId);
-
-            task.QuestionMessageId = tgMessage.MessageId;
-        }
-
         private async Task AddSearchAllButton(string text, long fromId)
         {
             try
@@ -674,10 +658,9 @@ namespace API.FilmDownload
             }
         }
 
-        public async Task ProcessYoutubeVideo(string taskId, long fromId, Message message, bool watchLater)
+        public async Task ProcessYoutubeVideo(string taskId, Message message)
         {
             var task = _downloadTasks[taskId];
-            task.WatchLater = watchLater;
             var downloader = DownloaderFabric.CreateDownloader(task, _config);
             task.DownloadType = downloader.DownloadType;
 
@@ -708,7 +691,7 @@ namespace API.FilmDownload
                                 if (!string.IsNullOrEmpty(task.VideoName))
                                     record.Value.Name = task.VideoName;
 
-                                fileService.DownloadFinished(record.Value, downloader.IsVideoPropertiesFilled);
+                                task.FileId = await fileService.DownloadFinishedAsync(record.Value, downloader.IsVideoPropertiesFilled);
 
                                 if (!System.IO.File.Exists(record.Value.Path))
                                 {
@@ -716,31 +699,50 @@ namespace API.FilmDownload
                                     throw new ArgumentException();
                                 }
 
-                                await NotifyBotDownloadEnded(fromId, record.Value, task);
+                                await NotifyBotDownloadEnded(record.Value, task);
                             });
                         }
                     }
                     catch (Exception ex)
                     {
-                        await _botClient.SendTextMessageAsync(new ChatId(fromId), "Ошибка, файл не скачан!", replyToMessageId: message.MessageId);
+                        await _botClient.SendTextMessageAsync(new ChatId(task.FromId), "Ошибка, файл не скачан!", replyToMessageId: message.MessageId);
                         NLog.LogManager.GetCurrentClassLogger().Error(ex);
                     }
                 }
             }
             catch (Exception)
             {
-                var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(fromId),
+                var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(task.FromId),
                     "Ошибка, файл не скачан!", replyToMessageId: message.MessageId);
                 return;
             }
         }
 
-        private async Task NotifyBotDownloadEnded(long telegramId, VideoFile item, DownloadTask task)
+        private async Task MoveToSeries(string taskId, string newSeasonName)
         {
-            await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {Environment.NewLine}{item.Name} {Environment.NewLine}{task.Uri} {Environment.NewLine}Открыть: http://192.168.1.55:2022/api/Files/getFileById?fileId={item.Id}");
+            var task = _downloadTasks[taskId];
+            var fileRepo = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IVideoFileRepository>();
+            await fileRepo.MoveToAnotherSeriesByNameAsync(task.FileId, newSeasonName);
 
-            await _botClient.DeleteMessageAsync(new ChatId(telegramId), task.OriginalMessageId);
-            await _botClient.DeleteMessageAsync(new ChatId(telegramId), task.QuestionMessageId);
+            await _botClient.DeleteMessageAsync(new ChatId(task.FromId), task.QuestionMessageId);
+        }
+
+        private async Task NotifyBotDownloadEnded(VideoFile item, DownloadTask task)
+        {
+            var keyboard = new List<List<InlineKeyboardButton>>
+                {
+                 new List<InlineKeyboardButton>{
+                    new InlineKeyboardButton(SeasonNames.OneTime) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadOneTime, task.Id) },
+                    new InlineKeyboardButton(SeasonNames.India) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadIndia, task.Id) },
+                    new InlineKeyboardButton(SeasonNames.AsDesigned) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadAsDesigned, task.Id) },
+                    }};
+
+            var tgMessage =  await _botClient.SendTextMessageAsync(new ChatId(task.FromId), 
+                $"Закончена закачка {Environment.NewLine}{item.Name} {Environment.NewLine}{task.Uri}{Environment.NewLine}Как храним скачанное?{Environment.NewLine}Открыть: http://192.168.1.55:2022/api/Files/getFileById?fileId={item.Id}",
+                replyToMessageId: task.OriginalMessageId,
+                replyMarkup: new InlineKeyboardMarkup(keyboard));
+
+            task.QuestionMessageId = tgMessage.MessageId;
         }
 
         private async Task UpdateCover(int count, long tgId)
@@ -761,7 +763,7 @@ namespace API.FilmDownload
 
             if (!filesToUpdateCoverByTg.Any())
             {
-                _botClient.SendTextMessageAsync(new ChatId(tgId), "Нечего обновлять");
+                await _botClient.SendTextMessageAsync(new ChatId(tgId), "Нечего обновлять");
             }
 
             foreach (var file in filesToUpdateCoverByTg.Take(count))

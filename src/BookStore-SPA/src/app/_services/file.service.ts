@@ -48,6 +48,10 @@ export class FileService {
         return this.http.get<Book[]>(`${this.baseUrl}files/getLatest`);
     }
 
+    getNew() {
+        return this.http.get<Book[]>(`${this.baseUrl}files/getNew`);
+    }
+
     public filmStarted(fileId: number) {
         return this.http.patch(`${this.baseUrl}files/filmStarted`, fileId);
     }

@@ -23,5 +23,7 @@ namespace FileStore.Domain.Interfaces
         void MarkFileToDelete(T file);
         Task<bool> MoveToSerie(int fileId, int serieId);
         Task<bool> MoveToSeason(int fileId, int serieId);
+        Task<IEnumerable<T>> GetNew(int count);
+        Task MoveToAnotherSeriesByNameAsync(int fileId, string name);
     }
 }

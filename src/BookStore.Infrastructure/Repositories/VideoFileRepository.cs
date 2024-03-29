@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
+using Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Schema;
 using static FileStore.Infrastructure.Repositories.VideoFileRepository;
@@ -215,6 +216,24 @@ namespace FileStore.Infrastructure.Repositories
             }
 
             return true;
+        }
+
+        public async Task<IEnumerable<T>> GetNew(int count)
+        {
+            var files = DbSet.OrderByDescending(x => x.Id).Take(20);
+
+            return files;
+        }
+
+        public async Task MoveToAnotherSeriesByNameAsync(int fileId, string name)
+        {
+            var file = await GetFilesSet().FirstAsync(x => x.Id == fileId);
+
+            var series = await Db.Series.FirstAsync(x => x.Name == name);
+
+            file.SeriesId = series.Id;
+
+            await Db.SaveChangesAsync();
         }
     }
 }

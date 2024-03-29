@@ -204,5 +204,14 @@ namespace FileStore.API.Controllers
 
             return Ok(_mapper.GetFiles<F, DTO>(files, await GetUserId(_userManager)));
         }
+
+        [HttpGet]
+        [Route("getNew")]
+        public async Task<ActionResult<List<DTO>>> GetNew(int count = 20)
+        {
+            var files = _mapper.Map<List<F>>(await _fileService.GetNew(count));
+
+            return Ok(_mapper.GetFiles<F, DTO>(files, await GetUserId(_userManager)));
+        }
     }
 }

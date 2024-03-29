@@ -299,6 +299,12 @@ namespace Infrastructure
             }
         }
 
+        public Season AddOrUpdateSeason(string seasonName, string seriesName, VideoType type)
+        {
+            var series = AddOrUpdateVideoSeries(seriesName, false, type);
+            return AddOrUpdateSeason(series.Id, seasonName);
+        }
+
         public Season AddOrUpdateSeason(int seriesId, string name)
         {
             var serie = _db.Series.FirstOrDefault(x => x.Id == seriesId);
@@ -424,14 +430,16 @@ namespace Infrastructure
             _db.SaveChanges();
         }
 
-        public void DownloadFinished(VideoFile file, bool isVideoPropertiesFilled)
+        public async Task<int> DownloadFinishedAsync(VideoFile file, bool isVideoPropertiesFilled)
         {
             if(!isVideoPropertiesFilled)
                 VideoHelper.FillVideoProperties(file);
 
             file.IsDownloading = false;
-            _db.Files.Add(file);
-            _db.SaveChanges();
+            await _db.Files.AddAsync(file);
+            await _db.SaveChangesAsync();
+
+            return file.Id;
         }
 
         private static string TrimDots(string result)
@@ -956,7 +964,11 @@ namespace Infrastructure
                 file.VideoFileExtendedInfo.SetCover(File.ReadAllBytes(coverImage));
             }
 
-            _db.AudioFiles.AddRange(files);
+            foreach (var file in files)
+            {
+                if(!_db.AudioFiles.Any(x => x.Name == file.Name))
+                    _db.AudioFiles.AddRange(files);
+            }
             _db.SaveChanges();
         }
 

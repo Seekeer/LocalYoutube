@@ -13,8 +13,9 @@ namespace API.TG
         SetupVLC,
         [CommandName(TgBot.SHOW_ALL_SEARCH_RESULT_Message)]
         ShowAllSearchResult,
-        DownloadWatchLater,
+        DownloadOneTime,
         DownloadAsDesigned,
+        DownloadIndia,
         [CommandName("Сериал")]
         Series,
         [CommandName("Фильм")]

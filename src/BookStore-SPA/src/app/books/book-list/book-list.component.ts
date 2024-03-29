@@ -52,6 +52,7 @@ export enum MenuVideoType {
   latest,
   youtube,
   special,
+  new,
 }
 
 @Component({
@@ -346,6 +347,20 @@ displayListForType() {
         this.showWatched  = true;
 
         this.service.getLatest().subscribe({
+         next: (books) => {
+            that.showBooks(books);
+            this.hideSpinner();
+         },
+         error: (e) => this.getFilmsError(e)
+        });
+        break;
+      }
+      case MenuVideoType.new:{
+        this.showSpinner();
+        this.selectSeries(false);
+        this.showWatched  = true;
+
+        this.service.getNew().subscribe({
          next: (books) => {
             that.showBooks(books);
             this.hideSpinner();

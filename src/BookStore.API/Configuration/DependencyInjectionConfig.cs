@@ -39,6 +39,7 @@ namespace FileStore.API.Configuration
             services.AddScoped<DbUpdateManager, DbUpdateManager>();
             services.AddScoped<IMessageProcessor, MessageProcessor>();
             services.AddSingleton<TgBot, TgBot>();
+            //services.AddSingleton<IStartupInitService, StartupInitService>();
             services.AddScoped<TgAPIClient, TgAPIClient>();
 
             services.AddHostedService<StartupService>();
@@ -68,7 +69,7 @@ namespace FileStore.API.Configuration
                 q.ScheduleJob<MoveDownloadedJob>(trigger => trigger
                     .WithIdentity("trigger3", "group3")
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(5)).RepeatForever())
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5)).RepeatForever())
                 );
             });
             services.AddQuartz(q =>
@@ -114,6 +115,9 @@ namespace FileStore.API.Configuration
                 using var scope = services.CreateScope();
                 var tg = scope.ServiceProvider.GetRequiredService<TgBot>();
                 await tg.Start();
+
+                //var init = scope.ServiceProvider.GetRequiredService<IStartupInitService>();
+                //await init.Init();
             }
             catch (Exception ex)
             {

@@ -179,5 +179,10 @@ namespace FileStore.Domain.Services
         {
             return await _FileRepository.MoveToSeason(fileId, seasonId);
         }
+
+        public async Task<IEnumerable<T>> GetNew(int count)
+        {
+            return await _FileRepository.GetNew(count);
+        }
     }
 }

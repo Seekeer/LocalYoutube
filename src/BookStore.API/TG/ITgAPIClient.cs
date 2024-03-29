@@ -21,7 +21,7 @@ namespace API.TG
 {
     public interface ITgAPIClient
     {
-        public Task ImportMessages();
+        public Task ImportMessages(DateTime startDate, DateTime finihsDate);
     }
 
     internal class TgAPIClient : ITgAPIClient
@@ -64,14 +64,12 @@ namespace API.TG
 
         }
 
-        public async Task ImportMessages()
+        public async Task ImportMessages(DateTime startDate, DateTime finihsDate)
         {
             var my = await _client.LoginUserIfNeeded();
 
             //_client.OnUpdate += Client_OnUpdate;
-
-            var startDate = new DateTime(2023, 1, 1);
-            var finihsDate = new DateTime(2023, 2, 3);
+            
             var abooksChannelId = 1210302841;
             //var abooksChannelId = 2084249373;
             ////var finihsDate = new DateTime(2023, 3, 3);

@@ -51,7 +51,22 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> DoAction()
         {
-            RemoveFile(54671, true);
+            // India 
+            //MoveSeason(15045, 6157);
+            //MoveSeason(15040, 6157);
+            //MoveSeason(15038, 6157);
+            //MoveFileToSeasonByName(54675, "Блоги-Индия", "Индия", VideoType.Youtube);
+            //MoveFileToSeasonByName(54674, "Блоги-Индия", "Индия", VideoType.Youtube);
+            //MoveFileToSeasonByName(54687, "Блоги-Индия", "Индия", VideoType.Youtube);
+            //MoveFileToSeasonByName(52329, "Блоги-Индия", "Индия", VideoType.Youtube);
+            //MoveFileToSeasonByName(54682, "Индия-контекст", "Индия", VideoType.Youtube);
+            
+            //// Eot
+            //MoveFileToSeasonByName(54687, "Мудрец", "СВ-РВС", VideoType.EoT);
+
+            ////RemoveFile(54677, true);
+            //RemoveFile(53331, true);
+            //RemoveFile(52326, true);
             //await CombineSeasons("Сказки на ночь, которые помогут малышам спокойно заснуть", 15007, 15021);
 
             //CreateSeason("Списки", "Список Жаринова", 54656, 54658, false);
@@ -76,8 +91,8 @@ namespace FileStore.API.Controllers
             //    await fileManager.MoveFile(file);
 
             // Get Fairy tales
-            //var tgAPI = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TgAPIClient>();
-            //await tgAPI.ImportMessages();
+            var tgAPI = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TgAPIClient>();
+            await tgAPI.ImportMessages(new DateTime(2024, 2, 1), new DateTime(2024, 3, 29));
 
             // Add courses
             //var dbUpdater = new DbUpdateManager(_db);
@@ -344,8 +359,8 @@ namespace FileStore.API.Controllers
 
             season.SeriesId = newSeriesId;
 
-            var oldSeries = _db.Series.FirstOrDefault(x => x.Id == seasonId);
-            _db.Remove(oldSeries);
+            //var oldSeries = _db.Series.FirstOrDefault(x => x.Id == seasonId);
+            //_db.Remove(oldSeries);
             _db.SaveChanges();
 
             return Ok();

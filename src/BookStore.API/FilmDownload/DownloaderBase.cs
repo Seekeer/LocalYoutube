@@ -21,20 +21,22 @@ namespace API.FilmDownload
 
     public class DownloadTask
     {
-        public DownloadTask(int messageId, string text)
+        public DownloadTask(int messageId, long fromId, string text)
         {
             OriginalMessageId = messageId;
+            FromId = fromId;
             ParseMessageText(text);
         }
 
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
+        public int FileId { get; set; }
         public int OriginalMessageId { get; set; }
+        public long FromId { get; }
         public int QuestionMessageId { get; set; }
         public string SeasonName { get; set; }
         public string VideoName { get; set; }
         public Uri Uri { get; set; }
-        public bool WatchLater { get; internal set; }
         public DownloadType DownloadType { get; internal set; }
 
         private void ParseMessageText(string text)
@@ -59,12 +61,12 @@ namespace API.FilmDownload
             if (!string.IsNullOrEmpty(SeasonName))
                 return SeasonName;
 
-            return !WatchLater || DownloadType == DownloadType.Common ? channelName : $"{DownloadType}" ;
+            return DownloadType == DownloadType.Common ? channelName : $"{DownloadType}" ;
         }
 
         internal string GetSeriesName()
         {
-            return WatchLater ? "На один раз" : DownloadType.ToString();
+            return DownloadType.ToString();
         }
     }
 
