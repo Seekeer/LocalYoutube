@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using FileStore.Domain.Models;
+using System.Collections.Generic;
 
 namespace FileStore.API.Dtos.Series
 {
@@ -8,6 +9,7 @@ namespace FileStore.API.Dtos.Series
 
         public string Name { get; set; }
         public bool IsOrderMatter { get; set; }
+        public VideoType? Type { get; set; }
         public IEnumerable<SeasonResultDto> Seasons { get; set; }
     }
 

@@ -17,6 +17,7 @@ namespace Infrastructure
     {
         public FileManagerSettings(AppConfig config) : this()
         {
+            Config = config;
             FromFolder = config.RootDownloadFolder;
             ToFolder = config.RootFolder;
         }
@@ -30,6 +31,7 @@ namespace Infrastructure
 
         public long FileBufferLimit { get; } = (long)150 * 1024 * 1024 * 1024;
         public TimeSpan BuefferWaitTime { get; } = TimeSpan.FromMinutes(2);
+        public AppConfig Config { get; }
         public string FromFolder { get; }
         public string ToFolder { get;  }
         public bool ConvertFilesIfNeeded { get; }

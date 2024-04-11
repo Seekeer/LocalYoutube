@@ -6,11 +6,15 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Security.Policy;
+using System.Threading.Tasks;
 
 namespace Infrastructure
 {
     public class VideoHelper
     {
+        public VideoHelper(AppConfig config) : this (new FileManagerSettings(config)) { }
+
         public VideoHelper(FileManagerSettings config) { 
         
             _config = config;
@@ -100,6 +104,29 @@ namespace Infrastructure
                 FFMpegCore.Enums.VideoSize.Original, FFMpegCore.Enums.AudioQuality.VeryHigh, true);
 
             return resultPath;
+        }
+
+        public async Task<string> EncodeToX264(string path)
+        { 
+            var format = FFMpeg.GetContainerFormat("mp4");
+            var fileInfo = new FileInfo(path);
+            var convertedPath = Path.Combine(_config.Config.PremierConvertedFolderPath, new string(fileInfo.Name.Where(ch => !Path.InvalidPathChars.Contains(ch)).ToArray()));
+
+            await FFMpegArguments
+                .FromFileInput(path)
+                .OutputToFile(convertedPath, false, options => options
+                    .WithVideoCodec("libx264")
+                    //.WithConstantRateFactor(21)
+                    .WithAudioCodec(FFMpegCore.Enums.AudioCodec.Aac)
+                    //.WithVariableBitrate(4)
+                    .UsingMultithreading(true)
+                    .OverwriteExisting()
+                    //.WithVideoFilters(filterOptions => filterOptions
+                    //    .Scale(VideoSize.Hd))
+                    .WithFastStart())
+                .ProcessAsynchronously();
+
+            return convertedPath;
         }
 
 

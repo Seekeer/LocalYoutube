@@ -1,8 +1,10 @@
+import { VideoType } from './Book';
 import { Seasons } from './Seasons';
 
 export class Serie {
     id: number;
     name: string;
+    type: VideoType;
     isOrderMatter: boolean;
 
     seasons: Seasons[]

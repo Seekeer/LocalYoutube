@@ -33,6 +33,8 @@ namespace API.TG
         [CommandName("Аудиосказка")]
         AudioFairyTale,
         Unknown,
+        DownloadCossacks,
+        DownloadPremier,
     }
 
     public class TgCommand

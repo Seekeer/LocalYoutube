@@ -21,6 +21,9 @@ export class SeriesService {
     moveSeasonToBlackList(seasonId: number) {
         return this.http.get<Serie[]>(this.baseUrl + `series/moveSeasonToFavorite?seasonId=${seasonId}&favorite=false`);
     }
+    moveSeasonToSeries(fileId:number, serieId: number) {
+        return this.http.get<Serie[]>(this.baseUrl + `series/moveSeasonToSeries?fileId=${fileId}&seriesId=${serieId}`);
+    }
     private baseUrl: string = environment.baseUrl + 'api/';
 
     constructor(private http: HttpClient) { }
@@ -45,10 +48,10 @@ export class SeriesService {
     getAdultEpisode(): Observable<Serie[]> {
         return this.http.get<Serie[]>(this.baseUrl + `series/adultEpisode`);
     }
-    getSpecial(): Observable<Serie[]> {
-        return this.http.get<Serie[]>(this.baseUrl + `series/special`);
+    getSpecialAndEot(): Observable<Serie[]> {
+        return this.http.get<Serie[]>(this.baseUrl + `series/specialAndEot`);
     }
-
+    
     public getCategories(): Observable<Serie[]> {
         return this.http.get<Serie[]>(this.baseUrl + `series`);
     }

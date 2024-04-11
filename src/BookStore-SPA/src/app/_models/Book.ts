@@ -37,7 +37,9 @@ export enum VideoType {
     AdultEpisode,
     Courses,
     Downloaded,
-    Youtube
+    Youtube,
+    EoT,
+    Special
 }
 
 export enum VideoOrigin {

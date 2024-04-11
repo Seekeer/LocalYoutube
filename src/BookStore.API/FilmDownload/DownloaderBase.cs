@@ -1,5 +1,6 @@
 ﻿using FileStore.Domain;
 using FileStore.Domain.Models;
+using Infrastructure;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -123,10 +124,13 @@ namespace API.FilmDownload
         public virtual async Task<string> Download(string url, string path)
         {
             //$path = '{path.Replace(" ", "")}'
+            var fInfo = new FileInfo(path);
+            var fileName = fInfo.FullName.Replace(fInfo.Extension, "");
+
             var downloadUtilitiesScript = File.ReadAllText(@"Assets\downloadScript.txt");
             var downloadVideoScript = @$"
             $ytdlp = 'yt-dlp.exe'
-            $cmd = '-f bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best --merge-output-format mp4 {url} -o """"{path}""""'
+            $cmd = '-f ""bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"" --merge-output-format mp4 {url} -o """"{fileName}""""'
             Start-Process -FilePath $ytdlp -ArgumentList $cmd -Wait 
 ";
 
@@ -146,11 +150,13 @@ namespace API.FilmDownload
             await process.WaitForExitAsync();
             string output = process.StandardOutput.ReadToEnd();
 
-            if (File.Exists(path + '#'))
-                File.Move(path + '#', path);
-
-            if (File.Exists(path + "#.mp4"))
-                File.Move(path + "#.mp4", path);
+            if (File.Exists(fileName + "#.mp4"))
+            {
+                if (File.Exists(path))
+                    File.Delete(fileName + "#.mp4");
+                else 
+                    File.Move(fileName + "#.mp4", path);
+            }
 
             return path;
         }

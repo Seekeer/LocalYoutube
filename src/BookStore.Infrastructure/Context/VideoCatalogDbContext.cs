@@ -67,7 +67,7 @@ namespace FileStore.Infrastructure.Context
 
         public override int SaveChanges()
         {
-            UpdateTimeStamps();
+            //UpdateTimeStamps();
 
             return base.SaveChanges();
         }

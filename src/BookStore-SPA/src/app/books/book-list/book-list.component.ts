@@ -83,6 +83,7 @@ export class BookListComponent implements OnInit {
   public showWatched: boolean = true;
   public showSelected: boolean = false;
   public showOnlineButtons: boolean = false;
+  public newSeasonId: string = '14924';
   
   public showOnlyWebSupported: boolean;
   
@@ -114,6 +115,8 @@ export class BookListComponent implements OnInit {
   _numberOfTry = 0;
   public isAndroid: boolean;
   private readonly defaultEpisodesCount: number = 10;
+  allSeasons: Seasons[];
+  allSeries: Serie[];
 
   constructor(private router: Router,
               private service: FileService,
@@ -279,6 +282,7 @@ displayListForType() {
         this.showOnlineButtons = true;
         this.showWatchedCheckbox = true;
         this.showWatched = false;
+        this.setSpecialSeries();
         this.getSeries(VideoType.Youtube);
         this.episodeCount = this.defaultEpisodesCount;
         this.service.getFilmsByType(VideoType.Youtube).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
@@ -305,9 +309,10 @@ displayListForType() {
         break;
       }
       case MenuVideoType.special:{
+        this.setSpecialSeries();
         this.showOnlineButtons = true;
 
-          this.seriesService.getSpecial().subscribe(series => {            
+          this.seriesService.getSpecialAndEot().subscribe(series => {            
             this.showManyEpisodes(series, this.defaultEpisodesCount);
           });
         break;
@@ -359,6 +364,7 @@ displayListForType() {
         this.showSpinner();
         this.selectSeries(false);
         this.showWatched  = true;
+        this.setSpecialSeries();
 
         this.service.getNew().subscribe({
          next: (books) => {
@@ -371,6 +377,19 @@ displayListForType() {
       }
     }
 }
+
+  setSpecialSeries() {
+    this.seriesService.getSpecialAndEot().subscribe((series) => {
+
+      this.allSeasons = series.filter(serie => serie.type != VideoType.EoT).reduce((pr, cur) => [...pr, ...cur.seasons], []).sort((a, b) => {
+        return a.name >= b.name ? 1 : -1;
+      });
+      this.allSeries = series;
+
+      this.hideSpinner();
+    });
+  }
+
   showManyEpisodes(series: Serie[],count: number) {
     this.series = series;
     this.selectSeries(true);
@@ -493,6 +512,16 @@ watchedChanged(event){
             this.spinner.hide() 
       }, 5);
 
+}
+
+public changeSeason(film: Book){
+  let that = this;
+  this.service.moveToSeason(film, film.seasonId).subscribe();//x => that.displayListForType());;
+}
+
+public changeSeries(film: Book){
+  let that = this;
+  this.seriesService.moveSeasonToSeries(film.id, film.seasonId).subscribe();
 }
 
 counter : number =0 ;

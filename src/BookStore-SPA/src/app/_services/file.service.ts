@@ -14,6 +14,9 @@ import { Mark } from '../_models/Mark';
     providedIn: 'root'
 })
 export class FileService {
+    moveToSeason(selectedFile: Book, newSeasonId: number) {
+      return this.http.post(`${this.baseUrl}files/move-file-to-season/${selectedFile.id}/${newSeasonId}`, null);
+    }
 
     updateCover(film: Book) {
         var url = this.baseUrl + `files/updateCover/${film.id}`;

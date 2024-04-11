@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace FileStore.Domain
 {
@@ -12,12 +13,25 @@ namespace FileStore.Domain
         public int YD_Upload_Threads_Count { get; set; }
         public string RootFolder { get; set; }
         public string RootDownloadFolder { get; set; }
+        public string PremierConvertedFolder { get; set; }
 
         public static string FFmpegPath
         {
             get
             {
                 return @"C:\Dev\_Smth\BookStore-master\lib\ffmpeg\";
+            }
+        }
+
+        public string PremierConvertedFolderPath
+        {
+            get
+            {
+                var folder = Path.Combine(RootDownloadFolder, PremierConvertedFolder);
+                if (!Directory.Exists(folder))
+                    Directory.CreateDirectory(folder);
+
+                return folder;
             }
         }
 

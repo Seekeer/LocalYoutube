@@ -199,11 +199,16 @@ namespace FileStore.Infrastructure.Repositories
             var file = await GetById(fileId);
 
             var oldSeasonId = file.SeasonId;
-            var season = await Db.Seasons.FirstOrDefaultAsync(x => x.Id == seasonId);    
+            var season = await Db.Seasons.Include(x => x.Series).FirstOrDefaultAsync(x => x.Id == seasonId);    
 
             Db.Attach(file);
             file.SeasonId = seasonId;
             file.SeriesId = season.SeriesId;
+
+            if(file is VideoFile)
+            {
+                (file as VideoFile).Type = season.Series.Type.Value;
+            }
 
             await Db.SaveChangesAsync();
 

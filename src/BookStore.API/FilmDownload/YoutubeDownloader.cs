@@ -65,11 +65,13 @@ namespace API.FilmDownload
             var streamInfo = streamManifest.GetMuxedStreams().GetWithHighestVideoQuality();
 
             var path = Path.Combine(rootDownloadFolder, new string(channelName.Where(ch => !Path.InvalidPathChars.Contains(ch) && !Path.GetInvalidFileNameChars().Contains(ch)).ToArray()));
-            //Directory.CreateDirectory(path);
+            // TODO 
+            path = path.Trim('.');
 
             var validFilename = new string(video.Title.Where(ch => !Path.GetInvalidFileNameChars().Contains(ch)).ToArray());
 
             path = Path.Combine(path, validFilename);
+            path = path.Trim('.');
             file.Path = $"{path}.{streamInfo.Container}";
 
             return file;

@@ -4,6 +4,7 @@ using FileStore.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -96,6 +97,29 @@ namespace FileStore.Infrastructure.Repositories
             }
 
             return series;
+        }
+
+        public async Task MoveToSeason(int fileId, int seriesId)
+        {
+            var file = await Db.Files.FirstAsync(x => x.Id == fileId);
+            var series = await Db.Series.FirstAsync(x => x.Id == seriesId);
+
+            foreach (var seasonFile in Db.VideoFiles.Where(x => x.SeasonId == file.SeasonId))
+            {
+                seasonFile.SeriesId = seriesId;
+                seasonFile.Type = series.Type.Value;
+            }
+
+            foreach (var seasonFile in Db.AudioFiles.Where(x => x.SeasonId == file.SeasonId))
+            {
+                seasonFile.SeriesId = seriesId;
+                seasonFile.Type = series.AudioType.Value;
+            }
+
+            var season = Db.Seasons.First(x => x.Id == file.SeasonId);
+            season.SeriesId = seriesId;
+
+            await Db.SaveChangesAsync();
         }
     }
 }

@@ -88,10 +88,10 @@ namespace API.FilmDownload
                 Videos = new List<Video>() { new Video { Id = videoId, OwnerId = groupId } }
                 //Videos = new List<Video>() { new Video {  parts.Last() } }
             }) ;
-
+            var group = _GetApi().Groups.GetById(null, (-groupId).ToString(),  GroupsFields.All);
             var info = new DownloadInfo
             {
-                ChannelName = "VK",
+                ChannelName = $"VK|{group.FirstOrDefault().Name}",
                 IsList = false,
             };
 
@@ -140,6 +140,44 @@ namespace API.FilmDownload
         protected override bool IsPlaylist(string url)
         {
             return false;
+        }
+
+        internal async Task<Series> AddAudioFromVKGroup(string url, AudioType audioType)
+        {
+            var idString = url.Replace("https://vk.com/video", "");
+            idString = idString.Replace("https://vk.com/video?z=video", "");
+            idString = idString.Replace("https://vk.com/wall", "");
+            var parts = idString.Split('_', '%', '?');
+            var groupId = long.Parse(parts.First());
+
+            string rootDownloadFolder = Path.Combine(_config.RootDownloadFolder, "VK", groupId.ToString());
+
+            var group = _GetApi().Groups.GetById(null, (-groupId).ToString(),  GroupsFields.All);
+            var serie = new Series
+            {
+                AudioType = audioType,
+                // TODO
+                IsChild = true,
+                Name = group.FirstOrDefault()?.Name
+            };
+            var albums = _GetApi().Audio.GetPlaylists(groupId, count: 100);
+            foreach ( var album in albums )
+            {
+                var season = new Season
+                {
+                    Name = album.Title,
+                };
+                season.Series = serie;
+
+                var audios = _GetApi().Audio.Get(new AudioGetParams { OwnerId = (groupId), PlaylistId = album.Id.Value, AccessKey = album.AccessKey });
+                foreach (var file in audios)
+                {
+
+                    await this.Download("https://vk.com/audio-17232727_456241607_a5fe727c6bbecdb220", @"Z:\VideoServer\VK\asb.mp3");
+                }
+            }
+
+            return null;
         }
     }
 

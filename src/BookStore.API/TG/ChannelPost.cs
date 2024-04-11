@@ -76,6 +76,11 @@ namespace API.TG
                     this.Type = AttachType.Audio;
                     extension = "ogg";
                 }
+                if (document.mime_type == "audio/flac")
+                {
+                    this.Type = AttachType.Audio;
+                    extension = "flac";
+                }
                 else if (document.mime_type == "image/heif")
                 {
                     this.Type = AttachType.File;

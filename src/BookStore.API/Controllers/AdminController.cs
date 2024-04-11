@@ -21,6 +21,8 @@ using TL;
 using AngleSharp.Io;
 using Microsoft.Identity.Client;
 using Infrastructure.Scheduler;
+using FileStore.Infrastructure.Repositories;
+using FileStore.Domain.Interfaces;
 
 namespace FileStore.API.Controllers
 {
@@ -51,6 +53,15 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> DoAction()
         {
+            //await RemoveFile(55166, true, false);
+            //await RemoveFile(55208, true, false);
+            //await RemoveFile(54869, true, false);
+            await RemoveFile(54870, true, false);
+
+            //// Get Fairy tales
+            //var tgAPI = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TgAPIClient>();
+            //await tgAPI.ImportMessages(new DateTime(2023, 1, 1), new DateTime(2023, 12, 31));
+
             // India 
             //MoveSeason(15045, 6157);
             //MoveSeason(15040, 6157);
@@ -60,7 +71,39 @@ namespace FileStore.API.Controllers
             //MoveFileToSeasonByName(54687, "Блоги-Индия", "Индия", VideoType.Youtube);
             //MoveFileToSeasonByName(52329, "Блоги-Индия", "Индия", VideoType.Youtube);
             //MoveFileToSeasonByName(54682, "Индия-контекст", "Индия", VideoType.Youtube);
-            
+
+            //RemoveSeason(15020, true);
+
+            //await RemoveSeries(6153, true);
+
+            //var file = _db.VideoFiles.FirstOrDefault(x => x.Id == 50832);
+            //var file2 = _db.VideoFiles.FirstOrDefault(x => x.Id == 50838);
+            //var file3 = _db.VideoFiles.FirstOrDefault(x => x.Id == 50839);
+            //var file4 = _db.VideoFiles.FirstOrDefault(x => x.Id == 50833);
+            //file4.Type = VideoType.FairyTale;
+            //var file5 = _db.VideoFiles.FirstOrDefault(x => x.Id == 50834);
+            //file5.Type = VideoType.FairyTale;
+
+            //var file6 = _db.VideoFiles.FirstOrDefault(x => x.Id == 50837);
+            //file6.Type = VideoType.FairyTale;
+
+
+            //file.Type = VideoType.FairyTale;
+            //file2.Type = VideoType.FairyTale;
+            //file3.Type = VideoType.FairyTale;
+
+            //await RemoveFile(50848, true);
+
+            //var files = _db.VideoFiles.Where(x => x.Type == VideoType.EoT).OrderByDescending(x => x.Id);
+            //foreach (var file in files)
+            //{
+            //    if(file.SeriesId == 6156)
+            //    {
+            //        file.Type = VideoType.Special;
+            //    }
+            //}
+            _db.SaveChanges();
+
             //// Eot
             //MoveFileToSeasonByName(54687, "Мудрец", "СВ-РВС", VideoType.EoT);
 
@@ -90,10 +133,6 @@ namespace FileStore.API.Controllers
             //foreach (var file in filesToConvert)
             //    await fileManager.MoveFile(file);
 
-            // Get Fairy tales
-            var tgAPI = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TgAPIClient>();
-            await tgAPI.ImportMessages(new DateTime(2024, 2, 1), new DateTime(2024, 3, 29));
-
             // Add courses
             //var dbUpdater = new DbUpdateManager(_db);
             //await dbUpdater.AddAllCourcesFromFolder(@"C:\Users\Dim\Documents\Курсы", _config);
@@ -110,20 +149,50 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
+        [HttpGet]
+        [Route("moveManyToPremiere")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveToPremiere(int startId, int endId)
+        {
+            var fileRepo = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IVideoFileRepository>();
+            var files = _db.Files.Where(x => x.Id >= startId && x.Id <= endId).ToList();
+
+            foreach (var file in files)
+            {
+                var newPath = await new VideoHelper(_config).EncodeToX264(file.Path);
+                fileRepo.RemoveFileCompletely(file.Id);
+                System.IO.File.Delete(file.Path);
+            }
+
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("addAudioFromVKGroup")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> AddAudioFromVKGroup(string url)
+        {
+            var donwloader = DownloaderFabric.CreateDownloader(url, _config);
+            await (donwloader as VKDownloader).AddAudioFromVKGroup(url, AudioType.FairyTale);
+
+            return Ok();
+        }
+
         [HttpDelete]
         [Route("removeFile")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> RemoveFile(int fileId, bool deleteFile)
+        public async Task<IActionResult> RemoveFile(int fileId, bool deleteFile, bool deleteAllAfter)
         {
-            var file = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).First(x => x.Id == fileId);
+            var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).Where(x => deleteAllAfter ? x.Id >= fileId : x.Id == fileId).ToList();
 
-            if (deleteFile)
-                await PhisicallyRemoveFile(file);
+            using (var fileRepo = new DbFileRepository(_db))
+                foreach (var file in files)
+                {
+                    if (deleteFile)
+                        await PhisicallyRemoveFile(file);
 
-            var manager = new DbUpdateManager(_db);
-            manager.RemoveFileCompletely(file);
-
-            _db.SaveChanges();
+                    fileRepo.RemoveFileCompletely(file.Id);
+                }
 
             return Ok();
         }
@@ -367,6 +436,25 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("fixFileTypeBySeries")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> FixFileTypeBySeries()
+        {
+            var season = _db.VideoFiles.Where(x => x.Type == VideoType.Youtube).Include(x => x.Series);
+            foreach (var file in season)
+            {
+                if(file.Type != file.Series.Type)
+                {
+                    file.Type = file.Series.Type.Value;
+                }
+            }
+
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("moveFileToSeasonByName")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> MoveFileToSeasonByName(int fileId, string seasonName, string seriesName, VideoType type)
@@ -408,6 +496,30 @@ namespace FileStore.API.Controllers
             var oldSeason = _db.Seasons.First(x => x.Id == oldSeasonId);
             _db.Seasons.Remove(oldSeason);
             _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("copySeriesToFolder")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> CopyToFolder(int seriesId, string destination)
+        {
+            var series = _db.Series.Include(x => x.Seasons).ThenInclude(x => x.Files).First(x => x.Id == seriesId);
+
+            foreach (var season in series.Seasons)
+            {
+                var dirInfo = Directory.CreateDirectory(Path.Combine(destination, season.Name.Replace(@"/", "").Replace('"',' ')));
+
+                foreach (var file in season.Files)
+                {
+                    if (file.Id == 52220)
+                        continue;
+
+                    var fInfo = new FileInfo(file.Path);
+                    System.IO.File.Copy(file.Path, Path.Combine(dirInfo.FullName, $"{file.Name.Replace(@"/", "").Replace('"', ' ')}.mp4"));
+                }
+            }
 
             return Ok();
         }

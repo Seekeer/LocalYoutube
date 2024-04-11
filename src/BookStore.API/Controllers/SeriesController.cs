@@ -5,6 +5,7 @@ using AutoMapper;
 using FileStore.API.Dtos.Series;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
+using FileStore.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -17,13 +18,14 @@ namespace FileStore.API.Controllers
     public class SeriesController : MainController
     {
         private readonly ISeriesService _SeriesService;
+        private readonly ISeriesRepository _SeriesRepository;
         private readonly IMapper _mapper;
 
-        public SeriesController(IMapper mapper,
-                                    ISeriesService SeriesService)
+        public SeriesController(IMapper mapper, ISeriesService SeriesService, ISeriesRepository SeriesRepository)
         {
             _mapper = mapper;
             _SeriesService = SeriesService;
+            _SeriesRepository = SeriesRepository;
         }
 
         [HttpGet]
@@ -57,6 +59,15 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
+        [HttpPost]
+        [Route("moveSeasonToSeries/{fileId}/{seriesId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveToSeason(int fileId, int seriesId)
+        {
+            await _SeriesRepository.MoveToSeason(fileId, seriesId);
+            return Ok();
+        }
+
         [HttpGet]
         [Route("getAllByType")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -81,9 +92,9 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
-        [Route("special")]
+        [Route("specialAndEot")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> Special()
+        public async Task<IActionResult> SpecialAndEot()
         {
             var series = new List<Series>();
             series.AddRange(await _SeriesService.GetAllByType(VideoType.Special, null));

@@ -313,6 +313,12 @@ namespace API.FilmDownload
                             case CommandType.DownloadIndia:
                                 await MoveToSeries(command.Data, SeasonNames.India);
                                 break;
+                            case CommandType.DownloadCossacks:
+                                await MoveToSeries(command.Data, SeasonNames.Cossacks);
+                                break;
+                            case CommandType.DownloadPremier:
+                                await DownloadedForPremier(command.Data);
+                                break;
                             case CommandType.DownloadOneTime:
                                 await MoveToSeries(command.Data, SeasonNames.OneTime);
                                 break;
@@ -593,7 +599,7 @@ namespace API.FilmDownload
             {
                 var text = line;
 
-                var task = new DownloadTask(message.MessageId, message.From.Id, message.Text);
+                var task = new DownloadTask(message.MessageId, message.From.Id, line);
                 _downloadTasks.Add(task.Id, task);
 
                 if (DownloaderFabric.CanDownload(task))
@@ -727,6 +733,18 @@ namespace API.FilmDownload
             await _botClient.DeleteMessageAsync(new ChatId(task.FromId), task.QuestionMessageId);
         }
 
+        private async Task DownloadedForPremier(string taskId)
+        {
+           var task = _downloadTasks[taskId];
+            var fileRepo = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IVideoFileRepository>();
+            var file = await fileRepo.GetById(task.FileId);
+
+            var newPath = await new VideoHelper(_config).EncodeToX264(file.Path);
+
+            fileRepo.RemoveFileCompletely(task.FileId);
+            await _botClient.DeleteMessageAsync(new ChatId(task.FromId), task.QuestionMessageId);
+        }
+
         private async Task NotifyBotDownloadEnded(VideoFile item, DownloadTask task)
         {
             var keyboard = new List<List<InlineKeyboardButton>>
@@ -735,6 +753,8 @@ namespace API.FilmDownload
                     new InlineKeyboardButton(SeasonNames.OneTime) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadOneTime, task.Id) },
                     new InlineKeyboardButton(SeasonNames.India) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadIndia, task.Id) },
                     new InlineKeyboardButton(SeasonNames.AsDesigned) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadAsDesigned, task.Id) },
+                    new InlineKeyboardButton(SeasonNames.Cossacks) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadCossacks, task.Id) },
+                    new InlineKeyboardButton(SeasonNames.Premiere) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadPremier, task.Id) },
                     }};
 
             var tgMessage =  await _botClient.SendTextMessageAsync(new ChatId(task.FromId), 
