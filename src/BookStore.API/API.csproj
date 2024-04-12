@@ -7,6 +7,16 @@
     <DockerfileContext>..\..</DockerfileContext>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+
   <ItemGroup>
     <Content Remove="NLog.config" />
     <Content Remove="Properties\launchSettings.Development.json" />
