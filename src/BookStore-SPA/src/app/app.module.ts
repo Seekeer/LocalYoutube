@@ -8,6 +8,7 @@ import {
 } from '@angular/common/http';
 import {
   APP_INITIALIZER,
+  ErrorHandler,
   NgModule,
 } from '@angular/core';
 import { FlexLayoutModule } from '@angular/flex-layout';
@@ -30,6 +31,7 @@ import { NgxSpinnerModule } from 'ngx-spinner';
 import { ToastrModule } from 'ngx-toastr';
 
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import * as Sentry from '@sentry/angular-ivy';
 
 import { DurationDisplayPipe } from './_models/SeekPosition';
 import { AudioFileService } from './_services/AudioFileService';
@@ -106,6 +108,12 @@ import {
     ToastrModule.forRoot()
   ],
   providers: [
+    {
+      provide: ErrorHandler,
+      useValue: Sentry.createErrorHandler({
+        showDialog: true,
+      }),
+    },
     FileService,
     AudioFileService,
     SeriesService,
