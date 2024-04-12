@@ -18,6 +18,14 @@ namespace Infrastructure
         public VideoHelper(FileManagerSettings config) { 
         
             _config = config;
+            InitConverter();
+        }
+
+        private void InitConverter()
+        {
+            var directory = new DirectoryInfo((@"Assets\downloadScript.txt"));
+            GlobalFFOptions.Configure(new FFOptions { BinaryFolder = directory.Parent.FullName });
+            Xabe.FFmpeg.FFmpeg.SetExecutablesPath(directory.Parent.FullName);
         }
 
         public static string ChangeQuality(string path, string resultFolder, FFMpegCore.Enums.VideoSize size)
@@ -70,6 +78,7 @@ namespace Infrastructure
 
         public string EncodeToMp4(string path, bool encodeAlways = false, string destinationPath = null)
         {
+
             if (IsEncoded(path) && !encodeAlways)
                 return null;
 
@@ -179,12 +188,10 @@ namespace Infrastructure
             //return File.ReadAllBytes(outputFile.Filename);
         }
 
-        public string GetNewPath(string path)
+        private string GetNewPath(string path)
         {
             var fileInfo = new FileInfo(path);
             var resultPath = path.Replace(fileInfo.Extension, ".mp4");
-
-            resultPath = resultPath.Replace(_config.FromFolder, _config.ToFolder);
             return resultPath;
         }
 

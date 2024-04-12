@@ -49,9 +49,7 @@ namespace FileStore.API.Configuration
                 q.ScheduleJob<BackuperJob>(trigger => trigger
                     .WithIdentity("trigger1", "group1")
                     .StartNow()
-                    //.StartAt(DateBuilder.EvenSecondDate(DateTimeOffset.UtcNow.AddSeconds(7)))
-                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5)).RepeatForever())
-                    //.WithDailyTimeIntervalSchedule(x => x.WithIntervalInMinutes(10))
+                    .WithDailyTimeIntervalSchedule(s => s.OnEveryDay().StartingDailyAt(new TimeOfDay(01, 00)))
                     .WithDescription("my awesome trigger configured for a job with single call")
                 );
             });
@@ -69,7 +67,8 @@ namespace FileStore.API.Configuration
                 q.ScheduleJob<MoveDownloadedJob>(trigger => trigger
                     .WithIdentity("trigger3", "group3")
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5)).RepeatForever())
+                    //.WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5)).RepeatForever())
+                    .WithDailyTimeIntervalSchedule(s => s.OnEveryDay().StartingDailyAt(new TimeOfDay(14, 02)))
                 );
             });
             services.AddQuartz(q =>
