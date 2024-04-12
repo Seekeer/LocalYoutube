@@ -53,6 +53,7 @@
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.7.0" />
     <PackageReference Include="Quartz.Plugins" Version="3.8.0" />
     <PackageReference Include="RuTracker.Client" Version="0.8.0" />
+    <PackageReference Include="Sentry.NLog" Version="4.3.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageReference Include="System.Collections" Version="4.3.0" />
     <PackageReference Include="System.Diagnostics.Debug" Version="4.3.0" />
