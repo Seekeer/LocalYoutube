@@ -58,6 +58,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   totalDuration: moment.Moment;
   subscribed: boolean;
   lastVolumeChangedTime: Date = new Date(1);
+  lastPositionUpdatedTime: Date = new Date(1);
   vlcPlayURL: string;
   notifications: NodeListOf<Element>;
   timer: any;
@@ -392,8 +393,11 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   public switchToFullscreen() {
     var el = this.getVideoElement();
-
-    if (el && el.requestFullscreen) el.requestFullscreen();
+    
+    try{
+      if (el && el.requestFullscreen) el.requestFullscreen();
+    }
+    catch(exception){}
   }
 
   private setNextVideo(encreaseCounter: boolean) {
@@ -453,17 +457,20 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   parseDescription(description: string): DescriptionRow[] {
-    let paragraphs = description.split(/\r\n|\n\r|\n|\r/).map(paragraph => {
-      let convertedWords = paragraph.trim().split(" ");
-      const firstWord = convertedWords[0];
-      if(firstWord.indexOf(':') == -1)
-        return new DescriptionRow( paragraph, null);
-      
-      return new DescriptionRow( paragraph.replace(firstWord,''), firstWord) ;
-  });
+    if(!description)
+      return [];
 
-  return paragraphs;
-}
+    let paragraphs = description.split(/\r\n|\n\r|\n|\r/).map(paragraph => {
+        let convertedWords = paragraph.trim().split(" ");
+        const firstWord = convertedWords[0];
+        if(firstWord.indexOf(':') == -1)
+          return new DescriptionRow( paragraph, null);
+        
+        return new DescriptionRow( paragraph.replace(firstWord,''), firstWord) ;
+      });
+
+    return paragraphs;
+  }
   
   convertDescriptionToHtml(description: string): string {
     let paragraphs = description.split(/\r\n|\n\r|\n|\r/).map(paragraph => {
@@ -498,7 +505,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
         this.lastPosition = video.currentTime;
 
         if(!this.needToUpdateCurrentPosition)
-          this.service.setPosition(this.videoId, video.currentTime);
+          this.updateServerPosition(video.currentTime);
       }
     }
 
@@ -506,6 +513,14 @@ export class PlayerComponent implements OnInit, OnDestroy {
       this.statStr = `Общее время просмотра всех серий ${this.totalDuration.format(
         'mm:ss'
       )} ${this.playedVideoCount}/${this.parameters.videosCount}`;
+  }
+  updateServerPosition(currentTime: number) {
+    var msFromLastUpdate = (new Date()).valueOf() - this.lastPositionUpdatedTime.valueOf() ;
+    if ( msFromLastUpdate< 900 )
+      return;
+    
+    this.service.setPosition(this.videoId, currentTime);
+    this.lastPositionUpdatedTime = new Date();
   }
 
   setPosition() {

@@ -99,7 +99,7 @@ namespace FileStore.Infrastructure.Repositories
             return series;
         }
 
-        public async Task MoveToSeason(int fileId, int seriesId)
+        public async Task MoveSeasonToSeries(int fileId, int seriesId)
         {
             var file = await Db.Files.FirstAsync(x => x.Id == fileId);
             var series = await Db.Series.FirstAsync(x => x.Id == seriesId);

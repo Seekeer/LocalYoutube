@@ -32,6 +32,11 @@ namespace Infrastructure.Scheduler
 
         protected override async Task ExecuteNightJob()
         {
+            await this.MoveFiles();
+        }
+
+        public async Task MoveFiles()
+        {
             var db = _service.GetService<VideoCatalogDbContext>();
             var fileManager = new FileManager(db, new FileManagerSettings(_appConfig.RootDownloadFolder, _appConfig.RootFolder,  true));
             var movedFiles = 0;

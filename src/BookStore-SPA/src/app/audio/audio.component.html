@@ -1,24 +1,31 @@
 <div class="col-md-12">
 
-    <ngx-spinner type="ball-scale-multiple"></ngx-spinner>
-  
+  <ngx-spinner type="ball-scale-multiple"></ngx-spinner>
+
+  <mat-expansion-panel  [expanded]="showChoicePanel">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        Выбор трека
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+
     <div>
-      
+
       <mat-form-field class="example-full-width" appearance="fill">
         <mat-label>Название</mat-label>
-        <input matInput  [(ngModel)]="searchTitle" (ngModelChange)="search()">
+        <input matInput [(ngModel)]="searchTitle" (ngModelChange)="search()">
       </mat-form-field>
-  
-      <mat-form-field appearance="fill"  *ngIf="isSelectSeries" >
+
+      <mat-form-field appearance="fill" *ngIf="isSelectSeries">
         <mat-label>Автор или сборник</mat-label>
-        <mat-select [(ngModel)]="serieId" (ngModelChange)="search()"  [disabled]="serieId">
+        <mat-select [(ngModel)]="serieId" (ngModelChange)="search()" [disabled]="serieId">
           <mat-option *ngFor="let data of series" value="{{data.id}}">
             {{data.name}}
           </mat-option>
         </mat-select>
       </mat-form-field>
-  
-      <mat-form-field appearance="fill"  *ngIf="isSelectSeries" >
+
+      <mat-form-field appearance="fill" *ngIf="isSelectSeries">
         <mat-label>Аудиокнига</mat-label>
         <mat-select [(ngModel)]="seasonId" (ngModelChange)="search()">
           <mat-option *ngFor="let data of seasons" value="{{data.id}}">
@@ -27,19 +34,14 @@
         </mat-select>
       </mat-form-field>
 
-      <mat-form-field class="example-full-width"  *ngIf="isSelectSeries" appearance="fill">
+      <mat-form-field class="example-full-width" *ngIf="isSelectSeries" appearance="fill">
         <mat-label>Сколько еще файлов проиграть</mat-label>
-        <input matInput type="number"  [(ngModel)]="episodesLeft" >
+        <input matInput type="number" [(ngModel)]="episodesLeft">
       </mat-form-field>
 
       <mat-form-field class="example-full-width" appearance="fill">
         <mat-label>Выключить через (минут)</mat-label>
-        <input
-          matInput
-          type="number"
-          [(ngModel)]="timerMinutes"
-          (keyup.enter)="setTimer()"
-        />
+        <input matInput type="number" [(ngModel)]="timerMinutes" (keyup.enter)="setTimer()" />
       </mat-form-field>
 
       <button mat-icon-button color="primary" (click)="setTimer()">
@@ -52,13 +54,12 @@
 
     </div>
 
-
-    <mat-form-field style="width: 50%;" *ngIf="selectedFile">
-      <mat-label>Название трека</mat-label>
+    <mat-form-field style="width: 50%;" *ngIf="selectedFile && showManagementButtons">
+      <mat-label>Название трек1</mat-label>
       <input matInput (change)="fileChanged($event.target.value)" value="{{selectedFile.name}}">
     </mat-form-field>
 
-    <mat-form-field style="width: 50%;" *ngIf="selectedFile">        
+    <mat-form-field style="width: 50%;" *ngIf="selectedFile && showManagementButtons">
       <mat-label>Поменять аудиокнигу</mat-label>
       <mat-select [(ngModel)]="newSeasonId" (ngModelChange)="changeSeason()">
         <mat-option *ngFor="let data of allSeasons" value="{{data.id}}">
@@ -67,76 +68,61 @@
       </mat-select>
     </mat-form-field>
 
+  </mat-expansion-panel>
 
-    <audio id="player"  controls height="auto" autoplay  #audioElement (ended)="videoEnded()" src="{{audioURL}}"></audio>
+  <audio id="player" controls height="auto" autoplay #audioElement (ended)="videoEnded()" src="{{audioURL}}"></audio>
 
-    <div>
+  <div>
 
-      <button class="btn btn-outline-success btn-sm" (click)="continue()">Возобновить</button>
-      
-      <button mat-icon-button color="accent" (click)="rewindVideo()">
-        <mat-icon>fast_rewind</mat-icon>
-      </button>
-<!-- 
+    <button class="btn btn-outline-success btn-sm" (click)="continue()">Возобновить</button>
+
+    <button mat-icon-button color="accent" (click)="rewindVideo()">
+      <mat-icon>fast_rewind</mat-icon>
+    </button>
+    <!-- 
       <button mat-icon-button color="accent" (click)="startPlay()">
         <mat-icon>pause</mat-icon>
       </button> -->
 
-      <button class="btn" mat-icon-button color="accent" (click)="forwardVideo()">
-        <mat-icon>fast_forward</mat-icon>
-      </button>
+    <button class="btn" mat-icon-button color="accent" (click)="forwardVideo()">
+      <mat-icon>fast_forward</mat-icon>
+    </button>
 
-      <button class="btn btn-outline-danger btn-sm" (click)="videoEnded()">Следующий</button>
-  
-      <app-markslist *ngIf="!isChild" #markslist [videoId]="fileId"></app-markslist>
+    <button class="btn btn-outline-danger btn-sm" (click)="videoEnded()">Следующий</button>
 
+    <app-markslist *ngIf="!isChild" #markslist [videoId]="fileId"></app-markslist>
+
+    <div  *ngIf="showManagementButtons">
       <button class="btn btn-outline-success btn-sm" (click)="toFavorite()">В избранное</button>
       <button class="btn btn-outline-danger btn-sm" (click)="toBlackList()">В черный список</button>
       <button class="btn btn-outline-danger btn-sm" (click)="deleteSeries()">Удалить</button>
     </div>
-    
-    <!-- <div >
-      <div *ngFor="let file of filteredFiles">
-        <mat-card class="mat-elevation-z4 mt-2">
-          <mat-card-header>
-            <mat-icon matBadge="{{file.durationMinutes}}" matBadgeColor="warn">home</mat-icon>
-            <mat-card-title>{{file.name}}</mat-card-title>
-            <mat-card-subtitle>{{file.name}}</mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-actions>
-            <button mat-button color="success">В избранное</button>
-            <button mat-button color="danger">В черный список</button>
-          </mat-card-actions>
-        </mat-card>
+  </div>
+
+  <ul class="list-group list-group-light">
+    <li class="list-group-item d-flex justify-content-between align-items-center" (click)="selectAudio(file)"
+      [ngClass]="{'greenBackground' : file.id==selectedFile.id, 'orangeBackground' : file.isFinished }"
+      *ngFor="let file of filteredFiles">
+      <div>
+        {{file.name}} / {{file.seasoName}}
       </div>
-    </div> -->
 
-    <ul class="list-group list-group-light">
-      <li class="list-group-item d-flex justify-content-between align-items-center" (click)="selectAudio(file)"
-        [ngClass]="{'greenBackground' : file.id==selectedFile.id, 'orangeBackground' : file.isFinished }"
-        *ngFor="let file of filteredFiles">
-        <div>
-          {{file.name}} / {{file.seasoName}}
-        </div>
+      <div>
+        <span class="badge badge-primary rounded-pill">{{file.durationMinutes}}</span>
+        
+        <button mat-icon-button class="text-success" (click)="openBook(file);$event.stopPropagation()" *ngIf="!showManagementButtons">
+          <mat-icon>menu_book</mat-icon>
+        </button>
 
-        <div>
-          <span class="badge badge-primary rounded-pill">{{file.durationMinutes}}</span>
-       
-          <button
-            mat-icon-button
-            class="text-success"
-            (click)="moveToFavorite(file);$event.stopPropagation()" >
-            <mat-icon>done_outline</mat-icon>
-          </button>
-          <button
-            mat-icon-button
-            color="warn"
-            (click)="moveToBlacklist(file);$event.stopPropagation()" >
-            <mat-icon>block</mat-icon>
-          </button>
-        </div>
-      </li>
-    </ul>
+        <button mat-icon-button class="text-success" (click)="moveToFavorite(file);$event.stopPropagation()" *ngIf="showManagementButtons">
+          <mat-icon>done_outline</mat-icon>
+        </button>
+        <button mat-icon-button color="warn" (click)="moveToBlacklist(file);$event.stopPropagation()" *ngIf="showManagementButtons">
+          <mat-icon>block</mat-icon>
+        </button>
+      </div>
+    </li>
+  </ul>
 
 
-</div>  
+</div>

@@ -53,10 +53,13 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> DoAction()
         {
+
+            AddAudioFolder("", AudioType.AudioBook, false, "Трое в лодке");
+            await MoveToPremiere(55252, 552522);
             //await RemoveFile(55166, true, false);
             //await RemoveFile(55208, true, false);
             //await RemoveFile(54869, true, false);
-            await RemoveFile(54870, true, false);
+            //await RemoveFile(54870, true, false);
 
             //// Get Fairy tales
             //var tgAPI = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TgAPIClient>();
@@ -157,7 +160,7 @@ namespace FileStore.API.Controllers
             var fileRepo = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IVideoFileRepository>();
             var files = _db.Files.Where(x => x.Id >= startId && x.Id <= endId).ToList();
 
-            foreach (var file in files)
+            foreach (var file in files.OrderBy(x => x.Duration))
             {
                 var newPath = await new VideoHelper(_config).EncodeToX264(file.Path);
                 fileRepo.RemoveFileCompletely(file.Id);

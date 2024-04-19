@@ -248,6 +248,30 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("syncDb")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> SyncDb()
+        {
+            var secondDb = VideoCatalogContextFactory.CreateSecondDb();
+
+            var files = _db.VideoFiles.ToList();
+
+            var oldFiles = secondDb.VideoFiles.ToList();
+
+            var filesPairs = files.ToDictionary(x => x, x => oldFiles.FirstOrDefault(oldFile => oldFile.Id == x.Id));
+            var differentTypes = filesPairs.Where(x => x.Key.Type !=x.Value?.Type).ToList();
+            var wrongFIlms = differentTypes.Where(x => x.Key.Type == VideoType.Unknown);
+            foreach (var file in differentTypes.Where(x => x.Key.Type== VideoType.Unknown))
+            {
+                file.Key.Type = VideoType.Film;
+            }
+
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("clearNonMP4")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> ClearNonMp4()

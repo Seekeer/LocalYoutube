@@ -11,6 +11,10 @@ li{cursor: pointer;}
 audio{
     width: 100%;
 }
+/* 
+mat-form-field{
+    width: 100%;
+} */
 
 .btn{
     margin-right: 15px;
@@ -19,4 +23,11 @@ audio{
 button[mat-icon-button] {
     transform: scale(1.5);
   }
-  
+
+audio {
+padding-top: 10px;
+}
+
+.rounded-pill {
+transform: scale(1.5);
+}

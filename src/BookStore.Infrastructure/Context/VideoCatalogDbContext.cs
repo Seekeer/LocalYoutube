@@ -19,6 +19,14 @@ namespace FileStore.Infrastructure.Context
 
             return new VideoCatalogDbContext(optionsBuilder.Options);
         }
+
+        public static VideoCatalogDbContext CreateSecondDb()
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<VideoCatalogDbContext>();
+            optionsBuilder.UseSqlServer("Server=localhost;Database=FileStore_backup;Encrypt=False;Trusted_Connection=True;");
+
+            return new VideoCatalogDbContext(optionsBuilder.Options);
+        }
     }
 
     // cd .\src\BookStore.Infrastructure\

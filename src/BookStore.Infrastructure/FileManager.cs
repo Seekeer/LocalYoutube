@@ -73,7 +73,7 @@ namespace Infrastructure
             }
             catch (Exception ex)
             {
-                NLog.LogManager.GetCurrentClassLogger().Error($"FileManager", ex);
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }
 
             return new MoveResult { };

@@ -567,7 +567,7 @@ namespace Infrastructure
                 return int.Parse(TrimDots(numberStr));
         }
 
-        public IEnumerable<VideoFile> UpdateDownloading(Func<VideoFile, bool> selectFiles, int? newSeasonId = null)
+        public IEnumerable<VideoFile> UpdateDownloading(Func<VideoFile, bool> selectFiles)
         {
             var ready = new List<VideoFile>();
             IEnumerable<VideoFile> queue = _db.VideoFiles
@@ -829,7 +829,7 @@ namespace Infrastructure
                 var dirInfo = new DirectoryInfo(folderPath);
                 if (!dirInfo.Exists)
                     return ;
-                var title = dirInfo.Name;
+                var title = bookTitle?? dirInfo.Name;
 
                
                 if (severalSeriesInFolder)

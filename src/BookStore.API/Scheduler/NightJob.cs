@@ -21,8 +21,8 @@ namespace Infrastructure.Scheduler
     {
         protected override async Task Execute()
         {
-            if (DateTime.Now.Hour > 8 || DateTime.Now.Hour < 1)
-                return;
+            //if (DateTime.Now.Hour > 8 || DateTime.Now.Hour < 1)
+            //    return;
 
             await ExecuteNightJob();
         }

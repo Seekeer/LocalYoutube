@@ -169,7 +169,7 @@ namespace FileStore.API.Controllers
         {
             var file = await _fileService.GetById(fileId);
 
-            if (file.Cover == null)
+            if (file?.Cover == null)
                 return NotFound();
 
             // Replace the octet-stream with whatever type you desire, we decided on the basic, generic form because... well, it all is, isn't it?

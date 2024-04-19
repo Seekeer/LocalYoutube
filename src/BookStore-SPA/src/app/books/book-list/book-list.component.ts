@@ -516,12 +516,12 @@ watchedChanged(event){
 
 public changeSeason(film: Book){
   let that = this;
-  this.service.moveToSeason(film, film.seasonId).subscribe();//x => that.displayListForType());;
+  that.service.moveToSeason(film, film.seasonId).subscribe();//x => that.displayListForType());;
 }
 
 public changeSeries(film: Book){
   let that = this;
-  this.seriesService.moveSeasonToSeries(film.id, film.seasonId).subscribe();
+  that.seriesService.moveSeasonToSeries(film.id, film.seriesId).subscribe();
 }
 
 counter : number =0 ;

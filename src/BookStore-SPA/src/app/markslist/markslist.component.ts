@@ -76,7 +76,7 @@ export class MarkslistComponent implements OnInit, OnChanges {
   }
 
   public paused() {
-    if (this.getVideoElement().seeking) return;
+    if (this.getVideoElement()?.seeking) return;
 
     this.lastVolumeChangedTime = new Date();
   }
@@ -104,7 +104,10 @@ export class MarkslistComponent implements OnInit, OnChanges {
   }
 
   private calculateTime(date: Date) {
-    return new Date().getTime() - date.getTime();
+    if(!date)
+      return 0;
+    else
+      return new Date().getTime() - date.getTime();
   }
 
   getVideoElement() {

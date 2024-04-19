@@ -76,7 +76,6 @@ namespace FileStore.Domain.Services
                 }
                 catch (Exception ex)
                 {
-                    NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger().Error(ex);
                     _FileRepository.MarkFileToDelete(file);
 
                     return false;

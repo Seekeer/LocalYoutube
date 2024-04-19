@@ -43,12 +43,16 @@ export class HomeComponent implements OnInit {
           const m = mutations[i];
           if (m.type == 'childList') {
               for (let k = 0; k < m.addedNodes.length; k++) {
+                try {
                   const autofocuses = (<Element>m.addedNodes[k]).querySelectorAll("[autofocus]"); //Note: this ignores the fragment's root element
                   if (autofocuses.length) {
                       const a = autofocuses[autofocuses.length - 1] ; // focus last autofocus element
                       (a as HTMLElement)?.focus();
                       (a as HTMLInputElement)?.select();
                   }
+                }
+                catch(exception){
+                }
               }
           }
       }

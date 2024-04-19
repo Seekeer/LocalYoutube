@@ -10,7 +10,7 @@ if (environment.production) {
   enableProdMode();
 }
 
-if(environment.production){
+if(!environment.production){
   Sentry.init({
     dsn: "https://7b5242a17c30c84cd9c3f155eb7d296a@o4507070039851008.ingest.de.sentry.io/4507070043455568",
     integrations: [

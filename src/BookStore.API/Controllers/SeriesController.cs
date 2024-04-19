@@ -59,12 +59,12 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
-        [HttpPost]
-        [Route("moveSeasonToSeries/{fileId}/{seriesId}")]
+        [HttpGet]
+        [Route("moveSeasonToSeries")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> MoveToSeason(int fileId, int seriesId)
         {
-            await _SeriesRepository.MoveToSeason(fileId, seriesId);
+            await _SeriesRepository.MoveSeasonToSeries(fileId, seriesId);
             return Ok();
         }
 

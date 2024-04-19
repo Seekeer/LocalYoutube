@@ -248,7 +248,7 @@ namespace API.FilmDownload
         {
             try
             {
-                NLog.LogManager.GetCurrentClassLogger().Error(exception);
+                NLog.LogManager.GetCurrentClassLogger().Info(exception);
             }
             catch (Exception ex)
             {

@@ -30,6 +30,7 @@ enum MenuAudioType {
   selector: 'app-audio',
   templateUrl: './audio.component.html',
   styleUrls: ['./audio.component.css'],
+
 })
 export class AudioComponent implements OnInit {
   @ViewChild('audioElement') audio:ElementRef; 
@@ -38,7 +39,10 @@ export class AudioComponent implements OnInit {
   type: MenuAudioType;
   public isSelectSeries: boolean = true;
   public isChild: boolean = false;
+  public showChoicePanel: boolean = true;
+  public showManagementButtons: boolean = false;
   public series: Serie[];
+  public episodesLeft: number = 1;
   searchTitle: string;
   seasonId: number;
   serieId: number;
@@ -82,10 +86,12 @@ export class AudioComponent implements OnInit {
     switch (this.type) {
       case MenuAudioType.audioFairyTale: {
         this.isChild = true;
+        this.showManagementButtons = true;
         this.getSeries(AudioType.FairyTale);
         break;
       }
       case MenuAudioType.main: {
+        this.episodesLeft = 100;
         this.getSeries(null);
         break;
       }
@@ -190,16 +196,26 @@ export class AudioComponent implements OnInit {
       this.seasons = serie.seasons.sort((a, b) => {
         return a.name >= b.name ? 1 : -1;
       });
-      this.service
+      if(this.seasons.length == 1){
+        this.seasonId = this.seasons[0].id;
+        this.search();
+        this.hideSpinner();
+      }
+      else{
+        this.service
         .searchFilesWithSeries(serie.id, false)
         .subscribe(this.sortFilesByDuration.bind(this), this.getFilesError.bind(this));
+      }
+
     } else {
       this.toastr.error('Выберите название файла или сериала');
     }
   }
   
-  openVideo(film: AudioFile) {
-    throw new Error('Method not implemented.');
+  openBook(film: AudioFile) {
+    this.seasonId = film.seasonId;
+    this.search();
+    this.continue();
   }
 
   sortFilesByDuration(files: AudioFile[]) {
@@ -325,6 +341,7 @@ export class AudioComponent implements OnInit {
       if(!element.isFinished)
       {
         this.setVideoByIndex(element.index);
+        this.showChoicePanel = false;
         return;
       }
     }
@@ -333,12 +350,11 @@ export class AudioComponent implements OnInit {
   }
 
   public videoEnded() {
-    console.log('ended');
+    this.service.setPosition(this.selectedFile.id, (this.selectedFile.durationMinutes + 1) *60);
+
     if(this.setNextVideo())
       this.getAudioElement().load();
   }
-  
-  public episodesLeft: number = 1;
   
   private setNextVideo() {
 
