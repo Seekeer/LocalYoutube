@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using FileStore.API.Configuration;
 using FileStore.API.Dtos.File;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
+using Infrastructure;
 using Infrastructure.Scheduler;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -24,8 +26,27 @@ namespace FileStore.API.Controllers
     [Route("api/[controller]")]
     public class AudioFilesController : FilesControllerBase<AudioFile, AudioType, VideoFileResultDto>
     {
-        public AudioFilesController(UserManager<ApplicationUser> userManager, IMapper mapper, IAudioFileService FileService) : base(userManager, mapper, FileService)
+        private readonly FileManager _fileManager;
+
+        public AudioFilesController(UserManager<ApplicationUser> userManager, IMapper mapper, IAudioFileService FileService, FileManager fileManager) : base(userManager, mapper, FileService)
         {
+            _fileManager = fileManager;
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        [Route("downloadSeason/{seasonId}")]
+        public async Task<FileResult> ZipSeason(int seasonId)
+        {
+            var files = await _fileService.GetFilesBySeason(seasonId, false, 0, 0);
+
+            if (!files.Any())
+                throw new ArgumentException("None File was founded");
+
+            var tempFile = _fileManager.ZipFiles(files);
+            var stream = new FileStream(tempFile, FileMode.Open);
+
+            return PhysicalFile($"{tempFile}", "application/zip", files.First().Name, enableRangeProcessing: true);
         }
     }
 

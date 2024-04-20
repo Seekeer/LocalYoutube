@@ -35,6 +35,9 @@ export class AudioFileService {
     public searchFilesWithSeason(seasonId: number, isRandom: boolean): Observable<AudioFile[]> {
         return this.http.get<AudioFile[]>(`${this.baseUrl}AudioFiles/search-file-with-season/${seasonId}/${isRandom}`);
     }
+    public downloadURL(seasonId: number): string {
+        return `${this.baseUrl}AudioFiles/downloadSeason/${seasonId}`;
+    }
 
     public searchFilesWithTitle(searchedValue: string): Observable<AudioFile[]> {
         return this.http.get<AudioFile[]>(`${this.baseUrl}AudioFiles/search/${searchedValue}`);

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Runtime;
 using System.Text;
@@ -13,16 +14,16 @@ using System.Threading.Tasks;
 
 namespace Infrastructure
 {
-    public struct FileManagerSettings
+    public class FileManagerSettings
     {
-        public FileManagerSettings(AppConfig config) : this()
+        public FileManagerSettings(AppConfig config) 
         {
             Config = config;
             FromFolder = config.RootDownloadFolder;
             ToFolder = config.RootFolder;
         }
 
-        public FileManagerSettings(string rootDownloadFolder, string rootFolder, bool convertFilesIfNeeded) : this()
+        public FileManagerSettings(string rootDownloadFolder, string rootFolder, bool convertFilesIfNeeded)
         {
             FromFolder = rootDownloadFolder;
             ToFolder = rootFolder;
@@ -77,6 +78,29 @@ namespace Infrastructure
             }
 
             return new MoveResult { };
+        }
+
+        public string ZipFiles(IEnumerable<DbFile> files)
+        {
+            var filePath = Path.Combine(_settings.Config.RootDownloadFolder, "Upload");
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
+
+            filePath = Path.Combine(filePath, $"{Guid.NewGuid().ToString()}.zip");
+
+            using (var zipFile = System.IO.File.Create(filePath))
+            {
+                using (var zipArchive = new ZipArchive(zipFile, ZipArchiveMode.Create, true))
+                {
+                    foreach (var file in files)
+                    {
+                        var finfo = new FileInfo(file.Path);
+                        zipArchive.CreateEntryFromFile(file.Path, finfo.Name);
+                    }
+                }
+            }
+
+            return filePath;
         }
 
         private MoveResult _MoveFilePhysically(DbFile file)

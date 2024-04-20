@@ -33,6 +33,8 @@ namespace FileStore.API.Configuration
 
             services.AddScoped<ISeriesService, SeriesService>();
             services.AddScoped<IAudioFileService, AudioFileService>();
+            services.AddScoped<FileManagerSettings, FileManagerSettings>();
+            services.AddScoped<FileManager, FileManager>();
             services.AddScoped<IVideoFileService, VideoFileService>();
             services.AddScoped<IDbFileService, DbFileService>();
 

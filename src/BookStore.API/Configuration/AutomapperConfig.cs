@@ -2,6 +2,8 @@
 using FileStore.API.Dtos.File;
 using FileStore.API.Dtos.Series;
 using FileStore.Domain.Models;
+using ProtoBuf.WellKnownTypes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -12,7 +14,13 @@ namespace FileStore.API.Configuration
         public static IEnumerable<DTO> GetFiles<T, DTO>(this IMapper mapper, IEnumerable<T> files, string userId)
             where T : DbFile
         {
-            files.ToList().ForEach(x => x.CurrentUserId = userId);
+            var currentTime = TimeSpan.Zero;
+            files.ToList().ForEach(x =>
+            {
+                x.CurrentUserId = userId;
+                x.PreviousFilesDurationSeconds = currentTime.TotalSeconds;
+                currentTime += x.Duration;
+            });
 
             return mapper.Map<IEnumerable<DTO>>(files);
         }

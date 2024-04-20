@@ -19,6 +19,7 @@ namespace FileStore.API.Dtos.File
         public string Director { get; set; }
         public int Year { get; set; }
         public TimeSpan Duration { get; set; }
+        public double PreviousFilesDurationSeconds { get; set; }
 
         public int DurationMinutes
         {

@@ -13,6 +13,7 @@ export class Book {
     durationMinutes:number;
     isFinished:boolean;
     isSupportedWebPlayer:boolean;
+    previousFilesDurationSeconds:number;
 
     description: string;
     year: number;

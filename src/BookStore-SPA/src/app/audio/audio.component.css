@@ -25,9 +25,30 @@ button[mat-icon-button] {
   }
 
 audio {
-padding-top: 10px;
+    padding-top: 10px;
+    /* position: sticky;
+    top: 0; */
 }
 
 .rounded-pill {
-transform: scale(1.5);
+    transform: scale(1.5);
+}
+
+.limited{
+    /* max-width: 100vw; 
+    max-height: 100vh;  */
+}
+.parent{
+    position: relative;
+}
+
+.col_selector_container{
+    position: absolute;
+    overflow-y: auto;
+    list-style-type: none;
+    height: 80vh;
+    width: 100%;
+    display:inline-block;
+    vertical-align:top;
+    padding-left: 0px;
 }

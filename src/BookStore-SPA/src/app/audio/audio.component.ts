@@ -7,6 +7,7 @@ import {
 import { SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 
+import * as moment from 'moment';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { ToastrService } from 'ngx-toastr';
 
@@ -43,6 +44,8 @@ export class AudioComponent implements OnInit {
   public showManagementButtons: boolean = false;
   public series: Serie[];
   public episodesLeft: number = 1;
+  public trackCaption: string;
+  public trackInfo: string;
   searchTitle: string;
   seasonId: number;
   serieId: number;
@@ -287,7 +290,7 @@ export class AudioComponent implements OnInit {
     if(video.currentTime > 10 && this.selectedFile)
       this.service.setPosition(this.selectedFile.id, video.currentTime);
 
-    // this.setPosition();
+    this.updateTrackInfo();
   }
 
   private getAudioElement(){
@@ -351,6 +354,7 @@ export class AudioComponent implements OnInit {
 
   public videoEnded() {
     this.service.setPosition(this.selectedFile.id, (this.selectedFile.durationMinutes + 1) *60);
+    this.position = 0;
 
     if(this.setNextVideo())
       this.getAudioElement().load();
@@ -382,7 +386,22 @@ export class AudioComponent implements OnInit {
 
     this.setPosition();
 
+    this.trackCaption = this.selectedFile.name;
+    this.updateTrackInfo();
     return true;
+  }
+
+  download() {
+    (window as any).open(this.service.downloadURL(this.seasonId),'_blank');
+  }
+
+  updateTrackInfo() {
+    var time =  this.selectedFile.previousFilesDurationSeconds + this.position;
+    var totalTime = this.filteredFiles[ this.filteredFiles.length - 1].previousFilesDurationSeconds ;
+    var percent = time == 0 || Number.isNaN(time) ? 0 : time/totalTime*100;
+    var timeMoment = moment(0).utc(false).add(time, 'seconds');
+    var totalTimeMoment = moment(0).utc(false).add(totalTime, 'seconds');
+    this.trackInfo = `Прослушано ${(percent).toFixed(0)}% ${timeMoment.format('HH:mm:ss')} из ${totalTimeMoment.format('HH:mm:ss')}`;
   }
 
   counter: number = 0;

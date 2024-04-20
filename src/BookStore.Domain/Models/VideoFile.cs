@@ -146,6 +146,9 @@ namespace FileStore.Domain.Models
         }
 
         [NotMapped]
+        public double PreviousFilesDurationSeconds { get; set; }
+
+        [NotMapped]
         public byte[] Cover
         {
             get
