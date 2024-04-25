@@ -19,7 +19,7 @@ using AngleSharp.Media;
 namespace Infrastructure.Scheduler
 {
     [DisallowConcurrentExecution]
-    public class MoveDownloadedJob : NightJob
+    public class MoveDownloadedJob : JobBase
     {
         private readonly IServiceProvider _service;
         private readonly AppConfig _appConfig;
@@ -30,7 +30,7 @@ namespace Infrastructure.Scheduler
             _appConfig = appConfig;
         }
 
-        protected override async Task ExecuteNightJob()
+        protected override async Task Execute()
         {
             await this.MoveFiles();
         }

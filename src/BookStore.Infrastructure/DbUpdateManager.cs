@@ -106,6 +106,46 @@ namespace Infrastructure
             this._db = db;
         }
 
+        public async Task UpdateFilesSeries()
+        {
+            var db = _db;
+
+            var files = db.VideoFiles.ToList();
+            var seasons = db.Seasons.ToList();
+            var series = db.Series.ToList();
+
+            foreach (var seasonGroup in files.GroupBy(x => x.SeasonId))
+            {
+                var season = seasons.First(x => x.Id == seasonGroup.Key);
+
+                foreach (var file in seasonGroup)
+                {
+                    if (file.SeriesId != season.SeriesId)
+                    {
+                        if (file.SeriesId == 14)
+                            file.SeasonId = 55;
+                        else if (file.SeriesId == 6107)
+                        {
+                        }
+                        else if (file.SeriesId == 6157)
+                        {
+                            file.SeasonId = 15048;
+                        }
+                        else
+                            file.SeriesId = season.SeriesId;
+                    }
+                }
+            }
+
+            foreach (var file in files)
+            {
+                file.Type = series.First(x => x.Id == file.SeriesId).Type.Value;
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+
         public void FillFilms(string rootPath, Origin origin, VideoType type )
         {
             _origin = origin;
@@ -822,7 +862,8 @@ namespace Infrastructure
             }
         }
 
-        public void AddAudioFilesFromFolder(string folderPath, AudioType type, Origin origin, bool severalSeriesInFolder = false, string bookTitle = null)
+        public void AddAudioFilesFromFolder(string folderPath, AudioType type, Origin origin, bool severalSeriesInFolder = false
+            , string bookTitle = null, string author = null)
         {
             try
             {
@@ -831,7 +872,6 @@ namespace Infrastructure
                     return ;
                 var title = bookTitle?? dirInfo.Name;
 
-               
                 if (severalSeriesInFolder)
                 {
                     foreach (var dir in dirInfo.GetDirectories())
@@ -846,7 +886,8 @@ namespace Infrastructure
             }
         }
 
-        public bool AddAudioFilesFromFolder(string folderName, IEnumerable<FileInfo> filePaths, AudioType type, Origin origin)
+        public bool AddAudioFilesFromFolder(string folderName, IEnumerable<FileInfo> filePaths, AudioType type, Origin origin
+            , string bookTitle = null, string author = null)
         {
             var voice = "";
             var voiceParts = folderName.Split(new char[] { '(', ')', '[', ']', '_' }, StringSplitOptions.RemoveEmptyEntries);
@@ -855,16 +896,13 @@ namespace Infrastructure
                 voice = voiceParts.Last();
             }
 
-            var author = "";
-            var bookTitle = "";
-
             var removedVoice = !string.IsNullOrEmpty(voice) ? folderName.Replace(voice, "") : folderName; 
             var authorParts = removedVoice.Split('-', StringSplitOptions.RemoveEmptyEntries);
             if (authorParts.Length > 1)
             {
-                bookTitle = authorParts.Last().Split('(', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault().Trim();
+                bookTitle = bookTitle ?? authorParts.Last().Split('(', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault().Trim();
 
-                author = authorParts.First().Trim();
+                author = author?? authorParts.First().Trim();
             }
 
             var images = filePaths.Where(x => x.FullName.Contains(".jp")).OrderByDescending(x => x.Length);
@@ -877,10 +915,13 @@ namespace Infrastructure
             var season = AddOrUpdateSeason(series, bookTitle);
 
             var files = new List<AudioFile>();
-            foreach (var item in filePaths.Select((info, index) => (info, index)))
+
+            var mp3s = filePaths.Where(x => x.Name.EndsWith(".mp3"));
+            foreach (var item in mp3s.Select((info, index) => (info, index)))
             {
                 var finfo = item.info;
-                var filename = finfo.Name.Split("##").First().Replace(".mp3", "");
+                var filename = finfo.Name.Split("##").First()
+                    .Replace(".mp3", "").Replace(bookTitle, "").Replace(bookTitle.ToUpper(), "").Replace(author, "");
 
                 var audioFile = new AudioFile
                 {

@@ -230,7 +230,7 @@ export class AudioComponent implements OnInit {
   }
 
   updateSeasonNames(apiFiles: AudioFile[]) {
-    apiFiles.forEach(file => file.seasoName = this.allSeasons.filter(x => x.id == file.seasonId)[0].name);
+    apiFiles.forEach(file => file.seasoName = this.allSeasons.filter(x => x.id == file.seasonId)[0]?.name);
   }
 
   processFilesBase(files: AudioFile[],  sortByDuration: boolean) {
@@ -396,6 +396,9 @@ export class AudioComponent implements OnInit {
   }
 
   updateTrackInfo() {
+    if(!this.selectedFile)
+      return;
+
     var time =  this.selectedFile.previousFilesDurationSeconds + this.position;
     var totalTime = this.filteredFiles[ this.filteredFiles.length - 1].previousFilesDurationSeconds ;
     var percent = time == 0 || Number.isNaN(time) ? 0 : time/totalTime*100;

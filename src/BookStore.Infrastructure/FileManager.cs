@@ -4,6 +4,7 @@ using FileStore.Infrastructure.Context;
 using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -55,6 +56,26 @@ namespace Infrastructure
             _settings = settings;
             _db = db;
         }
+
+        public MoveResult MoveFileSync()
+        {
+            try
+            {
+                throw new ArgumentException();
+            }
+            catch (Exception ex)
+            {
+                StackTrace st = new StackTrace(true);
+                Console.WriteLine(ex.StackTrace);
+                Console.WriteLine("....");
+                Console.WriteLine(st);
+
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+            }
+
+            return new MoveResult { };
+        }
+
 
         public async Task<MoveResult> MoveFile(DbFile file)
         {

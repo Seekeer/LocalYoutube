@@ -487,20 +487,22 @@ namespace API.Controllers
             request.DownloadFolder = rootDownloadFolder;
             request.Tags = new List<string> { id.ToString() };
 
-            try
+            string hash = await StartDownload(id, request);
+            if (hash == null)
             {
-                await _qclient.AddTorrentsAsync(request);
-
-                return await _qclient.GetTorrentContentsAsync(await GetTorrentHash(id.ToString()));
-            }
-            catch (Exception ex)
-            {
-                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                // Probably we haven't started QBittorrent.
                 StartQBittorrent();
-                await _qclient.AddTorrentsAsync(request);
+                hash = await StartDownload(id, request);
             }
 
-            return null;
+            return await _qclient.GetTorrentContentsAsync(hash);
+        }
+
+        private async Task<string> StartDownload(int id, AddTorrentFilesRequest request)
+        {
+            await _qclient.AddTorrentsAsync(request);
+            var hash = await GetTorrentHash(id.ToString());
+            return hash;
         }
 
         private void StartQBittorrent()

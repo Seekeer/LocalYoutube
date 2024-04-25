@@ -27,7 +27,7 @@ namespace Infrastructure.Scheduler
     }
 
     [DisallowConcurrentExecution]
-    public class BackuperJob : NightJob
+    public class BackuperJob : JobBase
     {
         private readonly IServiceProvider _service;
         private readonly YandexDisc _client;
@@ -40,7 +40,7 @@ namespace Infrastructure.Scheduler
             _config = appConfig;
         }
 
-        protected override async Task ExecuteNightJob()
+        protected override async Task Execute()
         {
             NLog.LogManager.GetCurrentClassLogger().Debug($"BackuperJob");
 

@@ -53,7 +53,9 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> DoAction()
         {
-
+            //var manager = new FileManager(null, null);
+            //manager.MoveFileSync();
+            //await manager.MoveFile(null);
             AddAudioFolder("", AudioType.AudioBook, false, "Трое в лодке");
             await MoveToPremiere(55252, 552522);
             //await RemoveFile(55166, true, false);
@@ -359,11 +361,12 @@ namespace FileStore.API.Controllers
         [HttpGet]
         [Route("addAudioFolder")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> AddAudioFolder(string path, AudioType type, bool severalSeriesInFolder = false, string bookTitle = null)
+        public async Task<IActionResult> AddAudioFolder(string path, AudioType type, 
+            bool severalSeriesInFolder = false, string bookTitle = null, string author = null)
         {
             var dbUpdater = new DbUpdateManager(_db);
 
-            dbUpdater.AddAudioFilesFromFolder(path, type, Origin.Unknown, severalSeriesInFolder, bookTitle);
+            dbUpdater.AddAudioFilesFromFolder(path, type, Origin.Unknown, severalSeriesInFolder, bookTitle, author);
             return Ok();
         }
 

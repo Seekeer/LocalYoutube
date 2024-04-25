@@ -46,23 +46,16 @@ namespace FileStore.API.Configuration
 
             services.AddHostedService<StartupService>();
 
+
             services.AddQuartz(q =>
             {
                 q.ScheduleJob<BackuperJob>(trigger => trigger
-                    .WithIdentity("trigger1", "group1")
-                    .StartNow()
-                    .WithDailyTimeIntervalSchedule(s => s.OnEveryDay().StartingDailyAt(new TimeOfDay(01, 00)))
-                    .WithDescription("my awesome trigger configured for a job with single call")
-                );
+                    .WithSchedule(CronScheduleBuilder.DailyAtHourAndMinute(01, 20)));
             });
             services.AddQuartz(q =>
             {
                 q.ScheduleJob<MoveDownloadedJob>(trigger => trigger
-                    .WithIdentity("trigger3", "group3")
-                    .StartNow()
-                    //.WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5)).RepeatForever())
-                    .WithDailyTimeIntervalSchedule(s => s.OnEveryDay().StartingDailyAt(new TimeOfDay(02, 00)))
-                );
+                    .WithSchedule(CronScheduleBuilder.DailyAtHourAndMinute(02, 20)));
             });
             services.AddQuartz(q =>
             {
@@ -78,18 +71,8 @@ namespace FileStore.API.Configuration
                     .WithIdentity("trigger2", "group2")
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(30)).RepeatForever())
-                    .WithDescription("my awesome trigger configured for a job with single call")
                 );
             });
-            //services.AddQuartz(q =>
-            //{
-            //    q.ScheduleJob<UpdateFileJob>(trigger => trigger
-            //        .WithIdentity("trigger5", "group5")
-            //        .StartNow()
-            //        //.WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5)).RepeatForever())
-            //        .WithDailyTimeIntervalSchedule(s => s.OnEveryDay().StartingDailyAt(new TimeOfDay(23, 32)))
-            //    );
-            //});
 
             // Quartz.Extensions.Hosting allows you to fire background service that handles scheduler lifecycle
             services.AddQuartzHostedService(options =>

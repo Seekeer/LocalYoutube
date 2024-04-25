@@ -17,16 +17,4 @@ namespace Infrastructure.Scheduler
         protected abstract Task Execute();
     }
 
-    public abstract class NightJob : JobBase
-    {
-        protected override async Task Execute()
-        {
-            //if (DateTime.Now.Hour > 8 || DateTime.Now.Hour < 1)
-            //    return;
-
-            await ExecuteNightJob();
-        }
-
-        protected abstract Task ExecuteNightJob();
-    }
 }
