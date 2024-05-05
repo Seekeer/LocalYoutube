@@ -367,10 +367,10 @@ namespace API.Controllers.Tests
 
             var info = await updater.ParseAudioInfo(page);
 
-            Assert.AreEqual("", info.Name);
+            Assert.AreEqual("Пушкин Александр Сергеевич - Борис Годунов [Д. Назаров, Ю. Васильев, Б. Плотников, А. Феклистов и др., 2009 г., 256 kbps, MP3]", info.Name);
             Assert.AreEqual("Борис Годунов", info.BookTitle);
-            Assert.AreEqual("Александр Пушкин", info.Author);
-            Assert.AreEqual("Д. Назаров, Ю. Васильев, Б. Плотников, А. Феклистов и др", info.Voice);
+            Assert.AreEqual("Александр Сергеевич Пушкин", info.Author);
+            Assert.AreEqual("Д. Назаров, Ю. Васильев, Б. Плотников, А. Феклистов и др.", info.Voice);
         }
 
         [Test()]
@@ -382,7 +382,7 @@ namespace API.Controllers.Tests
 
             var info = await updater.ParseAudioInfo(page);
 
-            Assert.AreEqual("", info.Name);
+            Assert.AreEqual("Манн Томас - Волшебная гора [Терновский Евгений, 2013 г., 96 kbps, MP3]", info.Name);
             Assert.AreEqual("Волшебная гора", info.BookTitle);
             Assert.AreEqual("Томас Манн", info.Author);
             Assert.AreEqual("Терновский Евгений", info.Voice);

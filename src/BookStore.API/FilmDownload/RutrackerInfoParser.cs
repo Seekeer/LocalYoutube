@@ -90,56 +90,21 @@ namespace API.Controllers
 
             text = HttpUtility.HtmlDecode(text);
 
+            info.BookTitle = text.TrimStart('\r', '\n', '\t').SplitByNewLine().FirstOrDefault();
+
             var title = doc.QuerySelector("#topic-title").InnerText;
                 info.Name = title.EndingBefore("/")?.Trim();
 
             info.Description = GetProperty("Описание", text);
 
-            var director = GetProperty("Исполнитель:", text);
-            if (string.IsNullOrEmpty(director))
-                director = GetProperty("Режиссёр:", text);
-            if (string.IsNullOrEmpty(director))
-                director = GetProperty("Режиссёр", text);
-            if (string.IsNullOrEmpty(director))
-                director = GetProperty("Режиссер", text);
-            director = director?.EndingBefore("Роли озвучивали");
-            director = director?.EndingBefore("В ролях");
-            info.Director = director;
+            var director = GetProperty("Исполнитель", text);
+            info.Voice = director;
 
-            var name = GetProperty("В ролях", text);
-            info.Genres = GetProperty("Жанр", text);
-            var duration = GetProperty("Продолжительность", text);
-            if (string.IsNullOrEmpty(duration))
-                duration = GetProperty("Время", text);
-            if (!string.IsNullOrEmpty(duration))
-            {
-                if (TryParse(duration, out var durationTs))
-                    info.Duration = durationTs;
-            }
+            var name = GetProperty("Имя автора", text);
+            var surname = GetProperty("Фамилия автора", text);
+            info.Author = $"{name} {surname}";
 
-            var yearStr = GetProperty("Год выпуска", text);
-            if (string.IsNullOrEmpty(yearStr))
-                yearStr = GetProperty("Год выхода", text);
-            if (string.IsNullOrEmpty(yearStr))
-                yearStr = GetProperty("Год", text);
-            if (!string.IsNullOrEmpty(yearStr))
-            {
-                var yearStrDigits = yearStr.Length > 6 ? yearStr.Substring(0, 6).OnlyDigits() : yearStr.OnlyDigits();
-                if (int.TryParse(yearStrDigits, out int year))
-                {
-                    if (year > 1900 && year < 2030)
-                        info.Year = year;
-                }
-            }
             var urls = doc.QuerySelectorAll(".postImg").Select(x => x.GetAttributeValue("title", null));
-
-            var links = doc.QuerySelectorAll("a");
-            var kinopoiskLink = links.Select(x => x.GetAttributeValue("href", "")).FirstOrDefault(x => x.Contains("kinopoisk"));
-            if (kinopoiskLink != null)
-            {
-                var kpUrl = HttpUtility.HtmlDecode(kinopoiskLink).Replace("out.php?url=", "");
-                info.KinopoiskLink = kpUrl.Replace(@"/votes", "").Replace("level/1", "");
-            }
 
             return urls;
         }
