@@ -13,15 +13,15 @@ namespace API.Controllers.Tests
     public class RuTrackerUpdaterTests
     {
         [Test()]
-        public async Task ParseInfo_Zit()
+        public async Task ParseVideoInfo_Zit()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\Zit.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual("Ю Гэ, Гун Ли, Бен Ниу, Ксяо Конг, Ден Фэй, Тао Гуо", videoInfo.Artist);
             Assert.AreEqual("Чжан Имоу / Yimou Zhang", videoInfo.Director);
@@ -35,15 +35,15 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
-        public async Task ParseInfo_Svidetel()
+        public async Task ParseVideoInfo_Svidetel()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\svidetel.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual("Питер Уир / Peter Weir", videoInfo.Director);
             Assert.AreEqual(@"Девятилетний мальчик становится свидетелем зверского убийства: прямо на его глазах в туалете филадельфийского вокзала два человека безжалостно зарезали молодого мужчину. Оказывается, убитый был тайным агентом отдела по борьбе с наркотиками. Теперь мальчик- единственный свидетель, который может помочь детективу Джону Буку найти преступников.Лица убийц навсегда впечатались в детскую память. И мальчик увидел их снова, когда его привезли для дачи показаний в местный полицейский участок - он увидел фото убийц на доске почета полицейского управления. С этой минуты за маленьким свидетелем и его единственным защитником, инспектором Буком, начинается охота.", videoInfo.Description);
@@ -51,15 +51,15 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
-        public async Task ParseInfo_Wind()
+        public async Task ParseVideoInfo_Wind()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\Wind_5937963.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual("Ветер крепчает", videoInfo.Name);
             Assert.AreEqual("Хаяо Миядзаки", videoInfo.Director);
@@ -68,15 +68,15 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
-        public async Task ParseInfo_Gora()
+        public async Task ParseVideoInfo_Gora()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\Gora.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual(732, videoInfo.Duration.TotalMinutes);
             Assert.AreEqual(@"Сказка — первый и самый древний путь познания мира. «Гора Самоцветов» — это 54 сказки народов России. Каждую серию из цикла «Гора самоцветов» представляют одни и те же слова: «Мы живём в России». Всего несколько добрых слов о каждом народе, а следом — его мудрая и самобытная сказка. Именно такой радостный и светлый мир каждый взрослый мечтает подарить своему ребёнку. Особую окраску мультсборнику придают голоса известных актёров, которые озвучивали эти сказки.", videoInfo.Description);
@@ -84,15 +84,15 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
-        public async Task ParseInfo_Bugsy()
+        public async Task ParseVideoInfo_Bugsy()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\Bugsy.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual("Барри Левинсон / Barry Levinson", videoInfo.Director);
             Assert.AreEqual(1991, videoInfo.Year);
@@ -101,102 +101,102 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
-        public async Task ParseInfo_Las()
+        public async Task ParseVideoInfo_Las()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\las.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual("Покидая Лас-Вегас", videoInfo.Name);
             Assert.IsNotNull(videoInfo.Cover);
         }
 
         [Test()]
-        public async Task ParseInfo_Jfk()
+        public async Task ParseVideoInfo_Jfk()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\jfk.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual("Оливер Стоун", videoInfo.Director);
         }
 
         [Test()]
-        public async Task ParseInfo_Rapun()
+        public async Task ParseVideoInfo_Rapun()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\Rapun.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual("Рапунцель: Запутанная история", videoInfo.Name);
         }
 
         [Test()]
-        public async Task ParseInfo_Frozen()
+        public async Task ParseVideoInfo_Frozen()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\Frozen.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual("Холодное сердце", videoInfo.Name);
         }
 
 
         [Test()]
-        public async Task ParseInfo_Witch1_2()
+        public async Task ParseVideoInfo_Witch1_2()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\Witch1-2.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual("Сезон: 1-2", videoInfo.SeasonName);
         }
 
 
         [Test()]
-        public async Task ParseInfo_Witch1()
+        public async Task ParseVideoInfo_Witch1()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\Witch1.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual("Сезон: 1", videoInfo.SeasonName);
         }
 
         [Test()]
-        public async Task ParseInfo_Aviator()
+        public async Task ParseVideoInfo_Aviator()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\aviator.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual("Авиатор", videoInfo.Name);
             Assert.AreEqual("драма, биография", videoInfo.Genres);
@@ -204,15 +204,15 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
-        public async Task ParseInfo_Fox()
+        public async Task ParseVideoInfo_Fox()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\MrFox.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.IsNull(videoInfo.Artist);
             Assert.AreEqual(@"Разъяренные фермеры, уставшие от постоянных нападок хитрого лиса на их курятники, готовятся уничтожить своего врага и его «хитрое» семейство.Рип от CtrlHD!", videoInfo.Description);
@@ -226,15 +226,15 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
-        public async Task ParseInfo_Rainman()
+        public async Task ParseVideoInfo_Rainman()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\Rainman.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual(@"Дастин Хоффман, Том Круз, Валерия Голино, Джералд Р. Молен, Джек Мёрдок, Майкл Д. Робертс, Ральф Сеймур, Люсинда Дженни, Бонни Хант, Ким Робиллард", videoInfo.Artist);
             Assert.AreEqual("Барри Левинсон / Barry Levinson", videoInfo.Director);
@@ -248,15 +248,15 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
-        public async Task ParseInfo_Other()
+        public async Task ParseVideoInfo_Other()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\other.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual(new TimeSpan(1, 49, 0), videoInfo.Duration);
 
@@ -264,43 +264,43 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
-        public async Task ParseInfo_Star()
+        public async Task ParseVideoInfo_Star()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\stars.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual(new TimeSpan(1, 32, 23), videoInfo.Duration);
         }
 
         [Test()]
-        public async Task ParseInfo_Star1()
+        public async Task ParseVideoInfo_Star1()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\stars1.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual(2014, videoInfo.Year);
         }
 
         [Test()]
-        public async Task ParseInfo_Trud()
+        public async Task ParseVideoInfo_Trud()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\trud.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual(@"Кейт Уинслет, Джош Бролин, Гэттлин Гриффит, Тоби Магуайр, Том Липински, Майка Монро, Кларк Грегг, Джеймс Ван Дер Бик, Дж.К. Симмонс, Брук Смит", videoInfo.Artist);
             Assert.AreEqual("Джейсон Райтман / Jason Reitman", videoInfo.Director);
@@ -314,15 +314,15 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
-        public async Task ParseInfo_Yazik()
+        public async Task ParseVideoInfo_Yazik()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+            
 
             string page = GetPage(@"Resources\yazik.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual(@"Ширли МакЛейн, Дебра Уингер, Джек Николсон, Дэнни ДеВито, Джефф Дэниелс, Джон Литгоу, Лиза Харт Кэрролл, Бетти Кинг, Huckleberry Fox, Трой Бишоп", videoInfo.Artist);
             Assert.AreEqual("Джеймс Л. Брукс / James L. Brooks", videoInfo.Director);
@@ -336,15 +336,15 @@ namespace API.Controllers.Tests
         }
 
         [Test()]
-        public async Task ParseInfo_Malenkie()
+        public async Task ParseVideoInfo_Malenkie()
         {
-            var updater = new RuTrackerUpdater(null);
+            var updater = new RutrackerInfoParser();
 
-            var videoInfo = new VideoInfo();
+
 
             string page = GetPage(@"Resources\malenkie.html");
 
-            await updater.ParseInfo(page, videoInfo);
+            var videoInfo = await updater.ParseVideoInfo(page);
 
             Assert.AreEqual("Сирша Ронан, Эмма Уотсон, Флоренс Пью, Мэрил Стрип, Элайза Сканлен, Лора Дерн, Тимоти Шаламе, Трэйси Леттс, Боб Оденкёрк, Джеймс Нортон, Луи Гаррель", videoInfo.Artist);
             Assert.AreEqual("Грета Гервиг / Greta Gerwig", videoInfo.Director);
@@ -356,6 +356,36 @@ namespace API.Controllers.Tests
             Assert.IsNotNull(videoInfo.Cover);
             Assert.AreEqual("https://www.kinopoisk.ru/film/807339", videoInfo.KinopoiskLink);
             Assert.AreEqual(new TimeSpan(2, 14, 54), videoInfo.Duration);
+        }
+
+        [Test()]
+        public async Task ParseVideoInfo_Godunov()
+        {
+            var updater = new RutrackerInfoParser();
+
+            string page = GetPage(@"Resources\Godunov1.html");
+
+            var info = await updater.ParseAudioInfo(page);
+
+            Assert.AreEqual("", info.Name);
+            Assert.AreEqual("Борис Годунов", info.BookTitle);
+            Assert.AreEqual("Александр Пушкин", info.Author);
+            Assert.AreEqual("Д. Назаров, Ю. Васильев, Б. Плотников, А. Феклистов и др", info.Voice);
+        }
+
+        [Test()]
+        public async Task ParseVideoInfo_GoraVols()
+        {
+            var updater = new RutrackerInfoParser();
+
+            string page = GetPage(@"Resources\Gora1.html");
+
+            var info = await updater.ParseAudioInfo(page);
+
+            Assert.AreEqual("", info.Name);
+            Assert.AreEqual("Волшебная гора", info.BookTitle);
+            Assert.AreEqual("Томас Манн", info.Author);
+            Assert.AreEqual("Терновский Евгений", info.Voice);
         }
 
         private static string GetPage(string path)

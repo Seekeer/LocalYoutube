@@ -22,7 +22,7 @@ namespace FileStore.Domain.Models
         Foreign
     }
 
-    public enum VideoType
+    public enum VideoType 
     {
         Unknown,
         Film,

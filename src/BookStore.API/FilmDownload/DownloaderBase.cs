@@ -150,14 +150,21 @@ namespace API.FilmDownload
             await process.WaitForExitAsync();
             string output = process.StandardOutput.ReadToEnd();
 
-            if (File.Exists(fileName + "#.mp4"))
+            if (File.Exists(fileName))
+                File.Move(fileName, path);
+            else
             {
-                if (File.Exists(path))
-                    File.Delete(fileName + "#.mp4");
-                else 
-                    File.Move(fileName + "#.mp4", path);
+                fileName = fileName + "#";
+                if (File.Exists(fileName))
+                    File.Move(fileName, path);
+                else if (File.Exists(fileName + ".mp4"))
+                {
+                    if (File.Exists(path))
+                        File.Delete(fileName + ".mp4");
+                    else 
+                        File.Move(fileName + ".mp4", path);
+                }
             }
-
             return path;
         }
 

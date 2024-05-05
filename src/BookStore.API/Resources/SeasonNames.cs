@@ -8,5 +8,7 @@
         public static string OneTime { get; } = "На один раз";
         public static string Cossacks { get; } = "Казачество";
         public static string Premiere { get; } = "Для редактора";
+        public static string Kurginyan { get; } = "СЕ";
+        public static string Eot { get; } = "СВ-РВС";
     }
 }

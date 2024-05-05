@@ -56,8 +56,10 @@ namespace FileStore.API.Controllers
             //var manager = new FileManager(null, null);
             //manager.MoveFileSync();
             //await manager.MoveFile(null);
-            AddAudioFolder("", AudioType.AudioBook, false, "Трое в лодке");
-            await MoveToPremiere(55252, 552522);
+            NLog.LogManager.GetCurrentClassLogger().Info("test");
+
+            //AddAudioFolder("", AudioType.AudioBook, false, "Трое в лодке");
+            //await MoveToPremiere(55252, 552522);
             //await RemoveFile(55166, true, false);
             //await RemoveFile(55208, true, false);
             //await RemoveFile(54869, true, false);

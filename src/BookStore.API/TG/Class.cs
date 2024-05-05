@@ -1,6 +1,9 @@
 ﻿using API.FilmDownload;
+using API.Resources;
 using Infrastructure;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace API.TG
@@ -32,9 +35,14 @@ namespace API.TG
         Art,
         [CommandName("Аудиосказка")]
         AudioFairyTale,
+        AudioBook,
+        [CommandName("Аудиокнига")]
+        SearchAudioBook,
         Unknown,
         DownloadCossacks,
         DownloadPremier,
+        DownloadEot,
+        DownloadKurginyan,
     }
 
     public class TgCommand
@@ -67,6 +75,18 @@ namespace API.TG
 
     public class CommandParser
     {
+        public static IEnumerable<string> GetCommandName(CommandType command)
+        {
+            var memberInfos = typeof(CommandType).GetMember(command.ToString());
+            var enumValueMemberInfo = memberInfos.FirstOrDefault(m => m.DeclaringType == typeof(CommandType));
+            var valueAttributes = enumValueMemberInfo.GetCustomAttributes(typeof(CommandNameAttribute), false);
+
+            if (!valueAttributes.Any())
+                return new List<string>(); 
+
+            return ((CommandNameAttribute)valueAttributes[0]).Names;
+        }
+
         public static CommandType ParseCommand(string message)
         {
             try
@@ -82,15 +102,7 @@ namespace API.TG
                     if (message == ((int)command).ToString())
                         return command;
 
-                    var memberInfos = typeof(CommandType).GetMember(command.ToString());
-                    var enumValueMemberInfo = memberInfos.FirstOrDefault(m => m.DeclaringType == typeof(CommandType));
-                    var valueAttributes = enumValueMemberInfo.GetCustomAttributes(typeof(CommandNameAttribute), false);
-
-                    if (!valueAttributes.Any())
-                        continue;
-
-                    var names = ((CommandNameAttribute)valueAttributes[0]).Names;
-
+                    var names = GetCommandName(command);
                     if (names.Any(x => string.Compare(x, message, StringComparison.OrdinalIgnoreCase) == 0))
                         return command;
                 }
@@ -102,6 +114,7 @@ namespace API.TG
 
             return CommandType.Unknown;
         }
+
 
         private const string SEPARATOR = ";;";
 

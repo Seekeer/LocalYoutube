@@ -31,6 +31,8 @@ namespace API.FilmDownload
 
         private VkApi _GetApi()
         {
+            //$"https://vkhost.github.io/"
+
             if (_api == null)
             {
                 var services = new ServiceCollection();
@@ -41,7 +43,6 @@ namespace API.FilmDownload
 
                 //79366187801:rFdTbLLDgsJxy1
                 //api.OnTokenExpires += _api_OnTokenExpires;
-                //var token = "vk1.a.aU0anIQj5Tn2mtFxTNqKS4SejEnWC1N42glg6bZqs1EiPyFplM4Yfc85zswZk0CSZ3VGpQSM0geNOOmFJFL5fcktipwo9BNOjc3bHdYHG3sKZuqAUxOkHRB3GciQHKSk2L1peu3FdblDfWc2ho93PN_lLGo1BY59eCOSTLlvP15xbV_-1nmXZnSEF1P4XMEAUvn6ybwbqo0mBeBUO6xBUw";
 
                 api.Authorize(new ApiAuthParams
                 {
@@ -51,8 +52,7 @@ namespace API.FilmDownload
                     //ApplicationId = 210960361,
                     //ApplicationId = 51448867,
 
-                    AccessToken = "vk1.a.H8D7ZenWSih67WKh5_9SONJVhm9IWeNadB2BsGCn-9ZDNIsvTMXdRe5VjuBQ19FoZTjQ2wndJjD210YSDE40Yi-E-E_pNmxsYITbCTQFDQLdv12EfrlsvP9ysf2hR0_93TzuU-wu-e2AonuRdzwcTtrPEe0SHiU07GsFj_IHjSdl81x58MlJElo5sWMPn_qUiuBbirMxJeYOEfOqGaZ83A",
-                    //AccessToken = "vk1.a.XufLN77dVZAKlQ2LaU03qTs2ONr2BhjfLwM0GMc1C72veZaOVlL1fEKoPVGuva3gKAJF4J8WSiPgWyZOV94ca6MD3LxL-2MOMylO4Vm3eRr36pBNsh3KHHJyA24SblNFjN1QGkVZsF8-NgARlk2sI9WwLW8XBsb8YpBqmfs6B3ZhwG1Msa5vz9PnKoCxakXdXR2Q1UEZAzADlvqsPQn1IA",
+                    AccessToken = "vk1.a.EdX1HzRpSn6anH1GMP4LouKCQChe0xeCXohqEe2IFC1CBIggU1ufe0YMbyitDYZzcz4uyt_2g5qw7KUjb14iTGwAOpvWA2oQhhg__WZ4K1NDZ_45VbeWGEe9q1RBIQ_8wlVmU1vQdGfehGe92-rIvxffJ6ycJ--9hGkor5NWvRvksMp2OdB07LewU6q-Q7dRiz3ptPxnmpPZbykbK-W3tw",
                     ApplicationId = 6642456,
                     //Settings = Settings.Wall
                 });

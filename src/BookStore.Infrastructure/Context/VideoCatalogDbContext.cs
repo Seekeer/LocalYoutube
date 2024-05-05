@@ -7,9 +7,19 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using System.Threading.Tasks;
 using System.Threading;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FileStore.Infrastructure.Context
 {
+
+    public static class DbExtension
+    {
+        public static VideoCatalogDbContext CreateDb(this IServiceScopeFactory factory)
+        {
+            return factory.CreateScope().ServiceProvider.GetRequiredService<FileStore.Infrastructure.Context.VideoCatalogDbContext>();
+        }
+    }
+
     public class VideoCatalogContextFactory : IDesignTimeDbContextFactory<VideoCatalogDbContext>
     {
         public VideoCatalogDbContext CreateDbContext(string[] args)
@@ -61,6 +71,8 @@ namespace FileStore.Infrastructure.Context
 
             modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileExtendedInfo).AutoInclude();
             modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileUserInfos).AutoInclude();
+            modelBuilder.Entity<AudioFile>().Navigation(e => e.VideoFileExtendedInfo).AutoInclude();
+            modelBuilder.Entity<AudioFile>().Navigation(e => e.VideoFileUserInfos).AutoInclude();
             //modelBuilder.Entity<FileUserInfo>().Navigation(e => e.User).AutoInclude();
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(VideoCatalogDbContext).Assembly);

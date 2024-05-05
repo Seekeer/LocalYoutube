@@ -31,6 +31,8 @@ using static API.FilmDownload.TgBot;
 using QBittorrent.Client;
 using Google.Apis.CustomSearchAPI.v1.Data;
 using API.Resources;
+using YoutubeExplode.Common;
+using NLog.Web.LayoutRenderers;
 //using Polly;
 
 namespace API.FilmDownload
@@ -62,6 +64,7 @@ namespace API.FilmDownload
         public const string SHOW_ALL_SEARCH_RESULT_Message = "Показать все результаты поиска";
         private Timer _timer;
 
+
         public TgBot(AppConfig config, IServiceScopeFactory serviceScopeFactory)
         {
             _serviceScopeFactory = serviceScopeFactory;
@@ -74,6 +77,11 @@ namespace API.FilmDownload
             SendAdminMessage($"Сервер стартанул");
 
             CreateTGDict();
+        }
+
+        internal IEnumerable<TgLink> GetDict()
+        {
+            return _tgSeasonDict;
         }
 
         private void CreateTGDict()
@@ -142,25 +150,7 @@ namespace API.FilmDownload
             await _rutracker.Init();
         }
 
-        private async Task ReAddExistingTopics()
-        {
-            var list = await _rutracker.Get();
-            foreach (var item in list)
-            {
-                try
-                {
-                    var dir = new DirectoryInfo(item.SavePath);
-                    var folder = dir.Name;
-                    var id = int.Parse(folder);
-                    await FillVideoFileId(id, 111, null, VideoType.Film, item.SavePath);
-                }
-                catch (Exception ex)
-                {
-                }
-            }
-        }
-
-        private async Task NotifyDownloadEnded(long telegramId, VideoFile item)
+        private async Task NotifyDownloadEnded(long telegramId, DbFile item)
         {
              await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Открыть в VLC: http://192.168.1.55:2022/api/Files/getFileById?fileId={item.Id}");
         }
@@ -170,36 +160,6 @@ namespace API.FilmDownload
             return _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<FileStore.Infrastructure.Context.VideoCatalogDbContext>();
         }
 
-        public async Task SearchCoverForFile(DbFile file, long tgAccountId)
-        {
-            var search = new SearchEngine("f228f7e30451842e8", "AIzaSyB9gRWRoQRXZiLcX7ZUACwi-Smm5L8R-Mg");
-            var results = await search.Search($"фильм {file.Name} {file.VideoFileExtendedInfo.Year}", file.Name);
-
-            if (!results.Any())
-                await _botClient.SendTextMessageAsync(tgAccountId, $"Ничего не найдено для фильма {file.Name} {file.Id}");
-
-            foreach (var image in results)
-            {
-                try
-                {
-                    var keyboard = new List<InlineKeyboardButton>();
-                    var guid = Guid.NewGuid().ToString();
-                    keyboard.Add(new InlineKeyboardButton($"Использовать эту обложку") { CallbackData = CommandParser.GetMessageFromData(CommandType.FixCover, guid.ToString()) });
-                    var tgMessage = await _botClient.SendPhotoAsync(new ChatId(tgAccountId),
-                        new Telegram.Bot.Types.InputFiles.InputOnlineFile(image.Url),
-                        caption: $"{file.Name} {file.VideoFileExtendedInfo.Year} высота {image.Bitmap.Height} px", replyMarkup: new InlineKeyboardMarkup(keyboard));
-
-                    image.File = file;
-                    image.TgMessageId = tgMessage.MessageId;
-                    image.TgId = tgAccountId;
-                    _images.Add(guid, image);
-                }
-                catch (Exception ex)
-                {
-                }
-            }
-
-        }
 
         private async Task UpdateFile(SearchResult data)
         {
@@ -231,7 +191,7 @@ namespace API.FilmDownload
             }
         }
 
-        private async Task AddTorrent(string data, long fromId, VideoType type, AudioType? audioType = null)
+        private async Task AddTorrent(string data, long fromId, VideoType? type, AudioType? audioType = null)
         {
             if (!int.TryParse(data, out var id))
                 return;
@@ -241,7 +201,17 @@ namespace API.FilmDownload
             var searchInfo = record.Topic;
 
             NLog.LogManager.GetCurrentClassLogger().Info($"Got info for thread:{searchInfo.Id}|{searchInfo.Title}");
-            await FillVideoFileId(id, fromId, record, type);
+
+            if (type != null)
+            {
+                var filler = new FillVideoFileByTorrent(_rutracker, _config, _botClient, _serviceScopeFactory, this, type.Value);
+                await filler.CreateDbFile(id, fromId, record);
+            }
+            else
+            {
+                var filler = new FillAudioFileByTorrent(_rutracker, _config, _botClient, _serviceScopeFactory, this, audioType.Value);
+                await filler.CreateDbFile(id, fromId, record);
+            }
         }
 
         public static async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -300,12 +270,15 @@ namespace API.FilmDownload
                             case CommandType.Art:
                                 await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Art);
                                 break;
+                            case CommandType.AudioBook:
+                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, null,  AudioType.AudioBook);
+                                break;
                             case CommandType.AudioFairyTale:
-                                throw new NotSupportedException();
-                                //await AddTorrent(command.Data, update.CallbackQuery.From.Id,null, VideoType.FairyTale);
+                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, null, AudioType.AudioBook);
                                 break;
                             case CommandType.ShowAllSearchResult:
-                                await ProcessUserInput(command.Data, update.CallbackQuery.From.Id, false);
+                            case CommandType.SearchAudioBook:
+                                await ProcessUserInput(command.Data, update.CallbackQuery.From.Id, command.Type);
                                 break;
                             case CommandType.DownloadAsDesigned:
                                 // Do nothign
@@ -315,6 +288,12 @@ namespace API.FilmDownload
                                 break;
                             case CommandType.DownloadCossacks:
                                 await MoveToSeries(command.Data, SeasonNames.Cossacks);
+                                break;
+                            case CommandType.DownloadEot:
+                                await MoveToSeries(command.Data, SeasonNames.Eot);
+                                break;
+                            case CommandType.DownloadKurginyan:
+                                await MoveToSeries(command.Data, SeasonNames.Kurginyan);
                                 break;
                             case CommandType.DownloadPremier:
                                 await DownloadedForPremier(command.Data);
@@ -415,121 +394,13 @@ namespace API.FilmDownload
             }
         }
 
-        private async Task FillVideoFileId(int rutrackerId, long tgFromId, SearchRecord record, 
-            VideoType type, string downloadPath = null)
-        {
-            var info = await _rutracker.FillInfo(rutrackerId);
 
-            IReadOnlyList<TorrentContent> torrentFiles = null;
-            if (string.IsNullOrEmpty(downloadPath))
-            {
-                downloadPath = Path.Combine(_config.RootDownloadFolder, "Rutracker", rutrackerId.ToString());
-                try
-                {
-                    torrentFiles = await _rutracker.StartDownload(rutrackerId, downloadPath);
-                }
-                catch (Exception ex)
-                {
-                    NLog.LogManager.GetCurrentClassLogger().Error(ex);
-                    await _botClient.SendTextMessageAsync(new ChatId(tgFromId), $"Ошибка при добавлении торрента в QBittorrent. Попробуйте еще раз позже");
-                    return;
-                }
-            }
-
-            // TODO hardcode
-            var file = new FileStore.Domain.Models.VideoFile
-            {
-                SeriesId = 18,
-                SeasonId = 91,
-            };
-
-            FillData(rutrackerId, info, downloadPath, file);
-
-            FillVideoFilePropertiesByType(tgFromId, type, info, file);
-
-            await AnalyzeTorrentData(file, tgFromId, type, torrentFiles);
-
-            await _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IVideoFileRepository>().Add(file);
-
-            await ProcessTelegram(file, tgFromId, info, record);
-
-            if (file.Cover == null || file.Cover?.Length < 20 * 1024)
-                await SearchCoverForFile(file, tgFromId);
-        }
-
-        private async Task AnalyzeTorrentData(VideoFile file, long tgFromId, VideoType type, IReadOnlyList<TorrentContent> torrentFiles)
-        {
-            if (torrentFiles == null)
-                return;
-
-            var videos = torrentFiles;
-            if((type == VideoType.Film || type == VideoType.Animation ) && videos.Count() > 1)
-            {
-                file.DoNotAutoFinish = true;
-                await _botClient.SendTextMessageAsync(tgFromId, $"⚠️ В раздаче {file.Name} {videos.Count()} много файлов. Возможны проблемы, проверьте.");
-            }
-
-            // Direct path to biggest file so it can be watched during downloading. 
-            file.Path = Path.Combine(file.Path, videos.OrderBy(x => x.Size).First().Name + ".!qB");
-        }
-
-        private void FillVideoFilePropertiesByType(long tgFromId, VideoType type, VideoInfo info, VideoFile file)
-        {
-            var db = _GetDb();
-            var manager = new DbUpdateManager(db);
-
-            var tgRecord = _tgSeasonDict.FirstOrDefault(x => x.TgId == tgFromId);
-            var downloadSeries = manager.GetDownloadSeries();
-            if (type == VideoType.AdultEpisode)
-            {
-                var series = manager.AddOrUpdateVideoSeries(info.Name, false, VideoType.AdultEpisode);
-                file.SeriesId = series.Id;
-                // TODO hardcode
-                file.SeasonId = 91;
-            }
-            else if (type == VideoType.ChildEpisode)
-            {
-                var series = manager.AddOrUpdateVideoSeries(info.Name, false, VideoType.ChildEpisode);
-                file.SeriesId = series.Id;
-                // TODO hardcode
-                file.SeasonId = 91;
-            }
-            else if (type == VideoType.Film && tgRecord != null)
-            {
-                file.SeasonId = tgRecord.FilmSeasonId;
-            }
-            else if (type == VideoType.Animation && tgRecord != null)
-            { 
-                var series = manager.AddOrUpdateVideoSeries("Полнометражные мультики скаченные", false, VideoType.Animation);
-                file.SeriesId = series.Id;
-                var childDownloaded = manager.AddOrUpdateSeason(series, "Детские мультики");
-                file.SeasonId = childDownloaded.Id;
-            }
-            else if (type == VideoType.FairyTale && tgRecord != null)
-            {
-                // TODO hardcode
-                file.SeriesId = 11;
-                file.SeasonId = manager.AddOrUpdateSeason(11, "Сказки скаченные").Id;
-            }
-            else if (type == VideoType.Art && tgRecord != null)
-            {
-                // TODO hardcode
-                file.SeriesId = 2038;
-                file.SeasonId = manager.AddOrUpdateSeason(2038, file.Name).Id;
-            }
-            else
-                Debug.Assert(false);
-
-            file.Type = type;
-        }
-
-        private async Task ProcessTelegram(DbFile file, long tgFromId, VideoInfo info, SearchRecord record)
+        public async Task ProcessTelegram(DbFile file, long tgFromId, SearchRecord record)
         {
             var result = @$"Название: {file.Name}
 Длительность: {file.Duration}
 Посмотреть: vlc://http://192.168.1.55:2022/api/Files/getFileById?fileId={file.Id}
 Год: {file.Year}
-Режиссер: {info.Director}
 Описание: {file.Description}";
 
             var keyboard = new List<InlineKeyboardButton>
@@ -546,26 +417,40 @@ namespace API.FilmDownload
             }
         }
 
-        private void FillData(int id, VideoInfo info, 
-            string downloadPath, FileStore.Domain.Models.DbFile file)
+        public async Task SearchCoverForFile(DbFile file, long tgAccountId)
         {
-            try
-            {
-                _rutracker.FillFileInfo(file, info);
-            }
-            catch (Exception ex)
-            {
-                NLog.LogManager.GetCurrentClassLogger().Error(ex);
-            }
+            var search = new SearchEngine("f228f7e30451842e8", "AIzaSyB9gRWRoQRXZiLcX7ZUACwi-Smm5L8R-Mg");
+            var results = await search.Search($"фильм {file.Name} {file.VideoFileExtendedInfo.Year}", file.Name);
 
-            file.Name = _rutracker.ClearFromForeignOption(info.Name);
-            file.IsDownloading = true;
-            file.Path = downloadPath;
-            file.VideoFileExtendedInfo.RutrackerId = id;
+            if (!results.Any())
+                await _botClient.SendTextMessageAsync(tgAccountId, $"Ничего не найдено для фильма {file.Name} {file.Id}");
+
+            foreach (var image in results)
+            {
+                try
+                {
+                    var keyboard = new List<InlineKeyboardButton>();
+                    var guid = Guid.NewGuid().ToString();
+                    keyboard.Add(new InlineKeyboardButton($"Использовать эту обложку") { CallbackData = CommandParser.GetMessageFromData(CommandType.FixCover, guid.ToString()) });
+                    var tgMessage = await _botClient.SendPhotoAsync(new ChatId(tgAccountId),
+                        new Telegram.Bot.Types.InputFiles.InputOnlineFile(image.Url),
+                        caption: $"{file.Name} {file.VideoFileExtendedInfo.Year} высота {image.Bitmap.Height} px", replyMarkup: new InlineKeyboardMarkup(keyboard));
+
+                    image.File = file;
+                    image.TgMessageId = tgMessage.MessageId;
+                    image.TgId = tgAccountId;
+                    _images.Add(guid, image);
+                }
+                catch (Exception ex)
+                {
+                }
+            }
         }
 
         private async Task _botClient_OnMessage(ITelegramBotClient botClient, Message message)
         {
+            NLog.LogManager.GetCurrentClassLogger().Info($"Tg received from {message.From.Id} message {message.Text}");
+
             var command = CommandParser.ParseCommand(message.Text);
 
             switch (command)
@@ -581,17 +466,15 @@ namespace API.FilmDownload
                 case CommandType.Film:
                     break;
                 case CommandType.Unknown:
-                    await ProcessUserInput(message, true);
+                    await ProcessUserInput(message);
                     break;
                 default:
                     break;
             }
         }
 
-        private async Task ProcessUserInput(Message message, bool filterThemes)
+        private async Task ProcessUserInput(Message message)
         {
-            NLog.LogManager.GetCurrentClassLogger().Info(message.Text);
-
             if (string.IsNullOrEmpty(message.Text)) 
                 return;
 
@@ -605,33 +488,20 @@ namespace API.FilmDownload
                 if (DownloaderFabric.CanDownload(task))
                     await ProcessYoutubeVideo(task.Id, message);
                 else
-                    await ProcessUserInput(text, message.From.Id, filterThemes);
+                    await ProcessUserInput(text, message.From.Id);
             }
         }
 
-        private async Task ProcessUserInput(string text, long fromId, bool filterThemes)
+        private async Task ProcessUserInput(string text, long fromId, CommandType? type = null)
         { 
-            var infos = await _rutracker.FindTheme(text, filterThemes);
+            var infos = await _rutracker.FindTheme(text, type);
 
             if (!infos.Any())
                 await _botClient.SendTextMessageAsync(new ChatId(fromId), $"Ничего не найдено");
 
             foreach (var info in infos)
             {
-                var keyboard = new List<List<InlineKeyboardButton>>
-                {
-                 new List<InlineKeyboardButton>{
-                    new InlineKeyboardButton("фильм") { CallbackData = CommandParser.GetMessageFromData(CommandType.Film, info.Id.ToString()) },
-                    new InlineKeyboardButton("сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.Series, info.Id.ToString()) },
-                    new InlineKeyboardButton("балет/опера") { CallbackData = CommandParser.GetMessageFromData(CommandType.Art, info.Id.ToString()) },
-                    },
-                 new List<InlineKeyboardButton>{
-                    new InlineKeyboardButton("мультсериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.ChildSeries, info.Id.ToString()) },
-                    new InlineKeyboardButton("длинный мульт") { CallbackData = CommandParser.GetMessageFromData(CommandType.Animation, info.Id.ToString()) },
-                    new InlineKeyboardButton("сказка") { CallbackData = CommandParser.GetMessageFromData(CommandType.FairyTale, info.Id.ToString()) },
-                    // TODO audio download from tracker
-                    //new InlineKeyboardButton("аудиосказка") { CallbackData = CommandParser.GetMessageFromData(CommandType.AudioFairyTale, info.Id.ToString()) },
-                } };
+                List<List<InlineKeyboardButton>> keyboard = CreateKeyboard(info, type);
                 var size = decimal.Round(info.SizeInBytes / 1024 / 1024 / 1024, 2, MidpointRounding.AwayFromZero);
                 var title = info.Title;
                 if (title.Contains("DVD9") && !title.Contains("DVD5"))
@@ -647,6 +517,36 @@ namespace API.FilmDownload
             await AddSearchAllButton(text, fromId);
         }
 
+        private static List<List<InlineKeyboardButton>> CreateKeyboard(SearchTopicInfo info, CommandType? type)
+        {
+            switch (type)
+            {
+                case CommandType.SearchAudioBook:
+                    return new List<List<InlineKeyboardButton>>
+                        {
+                            new List<InlineKeyboardButton>{
+                                new InlineKeyboardButton("Аудиосказка") { CallbackData = CommandParser.GetMessageFromData(CommandType.AudioFairyTale, info.Id.ToString()) },
+                                new InlineKeyboardButton("Аудиокнига") { CallbackData = CommandParser.GetMessageFromData(CommandType.AudioBook, info.Id.ToString()) },
+                        }
+                    };
+                default:
+                    return new List<List<InlineKeyboardButton>>
+                        {
+                         new List<InlineKeyboardButton>{
+                            new InlineKeyboardButton("фильм") { CallbackData = CommandParser.GetMessageFromData(CommandType.Film, info.Id.ToString()) },
+                            new InlineKeyboardButton("сериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.Series, info.Id.ToString()) },
+                            new InlineKeyboardButton("балет/опера") { CallbackData = CommandParser.GetMessageFromData(CommandType.Art, info.Id.ToString()) },
+                            },
+                         new List<InlineKeyboardButton>{
+                            new InlineKeyboardButton("мультсериал") { CallbackData = CommandParser.GetMessageFromData(CommandType.ChildSeries, info.Id.ToString()) },
+                            new InlineKeyboardButton("длинный мульт") { CallbackData = CommandParser.GetMessageFromData(CommandType.Animation, info.Id.ToString()) },
+                            new InlineKeyboardButton("сказка") { CallbackData = CommandParser.GetMessageFromData(CommandType.FairyTale, info.Id.ToString()) },
+                            // TODO audio download from tracker
+                        }
+                    };
+            }
+        }
+
         private Dictionary<string, DownloadTask> _downloadTasks = new Dictionary<string, DownloadTask>();
 
         private async Task AddSearchAllButton(string text, long fromId)
@@ -654,10 +554,11 @@ namespace API.FilmDownload
             try
             {
                 var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(fromId),
-                    "Нет ничего подходящего?", replyMarkup: new InlineKeyboardMarkup(new InlineKeyboardButton("Показать без фильтрации")
-                    {
-                        CallbackData = CommandParser.GetMessageFromData(CommandType.ShowAllSearchResult, text)
-                    }));
+                    "Нет ничего подходящего?", replyMarkup:
+                        new InlineKeyboardMarkup(new List<InlineKeyboardButton>{
+                            new InlineKeyboardButton("Показать без фильтрации"){CallbackData = CommandParser.GetMessageFromData(CommandType.ShowAllSearchResult, text)},
+                            new InlineKeyboardButton("Искать аудиокниги") {CallbackData = CommandParser.GetMessageFromData(CommandType.SearchAudioBook, text)},
+                        }));
             }
             catch (Exception ex)
             {
@@ -751,10 +652,14 @@ namespace API.FilmDownload
                 {
                  new List<InlineKeyboardButton>{
                     new InlineKeyboardButton(SeasonNames.OneTime) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadOneTime, task.Id) },
-                    new InlineKeyboardButton(SeasonNames.India) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadIndia, task.Id) },
                     new InlineKeyboardButton(SeasonNames.AsDesigned) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadAsDesigned, task.Id) },
+                    new InlineKeyboardButton(SeasonNames.India) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadIndia, task.Id) },
                     new InlineKeyboardButton(SeasonNames.Cossacks) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadCossacks, task.Id) },
+                 },
+                 new List<InlineKeyboardButton>{
                     new InlineKeyboardButton(SeasonNames.Premiere) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadPremier, task.Id) },
+                    new InlineKeyboardButton(SeasonNames.Kurginyan) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadKurginyan, task.Id) },
+                    new InlineKeyboardButton(SeasonNames.Eot) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadEot, task.Id) },
                     }};
 
             var tgMessage =  await _botClient.SendTextMessageAsync(new ChatId(task.FromId), 
@@ -794,7 +699,7 @@ namespace API.FilmDownload
             }
         }
 
-        internal async Task NotifyDownloaded(IEnumerable<VideoFile> updated)
+        internal async Task NotifyDownloaded(IEnumerable<DbFile> updated)
         {
             foreach (var item in updated)
             {
@@ -806,5 +711,6 @@ namespace API.FilmDownload
                 await NotifyDownloadEnded(telegramId, item);
             }
         }
+
     }
 }

@@ -1017,7 +1017,7 @@ namespace FileStore.API.Controllers
                         continue;
 
                     //file.VideoFileExtendedInfo.RutrackerId = id;
-                    var info = await _rutracker.FillInfo(id);
+                    var info = await _rutracker.FillVideoInfo(id);
                     _rutracker.FillFileInfo(file, info);
 
                     _db.SaveChanges();
@@ -1040,7 +1040,7 @@ namespace FileStore.API.Controllers
 
             var file = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).First(x => x.Id == fileId);
 
-            var info = await _rutracker.FillInfo(file.VideoFileExtendedInfo.RutrackerId);
+            var info = await _rutracker.FillVideoInfo(file.VideoFileExtendedInfo.RutrackerId);
             _rutracker.FillFileInfo(file, info);
 
             _db.SaveChanges();
@@ -1296,7 +1296,7 @@ namespace FileStore.API.Controllers
             coverUrl = System.Web.HttpUtility.UrlDecode(coverUrl);
             var files = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).FirstOrDefault(x => x.Id == fileId);
 
-            files.VideoFileExtendedInfo.SetCover(RuTrackerUpdater.GetCoverByUrl(coverUrl));
+            files.VideoFileExtendedInfo.SetCover(RutrackerInfoParser.GetCoverByUrl(coverUrl));
             _db.SaveChanges();
 
             return Ok();

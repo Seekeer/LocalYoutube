@@ -21,9 +21,11 @@ using static MediaToolkit.Model.Metadata;
 using System.IO.Compression;
 using FileStore.Domain;
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
 
 namespace Infrastructure
 {
+
     public static class FileExtendedInfoExtension
     {
         public static void SetCover(this FileExtendedInfo info, byte[] cover)
@@ -285,7 +287,7 @@ namespace Infrastructure
         {
             try
             {
-                if (IsBadExtension(file))
+                if (IsBadExtension(file, false))
                     return null;
 
                 var existingInfo = _db.VideoFiles.FirstOrDefault(x => x.Path == file.FullName && x.SeriesId == series.Id);
@@ -305,25 +307,20 @@ namespace Infrastructure
             return null;
         }
 
-        private bool IsBadExtension(FileInfo file)
+        private bool IsBadExtension(FileInfo file, bool isAudio)
         {
-            //try
-            //{
-            //    var extension = MimeTypeMap.GetExtension(document.mime_type);
-
-            //}
-            //catch (Exception ex)
-            //{
-            //}
-
-            return file.Name.EndsWith("jpg") || file.Name.EndsWith("jpeg") || file.Name.EndsWith("docx") || file.Name.EndsWith("png") ||
-                                file.Name.EndsWith("nfo") || file.Name.EndsWith("mp3") || file.Name.EndsWith("txt") || file.Name.EndsWith("pdf") ||
+            var badExtension = file.Name.EndsWith("jpg") || file.Name.EndsWith("jpeg") || file.Name.EndsWith("docx") || file.Name.EndsWith("png") ||
+                                file.Name.EndsWith("nfo") ||  file.Name.EndsWith("txt") || file.Name.EndsWith("pdf") ||
                                 file.Name.EndsWith("xlsx") || file.Name.EndsWith("pdf") || file.Name.EndsWith("zip") || file.Name.EndsWith("vtt") ||
                                 file.Name.EndsWith("srt") || file.Name.EndsWith("rar") || file.Name.EndsWith("zip") || file.Name.EndsWith("vtt") ||
                                 file.Name.EndsWith("pptx") || file.Name.EndsWith("html") || file.Name.EndsWith("qB") || file.Name.EndsWith("lnk") ||
-                                file.Name.EndsWith("mka") || file.Name.EndsWith("ass") || file.Name.EndsWith("tff") || file.Name.EndsWith("ac3") ||
-                                file.Name.EndsWith("ogg") || file.Name.EndsWith("dts") ||
+                                file.Name.EndsWith("mka") || file.Name.EndsWith("ass") || file.Name.EndsWith("tff") || file.Name.EndsWith("dts") ||
                                 (file.FullName.Contains("Конспект") && _type == VideoType.Courses);
+
+            if (isAudio)
+                return badExtension;
+
+            return badExtension || file.Name.EndsWith("ac3") || file.Name.EndsWith("mp3") || file.Name.EndsWith("ogg");
         }
 
         public void MoveToFolder(VideoFile file)
@@ -404,6 +401,7 @@ namespace Infrastructure
                 series.IsOrderMatter = _type == VideoType.Courses;
                 series.IsChild = isChild;
                 _db.Series.Add(series);
+                _db.SaveChanges();
             }
 
             return series;
@@ -607,10 +605,10 @@ namespace Infrastructure
                 return int.Parse(TrimDots(numberStr));
         }
 
-        public IEnumerable<VideoFile> UpdateDownloading(Func<VideoFile, bool> selectFiles)
+        public IEnumerable<DbFile> UpdateDownloading(Func<DbFile, bool> selectFiles)
         {
-            var ready = new List<VideoFile>();
-            IEnumerable<VideoFile> queue = _db.VideoFiles
+            var ready = new List<DbFile>();
+            IEnumerable<DbFile> queue = _db.Files
                 .Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).Include(x => x.Series).Include(x => x.Season)
                 .Where(selectFiles).ToList();
 
@@ -655,7 +653,7 @@ namespace Infrastructure
 
                 foreach (var file in dirFiles)
                 {
-                    if (info.IsDownloading && !IsBadExtension(file))
+                    if (info.IsDownloading && !IsBadExtension(file, false))
                     { 
                         info.Path = file.FullName;
                         //info.IsDownloading = false;
@@ -680,11 +678,11 @@ namespace Infrastructure
             return result;
         }
 
-        private IEnumerable<VideoFile> UpdateFiles(IEnumerable<VideoFile> files, int? newSeasonId = null)
+        private IEnumerable<DbFile> UpdateFiles(IEnumerable<DbFile> files, int? newSeasonId = null)
         {
-            var result = new List<VideoFile>();
+            var result = new List<DbFile>();
 
-            foreach (var info in files.Where(x => x.Type != VideoType.Youtube))
+            foreach (var info in files.Where(x => x is not VideoFile || (x as VideoFile).Type != VideoType.Youtube))
             {
                 try
                 {
@@ -723,7 +721,7 @@ namespace Infrastructure
                     if (!dirFiles.Any() || dirFiles.Any(x => x.FullName.EndsWith(".!qB")))
                         continue;
 
-                    dirFiles = dirFiles.Where(x => !IsBadExtension(x));
+                    dirFiles = dirFiles.Where(x => !IsBadExtension(x, x is AudioFile));
 
                     if(dirFiles.Count() > 1)
                     {
@@ -732,44 +730,14 @@ namespace Infrastructure
 
                         ResetUpdateManager(info);
 
-                        if (info.Type == VideoType.Art)
+                        var processResult = (info is VideoFile) ?
+                            ProccessDownloadedVideoFile(info as VideoFile, dir, dirDirectories) :
+                            AddAudioFilesByFile(dir, info as AudioFile);
+
+                        if (processResult.Count() > 1)
                         {
-                            _type = info.Type;
-                            var newFiles = AddSeason(info.SeriesId, dir, info.Name);
-                            newFiles.ToList().ForEach(x => x.VideoFileExtendedInfo.SetCover(info.Cover));
-                            result.AddRange(newFiles);
-                            moreFilesAdded = true;
-                        }
-                        // Check that files ~ same size => they are series.
-                        else if (info.Series.Type == VideoType.AdultEpisode || info.Series.Type == VideoType.ChildEpisode 
-                            || info.Series.Type == VideoType.FairyTale)
-                        {
-                            if (dirDirectories.Count() > 1)
-                            {
-                                foreach (var seasonDirectory in dirDirectories)
-                                    result.AddRange(AddSeason(info.Series, seasonDirectory));
-                            }
-                            else
-                            {
-                                IEnumerable<VideoFile> dbFiles = null;
-                                dbFiles = AddSeason(info.Series, dir, info.Name);
-
-                                if (string.IsNullOrWhiteSpace(info.Season.Name))
-                                    info.Season.Name = info.Series.Name;
-
-                                result.AddRange(dbFiles);
-                            }
-
-                            moreFilesAdded = true;
-                        }
-                        else
-                        {
-
-                        }
-
-                        var fileRepo = new DbFileRepository(_db);
-                        if (moreFilesAdded)
-                        {
+                            processResult.ToList().ForEach(x => x.VideoFileExtendedInfo.RutrackerId = info.VideoFileExtendedInfo.RutrackerId);
+                            var fileRepo = new DbFileRepository(_db);
                             fileRepo.RemoveFileCompletely(info.Id);
                             _db.SaveChanges();
                             continue;
@@ -796,9 +764,43 @@ namespace Infrastructure
             return result;
         }
 
-        private void ResetUpdateManager(VideoFile info)
+        private IEnumerable<DbFile> ProccessDownloadedVideoFile(VideoFile info, DirectoryInfo dir, IEnumerable<DirectoryInfo> dirDirectories)
         {
-            _type = info.Type;
+            var result = new List<DbFile>();
+
+            if (info.Type == VideoType.Art)
+            {
+                _type = info.Type;
+                var newFiles = AddSeason(info.SeriesId, dir, info.Name);
+                newFiles.ToList().ForEach(x => x.VideoFileExtendedInfo.SetCover(info.Cover));
+                result.AddRange(newFiles);
+            }
+            // Check that files ~ same size => they are series.
+            else if (info.Series.Type == VideoType.AdultEpisode || info.Series.Type == VideoType.ChildEpisode
+                || info.Series.Type == VideoType.FairyTale)
+            {
+                if (dirDirectories.Count() > 1)
+                {
+                    foreach (var seasonDirectory in dirDirectories)
+                        result.AddRange(AddSeason(info.Series, seasonDirectory));
+                }
+                else
+                {
+                    IEnumerable<VideoFile> dbFiles = null;
+                    dbFiles = AddSeason(info.Series, dir, info.Name);
+
+                    if (string.IsNullOrWhiteSpace(info.Season.Name))
+                        info.Season.Name = info.Series.Name;
+
+                    result.AddRange(dbFiles);
+                }
+            };
+
+            return result;
+        }
+
+        private void ResetUpdateManager(DbFile info)
+        {
             _origin = info.Origin;
             _episodeNumber = 0;
         }
@@ -862,57 +864,55 @@ namespace Infrastructure
             }
         }
 
-        public void AddAudioFilesFromFolder(string folderPath, AudioType type, Origin origin, bool severalSeriesInFolder = false
+        public IEnumerable<AudioFile> AddAudioFilesFromFolder(string folderPath, AudioType type, Origin origin, bool severalSeriesInFolder = false
             , string bookTitle = null, string author = null)
         {
+            var result = new List<AudioFile>();
             try
             {
                 var dirInfo = new DirectoryInfo(folderPath);
                 if (!dirInfo.Exists)
-                    return ;
+                    return result;
+
                 var title = bookTitle?? dirInfo.Name;
 
                 if (severalSeriesInFolder)
                 {
                     foreach (var dir in dirInfo.GetDirectories())
-                        AddAudioFilesFromFolder(dir.Name, dir.GetFiles(), type, origin);
+                        result.AddRange(AddAudioFilesFromFolder(dir, type, origin, new AudioFileInfo(title, author)));
                 }
                 else
-                     AddAudioFilesFromFolder(dirInfo.Name, dirInfo.GetFiles(), type, origin);
+                    result.AddRange(AddAudioFilesFromFolder(dirInfo, type, origin, new AudioFileInfo(title, author)));
             }
             catch (Exception ex)
             {
                 NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }
+
+            return result;
         }
 
-        public bool AddAudioFilesFromFolder(string folderName, IEnumerable<FileInfo> filePaths, AudioType type, Origin origin
-            , string bookTitle = null, string author = null)
+        private IEnumerable<DbFile> AddAudioFilesByFile(DirectoryInfo dir, AudioFile audioFile)
         {
-            var voice = "";
-            var voiceParts = folderName.Split(new char[] { '(', ')', '[', ']', '_' }, StringSplitOptions.RemoveEmptyEntries);
-            if (voiceParts.Length > 1)
-            {
-                voice = voiceParts.Last();
-            }
+            return AddAudioFilesFromFolder(dir, audioFile.Type, audioFile.Origin, new AudioFileInfo( audioFile.Season.Name, audioFile.Series.Name));
+        }
 
-            var removedVoice = !string.IsNullOrEmpty(voice) ? folderName.Replace(voice, "") : folderName; 
-            var authorParts = removedVoice.Split('-', StringSplitOptions.RemoveEmptyEntries);
-            if (authorParts.Length > 1)
-            {
-                bookTitle = bookTitle ?? authorParts.Last().Split('(', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault().Trim();
-
-                author = author?? authorParts.First().Trim();
-            }
+        public IEnumerable<AudioFile> AddAudioFilesFromFolder(DirectoryInfo dirInfo, AudioType type, Origin origin, AudioFileInfo bookInfo)
+        {
+            var result = new List<AudioFile>();
+            if (!dirInfo.Exists)
+                return result;
+            IEnumerable<FileInfo> filePaths = dirInfo.EnumerateFiles("*", SearchOption.AllDirectories);
+            var folderName = dirInfo.FullName;
 
             var images = filePaths.Where(x => x.FullName.Contains(".jp")).OrderByDescending(x => x.Length);
             byte[] cover = null;
             if (images.Any())
                 cover = File.ReadAllBytes(images.FirstOrDefault().FullName);
 
-            var series = AddOrUpdateVideoSeries(author);
+            var series = AddOrUpdateVideoSeries(bookInfo.Author);
             series.AudioType = type;
-            var season = AddOrUpdateSeason(series, bookTitle);
+            var season = AddOrUpdateSeason(series, bookInfo.BookTitle);
 
             var files = new List<AudioFile>();
 
@@ -920,8 +920,7 @@ namespace Infrastructure
             foreach (var item in mp3s.Select((info, index) => (info, index)))
             {
                 var finfo = item.info;
-                var filename = finfo.Name.Split("##").First()
-                    .Replace(".mp3", "").Replace(bookTitle, "").Replace(bookTitle.ToUpper(), "").Replace(author, "");
+                var filename = bookInfo.ClearFileName(finfo.Name);
 
                 var audioFile = new AudioFile
                 {
@@ -936,7 +935,7 @@ namespace Infrastructure
 
                 UpdateAudioInfo(audioFile);
 
-                audioFile.VideoFileExtendedInfo.Director = voice;
+                audioFile.VideoFileExtendedInfo.Director = bookInfo.Voice;
                 files.Add(audioFile);
             }
 
@@ -949,7 +948,7 @@ namespace Infrastructure
             _db.AudioFiles.AddRange(files);
             _db.SaveChanges();
 
-            return true;
+            return files;
         }
 
         public void AddAudioFilesFromTg(string text, IEnumerable<string> enumerable, AudioType type, Origin origin, string coverImage)
