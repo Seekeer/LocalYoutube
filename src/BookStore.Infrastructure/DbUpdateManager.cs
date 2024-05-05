@@ -721,7 +721,7 @@ namespace Infrastructure
                     if (!dirFiles.Any() || dirFiles.Any(x => x.FullName.EndsWith(".!qB")))
                         continue;
 
-                    dirFiles = dirFiles.Where(x => !IsBadExtension(x, x is AudioFile));
+                    dirFiles = dirFiles.Where(x => !IsBadExtension(x, info is AudioFile));
 
                     if(dirFiles.Count() > 1)
                     {
@@ -894,7 +894,7 @@ namespace Infrastructure
 
         private IEnumerable<DbFile> AddAudioFilesByFile(DirectoryInfo dir, AudioFile audioFile)
         {
-            return AddAudioFilesFromFolder(dir, audioFile.Type, audioFile.Origin, new AudioFileInfo( audioFile.Season.Name, audioFile.Series.Name));
+            return AddAudioFilesFromFolder(dir, audioFile.Type, audioFile.Origin, new AudioFileInfo(audioFile.Season.Name, audioFile.Series.Name) { Voice = audioFile.Director});
         }
 
         public IEnumerable<AudioFile> AddAudioFilesFromFolder(DirectoryInfo dirInfo, AudioType type, Origin origin, AudioFileInfo bookInfo)

@@ -67,7 +67,7 @@ namespace API.TG
             }
 
             // Direct path to biggest file so it can be watched during downloading. 
-            file.Path = Path.Combine(file.Path, videos.OrderBy(x => x.Size).First().Name + ".!qB");
+            file.Path = Path.Combine(file.Path, videos.OrderByDescending(x => x.Size).First().Name + ".!qB");
         }
 
         protected void FillVideoSeriesSeasonType(long tgFromId, VideoType type, RutrackerInfo info, VideoFile file)
@@ -136,6 +136,7 @@ namespace API.TG
 
             var info = await _rutracker.FillAudioInfo(rutrackerId);
             FillData(rutrackerId, info, downloadPath, audioFile);
+            audioFile.Name = info.BookTitle;
 
             try
             {
@@ -168,16 +169,17 @@ namespace API.TG
                     break;
                 case AudioType.AudioBook:
                     series = manager.AddOrUpdateSeries(info.Author ?? "Rutracker Аудиокниги", false, true);
-                    series.AudioType = audioType;
                     break;
                 default:
                     throw new ArgumentException(nameof(audioType));
             }
 
+            series.AudioType = audioType;
             file.SeriesId = series.Id;
 
             var season1 = manager.AddOrUpdateSeason(series, info.BookTitle);
             file.SeasonId = season1.Id;
+            db.SaveChanges();
         }
     }
 

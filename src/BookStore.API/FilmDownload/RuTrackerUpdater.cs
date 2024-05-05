@@ -157,9 +157,15 @@ namespace API.Controllers
             file.VideoFileExtendedInfo.Year = info.Year;
             file.Duration = info.Duration;
 
-            // TODO Rutracker Info
-            //file.VideoFileExtendedInfo.Genres = info.Genres;
-            //file.VideoFileExtendedInfo.Director = ClearFromForeignOption(info.Director);
+            if(info is VideoInfo videoInf)
+            {
+                file.VideoFileExtendedInfo.Genres = videoInf.Genres;
+                file.VideoFileExtendedInfo.Director = ClearFromForeignOption(videoInf.Director);
+            }
+            else if (info is AudioInfo audioInf)
+            {
+                file.VideoFileExtendedInfo.Director = audioInf.Voice;
+            }
         }
 
         public string ClearFromForeignOption(string text)
