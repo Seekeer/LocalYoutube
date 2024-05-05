@@ -69,6 +69,22 @@ namespace FileStore.API.Controllers
             _fileService = FileService;
         }
 
+        [AllowAnonymous]
+        [HttpGet]
+        [Route("getImage")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetImage(int fileId)
+        {
+            var file = await _fileService.GetById(fileId);
+
+            if (file?.Cover == null)
+                return NotFound();
+
+            // Replace the octet-stream with whatever type you desire, we decided on the basic, generic form because... well, it all is, isn't it?
+            return File(file.VideoFileExtendedInfo.Cover, "application/octet-stream", "cover.jpeg");
+        }
+
         [HttpPost]
         [Route("updateFile")]
         [ProducesResponseType(StatusCodes.Status200OK)]

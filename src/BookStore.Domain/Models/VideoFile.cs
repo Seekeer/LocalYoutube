@@ -77,6 +77,7 @@ namespace FileStore.Domain.Models
         FairyTale,
         Lessons,
         AudioBook,
+        ChildMusic,
     }
 
     public class FileExtendedInfo : Entity
@@ -248,6 +249,7 @@ namespace FileStore.Domain.Models
 
     public class AudioFile : DbFile
     {
+        public string Artist { get; set; }
         public AudioType Type { get; set; }
     }
 }

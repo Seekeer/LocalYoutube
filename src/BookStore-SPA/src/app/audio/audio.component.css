@@ -16,12 +16,15 @@ mat-form-field{
     width: 100%;
 } */
 
+img{
+    max-width: 300px;
+}
 .btn{
     margin-right: 15px;
 }
 
 button[mat-icon-button] {
-    transform: scale(1.5);
+    transform: scale(2);
   }
 
 audio {
@@ -31,7 +34,7 @@ audio {
 }
 
 .rounded-pill {
-    transform: scale(1.5);
+    transform: scale(2);
 }
 
 .limited{

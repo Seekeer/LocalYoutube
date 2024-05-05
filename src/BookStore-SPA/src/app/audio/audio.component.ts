@@ -19,11 +19,13 @@ import {
 import { Serie } from '../_models/Category';
 import { Seasons } from '../_models/Seasons';
 import { AudioFileService } from '../_services/AudioFileService';
+import { FileService } from '../_services/file.service';
 import { SeriesService } from '../_services/series.service';
 import { MarkslistComponent } from '../markslist/markslist.component';
 
 enum MenuAudioType {
   audioFairyTale,
+  сhildMusic,
   main,
 }
 
@@ -63,9 +65,12 @@ export class AudioComponent implements OnInit {
   timer: any;
   forwardSpeed: number = 0;
   rewindSpeed: number = 0;
+  showCover: boolean;
+  addMarkTimer: any;
 
   constructor(
     private service: AudioFileService,
+    private videoService: FileService,
     private seriesService: SeriesService,
     private toastr: ToastrService,
     private spinner: NgxSpinnerService,
@@ -93,16 +98,18 @@ export class AudioComponent implements OnInit {
         this.getSeries(AudioType.FairyTale);
         break;
       }
+      case MenuAudioType.сhildMusic: {
+        this.isChild = true;
+        this.showCover = true;
+        this.getSeries(AudioType.ChildMusic);
+        break;
+      }
       case MenuAudioType.main: {
         this.episodesLeft = 100;
         this.getSeries(null);
         break;
       }
     }
-  }
-
-  isFairyTaleMode(){
-    return this.type == MenuAudioType.audioFairyTale;
   }
 
   getSeries(type: AudioType) {
@@ -251,10 +258,13 @@ export class AudioComponent implements OnInit {
 
     this.apiFiles.forEach((element,index) => {
       element.PlayURL = this.service.getAudioURLById(element.id);
+      element.coverURL = (`${this.service.getCoverById(element.id)}`);
       element.index = index;
     });
 
     this.filteredFiles = this.apiFiles;
+    if(this.type == MenuAudioType.сhildMusic)
+      this.filteredFiles = this.apiFiles.sort(() => Math.random() - 0.5);
 
     this.hideSpinner();
 
@@ -304,6 +314,20 @@ export class AudioComponent implements OnInit {
       video.currentTime = this.position;
       this.position = -1;
     }
+  }
+
+  public startPlay() {
+    let that = this;
+
+    if (this.addMarkTimer) return;
+
+    this.addMarkTimer = setTimeout(function () {
+      let video = that.getAudioElement();
+      if (video.paused === false) video.pause();
+      else video.play();
+
+      that.addMarkTimer = null;
+    }, 300);
   }
 
   forwardVideo() {
@@ -381,7 +405,7 @@ export class AudioComponent implements OnInit {
     var el = this.getAudioElement();
     el?.load();
 
-    if(!this.selectedFile.isFinished)
+    if(!this.selectedFile.isFinished && this.shouldResume())
       this.position = this.selectedFile.currentPosition;
 
     this.setPosition();
@@ -389,6 +413,10 @@ export class AudioComponent implements OnInit {
     this.trackCaption = this.selectedFile.name;
     this.updateTrackInfo();
     return true;
+  }
+
+  shouldResume() {
+    return this.type != MenuAudioType.сhildMusic;
   }
 
   download() {

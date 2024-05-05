@@ -61,5 +61,7 @@ export enum AudioType {
     Podcast,
     EoT,
     FairyTale,
-    Lessons
+    Lessons,
+    AudioBook,
+    ChildMusic,
 }

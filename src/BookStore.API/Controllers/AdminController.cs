@@ -58,10 +58,10 @@ namespace FileStore.API.Controllers
             //await manager.MoveFile(null);
             NLog.LogManager.GetCurrentClassLogger().Info("test");
 
-            //AddAudioFolder("", AudioType.AudioBook, false, "Трое в лодке");
-            //await MoveToPremiere(55252, 552522);
-            //await RemoveFile(55166, true, false);
-            //await RemoveFile(55208, true, false);
+            await AddAudioFolder("D:\\VideoServer\\Анюта\\Музыка\\Зарядка", AudioType.ChildMusic, false, "Зарядка");
+            ////await MoveToPremiere(55252, 552522);
+            //await RemoveFile(55468, true, false);
+            //await RemoveFile(55428, true, false);
             //await RemoveFile(54869, true, false);
             //await RemoveFile(54870, true, false);
 

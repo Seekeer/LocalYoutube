@@ -10,6 +10,9 @@ import { AudioFile } from '../_models/Book';
     providedIn: 'root'
 })
 export class AudioFileService {
+    getCoverById(id: number) {
+        return this.baseUrl +'AudioFiles/getImage?fileId=' + id;
+    }
     
     moveToSeason(selectedFile: AudioFile, newId: number) {
       return this.http.post(`${this.baseUrl}AudioFiles/move-file-to-season/${selectedFile.id}/${newId}`, null).subscribe();

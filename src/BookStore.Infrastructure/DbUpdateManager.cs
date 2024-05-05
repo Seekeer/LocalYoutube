@@ -851,7 +851,13 @@ namespace Infrastructure
             {
                 Id3Tag tag = mp3.GetTag(Id3TagFamily.Version2X);
 
-                audioFile.Name = tag?.Title ?? audioFile.Name;
+                if (tag != null)
+                {
+                    audioFile.Name = tag.Title ?? audioFile.Name;
+                    audioFile.VideoFileExtendedInfo.Cover = tag.Pictures.FirstOrDefault()?.PictureData;
+                    audioFile.Artist = tag.Artists.Value.First();
+                }
+
             }
 
             try
@@ -902,19 +908,25 @@ namespace Infrastructure
             var result = new List<AudioFile>();
             if (!dirInfo.Exists)
                 return result;
-            IEnumerable<FileInfo> filePaths = dirInfo.EnumerateFiles("*", SearchOption.AllDirectories);
             var folderName = dirInfo.FullName;
 
+            var series = type == AudioType.FairyTale ? AddOrUpdateVideoSeries(bookInfo.Author) :
+                AddOrUpdateVideoSeries(type.ToString());
+            series.AudioType = type;
+            var season = AddOrUpdateSeason(series, bookInfo.BookTitle);
+
+            return AddAudioFiles(dirInfo, type, origin, bookInfo, series, season);
+        }
+
+        private IEnumerable<AudioFile> AddAudioFiles(DirectoryInfo dirInfo, AudioType type, Origin origin, AudioFileInfo bookInfo, 
+            Series series, Season season)
+        {
+            var files = new List<AudioFile>();
+            IEnumerable<FileInfo> filePaths = dirInfo.EnumerateFiles("*", SearchOption.AllDirectories);
             var images = filePaths.Where(x => x.FullName.Contains(".jp")).OrderByDescending(x => x.Length);
             byte[] cover = null;
             if (images.Any())
                 cover = File.ReadAllBytes(images.FirstOrDefault().FullName);
-
-            var series = AddOrUpdateVideoSeries(bookInfo.Author);
-            series.AudioType = type;
-            var season = AddOrUpdateSeason(series, bookInfo.BookTitle);
-
-            var files = new List<AudioFile>();
 
             var mp3s = filePaths.Where(x => x.Name.EndsWith(".mp3"));
             foreach (var item in mp3s.Select((info, index) => (info, index)))

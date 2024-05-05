@@ -87,10 +87,10 @@
     <button mat-icon-button color="accent" (click)="rewindVideo()">
       <mat-icon>fast_rewind</mat-icon>
     </button>
-    <!-- 
+    
       <button mat-icon-button color="accent" (click)="startPlay()">
         <mat-icon>pause</mat-icon>
-      </button> -->
+      </button>
 
     <button class="btn" mat-icon-button color="accent" (click)="forwardVideo()">
       <mat-icon>fast_forward</mat-icon>
@@ -111,11 +111,17 @@
     </div>
   </div>
 
-
     <ul class="list-group list-group-light col_selector_container">
       <li class="list-group-item d-flex justify-content-between align-items-center" (click)="selectAudio(file)"
         [ngClass]="{'greenBackground' : file.id==selectedFile.id, 'orangeBackground' : file.isFinished }"
         *ngFor="let file of filteredFiles">
+
+        <img
+          src="{{file.coverURL}}"
+                loading="lazy"
+                *ngIf="showCover"
+        />
+
         <div>
           {{file.name}} / {{file.seasoName}}
         </div>

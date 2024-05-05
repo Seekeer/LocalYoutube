@@ -406,6 +406,9 @@ namespace Infrastructure.Migrations
                 {
                     b.HasBaseType("FileStore.Domain.Models.DbFile");
 
+                    b.Property<string>("Artist")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
