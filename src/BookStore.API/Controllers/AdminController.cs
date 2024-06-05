@@ -53,12 +53,27 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> DoAction()
         {
+            //await RestoreFiles();
+
+            await MoveFileToSeasonByName(55558, "Лекции об Индии", "Индия", VideoType.Special);
+
+            var fules = _db.Files.Where(x => x.Id >= 55559).Include(x => x.VideoFileExtendedInfo).ToList();
+            foreach (var file in fules)
+            {
+                await MoveFileToSeasonByName(file.Id, "Лекции об Индии", "Индия", VideoType.Special);
+            }
+
+            var files = _db.Files.Where(x => x.Id >= 55534 && x.Id <= 55544).Include(x => x.VideoFileExtendedInfo).ToList();
+            await DeleteFiles(true, files);
+
+            //RemoveSeason(13883, true);
+
             //var manager = new FileManager(null, null);
             //manager.MoveFileSync();
-            //await manager.MoveFile(null);
-            NLog.LogManager.GetCurrentClassLogger().Info("test");
 
-            await AddAudioFolder("D:\\VideoServer\\Анюта\\Музыка\\Зарядка", AudioType.ChildMusic, false, "Зарядка");
+            //await manager.MoveFile(null);
+            //NLog.LogManager.GetCurrentClassLogger().Info("test");
+            //await AddAudioFolder("D:\\VideoServer\\Анюта\\Музыка\\Зарядка", AudioType.ChildMusic, false, "Зарядка");
             ////await MoveToPremiere(55252, 552522);
             //await RemoveFile(55468, true, false);
             //await RemoveFile(55428, true, false);
@@ -156,6 +171,30 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
+        private async Task RestoreFiles()
+        {
+            var files = _db.Files.ToList();
+            var deleted = files.Where(file => !System.IO.File.Exists(file.Path)).ToList();
+            await RestoreFiles(deleted);
+        }
+
+        private async Task RestoreFiles(List<DbFile> files)
+        {
+
+                var manager = new DbUpdateManager(_db);
+                foreach (var file in files)
+            {
+                if (System.IO.File.Exists(file.Path))
+                    continue;
+
+                var downloader = DownloaderFabric.CreateDownloader(file.VideoFileExtendedInfo.ExternalLink, _config);
+                if(downloader == null)
+                    manager.RemoveFileCompletely(file);
+                else
+                    await downloader.Download(file.VideoFileExtendedInfo.ExternalLink, file.Path);
+            }
+        }
+
         [HttpGet]
         [Route("moveManyToPremiere")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -192,6 +231,13 @@ namespace FileStore.API.Controllers
         {
             var files = _db.Files.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos).Where(x => deleteAllAfter ? x.Id >= fileId : x.Id == fileId).ToList();
 
+            await DeleteFiles(deleteFile, files);
+
+            return Ok();
+        }
+
+        private async Task DeleteFiles(bool deleteFile, List<DbFile> files)
+        {
             using (var fileRepo = new DbFileRepository(_db))
                 foreach (var file in files)
                 {
@@ -200,8 +246,6 @@ namespace FileStore.API.Controllers
 
                     fileRepo.RemoveFileCompletely(file.Id);
                 }
-
-            return Ok();
         }
 
         [HttpDelete]

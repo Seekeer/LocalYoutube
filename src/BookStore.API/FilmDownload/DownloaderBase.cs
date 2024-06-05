@@ -124,6 +124,7 @@ namespace API.FilmDownload
         public virtual async Task<string> Download(string url, string path)
         {
             //$path = '{path.Replace(" ", "")}'
+            url = url.ClearEnd("&list=");
             var fInfo = new FileInfo(path);
             var fileName = fInfo.FullName.Replace(fInfo.Extension, "");
 

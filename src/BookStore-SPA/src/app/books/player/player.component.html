@@ -62,6 +62,7 @@
       *ngIf="!isMobile"
       [ngClass]="{'col-md-7': isAdditionalBookmarksVisible}"
       controls
+      preload="auto"
       height="auto"
       autoplay
       class="player__video viewer "
@@ -151,6 +152,8 @@
           <mat-icon>home</mat-icon>
         </button>
       </a>
+
+      <mat-checkbox class="mt-2" [(ngModel)]="enableDownload">Кэшировать полностью</mat-checkbox>
 
       <div  *ngIf="isSovietAnimation">
         <button class="btn btn-outline-warning btn-sm ml-2" (click)="moveToBad()">

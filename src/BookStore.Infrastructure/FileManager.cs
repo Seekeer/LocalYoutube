@@ -65,10 +65,10 @@ namespace Infrastructure
             }
             catch (Exception ex)
             {
-                StackTrace st = new StackTrace(true);
-                Console.WriteLine(ex.StackTrace);
-                Console.WriteLine("....");
-                Console.WriteLine(st);
+                //StackTrace st = new StackTrace(true);
+                //Console.WriteLine(ex.StackTrace);
+                //Console.WriteLine("....");
+                //Console.WriteLine(st);
 
                 NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }

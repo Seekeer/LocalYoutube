@@ -77,6 +77,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   lastPosition: number;
   seekPositions: SeekPositionCollection = new SeekPositionCollection();
   checkPauseDurationTimer: any;
+  enableDownload: boolean = true;
 
   constructor(
     public service: FileService,
@@ -526,6 +527,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
   setPosition() {
     if(!this.videoInfo)
       return;
+
+    this.tryToDownload();
+
     const position = this.videoInfo.currentPosition;
     var video = this.getVideoElement();
     if (video.duration && position > 0 && video) {
@@ -536,8 +540,65 @@ export class PlayerComponent implements OnInit, OnDestroy {
       }
       video.currentTime = position;
       this.videoInfo = null;
+      video.play();
     }
   }
+  tryToDownload() {
+    
+    if(this.videoInfo.durationMinutes > 60)
+      return;
+    
+    setTimeout(function () {
+      if(this.enableDownload)
+        this.startDownload();
+    }.bind(this), 25000, );
+  }
+
+  startDownload() {
+    var req = new XMLHttpRequest();
+    req.open('GET', this.videoURL, true);
+    req.responseType = 'blob';
+
+    let that = this;
+
+    console.log('start load');
+
+    req.onload = function() {
+      // Onload is triggered even on 404
+      // so we need to check the status code
+      if (this.status === 200) {
+
+        console.log('finish load');
+        var videoBlob = this.response;
+
+          // that.saveFile(videoBlob);
+          var vid = URL.createObjectURL(videoBlob); // IE10+
+          let videoEl = that.getVideoElement();
+          videoEl.src = vid;
+          videoEl.currentTime = that.lastPosition;
+          videoEl.play();
+      }
+    }
+    req.onerror = function() {
+      // Error
+    }
+
+    req.send();
+  }
+
+  // saveFile(videoBlob: Blob) {
+  //   var file = new File([videoBlob], this.videoId.toString());
+  //   try {
+  //     // Specify the filename using the File constructor, but ...
+  //     file = new File(videoBlob, this.videoId.toString());
+  //   } catch (e) {
+  //     // ... fall back to the Blob constructor if that isn't supported.
+  //     // file = new Blob(videoBlob);
+  //   }
+    
+  //   var url = URL.createObjectURL(file);
+  //   this.getVideoElement().src = file;
+  // }
 }
 
 export class DescriptionRow {

@@ -133,6 +133,9 @@ namespace FileStore.Domain.Services
 
             var video = await _FileRepository.GetById(videoId);
 
+            if (video == null)
+                return;
+
             var info = video.VideoFileUserInfos.FirstOrDefault(x => x.UserId == userId);
             if (info == null)
             {
