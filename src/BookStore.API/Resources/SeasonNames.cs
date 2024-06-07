@@ -10,5 +10,7 @@
         public static string Premiere { get; } = "Для редактора";
         public static string Kurginyan { get; } = "СЕ";
         public static string Eot { get; } = "СВ-РВС";
+        public static string It { get; internal set; } = "IT";
+        public static string Delete { get; } = "Удалить";
     }
 }

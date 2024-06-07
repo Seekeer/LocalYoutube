@@ -199,10 +199,13 @@ namespace FileStore.API.Controllers
             //await RedownloadByRutrackerId(3729674);
             //await RedownloadByRutrackerId(3283453);
 
-            await RedownloadByRutrackerId(5400445);
-            await RedownloadByRutrackerId(5103043);
-            await RedownloadByRutrackerId(3434813);
-
+            await RedownloadByRutrackerId(2801702);
+            await RedownloadByRutrackerId(4839067);
+            await RedownloadByRutrackerId(3453597);
+            await RedownloadByRutrackerId(5741326);
+            await RedownloadByRutrackerId(4655655);
+            await RedownloadByRutrackerId(5742848);
+            _db.SaveChanges();
             return Ok();
         }
 
@@ -212,9 +215,16 @@ namespace FileStore.API.Controllers
 
             foreach (var file in files)
             {
-                var directory = new DirectoryInfo(file.Path);
+                //var directory = new DirectoryInfo(file.Path);
 
-                await AddTorrent(id, directory.Parent.FullName);
+                //var path = directory.Parent.FullName;
+                //if (Directory.Exists(path))
+                //    Directory.Delete(path, true);
+
+                //path = path.Replace("D:\\VideoServer\\Rutracker\\", "Z:\\VideoServer\\Rutracker");
+                file.Path = @$"Z:\VideoServer\Rutracker\{id}";
+                file.IsDownloading = true;
+                await AddTorrent(id, file.Path);
             }
         }
 
@@ -347,6 +357,7 @@ namespace FileStore.API.Controllers
             {
                 var rutracker = new RuTrackerUpdater(_config);
                 await rutracker.Init();
+                await rutracker.DeleteTorrent(id.ToString());
                 await rutracker.StartDownload(id, folder);
             }
             catch (Exception)
@@ -1339,7 +1350,7 @@ namespace FileStore.API.Controllers
         {
             var dbUpdater = new DbUpdateManager(_db);
 
-            var series = dbUpdater.AddOrUpdateSeries(seriesName, false, false);
+            var series = dbUpdater.AddOrGetSeries(seriesName, false, false);
             _db.SaveChanges();
             series.Type = VideoType.Special;
 

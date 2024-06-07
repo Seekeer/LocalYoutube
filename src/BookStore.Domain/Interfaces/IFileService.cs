@@ -8,7 +8,9 @@ namespace FileStore.Domain.Interfaces
     public interface IDbFileService : IFileService<DbFile, VideoType>
     {
     }
-    public interface IVideoFileService : IFileService<VideoFile, VideoType> { }
+    public interface IVideoFileService : IFileService<VideoFile, VideoType> {
+        Task MoveToAnotherSeriesByNameAsync(int fileId, string seriesName, bool moveWholeSeason);
+    }
     public interface IAudioFileService : IFileService<AudioFile, AudioType> { }
 
     public interface IFileService<T,V> : IDisposable
@@ -32,5 +34,6 @@ namespace FileStore.Domain.Interfaces
         Task<bool> MoveToSeason(int fileId, int seasonId);
         Task<double> GetPosition(int fileId, string userId);
         Task<IEnumerable<T>> GetNew(int count);
+
     }
 }

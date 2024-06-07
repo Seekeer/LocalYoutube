@@ -22,12 +22,24 @@ using System.IO.Compression;
 using FileStore.Domain;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
+using System.Net;
 
 namespace Infrastructure
 {
 
     public static class FileExtendedInfoExtension
     {
+        public static void SetCoverByUrl(this FileExtendedInfo info, string url)
+        {
+            byte[] imageAsByteArray;
+            using (var webClient = new WebClient())
+            {
+                imageAsByteArray = webClient.DownloadData(url);
+            }
+
+            info.SetCover(imageAsByteArray);
+        }
+
         public static void SetCover(this FileExtendedInfo info, byte[] cover)
         {
             info.Cover = ResizeImage(cover);
@@ -88,7 +100,7 @@ namespace Infrastructure
     public class DbUpdateManager : IDisposable
     {
         private Origin _origin;
-        private VideoType _type;
+        private VideoType? _type;
         private int _episodeNumber;
         private bool _ignoreNonCyrillic = true;
         private VideoCatalogDbContext _db;
@@ -349,19 +361,10 @@ namespace Infrastructure
             return AddOrUpdateSeason(serie, name);
         }
 
-        public Season AddOrUpdateSeason(Series series, string name, bool doNotIgnoreSeriesId = true)
+        public Season AddOrUpdateSeason(Series series, string name)
         {
-            //var seasons = _db.Seasons.ToList();
-            //foreach (var season1 in seasons)
-            //{
-            //    if (!_db.Files.Any(x => x.SeasonId == season1.Id))
-            //    {
-            //        _db.Seasons.Remove(season1);
-            //    }
-            //}
-
-            var season = _db.Seasons.FirstOrDefault(x => x.Name == name);
-            if (season == null || (season.SeriesId != series.Id && doNotIgnoreSeriesId))
+            var season = _db.Seasons.FirstOrDefault(x => x.Name == name && x.SeriesId == series.Id);
+            if (season == null )
             {
                 season = new Season { Name = name, Series = series };
                 season.IsOrderMatter = _type == VideoType.Courses;
@@ -382,15 +385,17 @@ namespace Infrastructure
             if (type == null)
                 type = _type;
 
-            var series = AddOrUpdateSeries(folderName, analyzeNameLikeFolderName, type == VideoType.ChildEpisode || type == VideoType.FairyTale || type == VideoType.Animation);
-            series.Type = type;
+            var series = AddOrGetSeries(folderName, analyzeNameLikeFolderName, 
+                type == VideoType.ChildEpisode || type == VideoType.FairyTale || type == VideoType.Animation);
+            if(type != null)
+                series.Type = type;
 
             _db.SaveChanges();
 
             return series;
         }
 
-        public Series AddOrUpdateSeries(string folderName, bool analyzeFolderName, bool isChild)
+        public Series AddOrGetSeries(string folderName, bool analyzeFolderName, bool isChild)
         {
             var name = analyzeFolderName ? GetSeriesNameFromFolder(folderName) : folderName;
 
@@ -454,18 +459,16 @@ namespace Infrastructure
             return TrimDots(result);
         }
 
-        public void AddFromSiteDownload(VideoFile file, string seriesName, string seasonName)
+        public void AddFromSiteDownload(VideoFile file, string seriesName, string seasonName, int numberInSeries)
         {
-            var series = AddOrUpdateVideoSeries(seriesName, false);
-            series.Type = VideoType.Youtube;
-            var season = AddOrUpdateSeason(series, seasonName, false); 
+            var series = _db.Series.FirstOrDefault(x => x.Name == seriesName);
+            var season = AddOrUpdateSeason(series, seasonName); 
 
             file.Season = season;
             file.SeriesId = season.SeriesId;
-            file.Type = VideoType.Youtube;
+            file.Type = series.Type ?? VideoType.Unknown;
             file.IsDownloading = true;
-
-            _db.SaveChanges();
+            file.Number = numberInSeries;
         }
 
         public async Task<int> DownloadFinishedAsync(VideoFile file, bool isVideoPropertiesFilled)
@@ -497,7 +500,7 @@ namespace Infrastructure
         {
             video.Name = GetEpisodeNameFromFilenName(file.Name);
             video.Path = file.FullName;
-            video.Type = _type;
+            video.Type = _type ?? VideoType.Unknown;
             video.Origin = _origin;
             video.Series = series;
             video.Season = season;
@@ -855,7 +858,7 @@ namespace Infrastructure
                 {
                     audioFile.Name = tag.Title ?? audioFile.Name;
                     audioFile.VideoFileExtendedInfo.Cover = tag.Pictures.FirstOrDefault()?.PictureData;
-                    audioFile.Artist = tag.Artists.Value.First();
+                    audioFile.Artist = tag.Artists?.Value.FirstOrDefault();
                 }
 
             }
@@ -922,7 +925,7 @@ namespace Infrastructure
             Series series, Season season)
         {
             var files = new List<AudioFile>();
-            IEnumerable<FileInfo> filePaths = dirInfo.EnumerateFiles("*", SearchOption.AllDirectories);
+            IEnumerable<FileInfo> filePaths = dirInfo.EnumerateFiles("*", SearchOption.TopDirectoryOnly);
             var images = filePaths.Where(x => x.FullName.Contains(".jp")).OrderByDescending(x => x.Length);
             byte[] cover = null;
             if (images.Any())
@@ -971,7 +974,7 @@ namespace Infrastructure
             var albumName = rows.Count > 1 ? rows[1] : "Неизвестный";
 
             var isChild = type == AudioType.FairyTale;
-            var season = AddOrUpdateSeries("Неизвестное из Telegram", false, isChild);
+            var season = AddOrGetSeries("Неизвестное из Telegram", false, isChild);
             season.AudioType = type;
 
             var seasonName = $"{artistName} - {albumName}";

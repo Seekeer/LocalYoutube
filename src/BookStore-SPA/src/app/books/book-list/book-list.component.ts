@@ -365,7 +365,8 @@ displayListForType() {
         this.selectSeries(false);
         this.showWatched  = true;
         this.setSpecialSeries();
-
+        this.showOnlineButtons = true;
+        
         this.service.getNew().subscribe({
          next: (books) => {
             that.showBooks(books);

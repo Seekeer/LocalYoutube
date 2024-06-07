@@ -165,10 +165,10 @@ namespace API.TG
             switch (audioType)
             {
                 case AudioType.FairyTale:
-                    series = manager.AddOrUpdateSeries("info.Director Аудиосказки", false, true);
+                    series = manager.AddOrGetSeries("info.Director Аудиосказки", false, true);
                     break;
                 case AudioType.AudioBook:
-                    series = manager.AddOrUpdateSeries(info.Author ?? "Rutracker Аудиокниги", false, true);
+                    series = manager.AddOrGetSeries(info.Author ?? "Rutracker Аудиокниги", false, true);
                     break;
                 default:
                     throw new ArgumentException(nameof(audioType));

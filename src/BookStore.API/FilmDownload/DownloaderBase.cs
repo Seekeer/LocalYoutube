@@ -22,6 +22,8 @@ namespace API.FilmDownload
 
     public class DownloadTask
     {
+        public const string PARTS_SEPARATOR = "!!";
+
         public DownloadTask(int messageId, long fromId, string text)
         {
             OriginalMessageId = messageId;
@@ -36,38 +38,36 @@ namespace API.FilmDownload
         public long FromId { get; }
         public int QuestionMessageId { get; set; }
         public string SeasonName { get; set; }
+        public string SeriesName { get; internal set; }
+        public int NumberInSeries { get; internal set; }
         public string VideoName { get; set; }
+        public string CoverUrl { get; private set; }
         public Uri Uri { get; set; }
         public DownloadType DownloadType { get; internal set; }
 
         private void ParseMessageText(string text)
         {
-            var namePart = text.Split("||");
-            if (namePart.Length > 1)
-            {
-                VideoName = namePart[0];
-                text = namePart[1];
-            }
-            var parts = text.Split(' ');
-            if (parts.Length > 1)
-                SeasonName = string.Join(" ", parts.Take(parts.Length - 1));
+            var parts = text.Split(PARTS_SEPARATOR, StringSplitOptions.RemoveEmptyEntries);
 
             var url = parts.Last();
             if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
                 Uri = uri;
+
+            if (parts.Length > 1)
+                VideoName = parts[0];
+
+            if (parts.Length > 2)
+                CoverUrl = parts[1];
         }
 
         internal string GetSeasonName(string channelName)
         {
-            if (!string.IsNullOrEmpty(SeasonName))
-                return SeasonName;
-
-            return DownloadType == DownloadType.Common ? channelName : $"{DownloadType}" ;
+            return SeasonName ?? channelName ?? $"{DownloadType}";
         }
 
         internal string GetSeriesName()
         {
-            return DownloadType.ToString();
+            return SeriesName ?? DownloadType.ToString();
         }
     }
 
@@ -76,8 +76,9 @@ namespace API.FilmDownload
         Youtube = 0,
         VK = 1,
         Common = 2,
-
+        Rossaprimavera = 3,
     }
+
     public class DownloaderFabric
     {
         public static DownloaderBase CreateDownloader(DownloadTask task, AppConfig config)
@@ -93,6 +94,8 @@ namespace API.FilmDownload
                 return new YoutubeDownloader(config);
             else if (url.Contains("vk.com"))
                 return new VKDownloader(config);
+            else if (url.Contains("rossaprimavera"))
+                return new RossaDownloader(config);
             else
                 return new CommonDownloader(config);
         }
@@ -123,6 +126,8 @@ namespace API.FilmDownload
 
         public virtual async Task<string> Download(string url, string path)
         {
+            path = PrepareFilePath(path);
+
             //$path = '{path.Replace(" ", "")}'
             url = url.ClearEnd("&list=");
             var fInfo = new FileInfo(path);
@@ -173,5 +178,22 @@ namespace API.FilmDownload
         protected abstract Task<DownloadInfo> GetPlaylistInfo(string url, string rootDownloadFolder);
         protected abstract Task<DownloadInfo> GetVideoInfo(string url, string rootDownloadFolder);
 
+        private string PrepareFilePath(string path)
+        {
+            return path.Replace(" ", "")
+                // ' is breaking powershell script
+                .Replace("'", "");
+        }
+
+        internal void UpdateFileByTask(VideoFile value, DownloadTask task)
+        {
+            if (!string.IsNullOrEmpty(task.VideoName))
+                value.Name = task.VideoName;
+
+            value.VideoFileExtendedInfo.ExternalLink = task.Uri.ToString();
+
+            if(!string.IsNullOrEmpty(task.CoverUrl))
+                value.VideoFileExtendedInfo.SetCoverByUrl(task.CoverUrl);
+        }
     }
 }

@@ -16,8 +16,35 @@ namespace FileStore.Domain.Services
 
     public class VideoFileService : FileServiceBase<VideoFile, VideoType>, IVideoFileService
     {
-        public VideoFileService(IVideoFileRepository FileRepository) : base(FileRepository)
+        private readonly ISeriesRepository _seriesRepository;
+
+        public VideoFileService(IVideoFileRepository FileRepository, ISeriesRepository seriesRepository) : base(FileRepository)
         {
+            _seriesRepository = seriesRepository;
+        }
+
+
+        public async Task MoveToAnotherSeriesByNameAsync(int fileId, string seriesName, bool moveWholeSeason)
+        {
+            var series = _seriesRepository.AddOrUpdateSeries(seriesName, VideoType.Youtube, null);
+            var file = await _FileRepository.GetById(fileId);
+
+            if (file.SeriesId == series.Id)
+                return;
+
+            if (!moveWholeSeason)
+            {
+                var season = _seriesRepository.AddOrUpdateSeason(series, $"{file.Series.Name}_{file.Season.Name}");
+
+                file.Series = series;
+                file.Season = season;
+
+                await _FileRepository.Update(file);
+            }
+            else
+            {
+                await _seriesRepository.MoveSeasonToSeriesAsync(fileId, series.Id);
+            }
         }
     }
     public class AudioFileService : FileServiceBase<AudioFile, AudioType>, IAudioFileService
@@ -30,7 +57,7 @@ namespace FileStore.Domain.Services
     public class FileServiceBase<T,V> : IFileService<T,V>
         where T : DbFile
     {
-        private readonly IFileRepository<T, V> _FileRepository;
+        protected readonly IFileRepository<T, V> _FileRepository;
 
         public FileServiceBase(IFileRepository<T, V> FileRepository)
         {

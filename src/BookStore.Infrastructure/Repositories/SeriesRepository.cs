@@ -99,7 +99,21 @@ namespace FileStore.Infrastructure.Repositories
             return series;
         }
 
-        public async Task MoveSeasonToSeries(int fileId, int seriesId)
+        public Season AddOrUpdateSeason(Series series, string name, bool doNotIgnoreSeriesId = true, bool isOrderMatter = false)
+        {
+            var season = Db.Seasons.FirstOrDefault(x => x.Name == name);
+            if (season == null || (season.SeriesId != series.Id && doNotIgnoreSeriesId))
+            {
+                season = new Season { Name = name, Series = series };
+                season.IsOrderMatter = isOrderMatter;
+                Db.Seasons.Add(season);
+                Db.SaveChanges();
+            }
+
+            return season;
+        }
+
+        public async Task MoveSeasonToSeriesAsync(int fileId, int seriesId)
         {
             var file = await Db.Files.FirstAsync(x => x.Id == fileId);
             var series = await Db.Series.FirstAsync(x => x.Id == seriesId);

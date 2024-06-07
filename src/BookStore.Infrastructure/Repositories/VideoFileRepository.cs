@@ -230,15 +230,5 @@ namespace FileStore.Infrastructure.Repositories
             return files;
         }
 
-        public async Task MoveToAnotherSeriesByNameAsync(int fileId, string name)
-        {
-            var file = await GetFilesSet().FirstAsync(x => x.Id == fileId);
-
-            var series = await Db.Series.FirstAsync(x => x.Name == name);
-
-            file.SeriesId = series.Id;
-
-            await Db.SaveChangesAsync();
-        }
     }
 }

@@ -53,18 +53,22 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> DoAction()
         {
+            await RemoveFile(55625, true, false);
+            //var dbUpdater = new DbUpdateManager(_db);
+            //dbUpdater.AddAudioFilesFromFolder("D:\\VideoServer\\Анюта\\Музыка", AudioType.FairyTale, Origin.Russian, false, "Сказка о царе Салтане", "А.С. Пушкин - Сказки");
+
             //await RestoreFiles();
 
-            await MoveFileToSeasonByName(55558, "Лекции об Индии", "Индия", VideoType.Special);
+            //await MoveFileToSeasonByName(55558, "Лекции об Индии", "Индия", VideoType.Special);
 
-            var fules = _db.Files.Where(x => x.Id >= 55559).Include(x => x.VideoFileExtendedInfo).ToList();
-            foreach (var file in fules)
-            {
-                await MoveFileToSeasonByName(file.Id, "Лекции об Индии", "Индия", VideoType.Special);
-            }
+            //var fules = _db.Files.Where(x => x.Id >= 55559).Include(x => x.VideoFileExtendedInfo).ToList();
+            //foreach (var file in fules)
+            //{
+            //    await MoveFileToSeasonByName(file.Id, "Лекции об Индии", "Индия", VideoType.Special);
+            //}
 
-            var files = _db.Files.Where(x => x.Id >= 55534 && x.Id <= 55544).Include(x => x.VideoFileExtendedInfo).ToList();
-            await DeleteFiles(true, files);
+            //var files = _db.Files.Where(x => x.Id >= 55534 && x.Id <= 55544).Include(x => x.VideoFileExtendedInfo).ToList();
+            //await DeleteFiles(true, files);
 
             //RemoveSeason(13883, true);
 
@@ -124,7 +128,6 @@ namespace FileStore.API.Controllers
             //        file.Type = VideoType.Special;
             //    }
             //}
-            _db.SaveChanges();
 
             //// Eot
             //MoveFileToSeasonByName(54687, "Мудрец", "СВ-РВС", VideoType.EoT);
@@ -171,17 +174,23 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
-        private async Task RestoreFiles()
+        [HttpGet]
+        [Route("checkRemovedFiles")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task CheckRemovedFiles()
         {
             var files = _db.Files.ToList();
             var deleted = files.Where(file => !System.IO.File.Exists(file.Path)).ToList();
-            await RestoreFiles(deleted);
+
+            var list = string.Join(Environment.NewLine, deleted.Select(x => $"{x.Id} {x.Path}").Distinct());
+            //var list = string.Join(Environment.NewLine, deleted.Select(x => x.SeriesId).Distinct());
+
+            //await RestoreFiles(deleted);
         }
 
         private async Task RestoreFiles(List<DbFile> files)
         {
-
-                var manager = new DbUpdateManager(_db);
+            var manager = new DbUpdateManager(_db);
                 foreach (var file in files)
             {
                 if (System.IO.File.Exists(file.Path))
@@ -313,7 +322,7 @@ namespace FileStore.API.Controllers
 
             var files = _db.VideoFiles.Where(x => x.Id >= startId && x.Id <= finishId).ToList();
 
-            var series = manager.AddOrUpdateSeries(seriesName, false, isChild);
+            var series = manager.AddOrGetSeries(seriesName, false, isChild);
             series.Type = files.FirstOrDefault().Type;
             var season = manager.AddOrUpdateSeason(series, seasonName);
             foreach (var item in files)

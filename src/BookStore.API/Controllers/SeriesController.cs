@@ -64,7 +64,7 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> MoveToSeason(int fileId, int seriesId)
         {
-            await _SeriesRepository.MoveSeasonToSeries(fileId, seriesId);
+            await _SeriesRepository.MoveSeasonToSeriesAsync(fileId, seriesId);
             return Ok();
         }
 

@@ -10,6 +10,21 @@ using System.Threading.Tasks;
 
 namespace API.FilmDownload
 {
+    internal class RossaDownloader : CommonDownloader
+    {
+
+        public RossaDownloader(AppConfig config) : base(config) { }
+
+        public override Task<string> Download(string url, string path)
+        {
+            // https://rossaprimavera.ru/video/da867d54 -> https://rossaprimavera.ru/static/video/da867d54/720.mp4
+            url = url.Replace(@"https://rossaprimavera.ru/video", @"https://rossaprimavera.ru/static/video") + @"/720.mp4";
+            return base.Download(url, path);
+        }
+
+        public override DownloadType DownloadType => DownloadType.Rossaprimavera;
+    }
+
     internal class CommonDownloader : DownloaderBase
     {
         public CommonDownloader(AppConfig config)
@@ -42,7 +57,7 @@ namespace API.FilmDownload
             file.Name = uri.OriginalString.Replace(uri.Host, string.Empty).Replace("https:", "").Replace("video", "").Replace("/","");
             HtmlWeb web = new HtmlWeb();
             var htmlDoc = web.Load(uri);
-            var headers = htmlDoc.DocumentNode.SelectNodes("//meta");
+            var headers = htmlDoc.DocumentNode.SelectNodes("//meta")  ;
             //var headers = htmlDoc.DocumentNode.SelectNodes("//div[*[video]]");
             //var headers = htmlDoc.DocumentNode.SelectNodes("//div[video]/following-sibling:://h3");
             //var headers = htmlDoc.DocumentNode.SelectNodes("//h1 | //h2 or //h3 or //h4 or //h5 or //h6");
@@ -70,6 +85,10 @@ namespace API.FilmDownload
                         }
                     }
                 }
+            }
+            else
+            {
+                var title = htmlDoc.DocumentNode.SelectNodes(".//*[@id=\"title\"]");
             }
 
             file.VideoFileExtendedInfo = new FileExtendedInfo();

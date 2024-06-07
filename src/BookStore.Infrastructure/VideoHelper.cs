@@ -153,12 +153,13 @@ namespace Infrastructure
                     FFMpeg.Snapshot(videoFile.Path, null, TimeSpan.FromSeconds(2));
                 videoFile.Quality = DetectQuality(bitmap);
 
-                using (MemoryStream memoryStream = new MemoryStream())
-                {
-                    bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Jpeg);
+                if(videoFile.VideoFileExtendedInfo.Cover == null)
+                    using (MemoryStream memoryStream = new MemoryStream())
+                    {
+                        bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Jpeg);
 
-                    videoFile.VideoFileExtendedInfo.SetCover(memoryStream.ToArray());
-                }
+                        videoFile.VideoFileExtendedInfo.SetCover(memoryStream.ToArray());
+                    }
             }
             catch (Exception ex)
             {

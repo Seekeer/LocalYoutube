@@ -78,6 +78,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   seekPositions: SeekPositionCollection = new SeekPositionCollection();
   checkPauseDurationTimer: any;
   enableDownload: boolean = true;
+  isDownloading: boolean;
 
   constructor(
     public service: FileService,
@@ -403,7 +404,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   private setNextVideo(encreaseCounter: boolean) {
     console.log(`Video ended ${this.videoURL} ${this.name}`);
-
+    this.isDownloading = false;
     if (this.parameters.videosCount <= this.playedVideoCount) {
       this.videoURL = null;
       if(this.parameters.showDeleteButton == true)
@@ -413,13 +414,16 @@ export class PlayerComponent implements OnInit, OnDestroy {
       return false;
     }
 
+    var el = this.getVideoElement();
     let currentId = this.videosList[++this.currentVideoIndex];
     this.videoId = currentId;
 
     this.videoURL = this.service.getVideoURLById(currentId);
-    //this.download();
+    if (el)
+      el.src = this.videoURL;
     this.vlcPlayURL = `vlc://${this.videoURL}`;
-    var el = this.getVideoElement();
+    if(el?.attributes.getNamedItem("autoplay") === null)
+      el?.setAttribute("autoplay","");
     el?.load();
 
     if (encreaseCounter) {
@@ -434,16 +438,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
         this.name = videoInfo.displayName;
         this.videoInfo = videoInfo;
         this.description = this.parseDescription(videoInfo.description);
-
-        // this.description = this.parseDescription(`
-        // 0:00 - Что будет?
-        // 0:50 - Представление гостьи
-        // 3:07 - Выросла в многодетной семье
-        // 7:00 - Отношения с деньгами в детстве
-        // 9:40 - Первые заработки
-        // 18:40 - На что тратила деньги и реакция отца
-        // 22:15 - В чем мотивация зарабатыва`);
-
       },
       (err) => {
         console.log(`Cannot get video by series ${this.parameters.seriesId}`);
@@ -545,9 +539,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
   tryToDownload() {
     
-    if(this.videoInfo.durationMinutes > 60)
+    if(this.videoInfo.durationMinutes > 60 || this.isDownloading )
       return;
-    
+    this.isDownloading = true;
     setTimeout(function () {
       if(this.enableDownload)
         this.startDownload();
@@ -568,15 +562,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
       // so we need to check the status code
       if (this.status === 200) {
 
-        console.log('finish load');
         var videoBlob = this.response;
-
-          // that.saveFile(videoBlob);
-          var vid = URL.createObjectURL(videoBlob); // IE10+
-          let videoEl = that.getVideoElement();
-          videoEl.src = vid;
-          videoEl.currentTime = that.lastPosition;
-          videoEl.play();
+        that.setBlobAsSurce(videoBlob);
       }
     }
     req.onerror = function() {
@@ -584,6 +571,21 @@ export class PlayerComponent implements OnInit, OnDestroy {
     }
 
     req.send();
+  }
+  setBlobAsSurce(videoBlob: any) {
+    // that.saveFile(videoBlob);
+    var vid = URL.createObjectURL(videoBlob); // IE10+
+    let videoEl = this.getVideoElement();
+    let isPlaying = this.videoIsPlaying(videoEl);
+    videoEl.removeAttribute("autoplay");
+    videoEl.src = vid;
+    videoEl.currentTime = this.lastPosition;
+    if(isPlaying)
+      videoEl.play();
+  }
+
+  videoIsPlaying(videoEl: HTMLMediaElement) {
+    return !!(videoEl.currentTime > 0 && !videoEl.paused && !videoEl.ended && videoEl.readyState > 2);
   }
 
   // saveFile(videoBlob: Blob) {

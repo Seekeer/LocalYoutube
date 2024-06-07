@@ -16,6 +16,10 @@ namespace API.TG
         SetupVLC,
         [CommandName(TgBot.SHOW_ALL_SEARCH_RESULT_Message)]
         ShowAllSearchResult,
+        [CommandName("updatecover")]
+        UpdateCover,
+        [CommandName("rename")]
+        Rename,
         DownloadOneTime,
         DownloadAsDesigned,
         DownloadIndia,
@@ -42,6 +46,7 @@ namespace API.TG
         DownloadCossacks,
         DownloadPremier,
         DownloadEot,
+        DownloadIt,
         DownloadKurginyan,
     }
 
@@ -59,6 +64,10 @@ namespace API.TG
         }
 
         public string Data { get; set; }
+        public IEnumerable<string> GetDataParts()
+        {
+            return Data.Split(CommandParser.SEPARATOR);
+        }
         public CommandType Type { get; set; }
     }
 
@@ -116,7 +125,7 @@ namespace API.TG
         }
 
 
-        private const string SEPARATOR = ";;";
+        public const string SEPARATOR = ";;";
 
         internal static TgCommand GetDataFromMessage(string text)
         {
