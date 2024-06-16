@@ -196,10 +196,10 @@ namespace FileStore.Infrastructure.Repositories
 
         public async Task<bool> MoveToSeason(int fileId, int seasonId)
         {
-            var file = await GetById(fileId);
+            var file = await GetFilesSet().FirstOrDefaultAsync(x => x.Id == fileId);
 
             var oldSeasonId = file.SeasonId;
-            var season = await Db.Seasons.Include(x => x.Series).FirstOrDefaultAsync(x => x.Id == seasonId);    
+            var season = await Db.Seasons.Include(x => x.Series).FirstOrDefaultAsync(x => x.Id == seasonId);
 
             Db.Attach(file);
             file.SeasonId = seasonId;

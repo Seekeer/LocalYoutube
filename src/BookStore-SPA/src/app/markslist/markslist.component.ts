@@ -96,7 +96,7 @@ export class MarkslistComponent implements OnInit, OnChanges {
     callbackOnMore: Function
   ) {
     var timeDiff = this.calculateTime(date);
-    if (timeDiff < 2000) {
+    if (timeDiff > 10 && timeDiff < 2000) {
       callbackOnLess();
     } else {
       callbackOnMore();

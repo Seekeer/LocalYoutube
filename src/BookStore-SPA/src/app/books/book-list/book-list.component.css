@@ -19,3 +19,7 @@ img {
 img{
     max-height: 550px;
 }
+
+.infoCover{
+    max-width: 60% !important;
+}

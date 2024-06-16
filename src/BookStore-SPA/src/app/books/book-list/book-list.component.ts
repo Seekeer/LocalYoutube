@@ -311,6 +311,7 @@ displayListForType() {
       case MenuVideoType.special:{
         this.setSpecialSeries();
         this.showOnlineButtons = true;
+        this.showWatchedCheckbox = true;
 
           this.seriesService.getSpecialAndEot().subscribe(series => {            
             this.showManyEpisodes(series, this.defaultEpisodesCount);
@@ -382,7 +383,7 @@ displayListForType() {
   setSpecialSeries() {
     this.seriesService.getSpecialAndEot().subscribe((series) => {
 
-      this.allSeasons = series.filter(serie => serie.type != VideoType.EoT).reduce((pr, cur) => [...pr, ...cur.seasons], []).sort((a, b) => {
+      this.allSeasons = series.reduce((pr, cur) => [...pr, ...cur.seasons], []).sort((a, b) => {
         return a.name >= b.name ? 1 : -1;
       });
       this.allSeries = series;
