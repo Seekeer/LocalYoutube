@@ -1,7 +1,7 @@
 ﻿using FileStore.Domain.Models;
 using System.Collections.Generic;
 
-namespace FileStore.API.Dtos.Series
+namespace Dtos
 {
     public class SeriesResultDto
     {

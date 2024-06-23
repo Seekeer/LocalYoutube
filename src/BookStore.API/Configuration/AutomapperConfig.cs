@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
-using FileStore.API.Dtos.File;
-using FileStore.API.Dtos.Series;
+using Dtos;
 using FileStore.Domain.Models;
 using ProtoBuf.WellKnownTypes;
 using System;
@@ -40,11 +39,7 @@ namespace FileStore.API.Configuration
         {
             //CreateMap<byte[], string>().ConvertUsing(new Base64Converter());
             CreateMap<Season, SeasonResultDto>().ReverseMap();
-            CreateMap<Series, SeriesAddDto>().ReverseMap();
-            CreateMap<Series, SeriesEditDto>().ReverseMap();
             CreateMap<Series, SeriesResultDto>().ReverseMap();
-            CreateMap<VideoFile, FileAddDto>().ReverseMap();
-            CreateMap<VideoFile, FileEditDto>().ReverseMap();
             CreateMap<VideoFile, VideoFileResultDto>().ReverseMap();
             CreateMap<AudioFile, VideoFileResultDto>().ReverseMap();
             CreateMap<FileMark, MarkAddDto>().ReverseMap();

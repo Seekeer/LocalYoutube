@@ -17,10 +17,8 @@ namespace MAUI
         {
             Routing.RegisterRoute(nameof(LoginPage), typeof(LoginPage));
             Routing.RegisterRoute(nameof(ButtonsPage), typeof(ButtonsPage));
-            //Routing.RegisterRoute(nameof(ShowDetailPage), typeof(ShowDetailPage));
-            //Routing.RegisterRoute(nameof(EpisodeDetailPage), typeof(EpisodeDetailPage));
-            //Routing.RegisterRoute(nameof(CategoriesPage), typeof(CategoriesPage));
-            //Routing.RegisterRoute(nameof(CategoryPage), typeof(CategoryPage));
+            Routing.RegisterRoute(nameof(Player), typeof(Player));
+            Routing.RegisterRoute(nameof(ListPage), typeof(ListPage));
         }
     }
 }

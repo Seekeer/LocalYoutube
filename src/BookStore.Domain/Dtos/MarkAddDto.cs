@@ -1,4 +1,4 @@
-﻿namespace FileStore.API.Dtos.Series
+﻿namespace Dtos
 {
     public class MarkAddDto
     {

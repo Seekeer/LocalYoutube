@@ -4,13 +4,12 @@ namespace MAUI.Pages;
 
 public partial class LoginPage : ContentPage
 {
-    private LoginVM viewModel => BindingContext as LoginVM;
-
     public LoginPage(LoginVM vm)
 	{
 		InitializeComponent();
         BindingContext = vm;
     }
+    private LoginVM viewModel => BindingContext as LoginVM;
 
     protected override async void OnNavigatedTo(NavigatedToEventArgs args)
     {

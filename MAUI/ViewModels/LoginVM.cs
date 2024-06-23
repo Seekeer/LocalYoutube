@@ -1,35 +1,39 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MAUI.Pages;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using MAUI.Services;
 
 namespace MAUI.ViewModels
 {
-    public partial class LoginVM : VMBase
+    public partial class LoginVM : VMBase<string>
     {
+        public LoginVM(IAPIService api, INavigationService navigationService)
+        {
+            _navigationService = navigationService;
+            _api = api;
+        }
+
         [ObservableProperty]
         private string? _login;
 
         [ObservableProperty]
         private string? _password;
 
+        [ObservableProperty]
+        private bool _areCredentialsWrong;
+        private readonly INavigationService _navigationService;
+        private readonly IAPIService _api;
+
         [RelayCommand]
-        public async Task Login()
+        public async Task DoLogin()
         {
             if (string.IsNullOrEmpty(_login) || string.IsNullOrEmpty(_password))
                 return;
 
-            await CallAuthEndpoint(this);
-            await TryToLogin();
-        }
+            SecureStorage.RemoveAll();
 
-        private Task CallAuthEndpoint(LoginVM loginVM)
-        {
-            throw new NotImplementedException();
+            await HttpClientAuth.LoginAsync(Login, Password);
+            await TryToLogin();
         }
 
         internal async Task OnNavigated()
@@ -39,16 +43,10 @@ namespace MAUI.ViewModels
 
         private async Task TryToLogin()
         {
-            if (await IsAuthenticated())
-                await Shell.Current.GoToAsync(nameof(ButtonsPage));
+            if (await HttpClientAuth.IsAuthenticated())
+                await _navigationService.NavigateAsync(nameof(ButtonsPage));
             else
-                await Shell.Current.GoToAsync(nameof(LoginPage));
-        }
-
-        private async Task<bool> IsAuthenticated()
-        {
-            var hasAuth = await SecureStorage.GetAsync("hasAuth");
-            return hasAuth != null;
+                AreCredentialsWrong = true;
         }
     }
 }

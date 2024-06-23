@@ -10,7 +10,7 @@ using API.FilmDownload;
 using API.TG;
 using AutoMapper;
 using FileStore.API.Configuration;
-using FileStore.API.Dtos.File;
+using Dtos;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using FileStore.Domain.Services;

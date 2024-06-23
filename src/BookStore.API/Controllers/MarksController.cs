@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
+using Dtos;
 using FileStore.API.Controllers;
-using FileStore.API.Dtos.Series;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using FileStore.Domain.Services;
