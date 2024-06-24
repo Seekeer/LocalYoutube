@@ -80,8 +80,8 @@ namespace MAUI.Services
 
         public async Task<IEnumerable<VideoFileResultDto>> GetHistoryAsync()
         {
-            //var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDto>>($"files/getLatest");
-            //return list;
+            var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDto>>($"files/getLatest");
+            return list;
 
             //TODO no network
             var list1 = new List<VideoFileResultDto>
@@ -214,7 +214,11 @@ namespace MAUI.Services
         private static async Task<T?> Parse<T>(HttpResponseMessage response)
         {
             var respStr = await response.Content.ReadAsStringAsync();
-            var list = JsonSerializer.Deserialize<T>(respStr);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            var list = JsonSerializer.Deserialize<T>(respStr, options);
             return list;
         }
 

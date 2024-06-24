@@ -38,6 +38,18 @@
                             Text="{Binding Description}"
                             FontAttributes="Italic"
                             VerticalOptions="End" />
+
+                        <Button Grid.Column="2"
+                            Text="Скачать"
+                            Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                            CommandParameter="{Binding Id}"
+                            FontAttributes="Bold" />
+
+                        <!--<Button Grid.Column="2"
+                            Text="Скачать"
+                            Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                            CommandParameter="{Binding}"
+                            FontAttributes="Bold" />-->
                     </Grid>
                 </ViewCell>
             </DataTemplate>

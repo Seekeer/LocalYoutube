@@ -25,6 +25,13 @@ namespace MAUI.ViewModels
             await _navigationService.NavigateAsync(nameof(Player), videoFileResultDto);
         }
 
+
+        [RelayCommand]
+        public async Task DownloadVideo(int id)
+        {
+            await DownloadManager.DownloadAsync(id);
+        }
+
         private readonly INavigationService _navigationService;
     }
 }

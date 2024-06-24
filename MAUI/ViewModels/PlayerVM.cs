@@ -32,7 +32,7 @@ namespace MAUI.ViewModels
         private void AssignDTO(VideoFileResultDto dto)
         {
             this.File = dto;
-            this.VideoUrl = HttpClientAuth.GetVideoUrlById(dto.Id); ;
+            this.VideoUrl = HttpClientAuth.GetVideoUrlById(dto.Id);
 
             DownloadAndReplace().ConfigureAwait(true).GetAwaiter().GetResult();
         }

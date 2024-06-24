@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Dtos;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,8 +21,14 @@ namespace MAUI.Services
             Client = client;
         }
 
+        public static async Task<string> DownloadAsync(int fileId)
+        {
+            var name = fileId.ToString();
+            return await DownloadManager.DownloadAsync(name, HttpClientAuth.GetVideoUrlById(fileId));
+        }
+
         public static async Task<string> DownloadAsync(
-            string file,
+            string fileName,
             string url,
             IProgress<double> progress = default(IProgress<double>),
             CancellationToken token = default(CancellationToken))
@@ -31,7 +38,7 @@ namespace MAUI.Services
 
             //TODO colocar isso dentro de alguma pasta
             var path = PlataformFolder();
-            var fileWriteTo = Path.Combine(path, file);
+            var fileWriteTo = Path.Combine(path, fileName);
 
             if (File.Exists(fileWriteTo))
                 return fileWriteTo;
@@ -64,7 +71,7 @@ namespace MAUI.Services
 
                             totalRead += read;
 
-                            //progress.Report((totalRead * 1d) / (total * 1d) * 100);
+                            progress?.Report((totalRead * 1d) / (total * 1d) * 100);
                         }
 
                     } while (isMoreToRead);
