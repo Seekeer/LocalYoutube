@@ -234,7 +234,7 @@ namespace MAUI.Services
         internal static async Task<bool> IsAuthenticated()
         {
             //TODO no network
-            return true;
+            //return true;
             var token = await SecureStorage.GetAsync("accessToken");
             return !string.IsNullOrEmpty(token);
         }

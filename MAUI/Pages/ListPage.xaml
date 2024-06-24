@@ -11,15 +11,15 @@
         <ListView.ItemTemplate>
             <DataTemplate>
                 <ViewCell>
-                    <Grid Padding="10">
+                    <Grid Margin="5">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
+                            <!--<RowDefinition Height="Auto" />-->
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="6*" />
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
                         <Image
@@ -29,27 +29,27 @@
                             Aspect="AspectFit"
                             SemanticProperties.Description="dot net bot in a race car number eight" />
 
-                        <Label Grid.Column="1"
-                            Text="{Binding Name}"
-                            FontAttributes="Bold" />
+                        <VerticalStackLayout  Grid.Column="1">
+                            <Label Grid.Column="1"
+                                MaxLines="1"
+                                Text="{Binding Name}"
+                                FontAttributes="Bold" />
 
-                        <Label Grid.Row="1"
+                            <Label Grid.Row="1"
                             Grid.Column="1"
                             Text="{Binding Description}"
+                            MaxLines="6"
                             FontAttributes="Italic"
                             VerticalOptions="End" />
+                        </VerticalStackLayout>
 
                         <Button Grid.Column="2"
-                            Text="Скачать"
+                                Grid.RowSpan="2"
+                                Text="Скачать"
+                                VerticalOptions="Center"
                             Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
                             CommandParameter="{Binding Id}"
                             FontAttributes="Bold" />
-
-                        <!--<Button Grid.Column="2"
-                            Text="Скачать"
-                            Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
-                            CommandParameter="{Binding}"
-                            FontAttributes="Bold" />-->
                     </Grid>
                 </ViewCell>
             </DataTemplate>

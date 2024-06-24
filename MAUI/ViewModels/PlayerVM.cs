@@ -22,6 +22,12 @@ namespace MAUI.ViewModels
 
         [ObservableProperty]
         private string _videoUrl;
+
+        [ObservableProperty]
+        private TimeSpan _position;
+
+        public Player Page { get; internal set; }
+
         public PlayerVM(IAPIService api)
         {
             _api = api;
@@ -34,7 +40,7 @@ namespace MAUI.ViewModels
             this.File = dto;
             this.VideoUrl = HttpClientAuth.GetVideoUrlById(dto.Id);
 
-            DownloadAndReplace().ConfigureAwait(true).GetAwaiter().GetResult();
+            DownloadAndReplace();
         }
 
         private async Task DownloadAndReplace()
@@ -45,7 +51,9 @@ namespace MAUI.ViewModels
             var path = File.Id.ToString();
 
             var filePath = await DownloadManager.DownloadAsync(path, this.VideoUrl);
+            var position = Page.PlayerElement.Position;
             VideoUrl = filePath;
+            await Page.PlayerElement.SeekTo(position);
         }
 
         [RelayCommand]

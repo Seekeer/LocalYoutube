@@ -2,10 +2,10 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="MAUI.Pages.LoginPage"
-             Title="LoginPage">
-    <Grid RowDefinitions="2*,*" Margin="0,10,0,0">
-        <VerticalStackLayout Padding="10" VerticalOptions="Center" HorizontalOptions="Center">
-            <Frame BorderColor="Gray"
+             Title="Нужно авторизоваться">
+    <Grid RowDefinitions="auto,*"  Margin="0,10,0,0">
+        <!--<VerticalStackLayout Padding="10" VerticalOptions="Center" HorizontalOptions="Center">-->
+            <!--<Frame BorderColor="Gray"
                CornerRadius="10"
                HasShadow="True"
                Margin="0,-20,0,0"
@@ -24,19 +24,14 @@
                 SemanticProperties.Description="Cute dot net bot waving hi to you!"
                 HeightRequest="80"
                     IsVisible="False"
-                HorizontalOptions="Center" />
-                        <Label Text="Login"
-                       FontSize="30"
-                       FontAttributes="Bold"
-                       TextColor="Black"
-                       FontFamily="Consolas"
-                       Padding="5"/>
-                        <Label Text="to continue!" TextColor="Black"
-                       FontSize="14" Padding="5"
-                       FontAttributes="Bold" />
-                    </VerticalStackLayout>
+                HorizontalOptions="Center" />-->
 
-                    <VerticalStackLayout Padding="10">
+                    <!--</VerticalStackLayout>-->
+
+                    <VerticalStackLayout Padding="10" VerticalOptions="Center"
+                       Grid.Row="1"
+                                         >
+                        
                         <Label FontFamily="Consolas" Text="Логин"/>
                         <Frame CornerRadius="10" Padding="3" Margin="0,10,0,0">
                             <VerticalStackLayout>
@@ -64,9 +59,10 @@
                                 Text="Login" VerticalOptions="CenterAndExpand" 
                                 HorizontalOptions="FillAndExpand"/>
 
-                    </VerticalStackLayout>
-                </StackLayout>
-            </Frame>
         </VerticalStackLayout>
+    <!--</VerticalStackLayout>-->
+                <!--</StackLayout>
+            </Frame>
+        </VerticalStackLayout>-->
     </Grid>
 </ContentPage>

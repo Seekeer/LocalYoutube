@@ -12,7 +12,7 @@ namespace MAUI.Converter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return $"{HttpClientAuth.BASE_API_URL}AudioFiles/getImage?fileId={value}";
+            return $"{HttpClientAuth.BASE_API_URL}Files/getImage?fileId={value}";
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
