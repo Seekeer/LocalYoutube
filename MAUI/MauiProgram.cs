@@ -3,6 +3,13 @@ using MAUI.Services;
 using MAUI.ViewModels;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Maui;
+using FileStore.Infrastructure.Context;
+using Microsoft.EntityFrameworkCore;
+using Infrastructure.Context;
+using FileStore.Infrastructure.Repositories;
+using FileStore.Domain.Interfaces;
+using FileStore.Domain.Models;
+using FileStore.Domain.Services;
 
 namespace MAUI
 {
@@ -31,8 +38,16 @@ namespace MAUI
     		builder.Logging.AddDebug();
 #endif
 
-            return builder.Build();
+            var app =  builder.Build();
+
+		    app.SeedDatabase();
+
+            return app;
         }
+
+        public const string USER_ID = "1";
+        public const int SERIES_ID = 1;
+        public const int SEASON_ID = 1;
     }
 
     public static class BuilderExtensions
@@ -41,7 +56,24 @@ namespace MAUI
         {
             builder.Services.AddTransient<INavigationService, NavigationService>();
             builder.Services.AddTransient<IAPIService, APIService>();
+            builder.Services.AddTransient<DownloadManager, DownloadManager>();
             builder.Services.AddTransient<HttpClientAuth, HttpClientAuth>();
+            builder.Services.AddSingleton<IFileSystem>(FileSystem.Current);
+            builder.Services.AddTransient<LocalFilesRepo, LocalFilesRepo>();
+
+            builder.Services.AddTransient<IFilePathProvider, DbPathProvider>();
+		    builder.Services.AddTransient<IPositionRepository, PositionRepository>();
+            builder.Services.AddTransient<IVideoFileService, VideoFileService>();
+            builder.Services.AddTransient<IVideoFileRepository, VideoFileRepository>();
+            builder.Services.AddTransient<ISeriesRepository, SeriesRepository>();
+            builder.Services.AddTransient<IDbFileRepository, DbFileRepository>();
+            builder.Services.AddTransient<VideoCatalogDbContext, MAUIDbContext>();
+            builder.Services.AddDbContextFactory<MAUIDbContext>((services, options) =>
+            {
+                var dbProvider = services.GetRequiredService<IFilePathProvider>();
+                var dbPath = dbProvider.GetFilePath();
+                options.UseSqlite($"FileName={dbPath}");
+            });
 
             //            builder.Services.AddMauiBlazorWebView();
             //            builder.Services.AddSingleton<SubscriptionsService>();

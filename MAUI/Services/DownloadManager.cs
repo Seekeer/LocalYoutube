@@ -1,4 +1,6 @@
 ﻿using Dtos;
+using FileStore.Domain.Interfaces;
+using Microsoft.Maui.Storage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,9 +9,15 @@ using System.Threading.Tasks;
 
 namespace MAUI.Services
 {
-    public static partial class DownloadManager
+    public partial class DownloadManager
     {
+        public DownloadManager(IVideoFileRepository videoFileRepository)
+        {
+            _videoFileRepository = videoFileRepository;
+        }
+
         static HttpClient Client = new HttpClient();
+        private readonly IVideoFileRepository _videoFileRepository;
 
         public static void UseCustomHttpClient(HttpClient client)
         {
@@ -21,14 +29,27 @@ namespace MAUI.Services
             Client = client;
         }
 
-        public static async Task<string> DownloadAsync(int fileId)
+        public async Task<string> DownloadAsync(int fileId)
         {
             var name = fileId.ToString();
-            return await DownloadManager.DownloadAsync(name, HttpClientAuth.GetVideoUrlById(fileId));
+
+            var path = PlataformFolder();
+            var fileWriteTo = Path.Combine(path, name);
+
+            if (File.Exists(fileWriteTo))
+                return fileWriteTo;
+
+            var finalPath =  await DownloadManager.DownloadAsync(fileWriteTo, HttpClientAuth.GetVideoUrlById(fileId));
+
+            var file = await _videoFileRepository.GetById(fileId);
+            file.Path = finalPath;
+            await _videoFileRepository.Update(file);
+
+            return finalPath;
         }
 
-        public static async Task<string> DownloadAsync(
-            string fileName,
+        private static async Task<string> DownloadAsync(
+            string fileWriteTo,
             string url,
             IProgress<double> progress = default(IProgress<double>),
             CancellationToken token = default(CancellationToken))
@@ -37,11 +58,6 @@ namespace MAUI.Services
             //    throw new ArgumentNullException($"the {nameof(file)} and {nameof(url)} parameters can't be null.");
 
             //TODO colocar isso dentro de alguma pasta
-            var path = PlataformFolder();
-            var fileWriteTo = Path.Combine(path, fileName);
-
-            if (File.Exists(fileWriteTo))
-                return fileWriteTo;
 
             using (var response = await Client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false))
             {

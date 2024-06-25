@@ -7,13 +7,18 @@
     <VerticalStackLayout >
         <toolkit:MediaElement
                 x:Name="MediaElement"
-                ShouldAutoPlay="True"
                 Source="{Binding VideoUrl}"
                 ShouldShowPlaybackControls="True"
                 PositionChanged="OnPositionChanged"
                 SeekCompleted="MediaElement_SeekCompleted"
+                Volume="0"
+                ShouldAutoPlay="True"
             />
-                <!--MediaEnded="OnMediaEnded"
+
+                <!--
+        
+
+        MediaEnded="OnMediaEnded"
                 MediaFailed="OnMediaFailed"
                 MediaOpened="OnMediaOpened"
                 StateChanged="OnStateChanged"

@@ -9,9 +9,10 @@ namespace MAUI.ViewModels
 {
     public partial class ListVM :  VMBase<IEnumerable<VideoFileResultDto>>
     {
-        public ListVM(INavigationService navigationService)
+        public ListVM(INavigationService navigationService, DownloadManager downloadManager)
         {
             _navigationService = navigationService;
+            _downloadManager = downloadManager;
 
             _dtoAssign = dto => this.Files = new ObservableCollection<VideoFileResultDto>(dto);
         }
@@ -25,13 +26,13 @@ namespace MAUI.ViewModels
             await _navigationService.NavigateAsync(nameof(Player), videoFileResultDto);
         }
 
-
         [RelayCommand]
         public async Task DownloadVideo(int id)
         {
-            await DownloadManager.DownloadAsync(id);
+            await _downloadManager.DownloadAsync(id);
         }
 
         private readonly INavigationService _navigationService;
+        private readonly DownloadManager _downloadManager;
     }
 }

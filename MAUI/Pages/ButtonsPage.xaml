@@ -5,18 +5,27 @@
              Title="Выберите коллекцию">
     <ContentPage.Resources>
         <Style TargetType="Button">
-            <Setter Property="WidthRequest" Value="100"/>
+            <Setter Property="WidthRequest" Value="500"/>
             <Setter Property="Margin" Value="0,10,0,10"/>
+            <Setter Property="FontSize" Value="50"/>
+            <Setter Property="TextColor" Value="White"/>
         </Style>
     </ContentPage.Resources>
 
     <VerticalStackLayout>
         <Button
             Text="История"
+            Background="LightBlue"
             Command="{Binding ShowHistoryCommand}"
             />
         <Button
+            Text="Недавнее"
+            Background="LightBlue"
+            Command="{Binding ShowFreshCommand}"
+            />
+        <Button
             Text="Скачанное"
+            Background="Orange"
             Command="{Binding ShowDownloadedCommand}"
             />
     </VerticalStackLayout>

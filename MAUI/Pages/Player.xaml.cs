@@ -16,7 +16,15 @@ public partial class Player : ContentPage
         vm.Page = this;
     }
 
-    public MediaElement PlayerElement { get { return MediaElement; } }
+    internal TimeSpan GetCurrentPosition()
+    {
+        return _lastPosition.LastOrDefault();
+    }
+
+    internal async Task SetPosition(TimeSpan time)
+    {
+        await MediaElement.SeekTo(time);
+    }
 
     private PlayerVM viewModel => BindingContext as PlayerVM;
 
