@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Dtos;
+using FileStore.Domain.Dtos;
 using FileStore.Domain.Models;
 using ProtoBuf.WellKnownTypes;
 using System;
@@ -43,6 +44,7 @@ namespace FileStore.API.Configuration
             CreateMap<VideoFile, VideoFileResultDto>().ReverseMap();
             CreateMap<AudioFile, VideoFileResultDto>().ReverseMap();
             CreateMap<FileMark, MarkAddDto>().ReverseMap();
+            CreateMap<FileUserInfo, PositionDTO>().ReverseMap();
         }
     }
 

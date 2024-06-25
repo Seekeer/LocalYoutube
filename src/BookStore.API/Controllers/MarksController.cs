@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 
 namespace API.Controllers
 {
-
     [Microsoft.AspNetCore.Cors.EnableCors("CorsPolicy")]
     [Route("api/[controller]")]
     [Authorize]

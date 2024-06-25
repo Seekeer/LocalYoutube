@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using FileStore.Domain.Models;
 
@@ -24,5 +26,6 @@ namespace FileStore.Domain.Interfaces
         Task<bool> MoveToSerie(int fileId, int serieId);
         Task<bool> MoveToSeason(int fileId, int serieId);
         Task<IEnumerable<T>> GetNew(int count);
+        Task<bool> Any(Expression<Func<T, bool>> predicate);
     }
 }
