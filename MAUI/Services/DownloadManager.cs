@@ -1,5 +1,6 @@
 ﻿using Dtos;
 using FileStore.Domain.Interfaces;
+using FileStore.Infrastructure.Repositories;
 using Microsoft.Maui.Storage;
 using System;
 using System.Collections.Generic;
@@ -11,13 +12,13 @@ namespace MAUI.Services
 {
     public partial class DownloadManager
     {
-        public DownloadManager(IVideoFileRepository videoFileRepository)
+        public DownloadManager(IMAUIService videoFileRepository)
         {
             _videoFileRepository = videoFileRepository;
         }
 
         static HttpClient Client = new HttpClient();
-        private readonly IVideoFileRepository _videoFileRepository;
+        private readonly IMAUIService _videoFileRepository;
 
         public static void UseCustomHttpClient(HttpClient client)
         {
@@ -27,6 +28,13 @@ namespace MAUI.Services
             Client.Dispose();
             Client = null;
             Client = client;
+        }
+
+        public async Task<string> DownloadAsync(VideoFileResultDto file)
+        {
+            _videoFileRepository.AddFileIfNeeded(file);
+
+            return await DownloadAsync(file.Id);
         }
 
         public async Task<string> DownloadAsync(int fileId)
@@ -41,9 +49,7 @@ namespace MAUI.Services
 
             var finalPath =  await DownloadManager.DownloadAsync(fileWriteTo, HttpClientAuth.GetVideoUrlById(fileId));
 
-            var file = await _videoFileRepository.GetById(fileId);
-            file.Path = finalPath;
-            await _videoFileRepository.Update(file);
+            await _videoFileRepository.UpdateFilePathAsync(fileId, finalPath);
 
             return finalPath;
         }

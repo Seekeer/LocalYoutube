@@ -3,14 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Dtos;
 using MAUI.Pages;
 using MAUI.Services;
-using Sentry.Protocol;
 using System.Collections.ObjectModel;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using FileStore.Infrastructure.Repositories;
-using Xabe.FFmpeg;
-using FileStore.Domain.Models;
-using FileStore.Domain.Interfaces;
-using FileStore.Domain.Services;
 using System.Timers;
 using FileStore.Domain.Dtos;
 
@@ -19,8 +12,7 @@ namespace MAUI.ViewModels
     public partial class PlayerVM : VMBase<VideoFileResultDto>
     {
         private readonly IAPIService _api;
-        private readonly IPositionRepository _positionRepository;
-        private readonly IVideoFileService _fileService;
+        private readonly IMAUIService _mauiDBService;
         private readonly DownloadManager _downloadManager;
 
         [ObservableProperty]
@@ -37,12 +29,10 @@ namespace MAUI.ViewModels
 
         public Player Page { get; internal set; }
 
-        public PlayerVM(IAPIService api, IPositionRepository positionRepository, 
-            IVideoFileService fileService, DownloadManager downloadManager)
+        public PlayerVM(IAPIService api, IMAUIService positionRepository, DownloadManager downloadManager)
         {
             _api = api;
-            _positionRepository = positionRepository;
-            _fileService = fileService;
+            _mauiDBService = positionRepository;
             _downloadManager = downloadManager;
 
             _dtoAssign = AssignDTO;
@@ -58,17 +48,23 @@ namespace MAUI.ViewModels
 
         private async Task ProcessFile()
         {
-            AddFileIfNeeded();
-
-            UpdatePosition();
+            //using var fileService = GetFileService();
+            _mauiDBService.AddFileIfNeeded(File);
 
             DownloadAndReplace();
         }
 
-        private void AddFileIfNeeded()
+        public async Task InitPosition()
         {
-            var file = new VideoFile { Id = File.Id, Name = File.Name, SeriesId = MauiProgram.SERIES_ID, SeasonId = MauiProgram.SEASON_ID };
-            Task.Run(async () => await _fileService.Add(file)).Wait();
+            await UpdatePosition();
+            StartPositionUpdateTimer();
+
+            //Task.Delay(TimeSpan.FromMilliseconds(10000))
+            //    .ContinueWith(async task => 
+            //    {
+            //        await UpdatePosition();
+            //        StartPositionUpdateTimer();
+            //    });
         }
 
         private async Task UpdatePosition()
@@ -77,47 +73,56 @@ namespace MAUI.ViewModels
             //FileUserInfo localPosition = null;
             //var setLocalPositionTask = Task.Run(async () =>
             //{
-            //    localPosition = await _positionRepository.GetById(File.Id);
+            //    localPosition = await _mauiDBService.GetById(File.Id);
             //    if (localPosition != null)
             //        await Page.PlayerElement.SeekTo(TimeSpan.FromSeconds(localPosition.Position));
             //});
             //var remotePositionTask = _api.GetPositionAsync(File.Id);
             //var remotePosition = await setLocalPositionTask.ContinueWith(async x => await remotePositionTask);
 
-            var localPosition = _positionRepository.GetInfoById(File.Id);
+            var localPosition = _mauiDBService.GetInfoById(File.Id);
             if (localPosition != null)
                 await Page.SetPosition(TimeSpan.FromSeconds(localPosition.Position));
 
             try
             {
+                // Try to get remote position - if it is newer - set to it.
                 var remotePosition = await _api.GetPositionAsync(File.Id);
-                if (await _fileService.SetPosition(File.Id, MauiProgram.USER_ID.ToString(), remotePosition.Position, remotePosition.UpdatedDate))
-                    await Page.SetPosition(TimeSpan.FromSeconds(remotePosition.Position));
+                if(remotePosition != null)
+                {
+                    //using var fileService = GetFileService();
+                    if (await _mauiDBService.SetPositionAsync(File.Id, remotePosition))
+                        await Page.SetPosition(TimeSpan.FromSeconds(remotePosition.Position));
+                }
             }
             catch (Exception ex)
             {
             }
+        }
 
-            StartPositionUpdateTimer();
+        private IMAUIService GetFileService()
+        {
+            return Application.Current.MainPage.Handler.MauiContext.Services.GetService<IMAUIService>();
         }
 
         private void StartPositionUpdateTimer()
         {
             System.Timers.Timer aTimer = new System.Timers.Timer();
             aTimer.Elapsed += new ElapsedEventHandler((_,__) => UpdatePositionByControl());
-            aTimer.Interval = 10000; 
+            aTimer.Interval = 1000;
             aTimer.Enabled = true;
         }
 
-        private void UpdatePositionByControl()
+        public void UpdatePositionByControl()
         {
             var position = Page.GetCurrentPosition().TotalSeconds;
             if (position < 5)
                 return;
 
             var positionDTO = new PositionDTO { Position = position };
-            _fileService.SetPosition(File.Id, MauiProgram.USER_ID.ToString(), position, positionDTO.UpdatedDate);
-            _api.SetPosition(File.Id, positionDTO);
+            //using var fileService = GetFileService();
+            _mauiDBService.SetPositionAsync(File.Id, positionDTO);
+            _api.SetPositionAsync(File.Id, positionDTO);
         }
 
         private async Task DownloadAndReplace()
@@ -135,6 +140,7 @@ namespace MAUI.ViewModels
         public async Task Play()
         {
         }
+
     }
 
     public class SeekPosition

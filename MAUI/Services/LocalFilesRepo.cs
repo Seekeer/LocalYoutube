@@ -27,18 +27,19 @@ namespace MAUI.Services
         private readonly IVideoFileRepository _videoFileRepository;
 
         public LocalFilesRepo( IVideoFileRepository videoFileRepository)
-        //public LocalFilesRepo(IMapper mapper, IVideoFileRepository videoFileRepository)
         {
-            //_mapper = mapper;
             _videoFileRepository = videoFileRepository;
         }
-
 
         public async Task<IEnumerable<VideoFileResultDto>> GetFiles()
         {
             var localFiles = await _videoFileRepository.GetAll();
 
-            var resultDTO = localFiles.Where(x => !string.IsNullOrEmpty(x.Path)).Select(x => new VideoFileResultDto { Description = x.Description, Id = x.Id, Name = x.Name});
+            //for (int i = 0; i < 10; i++)
+            //    localFiles.Add(localFiles[0]);
+
+            var resultDTO = localFiles.Where(x => !string.IsNullOrEmpty(x.Path))
+                .Select(x => new VideoFileResultDto { Description = x.Description, Id = x.Id, Name = x.Name});
             //var resultDTO = _mapper.Map<IEnumerable<VideoFileResultDto>>(localFiles.Where(x => !string.IsNullOrEmpty(x.Path)));
             return resultDTO;
         }

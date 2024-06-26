@@ -7,50 +7,86 @@
     <ContentPage.Resources>
         <converters:IdToImageUrlConverter x:Key="idToImageUrl" />
     </ContentPage.Resources>
-    <ListView ItemsSource="{Binding Files}" ItemTapped="ListView_ItemTapped">
+    <ListView ItemsSource="{Binding Files}" ItemTapped="ListView_ItemTapped" 
+              HasUnevenRows="True">
         <ListView.ItemTemplate>
             <DataTemplate>
                 <ViewCell>
-                    <Grid Margin="5">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <!--<RowDefinition Height="Auto" />-->
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="3*" />
-                            <ColumnDefinition Width="6*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+                    <VerticalStackLayout>
 
-                        <Image
-                            Grid.RowSpan="2"
-                            Source="{Binding Id, Converter={StaticResource idToImageUrl}}"
-                            HeightRequest="185"
-                            Aspect="AspectFit"
-                            SemanticProperties.Description="dot net bot in a race car number eight" />
+                        <VerticalStackLayout IsVisible="{Binding BindingContext.IsVerticalOrientation, Source={RelativeSource AncestorType={x:Type ListView}}}" >
+                            <Image
+                                Source="{Binding Id, Converter={StaticResource idToImageUrl}}"
+                                Aspect="AspectFit"
+                                SemanticProperties.Description="dot net bot in a race car number eight" />
 
-                        <VerticalStackLayout  Grid.Column="1">
-                            <Label Grid.Column="1"
-                                MaxLines="1"
-                                Text="{Binding Name}"
-                                FontAttributes="Bold" />
+                                <Label 
+                                    Padding="10"
+                                    FontSize="Large"
+                                    Text="{Binding Name}"
+                                    FontAttributes="Bold" />
 
-                            <Label Grid.Row="1"
-                            Grid.Column="1"
-                            Text="{Binding Description}"
-                            MaxLines="6"
-                            FontAttributes="Italic"
-                            VerticalOptions="End" />
+                                <Label 
+                                    Padding="10"
+                                    FontSize="Medium"
+                                    Text="{Binding Description}"
+                                    MaxLines="8"
+                                    FontAttributes="Italic"
+                                    VerticalOptions="End" />
+
+                            <Button 
+                                    Text="Скачать"
+                                    VerticalOptions="Center"
+                                    Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                    CommandParameter="{Binding Id}"
+                                    FontAttributes="Bold" />
                         </VerticalStackLayout>
 
-                        <Button Grid.Column="2"
+                        <Grid Margin="5" IsVisible="{Binding BindingContext.IsPortraitOrientation, Source={RelativeSource AncestorType={x:Type ListView}}}" >
+                                <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="6*" />
+                                <ColumnDefinition Width="6*" />
+                                <ColumnDefinition Width="2*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Image
                                 Grid.RowSpan="2"
-                                Text="Скачать"
-                                VerticalOptions="Center"
-                            Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
-                            CommandParameter="{Binding Id}"
-                            FontAttributes="Bold" />
-                    </Grid>
+                                Source="{Binding Id, Converter={StaticResource idToImageUrl}}"
+                                HeightRequest="300"
+                                Aspect="AspectFit"
+                                SemanticProperties.Description="dot net bot in a race car number eight" />
+
+                            <VerticalStackLayout  Grid.Column="1" Padding="10">
+                                <Label Grid.Column="1"
+                                    FontSize="Large"
+                                    Text="{Binding Name}"
+                                    FontAttributes="Bold" />
+
+                                <Label Grid.Row="1"
+                                       Padding="0,10,0,0"
+                                    FontSize="Medium"
+                                    Grid.Column="1"
+                                    Text="{Binding Description}"
+                                    MaxLines="8"
+                                    FontAttributes="Italic"
+                                    VerticalOptions="End" />
+                            </VerticalStackLayout>
+
+                            <Button Grid.Column="2"
+                                    Grid.RowSpan="2"
+                                    Padding="5"
+                                    Text="Скачать"
+                                    VerticalOptions="Center"
+                                    Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                    CommandParameter="{Binding Id}"
+                                    FontAttributes="Bold" />
+                        </Grid>
+                    </VerticalStackLayout>
+
                 </ViewCell>
             </DataTemplate>
         </ListView.ItemTemplate>

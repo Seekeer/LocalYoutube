@@ -12,7 +12,6 @@ using FileStore.Domain.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Infrastructure.Context;
 using FileStore.Domain.Interfaces;
-using FileStore.Infrastructure.Repositories;
 
 namespace MAUI.Services
 {
@@ -71,18 +70,4 @@ namespace MAUI.Services
         }
     }
 
-    public interface IPositionRepository : IRepository<FileUserInfo>
-    {
-        FileUserInfo GetInfoById(int id);
-    }
-
-    public class PositionRepository : Repository<FileUserInfo>, IPositionRepository
-    {
-        public PositionRepository(MAUIDbContext context) : base(context) { }
-
-        public FileUserInfo GetInfoById(int id)
-        {
-            return DbSet.FirstOrDefault(x => x.DbFile.Id == id);
-        }
-    }
 }

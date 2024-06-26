@@ -4,28 +4,34 @@
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="MAUI.Pages.Player"
              Title="{Binding File.Name}">
-    <VerticalStackLayout >
+    <ScrollView>
+
+        <VerticalStackLayout >
         <toolkit:MediaElement
                 x:Name="MediaElement"
                 Source="{Binding VideoUrl}"
                 ShouldShowPlaybackControls="True"
                 PositionChanged="OnPositionChanged"
                 SeekCompleted="MediaElement_SeekCompleted"
-                Volume="0"
                 ShouldAutoPlay="True"
+                MediaOpened="OnMediaOpened"
+
+                HeightRequest="300"
+                Volume="0"
+                StateChanged="OnStateChanged"
             />
 
                 <!--
-        
-
         MediaEnded="OnMediaEnded"
                 MediaFailed="OnMediaFailed"
                 MediaOpened="OnMediaOpened"
                 StateChanged="OnStateChanged"
                 SeekCompleted="OnSeekCompleted"-->
-        <Label 
-            Text="{Binding Name}"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-    </VerticalStackLayout>
+            <Label 
+            FontSize="Medium"
+            Padding="10"
+            Text="{Binding File.Description}"/>
+            <Button Text="90 sec" Clicked="Button_Clicked"/>
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

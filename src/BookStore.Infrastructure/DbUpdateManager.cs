@@ -16,7 +16,6 @@ using System.Drawing.Drawing2D;
 using FileStore.Domain.Interfaces;
 using FileStore.Infrastructure.Repositories;
 using Azure.Core;
-using NLog;
 using static MediaToolkit.Model.Metadata;
 using System.IO.Compression;
 using FileStore.Domain;
@@ -313,7 +312,7 @@ namespace Infrastructure
             }
             catch (Exception ex)
             {
-                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                //NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }
 
             return null;
@@ -895,7 +894,7 @@ namespace Infrastructure
             }
             catch (Exception ex)
             {
-                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                //NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }
 
             return result;
@@ -1095,7 +1094,7 @@ namespace Infrastructure
             }
             catch (Exception ex)
             {
-                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                //NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }
         }
     }

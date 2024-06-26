@@ -14,11 +14,30 @@ namespace MAUI.ViewModels
             _navigationService = navigationService;
             _downloadManager = downloadManager;
 
+            DeviceDisplay.Current.MainDisplayInfoChanged += Current_MainDisplayInfoChanged;
+            UpdateOrientation();
+
             _dtoAssign = dto => this.Files = new ObservableCollection<VideoFileResultDto>(dto);
+        }
+
+        private void Current_MainDisplayInfoChanged(object? sender, DisplayInfoChangedEventArgs e)
+        {
+            UpdateOrientation();
+        }
+
+        private void UpdateOrientation()
+        {
+            IsVerticalOrientation = DeviceDisplay.Current.MainDisplayInfo.Orientation == DisplayOrientation.Portrait;
+            IsPortraitOrientation = !IsVerticalOrientation;
         }
 
         [ObservableProperty]
         ObservableCollection<VideoFileResultDto> _files;
+
+        [ObservableProperty]
+        bool _isVerticalOrientation;
+        [ObservableProperty]
+        bool _isPortraitOrientation;
 
         [RelayCommand]
         public async Task ItemTapped(VideoFileResultDto videoFileResultDto)

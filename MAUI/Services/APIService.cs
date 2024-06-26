@@ -8,7 +8,7 @@ namespace MAUI.Services
         Task<IEnumerable<VideoFileResultDto>> GetHistoryAsync();
         Task<IEnumerable<VideoFileResultDto>> GetFreshAsync();
         Task<PositionDTO> GetPositionAsync(int id);
-        Task SetPosition(int id, PositionDTO positionDTO);
+        Task SetPositionAsync(int id, PositionDTO positionDTO);
     }
 
     public class APIService : IAPIService
@@ -25,9 +25,9 @@ namespace MAUI.Services
             return list;
         }
 
-        public async Task SetPosition(int id, PositionDTO positionDTO)
+        public async Task SetPositionAsync(int id, PositionDTO positionDTO)
         {
-            await _httpClientAuth.Post<string>($"files/getPositionMaui/{id}", positionDTO);
+            await _httpClientAuth.Put<string>($"files/setPositionMaui/{id}", positionDTO);
         }
 
         

@@ -62,8 +62,8 @@ namespace MAUI.Services
             SecureStorage.Remove("refresh_token");
         }
 
-        public const string BASE_API_URL = @"http://192.168.1.55:51951/api/";
-        //public const string BASE_API_URL = @"http://80.68.9.86:55/api/";
+        //public const string BASE_API_URL = @"http://192.168.1.55:51951/api/";
+        public const string BASE_API_URL = @"http://80.68.9.86:55/api/";
 
         private readonly INavigationService _navigationService;
 
@@ -72,14 +72,14 @@ namespace MAUI.Services
             return $"{HttpClientAuth.BASE_API_URL}Files/getFileById?fileId={id}";
         }
 
-        public async Task<T> Post<T>(string url, object data)
+        public async Task<T> Put<T>(string url, object data)
         {
             using var client = await GetClient();
 
             var json = JsonSerializer.Serialize(data);
             StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             url = !url.StartsWith(BASE_API_URL) ? $"{BASE_API_URL}{url}" : url;
-            var response = await client.PostAsync(url, httpContent);
+            var response = await client.PutAsync(url, httpContent);
 
             if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
@@ -89,8 +89,11 @@ namespace MAUI.Services
                     await _navigationService.NavigateAsync(nameof(LoginPage));
                 }
                 else
-                    return await Post<T>(url, data);
+                    return await Put<T>(url, data);
             }
+
+            if (typeof(T) == typeof(string))
+                return await response.Content.ReadAsAsync<T>();
 
             T? obj = await Parse<T>(response);
 
