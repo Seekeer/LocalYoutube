@@ -2,10 +2,12 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:converters="clr-namespace:MAUI.Converter"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="MAUI.Pages.ListPage"
              Title="Выберите видео">
     <ContentPage.Resources>
         <converters:IdToImageUrlConverter x:Key="idToImageUrl" />
+        <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
     </ContentPage.Resources>
     <ListView ItemsSource="{Binding Files}" ItemTapped="ListView_ItemTapped" 
               HasUnevenRows="True">
@@ -36,8 +38,18 @@
 
                             <Button 
                                     Text="Скачать"
+                                    IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"
                                     VerticalOptions="Center"
                                     Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                    CommandParameter="{Binding Id}"
+                                    FontAttributes="Bold" />
+
+                            <Button 
+                                    BackgroundColor="Red"
+                                    Text="Удалить"
+                                    IsVisible="{Binding IsDownloaded}"
+                                    VerticalOptions="Center"
+                                    Command="{Binding Path=BindingContext.DeleteDownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
                                     CommandParameter="{Binding Id}"
                                     FontAttributes="Bold" />
                         </VerticalStackLayout>

@@ -1,13 +1,14 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dtos;
+using MAUI.Downloading;
 using MAUI.Pages;
 using MAUI.Services;
 using System.Collections.ObjectModel;
 
 namespace MAUI.ViewModels
 {
-    public partial class ListVM :  VMBase<IEnumerable<VideoFileResultDto>>
+    public partial class ListVM :  VMBase<IEnumerable<VideoFileResultDtoDownloaded>>
     {
         public ListVM(INavigationService navigationService, DownloadManager downloadManager)
         {
@@ -17,7 +18,12 @@ namespace MAUI.ViewModels
             DeviceDisplay.Current.MainDisplayInfoChanged += Current_MainDisplayInfoChanged;
             UpdateOrientation();
 
-            _dtoAssign = dto => this.Files = new ObservableCollection<VideoFileResultDto>(dto);
+            _dtoAssign = dto =>
+            {
+                dto = dto ?? new List<VideoFileResultDtoDownloaded>();
+                downloadManager.CheckDownloaded(dto);
+                this.Files = new ObservableCollection<VideoFileResultDtoDownloaded>(dto);
+            };
         }
 
         private void Current_MainDisplayInfoChanged(object? sender, DisplayInfoChangedEventArgs e)
@@ -32,7 +38,7 @@ namespace MAUI.ViewModels
         }
 
         [ObservableProperty]
-        ObservableCollection<VideoFileResultDto> _files;
+        ObservableCollection<VideoFileResultDtoDownloaded> _files;
 
         [ObservableProperty]
         bool _isVerticalOrientation;
@@ -40,7 +46,7 @@ namespace MAUI.ViewModels
         bool _isPortraitOrientation;
 
         [RelayCommand]
-        public async Task ItemTapped(VideoFileResultDto videoFileResultDto)
+        public async Task ItemTapped(VideoFileResultDtoDownloaded videoFileResultDto)
         {
             await _navigationService.NavigateAsync(nameof(Player), videoFileResultDto);
         }
@@ -48,7 +54,13 @@ namespace MAUI.ViewModels
         [RelayCommand]
         public async Task DownloadVideo(int id)
         {
-            await _downloadManager.DownloadAsync(id);
+            await _downloadManager.DownloadAsync(Files.First(x => x.Id == id));
+        }
+
+        [RelayCommand]
+        public async Task DeleteDownloadVideo(int id)
+        {
+            await _downloadManager.DeleteDownloaded(id);
         }
 
         private readonly INavigationService _navigationService;

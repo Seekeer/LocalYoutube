@@ -15,6 +15,6 @@ public partial class ListPage : ContentPage
 
     private void ListView_ItemTapped(object sender, ItemTappedEventArgs e)
     {
-        viewModel.ItemTapped(e.Item as VideoFileResultDto);
+        viewModel.ItemTapped(e.Item as VideoFileResultDtoDownloaded);
     }
 }

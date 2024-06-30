@@ -40,7 +40,7 @@
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-android|AnyCPU'">
 	  <AndroidPackageFormat>apk</AndroidPackageFormat>
-	  <RunAOTCompilation>False</RunAOTCompilation>
+	  <RunAOTCompilation>True</RunAOTCompilation>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -62,7 +62,30 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <AndroidResource Remove="Platforms\Android\Resources\values\colors.xml" />
+	  <AndroidResource Remove="Platforms\Android\Resources\values\strings.xml" />
+	  <AndroidResource Remove="Platforms\Android\Resources\values\themes.xml" />
+	  <AndroidResource Remove="Platforms\Android\Resources\xml\backup_rules.xml" />
+	  <AndroidResource Remove="Platforms\Android\Resources\xml\data_extraction_rules.xml" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <MauiImage Remove="Resources\Images\dotnet_bot.scale-100.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="Platforms\Android\Resources\drawable\notification.svg" />
+	  <None Remove="Platforms\Android\Resources\mipmap-mdpi\ic_launcher.webp" />
+	  <None Remove="Platforms\Android\Resources\mipmap-mdpi\ic_launcher_round.webp" />
+	  <None Remove="Platforms\Android\Resources\mipmap-xhdpi\ic_launcher.webp" />
+	  <None Remove="Platforms\Android\Resources\mipmap-xhdpi\ic_launcher_round.webp" />
+	  <None Remove="Platforms\Android\Resources\mipmap-xxhdpi\ic_launcher.webp" />
+	  <None Remove="Platforms\Android\Resources\mipmap-xxhdpi\ic_launcher_round.webp" />
+	  <None Remove="Platforms\Android\Resources\mipmap-xxxhdpi\ic_launcher.webp" />
+	  <None Remove="Platforms\Android\Resources\mipmap-xxxhdpi\ic_launcher_round.webp" />
+	  <None Remove="Resources\AppIcon\appicon.svg" />
+	  <None Remove="Resources\AppIcon\appiconfg.svg" />
+	  <None Remove="Resources\Fonts\consolas.ttf" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -70,10 +93,12 @@
 		<PackageReference Include="CommunityToolkit.Maui" Version="9.0.1" />
 		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="4.0.0" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.6" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.14" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="8.0.60" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="8.0.60" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
+		<PackageReference Include="Shiny.Hosting.Maui" Version="3.3.3" />
+		<PackageReference Include="Shiny.Net.Http" Version="3.3.3" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -103,6 +128,10 @@
 	  <None Update="Pages\Player.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="DownloadTest\" />
 	</ItemGroup>
 
 </Project>

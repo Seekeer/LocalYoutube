@@ -10,6 +10,9 @@ using FileStore.Infrastructure.Repositories;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using FileStore.Domain.Services;
+using Shiny;
+using Shiny.NET;
+using MAUI.Downloading;
 
 namespace MAUI
 {
@@ -26,6 +29,7 @@ namespace MAUI
                 .ConfigureViewModels()
                 .UseMauiCommunityToolkit()
                 .UseMauiCommunityToolkitMediaElement()
+                .UseShiny() // <-- add this line (this is important) this wires shiny lifecycle through maui
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -54,9 +58,15 @@ namespace MAUI
     {
         public static MauiAppBuilder ConfigureServices(this MauiAppBuilder builder)
         {
+            builder.Services.AddHttpTransfers<MyHttpTransferDelegate>();
+#if ANDROID
+            // if you want http transfers to also show up as progress notifications, include this
+            builder.Services.AddShinyService<Shiny.Net.Http.PerTransferNotificationStrategy>();
+#endif
+
             builder.Services.AddTransient<INavigationService, NavigationService>();
             builder.Services.AddTransient<IAPIService, APIService>();
-            builder.Services.AddTransient<DownloadManager, DownloadManager>();
+            builder.Services.AddSingleton<DownloadManager, DownloadManager>();
             builder.Services.AddTransient<HttpClientAuth, HttpClientAuth>();
             builder.Services.AddSingleton<IFileSystem>(FileSystem.Current);
             builder.Services.AddTransient<LocalFilesRepo, LocalFilesRepo>();
@@ -67,7 +77,7 @@ namespace MAUI
             builder.Services.AddTransient<IVideoFileRepository, VideoFileRepository>();
             builder.Services.AddTransient<ISeriesRepository, SeriesRepository>();
             builder.Services.AddTransient<IDbFileRepository, DbFileRepository>();
-            builder.Services.AddTransient<MAUIDbContext, MAUIDbContext>();
+            builder.Services.AddTransient<VideoCatalogDbContext, MAUIDbContext>();
             //builder.Services.AddTransient<VideoCatalogDbContext, MAUIDbContext>();
             builder.Services.AddDbContextFactory<MAUIDbContext>((services, options) =>
             {
@@ -119,6 +129,8 @@ namespace MAUI
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<Player>();
 
+            builder.Services.AddTransient<MainPage>();
+
             return builder;
         }
 
@@ -128,6 +140,7 @@ namespace MAUI
             builder.Services.AddTransient<ButtonsVM>();
             builder.Services.AddTransient<ListVM>();
             builder.Services.AddTransient<PlayerVM>();
+            builder.Services.AddTransient<TESTMainViewModel>();
             //builder.Services.AddTransient<EpisodeDetailViewModel>();
             //builder.Services.AddSingleton<EpisodeViewModel>();
             //builder.Services.AddSingleton<ListenLaterViewModel>();

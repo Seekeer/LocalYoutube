@@ -6,10 +6,15 @@ using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using MAUI.Pages;
 using MAUI.Services;
+using Shiny.NET;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MAUI.ViewModels
 {
+    public class VideoFileResultDtoDownloaded : VideoFileResultDto
+    {
+        public bool IsDownloaded { get; set; }
+    }
 
     public partial class ButtonsVM : VMBase<string>
     {
@@ -26,7 +31,7 @@ namespace MAUI.ViewModels
         [RelayCommand]
         public async Task ShowHistory()
         {
-            IEnumerable<VideoFileResultDto> dtos = await _api.GetHistoryAsync();
+            var dtos = await _api.GetHistoryAsync();
 
             await _navigationService.NavigateAsync(nameof(ListPage), dtos);
         }
@@ -34,14 +39,16 @@ namespace MAUI.ViewModels
         [RelayCommand]
         public async Task ShowDownloaded()
         {
-            var dtos = await _videoFileRepository.GetFiles();
-            await _navigationService.NavigateAsync(nameof(ListPage), dtos);
+            //var dtos = await _videoFileRepository.GetFiles();
+            //await _navigationService.NavigateAsync(nameof(ListPage), dtos);
+
+            await _navigationService.NavigateAsync(nameof(MainPage), "фф");
         }
 
         [RelayCommand]
         public async Task ShowFresh()
         {
-            IEnumerable<VideoFileResultDto> dtos = await _api.GetFreshAsync();
+            var dtos = await _api.GetFreshAsync();
 
             await _navigationService.NavigateAsync(nameof(ListPage), dtos);
         }

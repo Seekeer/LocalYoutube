@@ -55,20 +55,8 @@ namespace Infrastructure.Context
 
     // PM> cd .\src\BookStore.Infrastructure\
     // PM> dotnet ef migrations add InitialCreate --context MAUIDbContext --output-dir MigrationsSqlite
-    public class MAUIDbContext : IdentityUserContext<ApplicationUser> //: VideoCatalogDbContext
+    public class MAUIDbContext : VideoCatalogDbContext
     {
         public MAUIDbContext(DbContextOptions options) : base(options) { }
-
-
-        public DbSet<UserRefreshTokens> RefreshTokens { get; set; }
-        public DbSet<Season> Seasons { get; set; }
-        public DbSet<AudioFile> AudioFiles { get; set; }
-        public DbSet<VideoFile> VideoFiles { get; set; }
-        public DbSet<DbFile> Files { get; set; }
-        public DbSet<FileExtendedInfo> FilesInfo { get; set; }
-        public DbSet<FileUserInfo> FilesUserInfo { get; set; }
-        public DbSet<FileMark> FileMarks { get; set; }
-
-        public DbSet<Series> Series { get; set; }
     }
 }

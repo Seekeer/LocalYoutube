@@ -11,6 +11,7 @@ namespace MAUI.Services
     public interface IMAUIService //: IRepository<FileUserInfo>
     {
         void AddFileIfNeeded(VideoFileResultDto file);
+        Task<VideoFile> GetFileById(int fileId);
         FileUserInfo GetInfoById(int id);
         Task<bool> SetPositionAsync(int id, PositionDTO position);
         Task UpdateFilePathAsync(int fileId, string finalPath);
@@ -48,11 +49,20 @@ namespace MAUI.Services
 
         public async Task UpdateFilePathAsync(int fileId, string finalPath)
         {
-            using var videoFileRepository = Application.Current.MainPage.Handler.MauiContext.Services.GetService<IVideoFileRepository>(); 
+            using var videoFileRepository = Application.Current.MainPage.Handler.MauiContext.Services.GetService<IVideoFileRepository>();
 
             var file = await videoFileRepository.GetById(fileId);
             file.Path = finalPath;
             await videoFileRepository.Update(file);
+        }
+
+        public async Task<VideoFile> GetFileById(int fileId)
+        {
+            using var videoFileRepository = Application.Current.MainPage.Handler.MauiContext.Services.GetService<IVideoFileRepository>();
+
+            var file = await videoFileRepository.GetById(fileId);
+
+            return file;
         }
 
         private IVideoFileService GetFileService()

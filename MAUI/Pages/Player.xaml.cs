@@ -15,8 +15,15 @@ public partial class Player : ContentPage
 	{
 		InitializeComponent();
 
+        this.NavigatedFrom += Player_NavigatedFrom;
         BindingContext = vm;
         vm.Page = this;
+    }
+
+    private void Player_NavigatedFrom(object? sender, NavigatedFromEventArgs e)
+    {
+        MediaElement.Dispose();
+        MediaElement.Stop();
     }
 
     internal TimeSpan GetCurrentPosition()
@@ -31,18 +38,17 @@ public partial class Player : ContentPage
 
         MainThread.BeginInvokeOnMainThread(async () =>
         {
-            await MediaElement.SeekTo(time);
+            try
+            {
+                await MediaElement.SeekTo(time);
+            }
+            catch (Exception ex)
+            {
+            }
         });
     }
 
     private PlayerVM viewModel => BindingContext as PlayerVM;
-
-    protected override bool OnBackButtonPressed()
-    {
-        MediaElement.Dispose();
-        MediaElement.Stop();
-        return base.OnBackButtonPressed();
-    }
 
     private void OnPositionChanged(object sender, 
         CommunityToolkit.Maui.Core.Primitives.MediaPositionChangedEventArgs e)

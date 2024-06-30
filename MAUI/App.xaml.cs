@@ -1,4 +1,5 @@
 ﻿using MAUI.Pages;
+using Shiny.NET;
 
 namespace MAUI
 {
@@ -19,6 +20,8 @@ namespace MAUI
             Routing.RegisterRoute(nameof(ButtonsPage), typeof(ButtonsPage));
             Routing.RegisterRoute(nameof(Player), typeof(Player));
             Routing.RegisterRoute(nameof(ListPage), typeof(ListPage));
+
+            Routing.RegisterRoute(nameof(MainPage), typeof(MainPage));
         }
     }
 }

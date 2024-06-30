@@ -1,12 +1,13 @@
 ﻿using Dtos;
 using FileStore.Domain.Dtos;
+using MAUI.ViewModels;
 
 namespace MAUI.Services
 {
     public interface IAPIService
     {
-        Task<IEnumerable<VideoFileResultDto>> GetHistoryAsync();
-        Task<IEnumerable<VideoFileResultDto>> GetFreshAsync();
+        Task<IEnumerable<VideoFileResultDtoDownloaded>> GetHistoryAsync();
+        Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFreshAsync();
         Task<PositionDTO> GetPositionAsync(int id);
         Task SetPositionAsync(int id, PositionDTO positionDTO);
     }
@@ -31,29 +32,29 @@ namespace MAUI.Services
         }
 
         
-        public async Task<IEnumerable<VideoFileResultDto>> GetFreshAsync()
+        public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFreshAsync()
         {
-            var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDto>>($"files/getNew");
+            var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getNew");
             return list;
         }
 
-        public async Task<IEnumerable<VideoFileResultDto>> GetHistoryAsync()
+        public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetHistoryAsync()
         {
-            var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDto>>($"files/getLatest");
+            var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getLatest");
             return list;
 
             //TODO no network
-            var list1 = new List<VideoFileResultDto>
-            {
-                new VideoFileResultDto
-                {
-                    CoverURL = "https://60.img.avito.st/image/1/1.e2WiAra414yUqxWJ2Gc0S8ag1Yoco1WE1KbVjhKr34YU.X0s5Dlazk8TBFZ-ZiyhhavQCV88ptt5n4-nzxyrEPOM",
-                    Name = "Мое видео",
-                    Description = "Описание",
-                    Id = 55664
-                }
-            };
-            return list1;
+            //var list1 = new List<VideoFileResultDto>
+            //{
+            //    new VideoFileResultDto
+            //    {
+            //        CoverURL = "https://60.img.avito.st/image/1/1.e2WiAra414yUqxWJ2Gc0S8ag1Yoco1WE1KbVjhKr34YU.X0s5Dlazk8TBFZ-ZiyhhavQCV88ptt5n4-nzxyrEPOM",
+            //        Name = "Мое видео",
+            //        Description = "Описание",
+            //        Id = 55664
+            //    }
+            //};
+            //return list1;
         }
     }
 }

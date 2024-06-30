@@ -6,17 +6,18 @@ using MAUI.Services;
 using System.Collections.ObjectModel;
 using System.Timers;
 using FileStore.Domain.Dtos;
+using MAUI.Downloading;
 
 namespace MAUI.ViewModels
 {
-    public partial class PlayerVM : VMBase<VideoFileResultDto>
+    public partial class PlayerVM : VMBase<VideoFileResultDtoDownloaded>
     {
         private readonly IAPIService _api;
         private readonly IMAUIService _mauiDBService;
         private readonly DownloadManager _downloadManager;
 
         [ObservableProperty]
-        private VideoFileResultDto _file;
+        private VideoFileResultDtoDownloaded _file;
 
         [ObservableProperty]
         private SeekPositionCollection _seekPositionCollection = new SeekPositionCollection();
@@ -38,7 +39,7 @@ namespace MAUI.ViewModels
             _dtoAssign = AssignDTO;
         }
 
-        private void AssignDTO(VideoFileResultDto dto)
+        private void AssignDTO(VideoFileResultDtoDownloaded dto)
         {
             this.File = dto;
             this.VideoUrl = HttpClientAuth.GetVideoUrlById(dto.Id);
@@ -127,10 +128,10 @@ namespace MAUI.ViewModels
 
         private async Task DownloadAndReplace()
         {
-            if (this.File == null || this.File.DurationMinutes > 60)
+            if(!this.File.IsDownloaded && (this.File == null || this.File.DurationMinutes > 60))
                 return;
 
-            var filePath = await _downloadManager.DownloadAsync(File.Id);
+            var filePath = await _downloadManager.DownloadAsync(File);
             var position = Page.GetCurrentPosition();
             VideoUrl = filePath;
             await Page.SetPosition(position);

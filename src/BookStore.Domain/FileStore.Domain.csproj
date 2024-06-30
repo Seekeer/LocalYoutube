@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="MediaToolkit" Version="1.1.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.6" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="7.0.14" />
     <PackageReference Include="NLog" Version="5.3.2" />
   </ItemGroup>
 
