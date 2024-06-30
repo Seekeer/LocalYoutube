@@ -78,4 +78,15 @@ public partial class Player : ContentPage
         this.SetPosition(TimeSpan.FromMinutes(1.5));
         //viewModel.UpdatePositionByControl();
     }
+
+    private void OnUrlClicked(object sender, TappedEventArgs e)
+    {
+        var label = sender as Label;
+        var ts = (TimeSpan)label.BindingContext;
+
+        if (ts == TimeSpan.Zero)
+            return;
+
+        SetPosition(ts);
+    }
 }

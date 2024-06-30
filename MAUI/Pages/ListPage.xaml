@@ -41,6 +41,7 @@
                                     IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"
                                     VerticalOptions="Center"
                                     Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                    Clicked="Button_Clicked"
                                     CommandParameter="{Binding Id}"
                                     FontAttributes="Bold" />
 

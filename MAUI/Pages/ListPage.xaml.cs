@@ -17,4 +17,11 @@ public partial class ListPage : ContentPage
     {
         viewModel.ItemTapped(e.Item as VideoFileResultDtoDownloaded);
     }
+
+    private void Button_Clicked(object sender, EventArgs e)
+    {
+        var button = (Button)sender;
+        var stack = (StackLayout)button.Parent;
+        stack.Remove(button);
+    }
 }
