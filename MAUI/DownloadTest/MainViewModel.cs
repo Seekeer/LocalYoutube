@@ -14,8 +14,9 @@ namespace Shiny.NET
         public TESTMainViewModel( HttpTransferMonitor monitor
             )  {
 
-            //Monitor = monitor;
-            //monitor.Start();
+            Monitor = monitor;
+            if(!Monitor.IsStarted)
+                monitor.Start();
         }
 
         [ObservableProperty]

@@ -15,15 +15,7 @@ using System.Threading.Tasks;
 
 namespace MAUI.Downloading
 {
-
-    public interface IDownloader
-    {
-        Task StartDownload(string fileWriteTo, string url);
-        public event DownloadProgressChangedEventHandler? DownloadProgressChanged;
-        public event AsyncCompletedEventHandler? DownloadFileCompleted;
-    }
-
-    class DownloaderMaui : IDownloader
+    class DownloaderMaui 
     {
         private readonly IHttpTransferManager _transferManager;
         private string _filePath;
@@ -76,7 +68,7 @@ namespace MAUI.Downloading
         }
     }
 
-    public class DownloaderBase : IDownloader
+    public class DownloaderBase 
     {
         public event DownloadProgressChangedEventHandler? DownloadProgressChanged;
         public event AsyncCompletedEventHandler? DownloadFileCompleted;

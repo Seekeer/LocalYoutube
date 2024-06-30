@@ -2,6 +2,7 @@
 using Dtos;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
+using MAUI.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
@@ -39,7 +40,7 @@ namespace MAUI.Services
             //    localFiles.Add(localFiles[0]);
 
             var resultDTO = localFiles.Where(x => !string.IsNullOrEmpty(x.Path))
-                .Select(x => new VideoFileResultDto { Description = x.Description, Id = x.Id, Name = x.Name});
+                .Select(x => new VideoFileResultDtoDownloaded { Description = x.Description, Id = x.Id, Name = x.Name, IsDownloaded = true, Path = x.Path});
             //var resultDTO = _mapper.Map<IEnumerable<VideoFileResultDto>>(localFiles.Where(x => !string.IsNullOrEmpty(x.Path)));
             return resultDTO;
         }

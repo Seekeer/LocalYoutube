@@ -28,5 +28,15 @@
             Background="Orange"
             Command="{Binding ShowDownloadedCommand}"
             />
+        <Button
+            Text="Скачиваемое"
+            Background="Green"
+            Command="{Binding ShowDownloadingCommand}"
+            />
+        <Button
+            Text="Разлогиниться"
+            Background="Red"
+            Command="{Binding LogoutCommand}"
+            />
     </VerticalStackLayout>
 </ContentPage>

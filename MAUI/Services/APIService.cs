@@ -31,11 +31,15 @@ namespace MAUI.Services
             await _httpClientAuth.Put<string>($"files/setPositionMaui/{id}", positionDTO);
         }
 
-        
+
         public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFreshAsync()
         {
             var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getNew");
             return list;
+        }
+        public async Task LogoutAsync()
+        {
+            HttpClientAuth.ClearTokens();
         }
 
         public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetHistoryAsync()

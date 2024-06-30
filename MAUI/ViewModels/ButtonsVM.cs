@@ -14,6 +14,7 @@ namespace MAUI.ViewModels
     public class VideoFileResultDtoDownloaded : VideoFileResultDto
     {
         public bool IsDownloaded { get; set; }
+        public string Path { get; set; }
     }
 
     public partial class ButtonsVM : VMBase<string>
@@ -39,14 +40,26 @@ namespace MAUI.ViewModels
         [RelayCommand]
         public async Task ShowDownloaded()
         {
-            //var dtos = await _videoFileRepository.GetFiles();
-            //await _navigationService.NavigateAsync(nameof(ListPage), dtos);
+            var dtos = await _videoFileRepository.GetFiles();
+            await _navigationService.NavigateAsync(nameof(ListPage), dtos);
+        }
 
+        [RelayCommand]
+        public async Task ShowDownloading()
+        {
             await _navigationService.NavigateAsync(nameof(MainPage), "фф");
         }
 
         [RelayCommand]
         public async Task ShowFresh()
+        {
+            var dtos = await _api.GetFreshAsync();
+
+            await _navigationService.NavigateAsync(nameof(ListPage), dtos);
+        }
+
+        [RelayCommand]
+        public async Task Logout()
         {
             var dtos = await _api.GetFreshAsync();
 

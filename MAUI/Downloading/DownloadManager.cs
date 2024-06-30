@@ -54,47 +54,33 @@ namespace MAUI.Downloading
             if (!string.IsNullOrEmpty(file.Path))
                 return file.Path;
 
-            var name = fileDTO.Id.ToString();
+            var name = fileDTO.Name.ToString();
 
             var path = PlataformFolder();
-            name = Path.Combine(path, name);
+            path = Path.Combine(path, name);
 
-            var downloader = CreateDownloader();
-            await downloader.StartDownload(name, HttpClientAuth.GetVideoUrlById(fileDTO.Id));
-            downloader.DownloadFileCompleted += (_, __) =>
-            {
-                if (__.Cancelled || __.Error != null)
-                    return;
-                else
+            var manager = Application.Current.MainPage.Handler.MauiContext.Services.GetService<IHttpTransferManager>();
+            var task = await manager.Queue(new HttpTransferRequest(name, HttpClientAuth.GetVideoUrlById(fileDTO.Id), false, path, true));
+            var sub = manager.WatchTransfer(name).Subscribe(
+                x =>
+                {
+                },
+                ex =>
+                {
+                },
+                () =>
                 {
                     _videoFileRepository.UpdateFilePathAsync(fileDTO.Id, name);
                     fileDTO.IsDownloaded = true;
-                };
-            };
-            
+                }
+            );
+
             return name;
-        }
-
-        private static IDownloader CreateDownloader()
-        {
-            var manager = Application.Current.MainPage.Handler.MauiContext.Services.GetService<IHttpTransferManager>();
-
-            return new DownloaderMaui(manager);
-
-            //return new DownloaderBase();
         }
 
         private static string PlataformFolder()
         {
             return FileSystem.AppDataDirectory;
-            //#if ANDROID
-            //            IWindowManager windowManager = Android.App.Application.Context.GetSystemService(Context.WindowService).JavaCast<IWindowManager>();
-            //            SurfaceOrientation orientation = windowManager.DefaultDisplay.Rotation;
-            //            bool isLandscape = orientation == SurfaceOrientation.Rotation90 || orientation == SurfaceOrientation.Rotation270;
-            //            return isLandscape ? DeviceOrientation.Landscape : DeviceOrientation.Portrait;
-            //#else
-            //            return "";
-            //#endif
         }
     }
 }

@@ -21,7 +21,7 @@ public partial class ListPage : ContentPage
     private void Button_Clicked(object sender, EventArgs e)
     {
         var button = (Button)sender;
-        var stack = (StackLayout)button.Parent;
+        var stack = (VerticalStackLayout)button.Parent;
         stack.Remove(button);
     }
 }

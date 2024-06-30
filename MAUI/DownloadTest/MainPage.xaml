@@ -22,28 +22,28 @@
                                 <Label 
                                     Padding="10"
                                     FontSize="Medium"
-                                    Text="{Binding PercentComplete }"
+                                    Text="{Binding PercentComplete, StringFormat='Скачано {0}%' }"
                                     MaxLines="8"
                                     FontAttributes="Italic"
                                     VerticalOptions="End" />
                                 <Label 
                                     Padding="10"
                                     FontSize="Medium"
-                                    Text="{Binding BytesPerSecond }"
+                                    Text="{Binding BytesPerSecond, StringFormat='Скорость {0} Байт\сек' }"
                                     MaxLines="8"
                                     FontAttributes="Italic"
                                     VerticalOptions="End" />
                                 <Label 
                                         Padding="10"
                                         FontSize="Medium"
-                                        Text="{Binding BytesToTransfer  }"
+                                        Text="{Binding BytesToTransfer, StringFormat='Осталось {0} ' }"
                                         MaxLines="8"
                                         FontAttributes="Italic"
                                         VerticalOptions="End" />
                                 <Label 
                                         Padding="10"
                                         FontSize="Medium"
-                                        Text="{Binding Status }"
+                                        Text="{Binding Status, StringFormat='Статус {0}' }"
                                         MaxLines="8"
                                         FontAttributes="Italic"
                                         VerticalOptions="End" />

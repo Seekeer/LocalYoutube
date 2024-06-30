@@ -55,7 +55,7 @@ namespace MAUI.Services
             await SecureStorage.SetAsync("refresh_token", result.RefreshToken);
         }
 
-        private static void ClearTokens()
+        public static void ClearTokens()
         {
             SecureStorage.Remove("user_name");
             SecureStorage.Remove("accessToken");
