@@ -70,12 +70,12 @@ namespace MAUI.Downloading
                 },
                 () =>
                 {
-                    _videoFileRepository.UpdateFilePathAsync(fileDTO.Id, name);
+                    _videoFileRepository.UpdateFilePathAsync(fileDTO.Id, path);
                     fileDTO.IsDownloaded = true;
                 }
             );
 
-            return name;
+            return path;
         }
 
         private static string PlataformFolder()
