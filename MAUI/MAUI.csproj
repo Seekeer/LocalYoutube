@@ -107,6 +107,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Compile Update="Pages\DownloadingPage.xaml.cs">
+	    <DependentUpon>DownloadingPage.xaml</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
 	  <MauiXaml Update="Pages\ButtonsPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
@@ -128,10 +134,6 @@
 	  <None Update="Pages\Player.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </None>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="DownloadTest\" />
 	</ItemGroup>
 
 </Project>

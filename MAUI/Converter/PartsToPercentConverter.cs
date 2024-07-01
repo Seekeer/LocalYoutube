@@ -8,11 +8,12 @@ using System.Threading.Tasks;
 
 namespace MAUI.Converter
 {
-    public class IdToImageUrlConverter : IValueConverter
+    public class PartsToPercentConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return APIService.GetCoverUrlForFile(value.ToString());
+            var doubleValue = double.Parse(value.ToString());
+            return (int)(doubleValue * 100);
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

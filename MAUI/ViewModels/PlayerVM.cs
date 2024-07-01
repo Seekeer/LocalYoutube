@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.Timers;
 using FileStore.Domain.Dtos;
 using MAUI.Downloading;
+using CommunityToolkit.Maui.Views;
 
 namespace MAUI.ViewModels
 {
@@ -24,6 +25,12 @@ namespace MAUI.ViewModels
 
         [ObservableProperty]
         private string _videoUrl;
+
+        [ObservableProperty]
+        private string _coverUrl;
+
+        [ObservableProperty]
+        private MediaSource _videoSource;
 
         [ObservableProperty]
         private TimeSpan _position;
@@ -133,7 +140,7 @@ namespace MAUI.ViewModels
 
             var filePath = await _downloadManager.DownloadAsync(File);
             var position = Page.GetCurrentPosition();
-            VideoUrl = filePath;
+            VideoSource = MediaSource.FromResource(filePath);
             await Page.SetPosition(position);
         }
 

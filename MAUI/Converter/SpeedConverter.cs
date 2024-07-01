@@ -8,11 +8,12 @@ using System.Threading.Tasks;
 
 namespace MAUI.Converter
 {
-    public class IdToImageUrlConverter : IValueConverter
+    public class SpeedConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return APIService.GetCoverUrlForFile(value.ToString());
+            var intValue = int.Parse(value.ToString());
+            return intValue / 1024 / 8;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

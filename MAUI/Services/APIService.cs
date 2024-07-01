@@ -20,6 +20,10 @@ namespace MAUI.Services
             _httpClientAuth = httpClientAuth;
         }
 
+        public static string GetCoverUrlForFile(string fileid)
+        {
+            return $"{HttpClientAuth.BASE_API_URL}Files/getImage?fileId={fileid}";
+        }
         public async Task<PositionDTO> GetPositionAsync(int id)
         {
             var list = await _httpClientAuth.GetAsync<PositionDTO>($"files/getPositionMaui/{id}");
