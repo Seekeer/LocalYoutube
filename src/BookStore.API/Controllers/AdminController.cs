@@ -41,7 +41,6 @@ namespace FileStore.API.Controllers
         public AdminController(VideoCatalogDbContext dbContext, AppConfig config, 
             IServiceScopeFactory serviceScopeFactory, TgBot tgBot, UserManager<ApplicationUser> userManager)
         {
-            _observer = observer;
             _userManager = userManager;
             _tgBot = tgBot;
             _db = dbContext;
