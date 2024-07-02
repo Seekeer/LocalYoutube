@@ -1,13 +1,14 @@
 ﻿using FileStore.Domain;
 using FileStore.Domain.Models;
 using Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
+using Polly;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace API.FilmDownload
 {
@@ -20,30 +21,14 @@ namespace API.FilmDownload
         public Dictionary<string, VideoFile> Records { get; set; } = new Dictionary<string, VideoFile>();
     }
 
-    public class DownloadTask
+    public class TgDownloadTask: DownloadTask
     {
-        public const string PARTS_SEPARATOR = "!!";
-
-        public DownloadTask(int messageId, long fromId, string text)
+        public TgDownloadTask(int messageId, long fromId, string text)
         {
             OriginalMessageId = messageId;
             FromId = fromId;
             ParseMessageText(text);
         }
-
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        public int FileId { get; set; }
-        public int OriginalMessageId { get; set; }
-        public long FromId { get; }
-        public int QuestionMessageId { get; set; }
-        public string SeasonName { get; set; }
-        public string SeriesName { get; internal set; }
-        public int NumberInSeries { get; internal set; }
-        public string VideoName { get; set; }
-        public string CoverUrl { get; private set; }
-        public Uri Uri { get; set; }
-        public DownloadType DownloadType { get; internal set; }
 
         private void ParseMessageText(string text)
         {
@@ -59,6 +44,34 @@ namespace API.FilmDownload
             if (parts.Length > 2)
                 CoverUrl = parts[1];
         }
+
+        public int OriginalMessageId { get; set; }
+        public long FromId { get; }
+        public int QuestionMessageId { get; set; }
+    }
+
+    public class DownloadTask
+    {
+        public const string PARTS_SEPARATOR = "!!";
+
+        public DownloadTask(string url, string? coverUrl)
+        {
+            Uri = new Uri(url);
+            CoverUrl = coverUrl;
+        }
+
+        protected DownloadTask() { }
+
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+
+        public int FileId { get; set; }
+        public string SeasonName { get; set; }
+        public string SeriesName { get; internal set; }
+        public int NumberInSeries { get; internal set; }
+        public string VideoName { get; set; }
+        public string CoverUrl { get; protected set; }
+        public Uri Uri { get; set; }
+        public DownloadType DownloadType { get; internal set; }
 
         internal string GetSeasonName(string channelName)
         {
@@ -110,9 +123,54 @@ namespace API.FilmDownload
 
     public abstract class DownloaderBase
     {
+        protected DownloaderBase(AppConfig config) { 
+            this._config = config;
+        }
+
         protected AppConfig _config;
         public abstract DownloadType DownloadType { get; }
         public abstract bool IsVideoPropertiesFilled { get;}
+
+        public async Task DownloadAndProcess(DownloadTask task, IServiceScopeFactory serviceScopeFactory,
+            Action<Exception> error, Action<VideoFile> success)
+        {
+            var info = await GetInfo(task.Uri.ToString());
+
+            foreach (var record in info.Records)
+            {
+                try
+                {
+                    var scope = serviceScopeFactory.CreateScope();
+                    using (var fileService = scope.ServiceProvider.GetRequiredService<DbUpdateManager>())
+                    {
+                        fileService.AddFromSiteDownload(record.Value, task.GetSeriesName(), task.GetSeasonName(info.ChannelName), task.NumberInSeries);
+
+                        var policy = Policy
+                            .Handle<Exception>()
+                            .WaitAndRetry(20, retryAttempt => TimeSpan.FromSeconds(10));
+
+                        await policy.Execute(async () =>
+                        {
+                            record.Value.Path = await Download(record.Key, record.Value.Path);
+
+                            if (!System.IO.File.Exists(record.Value.Path))
+                            {
+                                throw new ArgumentException();
+                            }
+
+                            UpdateFileByTask(record.Value, task);
+                            task.FileId = await fileService.DownloadFinishedAsync(record.Value, IsVideoPropertiesFilled);
+
+                            success(record.Value);
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    error(ex);
+                }
+            }
+        }
 
         public async Task<DownloadInfo> GetInfo(string url)
         {

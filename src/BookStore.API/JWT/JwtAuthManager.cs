@@ -57,7 +57,7 @@ namespace FileStore.API.JWT
         //// optional: clean up expired refresh tokens
         public void RemoveExpiredRefreshTokens(DateTime now)
         {
-            //var expiredTokens = _usersRefreshTokens.Where(x => x.Value.ExpireAt < now).ToList();
+            //var expiredTokens = _usersRefreshTokens.Where(x => x.PLAYLIST_NAME.ExpireAt < now).ToList();
             //foreach (var expiredToken in expiredTokens)
             //{
             //    _usersRefreshTokens.TryRemove(expiredToken.Key, out _);
@@ -68,7 +68,7 @@ namespace FileStore.API.JWT
         // can be more specific to ip, user agent, device name, etc.
         //public void RemoveRefreshTokenByUserName(string userName)
         //{
-        //    var refreshTokens = _usersRefreshTokens.Where(x => x.Value.UserName == userName).ToList();
+        //    var refreshTokens = _usersRefreshTokens.Where(x => x.PLAYLIST_NAME.UserName == userName).ToList();
         //    foreach (var refreshToken in refreshTokens)
         //    {
         //        _usersRefreshTokens.TryRemove(refreshToken.Key, out _);

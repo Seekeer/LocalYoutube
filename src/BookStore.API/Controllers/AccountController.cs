@@ -197,7 +197,7 @@ namespace FileStore.API.Controllers
         //    public ActionResult StopImpersonation()
         //    {
         //        var userName = User.Identity?.Name;
-        //        var originalUserName = User.FindFirst("OriginalUserName")?.Value;
+        //        var originalUserName = User.FindFirst("OriginalUserName")?.PLAYLIST_NAME;
         //        if (string.IsNullOrWhiteSpace(originalUserName))
         //        {
         //            return BadRequest("You are not impersonating anyone.");

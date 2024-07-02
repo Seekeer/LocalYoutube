@@ -27,9 +27,8 @@ namespace API.FilmDownload
 
     internal class CommonDownloader : DownloaderBase
     {
-        public CommonDownloader(AppConfig config)
+        public CommonDownloader(AppConfig config) :base(config)
         {
-            this._config = config;
         }
 
         public override DownloadType DownloadType => DownloadType.Common;

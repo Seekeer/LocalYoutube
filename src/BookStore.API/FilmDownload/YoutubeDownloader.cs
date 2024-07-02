@@ -24,9 +24,8 @@ namespace API.FilmDownload
         public override DownloadType DownloadType { get => DownloadType.Youtube; }
         public override bool IsVideoPropertiesFilled => true;
 
-        public YoutubeDownloader(AppConfig config)
+        public YoutubeDownloader(AppConfig config) : base(config)
         {
-            this._config = config;
         }
 
         protected override async Task<DownloadInfo> GetVideoInfo(string url, string rootDownloadFolder)

@@ -41,6 +41,7 @@ namespace FileStore.API.Controllers
         public AdminController(VideoCatalogDbContext dbContext, AppConfig config, 
             IServiceScopeFactory serviceScopeFactory, TgBot tgBot, UserManager<ApplicationUser> userManager)
         {
+            _observer = observer;
             _userManager = userManager;
             _tgBot = tgBot;
             _db = dbContext;
@@ -53,7 +54,9 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> DoAction()
         {
-            await RemoveFile(55625, true, false);
+            //var files = await _observer.GetUpdates();
+
+            //await RemoveFile(55625, true, false);
             //var dbUpdater = new DbUpdateManager(_db);
             //dbUpdater.AddAudioFilesFromFolder("D:\\VideoServer\\Анюта\\Музыка", AudioType.FairyTale, Origin.Russian, false, "Сказка о царе Салтане", "А.С. Пушкин - Сказки");
 
@@ -346,8 +349,8 @@ namespace FileStore.API.Controllers
             IEnumerable<VideoFile> queue = _db.VideoFiles.Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileUserInfos)
                 .Where(x => x.Id > minId && !x.NeedToDelete && !x.IsDownloading).ToList();
 
-            var online = queue.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type) && !x.Path.EndsWith("mp4") && !x.Path.EndsWith("webm")).ToList();
-            foreach (var item in online)
+            var notOnline = queue.Where(x => (new IsOnlineVideoAttribute()).HasAttribute(x.Type) && !x.Path.EndsWith("mp4") && !x.Path.EndsWith("webm")).ToList();
+            foreach (var item in notOnline)
                 dbUpdater.Convert(item, _config);
 
             return Ok();

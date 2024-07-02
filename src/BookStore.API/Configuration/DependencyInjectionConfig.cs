@@ -40,12 +40,12 @@ namespace FileStore.API.Configuration
 
             services.AddScoped<DbUpdateManager, DbUpdateManager>();
             services.AddScoped<IMessageProcessor, MessageProcessor>();
+            services.AddScoped<YoutubeObserver, YoutubeObserver>();
             services.AddSingleton<TgBot, TgBot>();
             //services.AddSingleton<IStartupInitService, StartupInitService>();
             services.AddScoped<TgAPIClient, TgAPIClient>();
 
             services.AddHostedService<StartupService>();
-
 
             services.AddQuartz(q =>
             {
@@ -71,6 +71,14 @@ namespace FileStore.API.Configuration
                     .WithIdentity("trigger2", "group2")
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(30)).RepeatForever())
+                );
+            });
+            services.AddQuartz(q =>
+            {
+                q.ScheduleJob<CheckYoutubePlaylistJob>(trigger => trigger
+                    .WithIdentity("trigger5", "group5")
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(30)).RepeatForever())
                 );
             });
 
