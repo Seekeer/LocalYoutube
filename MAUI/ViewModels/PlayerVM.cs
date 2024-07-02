@@ -140,8 +140,9 @@ namespace MAUI.ViewModels
 
             var filePath = await _downloadManager.DownloadAsync(File);
             var position = Page.GetCurrentPosition();
-            VideoSource = MediaSource.FromResource(filePath);
-            await Page.SetPosition(position);
+            VideoUrl = (filePath);
+            if(position.TotalSeconds > 5)
+                await Page.SetPosition(position);
         }
 
         [RelayCommand]

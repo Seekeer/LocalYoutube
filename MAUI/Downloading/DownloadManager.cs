@@ -57,7 +57,7 @@ namespace MAUI.Downloading
             var name = fileDTO.Name.ToString();
 
             var path = PlataformFolder();
-            path = Path.Combine(path, name);
+            path = Path.Combine(path, Guid.NewGuid().ToString());
 
             var manager = Application.Current.MainPage.Handler.MauiContext.Services.GetService<IHttpTransferManager>();
             var task = await manager.Queue(new HttpTransferRequest(name, HttpClientAuth.GetVideoUrlById(fileDTO.Id), false, path, true));

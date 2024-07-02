@@ -19,7 +19,6 @@ public partial class Player : ContentPage
         BindingContext = vm;
         vm.Page = this;
     }
-
     private void Player_NavigatedFrom(object? sender, NavigatedFromEventArgs e)
     {
         MediaElement.Dispose();
@@ -33,7 +32,8 @@ public partial class Player : ContentPage
 
     internal async Task SetPosition(TimeSpan time)
     {
-        var toast = Toast.Make($"Navigate to {time.TotalSeconds}", ToastDuration.Short, 14);
+        var toast = Toast.Make($"Navigate to {viewModel.VideoUrl}", ToastDuration.Short, 14);
+        //var toast = Toast.Make($"Navigate to {time.TotalSeconds}", ToastDuration.Short, 14);
         await toast.Show();
 
         MainThread.BeginInvokeOnMainThread(async () =>
