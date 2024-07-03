@@ -73,6 +73,27 @@ namespace MAUI.Services
             return $"{HttpClientAuth.BASE_API_URL}Files/getFileById?fileId={id}";
         }
 
+        public async Task Put(string url, object data)
+        {
+            using var client = await GetClient();
+
+            var json = JsonSerializer.Serialize(data);
+            StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            url = !url.StartsWith(BASE_API_URL) ? $"{BASE_API_URL}{url}" : url;
+            var response = await client.PutAsync(url, httpContent);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                if (!await RefreshToken())
+                {
+                    ClearTokens();
+                    await _navigationService.NavigateAsync(nameof(LoginPage));
+                }
+                else
+                    await Put(url, data);
+            }
+        }
+
         public async Task<T> Put<T>(string url, object data)
         {
             using var client = await GetClient();

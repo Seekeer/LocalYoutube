@@ -27,9 +27,31 @@ namespace MAUI.ViewModels
             _api = api;
             _navigationService = navigationService;
             _videoFileRepository = localFileRepository;
+
+            Connectivity.ConnectivityChanged += (_, __) =>
+            {
+                OnPropertyChanged(nameof(InternetEnabled));
+                OnPropertyChanged(nameof(InternetDisabled));
+            };
         }
 
-        [RelayCommand]
+        public bool InternetEnabled
+        {
+            get
+            {
+                return Connectivity.NetworkAccess == NetworkAccess.Internet;
+            }
+        }
+
+        public bool InternetDisabled
+        {
+            get
+            {
+                return Connectivity.NetworkAccess != NetworkAccess.Internet;
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(InternetEnabled))]
         public async Task ShowHistory()
         {
             var dtos = await _api.GetHistoryAsync();
@@ -47,10 +69,10 @@ namespace MAUI.ViewModels
         [RelayCommand]
         public async Task ShowDownloading()
         {
-            await _navigationService.NavigateAsync(nameof(MainPage), "фф");
+            await _navigationService.NavigateAsync(nameof(MainPage), "");
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(InternetEnabled))]
         public async Task ShowFresh()
         {
             var dtos = await _api.GetFreshAsync();

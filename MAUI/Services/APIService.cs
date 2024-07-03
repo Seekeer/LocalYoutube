@@ -24,6 +24,7 @@ namespace MAUI.Services
         {
             return $"{HttpClientAuth.BASE_API_URL}Files/getImage?fileId={fileid}";
         }
+
         public async Task<PositionDTO> GetPositionAsync(int id)
         {
             var list = await _httpClientAuth.GetAsync<PositionDTO>($"files/getPositionMaui/{id}");
@@ -32,15 +33,28 @@ namespace MAUI.Services
 
         public async Task SetPositionAsync(int id, PositionDTO positionDTO)
         {
-            await _httpClientAuth.Put<string>($"files/setPositionMaui/{id}", positionDTO);
+            try
+            {
+                await _httpClientAuth.Put($"files/setPositionMaui/{id}", positionDTO);
+            }
+            catch (Exception ex)
+            {
+            }
         }
-
 
         public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFreshAsync()
         {
-            var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getNew");
-            return list;
+            try
+            {
+                var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getNew");
+                return list;
+            }
+            catch (Exception ex)
+            {
+                return new List<VideoFileResultDtoDownloaded>();
+            }
         }
+
         public async Task LogoutAsync()
         {
             HttpClientAuth.ClearTokens();
@@ -48,21 +62,28 @@ namespace MAUI.Services
 
         public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetHistoryAsync()
         {
-            var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getLatest");
-            return list;
+            try
+            { 
+                var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getLatest");
+                return list;
+            }
+            catch (Exception ex)
+            {
+                return new List<VideoFileResultDtoDownloaded>();
+            }
 
-            //TODO no network
-            //var list1 = new List<VideoFileResultDto>
-            //{
-            //    new VideoFileResultDto
-            //    {
-            //        CoverURL = "https://60.img.avito.st/image/1/1.e2WiAra414yUqxWJ2Gc0S8ag1Yoco1WE1KbVjhKr34YU.X0s5Dlazk8TBFZ-ZiyhhavQCV88ptt5n4-nzxyrEPOM",
-            //        Name = "Мое видео",
-            //        Description = "Описание",
-            //        Id = 55664
-            //    }
-            //};
-            //return list1;
-        }
+    //TODO no network
+    //var list1 = new List<VideoFileResultDto>
+    //{
+    //    new VideoFileResultDto
+    //    {
+    //        CoverURL = "https://60.img.avito.st/image/1/1.e2WiAra414yUqxWJ2Gc0S8ag1Yoco1WE1KbVjhKr34YU.X0s5Dlazk8TBFZ-ZiyhhavQCV88ptt5n4-nzxyrEPOM",
+    //        Name = "Мое видео",
+    //        Description = "Описание",
+    //        Id = 55664
+    //    }
+    //};
+    //return list1;
+}
     }
 }

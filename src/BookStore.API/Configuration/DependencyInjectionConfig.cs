@@ -40,7 +40,6 @@ namespace FileStore.API.Configuration
 
             services.AddScoped<DbUpdateManager, DbUpdateManager>();
             services.AddScoped<IMessageProcessor, MessageProcessor>();
-            services.AddScoped<YoutubeObserver, YoutubeObserver>();
             services.AddSingleton<TgBot, TgBot>();
             //services.AddSingleton<IStartupInitService, StartupInitService>();
             services.AddScoped<TgAPIClient, TgAPIClient>();

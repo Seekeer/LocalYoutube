@@ -75,7 +75,7 @@ public partial class Player : ContentPage
 
     private void Button_Clicked(object sender, EventArgs e)
     {
-        this.SetPosition(TimeSpan.FromMinutes(1.5));
+        //this.SetPosition(TimeSpan.FromMinutes(1.5));
         //viewModel.UpdatePositionByControl();
     }
 

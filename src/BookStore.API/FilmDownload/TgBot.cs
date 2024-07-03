@@ -60,7 +60,6 @@ namespace API.FilmDownload
         private readonly List<SearchRecord> _infos = new List<SearchRecord>();
         private readonly Dictionary<string, SearchResult> _images = new Dictionary<string, SearchResult>();
         private readonly List<TgLink> _tgSeasonDict = new List<TgLink>();
-        private readonly string _apiUrl = @"http://80.68.9.86:55/api/";
         public const string UPDATECOVER_MESSAGE = "Обновить обложку";
         public const string SETUP_VLC_Message = "Настроить VLC";
         public const string SHOW_ALL_SEARCH_RESULT_Message = "Показать все результаты поиска";
@@ -727,7 +726,7 @@ namespace API.FilmDownload
                     }};
 
             var tgMessage =  await _botClient.SendTextMessageAsync(new ChatId(task.FromId), 
-                $"Закончена закачка {Environment.NewLine}{item.Name} в {item.Series.Name}|{item.Season.Name} {Environment.NewLine}{task.Uri}{Environment.NewLine}Как храним скачанное?{Environment.NewLine}Открыть: {_apiUrl}Files/getFileById?fileId={item.Id}",
+                $"Закончена закачка {Environment.NewLine}{item.Name} в {item.Series.Name}|{item.Season.Name} {Environment.NewLine}{task.Uri}{Environment.NewLine}Как храним скачанное?{Environment.NewLine}Открыть: {item.GetUrl(_config)}",
                 replyToMessageId: task.OriginalMessageId,
                 disableWebPagePreview: true,
                 replyMarkup: new InlineKeyboardMarkup(keyboard));

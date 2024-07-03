@@ -43,8 +43,15 @@ namespace MAUI.Services
 
         public async Task<bool> SetPositionAsync(int id, PositionDTO positionDTO)
         {
-            using var fileService = GetFileService();
-            return await fileService.SetPosition(id, MauiProgram.USER_ID.ToString(), positionDTO.Position, positionDTO.UpdatedDate);
+            try
+            {
+                using var fileService = GetFileService();
+                return await fileService.SetPosition(id, MauiProgram.USER_ID.ToString(), positionDTO.Position, positionDTO.UpdatedDate);
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
 
         public async Task UpdateFilePathAsync(int fileId, string finalPath)

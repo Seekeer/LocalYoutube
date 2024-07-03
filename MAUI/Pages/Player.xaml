@@ -23,11 +23,9 @@
                 HeightRequest="300"
                 Volume="0"
                 StateChanged="OnStateChanged"
-            
                 MetadataArtworkUrl="{Binding File.Id, Converter={StaticResource idToImageUrl}}"
                 MetadataTitle="{Binding File.Name}"
             />
-
                 <!--
                 MetadataArtist="Blender Foundation"
             
@@ -37,10 +35,11 @@
                 StateChanged="OnStateChanged"
                 SeekCompleted="OnSeekCompleted"-->
             <Label 
-            FontSize="Medium"
-            Padding="10"
-            Text="{Binding File.Description}"/>
-            <Button Text="90 sec" Clicked="Button_Clicked"/>
+                FontSize="Medium"
+                Padding="10"
+                Text="{Binding File.Description}"/>
+            
+            <!--<Button Text="Pause/Play" Clicked="Button_Clicked"/>-->
 
             <ListView ItemsSource="{Binding SeekPositionCollection}" 
               HasUnevenRows="True">
