@@ -29,7 +29,13 @@ namespace MAUI.Services
 
         public string GetFilePath()
         {
-            return Path.Combine(fileSystem.AppDataDirectory, DATABASE_FILENAME);
+            //return Path.Combine((Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)), DATABASE_FILENAME);
+
+            var dbPath = Path.Combine(fileSystem.AppDataDirectory, DATABASE_FILENAME);
+
+            Directory.CreateDirectory(fileSystem.AppDataDirectory);
+
+            return dbPath;
         }
     }
 
@@ -41,18 +47,24 @@ namespace MAUI.Services
 
             var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MAUIDbContext>>();
 
-            using var dbContext = dbContextFactory.CreateDbContext();
-
-            var pendingMigrations = MigrationsPending(dbContext);
-            if(pendingMigrations)
-                dbContext.Database.Migrate();
-
-            if (!dbContext.Series.Any())
+            try
             {
-                dbContext.Users.Add(new ApplicationUser { Id = MauiProgram.USER_ID });
-                dbContext.Series.Add(new Series { Id = MauiProgram.SERIES_ID });
-                dbContext.Seasons.Add(new Season { Id = MauiProgram.SEASON_ID, SeriesId = MauiProgram.SERIES_ID });
-                dbContext.SaveChanges();
+                using var dbContext = dbContextFactory.CreateDbContext();
+
+                var pendingMigrations = MigrationsPending(dbContext);
+                if (pendingMigrations)
+                    dbContext.Database.Migrate();
+
+                if (!dbContext.Series.Any())
+                {
+                    dbContext.Users.Add(new ApplicationUser { Id = MauiProgram.USER_ID });
+                    dbContext.Series.Add(new Series { Id = MauiProgram.SERIES_ID });
+                    dbContext.Seasons.Add(new Season { Id = MauiProgram.SEASON_ID, SeriesId = MauiProgram.SERIES_ID });
+                    dbContext.SaveChanges();
+                }
+            }
+            catch (Exception ex)
+            {
             }
         }
 

@@ -13,6 +13,7 @@ using FileStore.Domain.Services;
 using Shiny;
 using Shiny.NET;
 using MAUI.Downloading;
+using MetroLog.MicrosoftExtensions;
 
 namespace MAUI
 {
@@ -41,12 +42,49 @@ namespace MAUI
 #if DEBUG
     		builder.Logging.AddDebug();
 #endif
+            AddLogging(builder);
 
             var app =  builder.Build();
 
 		    app.SeedDatabase();
 
             return app;
+        }
+
+        private static void AddLogging(MauiAppBuilder builder)
+        {
+            builder.Logging
+#if DEBUG
+                .AddTraceLogger(
+                    options =>
+                    {
+                        options.MinLevel = LogLevel.Error;
+                        options.MaxLevel = LogLevel.Critical;
+                    }) // Will write to the Debug Output
+#endif
+                .AddInMemoryLogger(
+                    options =>
+                    {
+                        options.MaxLines = 1024;
+                        options.MinLevel = LogLevel.Error;
+                        options.MaxLevel = LogLevel.Critical;
+                    })
+//#if RELEASE
+            .AddStreamingFileLogger(
+                options =>
+                {
+                    options.RetainDays = 2;
+                    options.FolderPath = Path.Combine(
+                        FileSystem.CacheDirectory,
+                        "MetroLogs");
+                })
+//#endif
+                .AddConsoleLogger(
+                    options =>
+                    {
+                        options.MinLevel = LogLevel.Error;
+                        options.MaxLevel = LogLevel.Critical;
+                    }); // Will write to the Console Output (logcat for android)
         }
 
         public const string USER_ID = "1";

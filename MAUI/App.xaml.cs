@@ -1,4 +1,5 @@
 ﻿using MAUI.Pages;
+using MetroLog.Maui;
 using Shiny.NET;
 
 namespace MAUI
@@ -12,6 +13,13 @@ namespace MAUI
             MainPage = new AppShell();
 
             this.RegisterRoutes();
+
+            LogController.InitializeNavigation(
+                page => MainPage!.Navigation.PushModalAsync(page),
+                () => MainPage!.Navigation.PopModalAsync());
+
+            var logController = new LogController();
+            logController.IsShakeEnabled = true;
         }
 
         private void RegisterRoutes()
