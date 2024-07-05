@@ -220,7 +220,12 @@ namespace API.FilmDownload
             {
                 fileName = fileName + "#";
                 if (File.Exists(fileName))
+                {
+                    if (File.Exists(path))
+                        File.Delete(path);
+                    
                     File.Move(fileName, path);
+                }
                 else if (File.Exists(fileName + ".mp4"))
                 {
                     if (File.Exists(path))
