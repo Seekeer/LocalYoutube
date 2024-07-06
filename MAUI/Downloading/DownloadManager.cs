@@ -13,6 +13,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using MAUI.Services;
+using System.Security.Policy;
 
 namespace MAUI.Downloading
 {
@@ -59,8 +60,10 @@ namespace MAUI.Downloading
             var path = PlataformFolder();
             path = Path.Combine(path, Guid.NewGuid().ToString());
 
+            var url = HttpClientAuth.GetVideoUrlById(fileDTO.Id);
+#if ANDROID
             var manager = Application.Current.MainPage.Handler.MauiContext.Services.GetService<IHttpTransferManager>();
-            var task = await manager.Queue(new HttpTransferRequest(name, HttpClientAuth.GetVideoUrlById(fileDTO.Id), false, path, true));
+            var task = await manager.Queue(new HttpTransferRequest(name, url, false, path, true));
             var sub = manager.WatchTransfer(name).Subscribe(
                 x =>
                 {
@@ -70,12 +73,23 @@ namespace MAUI.Downloading
                 },
                 () =>
                 {
-                    _videoFileRepository.UpdateFilePathAsync(fileDTO.Id, path);
-                    fileDTO.IsDownloaded = true;
+                    DownloadFinished(fileDTO, path);
                 }
             );
+#else
+            WebClient webClient = new WebClient();
+            //webClient.DownloadProgressChanged += new DownloadProgressChangedEventHandler(DownloadProgressCallback);
+            webClient.DownloadFileCompleted += (_, __) => DownloadFinished(fileDTO, path);
+            webClient.DownloadFileAsync(new Uri(url), path);
+#endif
 
             return path;
+        }
+
+        private void DownloadFinished(VideoFileResultDtoDownloaded fileDTO, string path)
+        {
+            _videoFileRepository.UpdateFilePathAsync(fileDTO.Id, path);
+            fileDTO.IsDownloaded = true;
         }
 
         private static string PlataformFolder()
