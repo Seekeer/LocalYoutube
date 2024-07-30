@@ -148,7 +148,8 @@ namespace FileStore.API
 
             //app.UseHttpsRedirection();
 
-            app.UseHttpLogging();
+            // TODO HttpLogging
+            //app.UseHttpLogging();
             app.UseRouting();
             app.UseCors(_policyName);
             //app.UseCors("AllowAll");

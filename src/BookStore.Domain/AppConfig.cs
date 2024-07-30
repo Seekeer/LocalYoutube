@@ -11,6 +11,8 @@ namespace FileStore.Domain
         public Credentials VkontakteSettings { get; set; }
 
         public int YD_Upload_Threads_Count { get; set; }
+        public string APIUrl { get; set; }
+        public string UIUrl { get; set; }
         public string RootFolder { get; set; }
         public string RootDownloadFolder { get; set; }
         public string PremierConvertedFolder { get; set; }

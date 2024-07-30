@@ -46,7 +46,6 @@ namespace FileStore.API.Configuration
 
             services.AddHostedService<StartupService>();
 
-
             services.AddQuartz(q =>
             {
                 q.ScheduleJob<BackuperJob>(trigger => trigger
@@ -71,6 +70,14 @@ namespace FileStore.API.Configuration
                     .WithIdentity("trigger2", "group2")
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(30)).RepeatForever())
+                );
+            });
+            services.AddQuartz(q =>
+            {
+                q.ScheduleJob<CheckYoutubePlaylistJob>(trigger => trigger
+                    .WithIdentity("trigger5", "group5")
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(30)).RepeatForever())
                 );
             });
 

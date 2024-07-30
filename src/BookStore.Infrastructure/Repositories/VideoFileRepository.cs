@@ -230,5 +230,10 @@ namespace FileStore.Infrastructure.Repositories
             return files;
         }
 
+        public async Task<bool> Any(Expression<Func<T, bool>> predicate)
+        {
+            return DbSet.Any(predicate);
+        }
+
     }
 }

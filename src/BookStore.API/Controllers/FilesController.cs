@@ -10,7 +10,7 @@ using API.FilmDownload;
 using API.TG;
 using AutoMapper;
 using FileStore.API.Configuration;
-using FileStore.API.Dtos.File;
+using Dtos;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using FileStore.Domain.Services;
@@ -60,6 +60,21 @@ namespace FileStore.API.Controllers
             var Files = await _fileService.GetAll();
 
             return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files, await GetUserId(_userManager)));
+        }
+
+        [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [Route("sendToTG/{videoId}")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> SendToTg(int fileId)
+        {
+            var File = await _fileService.GetById(fileId);
+
+            if (File == null) return NotFound();
+
+            await _tgBot.SendFile(File, await GetUser(_userManager));
+
+            return Ok();
         }
 
         [HttpGet("{id:int}")]

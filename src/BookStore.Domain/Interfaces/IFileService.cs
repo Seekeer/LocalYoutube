@@ -28,11 +28,11 @@ namespace FileStore.Domain.Interfaces
         Task<IEnumerable<T>> SearchFileByType(V type);
         Task<T> GetRandomFileBySeriesId(int seriesId);
         Task SetRating(int videoId, double value);
-        Task SetPosition(int videoId, string userId, double? value);
+        Task<bool> SetPosition(int videoId, string userId, double? value, DateTime? updateTime);
         Task<IEnumerable<T>> GetLatest(string userId);
         Task<bool> MoveToSerie(int fileId, int serieId);
         Task<bool> MoveToSeason(int fileId, int seasonId);
-        Task<double> GetPosition(int fileId, string userId);
+        Task<FileUserInfo> GetPosition(int fileId, string userId);
         Task<IEnumerable<T>> GetNew(int count);
 
     }

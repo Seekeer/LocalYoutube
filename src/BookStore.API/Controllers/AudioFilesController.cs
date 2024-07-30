@@ -7,8 +7,9 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using AutoMapper;
+using Dtos;
 using FileStore.API.Configuration;
-using FileStore.API.Dtos.File;
+using FileStore.Domain.Dtos;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using Infrastructure;
@@ -165,7 +166,7 @@ namespace FileStore.API.Controllers
         [Route("filmStarted")]
         public async Task<ActionResult> FilmStarted([FromBody]int fileId)
         {
-            await _fileService.SetPosition(fileId, await GetUserId(_userManager), null);
+            await _fileService.SetPosition(fileId, await GetUserId(_userManager), null, null);
 
             return Ok();
         }
@@ -217,7 +218,7 @@ namespace FileStore.API.Controllers
         public async Task<IActionResult> SetPosition(int id, [FromBody] double value)
         {
             string userId = await GetUserId(_userManager);
-            await _fileService.SetPosition(id, userId, value);
+            await _fileService.SetPosition(id, userId, value, null);
 
             return Ok();
         }
@@ -227,9 +228,31 @@ namespace FileStore.API.Controllers
         public async Task<IActionResult> GetPosition(int fileId)
         {
             string userId = await GetUserId(_userManager);
-            var position = await _fileService.GetPosition(fileId, userId);
+            var info = await _fileService.GetPosition(fileId, userId);
 
-            return Ok(position);
+            return Ok(info.Position);
+        }
+
+        [HttpPut]
+        [Route("setPositionMaui/{id}")]
+        public async Task<IActionResult> SetPositionMaui(int id, [FromBody] PositionDTO position)
+        {
+            string userId = await GetUserId(_userManager);
+            var result = await _fileService.SetPosition(id, userId, position.Position, position.UpdatedDate);
+
+            return Ok(result);
+        }
+
+        [HttpGet]
+        [Route("getPositionMaui/{fileId}")]
+        public async Task<IActionResult> GetPositionMaui(int fileId)
+        {
+            string userId = await GetUserId(_userManager);
+            var info = await _fileService.GetPosition(fileId, userId);
+
+            var dto = _mapper.Map<PositionDTO>(info);
+
+            return Ok(dto);
         }
 
         [HttpGet]

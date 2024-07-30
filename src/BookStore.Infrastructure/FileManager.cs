@@ -70,7 +70,7 @@ namespace Infrastructure
                 //Console.WriteLine("....");
                 //Console.WriteLine(st);
 
-                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                //NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }
 
             return new MoveResult { };
@@ -84,7 +84,7 @@ namespace Infrastructure
                 var moveResult = _MoveFilePhysically(file);
                 if (moveResult.HasBeenMoved)
                 {
-                    NLog.LogManager.GetCurrentClassLogger().Info($"FileManager {file.Id} from {file.Path} to {moveResult.NewPath}");
+                    //NLog.LogManager.GetCurrentClassLogger().Info($"FileManager {file.Id} from {file.Path} to {moveResult.NewPath}");
 
                     file.Path = moveResult.NewPath;
                     _db.Update(file);
@@ -95,7 +95,7 @@ namespace Infrastructure
             }
             catch (Exception ex)
             {
-                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                //NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }
 
             return new MoveResult { };

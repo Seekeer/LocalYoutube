@@ -76,7 +76,7 @@ namespace FileStore.Domain.Services
 
         public async Task<T> Add(T File)
         {
-            if (_FileRepository.SearchRandom(b => b.Name == File.Name).Result.Any())
+            if (await _FileRepository.Any(b => b.Name == File.Name))
                 return null;
 
             await _FileRepository.Add(File);
@@ -153,40 +153,51 @@ namespace FileStore.Domain.Services
             //await _FileRepository.Update(video);
         }
 
-        public async Task SetPosition(int videoId, string userId, double? position)
+        public async Task<bool> SetPosition(int videoId, string userId, double? position, DateTime? updateTime)
         {
             if (string.IsNullOrEmpty(userId))
-                return;
+                return false;
 
             var video = await _FileRepository.GetById(videoId);
 
             if (video == null)
-                return;
+                return false;
 
             var info = video.VideoFileUserInfos.FirstOrDefault(x => x.UserId == userId);
             if (info == null)
             {
-                info = new FileUserInfo { DbFile = video, UserId = userId};
+                info = new FileUserInfo { DbFile = video, UserId = userId };
                 video.VideoFileUserInfos.Add(info);
             }
-            if(position != null)
+            else if (updateTime != null)
+            {
+                if(updateTime < info.UpdatedDate)
+                    return false;
+                else
+                    info.UpdatedDate = updateTime.Value;
+            }
+            else
+                info.UpdatedDate = System.DateTime.UtcNow;
+
+            if (position != null)
                 info.Position = position.Value;
-            info.UpdatedDate = System.DateTime.Now;
 
             await _FileRepository.Update(video);
+            
+            return true;
         }
 
-        public async Task<double> GetPosition(int fileId, string userId)
+        public async Task<FileUserInfo> GetPosition(int fileId, string userId)
         {
             if (string.IsNullOrEmpty(userId))
-                return 0;
+                return new FileUserInfo { };
 
             var video = await _FileRepository.GetById(fileId);
             var info = video.VideoFileUserInfos.FirstOrDefault(x => x.UserId == userId);
             if (info == null)
-                return 0;
+                return new FileUserInfo { };
 
-            return info.Position;
+            return info;
         }
 
         public async Task<IEnumerable<T>> SearchFileByType(V type)

@@ -60,7 +60,6 @@ namespace API.FilmDownload
         private readonly List<SearchRecord> _infos = new List<SearchRecord>();
         private readonly Dictionary<string, SearchResult> _images = new Dictionary<string, SearchResult>();
         private readonly List<TgLink> _tgSeasonDict = new List<TgLink>();
-        private readonly string _apiUrl = @"http://80.68.9.86:55/api/";
         public const string UPDATECOVER_MESSAGE = "Обновить обложку";
         public const string SETUP_VLC_Message = "Настроить VLC";
         public const string SHOW_ALL_SEARCH_RESULT_Message = "Показать все результаты поиска";
@@ -162,9 +161,9 @@ namespace API.FilmDownload
             await _rutracker.Init();
         }
 
-        private async Task NotifyDownloadEnded(long telegramId, DbFile item)
+        public async Task NotifyDownloadEnded(long telegramId, DbFile item)
         {
-             await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Открыть в VLC: http://192.168.1.55:2022/api/Files/getFileById?fileId={item.Id}");
+             await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Посмотреть: {item.GetUrl(_config)}");
         }
 
         private FileStore.Infrastructure.Context.VideoCatalogDbContext _GetDb()
@@ -379,7 +378,7 @@ namespace API.FilmDownload
         {
             var task = _downloadTasks.FirstOrDefault(x => x.Value.QuestionMessageId == message.ReplyToMessage.MessageId);
 
-            if (EqualityComparer<KeyValuePair<string, DownloadTask>>.Default.Equals(task, default(KeyValuePair<string, DownloadTask>)))
+            if (EqualityComparer<KeyValuePair<string, TgDownloadTask>>.Default.Equals(task, default(KeyValuePair<string, TgDownloadTask>)))
                 return;
 
 
@@ -439,7 +438,7 @@ namespace API.FilmDownload
         {
             var result = @$"Название: {file.Name}
 Длительность: {file.Duration}
-Посмотреть: vlc://http://192.168.1.55:2022/api/Files/getFileById?fileId={file.Id}
+Посмотреть: {file.GetUrl(_config)}
 Год: {file.Year}
 Описание: {file.Description}";
 
@@ -536,7 +535,7 @@ namespace API.FilmDownload
             {
                 var text = line;
 
-                var task = new DownloadTask(message.MessageId, message.From.Id, line);
+                var task = new TgDownloadTask(message.MessageId, message.From.Id, line);
                 _downloadTasks.Add(task.Id, task);
 
                 if (DownloaderFabric.CanDownload(task))
@@ -560,7 +559,7 @@ namespace API.FilmDownload
             {
                 try
                 {
-                    var task = new DownloadTask(message.MessageId, message.From.Id, line);
+                    var task = new TgDownloadTask(message.MessageId, message.From.Id, line);
                     if (!string.IsNullOrEmpty(commands[0]))
                         task.SeriesName = commands[0]; 
                     
@@ -642,7 +641,7 @@ namespace API.FilmDownload
             }
         }
 
-        private Dictionary<string, DownloadTask> _downloadTasks = new Dictionary<string, DownloadTask>();
+        private Dictionary<string, TgDownloadTask> _downloadTasks = new Dictionary<string, TgDownloadTask>();
 
         private async Task AddSearchAllButton(string text, long fromId)
         {
@@ -668,43 +667,16 @@ namespace API.FilmDownload
 
             try
             {
-                var info = await downloader.GetInfo(task.Uri.ToString());
-
-                foreach (var record in info.Records)
-                {
-                    try
-                    {
-                        var scope = _serviceScopeFactory.CreateScope();
-                        using (var fileService = scope.ServiceProvider.GetRequiredService<DbUpdateManager>())
-                        {
-                            fileService.AddFromSiteDownload(record.Value, task.GetSeriesName(), task.GetSeasonName(info.ChannelName), task.NumberInSeries);
-
-                            var policy = Policy
-                                .Handle<Exception>()
-                                .WaitAndRetry(20, retryAttempt => TimeSpan.FromSeconds(10));
-
-                            await policy.Execute(async () =>
-                            {
-                                record.Value.Path = await downloader.Download(record.Key, record.Value.Path);
-
-                                if (!System.IO.File.Exists(record.Value.Path))
-                                {
-                                    throw new ArgumentException();
-                                }
-
-                                downloader.UpdateFileByTask(record.Value, task);
-                                task.FileId = await fileService.DownloadFinishedAsync(record.Value, downloader.IsVideoPropertiesFilled);
-
-                                await NotifyBotDownloadEnded(record.Value, task);
-                            });
-                        }
-                    }
-                    catch (Exception ex)
+                await downloader.DownloadAndProcess(task, _serviceScopeFactory,
+                    async ex =>
                     {
                         await _botClient.SendTextMessageAsync(new ChatId(task.FromId), "Ошибка, файл не скачан!", replyToMessageId: task.OriginalMessageId);
                         NLog.LogManager.GetCurrentClassLogger().Error(ex);
-                    }
-                }
+                    },
+                    async videoFile =>
+                    {
+                        await NotifyBotDownloadEnded(videoFile, task);
+                    });
             }
             catch (Exception)
             {
@@ -735,7 +707,7 @@ namespace API.FilmDownload
             await _botClient.DeleteMessageAsync(new ChatId(task.FromId), task.QuestionMessageId);
         }
 
-        private async Task NotifyBotDownloadEnded(VideoFile item, DownloadTask task)
+        private async Task NotifyBotDownloadEnded(VideoFile item, TgDownloadTask task)
         {
             var keyboard = new List<List<InlineKeyboardButton>>
                 {
@@ -754,7 +726,7 @@ namespace API.FilmDownload
                     }};
 
             var tgMessage =  await _botClient.SendTextMessageAsync(new ChatId(task.FromId), 
-                $"Закончена закачка {Environment.NewLine}{item.Name} в {item.Series.Name}|{item.Season.Name} {Environment.NewLine}{task.Uri}{Environment.NewLine}Как храним скачанное?{Environment.NewLine}Открыть: {_apiUrl}Files/getFileById?fileId={item.Id}",
+                $"Закончена закачка {Environment.NewLine}{item.Name} в {item.Series.Name}|{item.Season.Name} {Environment.NewLine}{task.Uri}{Environment.NewLine}Как храним скачанное?{Environment.NewLine}Открыть: {item.GetUrl(_config)}",
                 replyToMessageId: task.OriginalMessageId,
                 disableWebPagePreview: true,
                 replyMarkup: new InlineKeyboardMarkup(keyboard));
@@ -831,5 +803,19 @@ namespace API.FilmDownload
             }
         }
 
+        internal async Task SendFile(VideoFile dbFile, ApplicationUser user)
+        {
+            var fInfo = new FileInfo(dbFile.Path);
+            using (var stream = System.IO.File.OpenRead(dbFile.Path))
+            {
+                var file = new Telegram.Bot.Types.InputFiles.InputOnlineFile(stream, $"{dbFile.Name}.{fInfo.Extension}");
+
+                await _botClient.SendDocumentAsync(
+                    caption: dbFile.Name,
+                    chatId: user.TgId,
+                    document: file
+                );
+            }
+        }
     }
 }

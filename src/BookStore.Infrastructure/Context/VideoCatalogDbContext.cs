@@ -112,9 +112,9 @@ namespace FileStore.Infrastructure.Context
                 foreach (var entityEntry in entries)
                 {
                     if (entityEntry.State == EntityState.Added)
-                        ((TrackUpdateCreateTimeEntity)entityEntry.Entity).CreatedDate = DateTime.Now;
+                        ((TrackUpdateCreateTimeEntity)entityEntry.Entity).CreatedDate = DateTime.UtcNow;
 
-                    ((TrackUpdateCreateTimeEntity)entityEntry.Entity).UpdatedDate = DateTime.Now;
+                    ((TrackUpdateCreateTimeEntity)entityEntry.Entity).UpdatedDate = DateTime.UtcNow;
                 }
             }
             catch (Exception ex)

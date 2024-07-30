@@ -414,3 +414,4 @@ MigrationBackup/
 /src/BookStore-SPA/src/environments/environment.prod.ts
 /docs/CNAME
 /docs/CNAME
+/src/BookStore.API/token.json

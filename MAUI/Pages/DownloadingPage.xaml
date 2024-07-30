@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:converters="clr-namespace:MAUI.Converter"
+             xmlns:local="clr-namespace:Shiny.NET"
+             x:Class="Shiny.NET.MainPage">
+    <ContentPage.Resources>
+        <converters:PartsToPercentConverter x:Key="percent" />
+        <converters:SpeedConverter x:Key="speed" />
+    </ContentPage.Resources>
+    
+    <ScrollView>
+        
+    <VerticalStackLayout>
+        <ListView ItemsSource="{Binding Monitor.Transfers}" 
+              HasUnevenRows="True">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <ViewCell>
+                        <VerticalStackLayout>
+
+                                <Label 
+                                    Padding="10"
+                                    FontSize="Large"
+                                    Text="{Binding Identifier }"
+                                    FontAttributes="Bold" />
+
+                                <Label 
+                                    Padding="10"
+                                    FontSize="Medium"
+                                    Text="{Binding PercentComplete, StringFormat='Скачано {0}%', Converter={StaticResource percent}}"
+                                    MaxLines="8"
+                                    FontAttributes="Italic"
+                                    VerticalOptions="End" />
+                                <Label 
+                                    Padding="10"
+                                    FontSize="Medium"
+                                    Text="{Binding BytesPerSecond, StringFormat='Скорость {0} кБайт\сек', Converter={StaticResource speed}}"
+                                    MaxLines="8"
+                                    FontAttributes="Italic"
+                                    VerticalOptions="End" />
+                                <Label 
+                                        Padding="10"
+                                        FontSize="Medium"
+                                        Text="{Binding EstimatedTimeRemaining , StringFormat='Осталось {0} ' }"
+                                        MaxLines="8"
+                                        FontAttributes="Italic"
+                                        VerticalOptions="End" />
+                                <Label 
+                                        Padding="10"
+                                        FontSize="Medium"
+                                        Text="{Binding Status, StringFormat='Статус {0}' }"
+                                        MaxLines="8"
+                                        FontAttributes="Italic"
+                                        VerticalOptions="End" />
+
+                        </VerticalStackLayout>
+
+                    </ViewCell>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+            </ListView>
+            <!--<Button
+                Text="Add https"
+            Clicked="Button_Clicked"
+            />
+            <Button
+                Text="Add http"
+            Clicked="Button_Clicked3"
+            />
+            <Button 
+                Text="Clear"
+            Clicked="Button_Clicked2"
+            />-->
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

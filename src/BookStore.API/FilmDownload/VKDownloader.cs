@@ -24,9 +24,8 @@ namespace API.FilmDownload
 
         private VkApi _api;
 
-        public VKDownloader(AppConfig config)
+        public VKDownloader(AppConfig config) : base(config)
         {
-            _config = config;
         }
 
         private VkApi _GetApi()

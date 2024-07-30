@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
+using Dtos;
 using FileStore.API.Controllers;
-using FileStore.API.Dtos.Series;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using FileStore.Domain.Services;
@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 
 namespace API.Controllers
 {
-
     [Microsoft.AspNetCore.Cors.EnableCors("CorsPolicy")]
     [Route("api/[controller]")]
     [Authorize]

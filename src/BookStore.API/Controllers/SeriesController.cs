@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoMapper;
-using FileStore.API.Dtos.Series;
+using Dtos;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using FileStore.Domain.Services;
@@ -135,35 +135,6 @@ namespace FileStore.API.Controllers
             if (Series == null) return NotFound();
 
             return Ok(_mapper.Map<SeriesResultDto>(Series));
-        }
-
-        [HttpPost]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Add(SeriesAddDto SeriesDto)
-        {
-            if (!ModelState.IsValid) return BadRequest();
-
-            var series = _mapper.Map<Series>(SeriesDto);
-            var SeriesResult = await _SeriesService.Add(series);
-
-            if (SeriesResult == null) return BadRequest();
-
-            return Ok(_mapper.Map<SeriesResultDto>(SeriesResult));
-        }
-
-        [HttpPut("{id:int}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Update(int id, SeriesEditDto SeriesDto)
-        {
-            if (id != SeriesDto.Id) return BadRequest();
-
-            if (!ModelState.IsValid) return BadRequest();
-
-            await _SeriesService.Update(_mapper.Map<Series>(SeriesDto));
-
-            return Ok(SeriesDto);
         }
 
         [HttpDelete("{id:int}")]

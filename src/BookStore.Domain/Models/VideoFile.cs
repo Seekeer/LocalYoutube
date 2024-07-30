@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.IO;
 using System.Linq;
 
 namespace FileStore.Domain.Models
@@ -50,7 +51,6 @@ namespace FileStore.Domain.Models
         public IsOnlineVideoAttribute()
         {
         }
-
     }
 
     public class ApplicationUser : IdentityUser
@@ -239,17 +239,37 @@ namespace FileStore.Domain.Models
         {
             return Name;
         }
+
+        public abstract string GetUrl(AppConfig config);
     }
 
     public class VideoFile : DbFile
     {
         public VideoType Type { get; set; }
         public Quality Quality { get; set; }
+
+        public bool IsOnlineFormat()
+        {
+            return Path.EndsWith("mp4") || Path.EndsWith("webm");
+        }
+
+        public override string GetUrl(AppConfig config)
+        {
+            if(IsOnlineFormat())
+                return $"{config.UIUrl}/#/player?videoId={Id}&videosCount=1&isRandom=false&showDeleteButton=true"; 
+            else
+                return $"vlc://{config.APIUrl}/api/Files/getFileById?fileId={Id}"; 
+        }
     }
 
     public class AudioFile : DbFile
     {
         public string Artist { get; set; }
         public AudioType Type { get; set; }
+
+        public override string GetUrl(AppConfig config)
+        {
+            return $"{config.UIUrl}/#/player?videoId={Id}&videosCount=1&isRandom=false&showDeleteButton=true"; 
+        }
     }
 }
