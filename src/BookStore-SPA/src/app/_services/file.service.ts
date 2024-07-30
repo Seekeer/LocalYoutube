@@ -120,6 +120,9 @@ export class FileService {
     public deleteBook(id: number) {
         return this.http.delete(this.baseUrl + 'files/' + id);
     }
+    public sendToTg(id: number) {
+        return this.http.get(this.baseUrl + 'sendToTG/' + id);
+    }
 
     public getBookById(id): Observable<Book> {
         return this.http.get<Book>(this.baseUrl + 'files/' + id);

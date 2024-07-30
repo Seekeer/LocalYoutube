@@ -69,16 +69,25 @@ namespace MAUI
                         options.MinLevel = LogLevel.Error;
                         options.MaxLevel = LogLevel.Critical;
                     })
-//#if RELEASE
+            //#if RELEASE
+            .AddStreamingFileLogger(
+                options =>
+                {
+                    options.MinLevel = LogLevel.Error;
+                    options.RetainDays = 2;
+                    options.FolderPath = Path.Combine(
+                        FileSystem.CacheDirectory,
+                        "MetroLogs");
+                })
             .AddStreamingFileLogger(
                 options =>
                 {
                     options.RetainDays = 2;
                     options.FolderPath = Path.Combine(
                         FileSystem.CacheDirectory,
-                        "MetroLogs");
+                        "MetroLogsFull");
                 })
-//#endif
+                //#endif
                 .AddConsoleLogger(
                     options =>
                     {
@@ -96,8 +105,8 @@ namespace MAUI
     {
         public static MauiAppBuilder ConfigureServices(this MauiAppBuilder builder)
         {
-            builder.Services.AddHttpTransfers<MyHttpTransferDelegate>();
 #if ANDROID
+            builder.Services.AddHttpTransfers<MyHttpTransferDelegate>();
             // if you want http transfers to also show up as progress notifications, include this
             builder.Services.AddShinyService<Shiny.Net.Http.PerTransferNotificationStrategy>();
 #endif

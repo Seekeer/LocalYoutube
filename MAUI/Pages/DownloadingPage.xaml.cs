@@ -1,6 +1,7 @@
 ﻿using Shiny.Net.Http;
+#if ANDROID
 using static Android.Provider.MediaStore;
-
+#endif
 namespace Shiny.NET
 {
 

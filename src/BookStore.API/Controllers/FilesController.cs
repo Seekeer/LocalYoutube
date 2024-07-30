@@ -62,6 +62,21 @@ namespace FileStore.API.Controllers
             return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files, await GetUserId(_userManager)));
         }
 
+        [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [Route("sendToTG/{videoId}")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> SendToTg(int fileId)
+        {
+            var File = await _fileService.GetById(fileId);
+
+            if (File == null) return NotFound();
+
+            await _tgBot.SendFile(File, await GetUser(_userManager));
+
+            return Ok();
+        }
+
         [HttpGet("{id:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
