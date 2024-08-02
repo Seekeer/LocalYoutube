@@ -1,5 +1,6 @@
 ﻿using Dtos;
 using FileStore.Domain.Dtos;
+using FileStore.Domain.Models;
 using MAUI.ViewModels;
 
 namespace MAUI.Services
@@ -10,6 +11,10 @@ namespace MAUI.Services
         Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFreshAsync();
         Task<PositionDTO> GetPositionAsync(int id);
         Task SetPositionAsync(int id, PositionDTO positionDTO);
+        Task LogoutAsync();
+         Task<IEnumerable<Series>> GetSeries();
+        //IEnumerable<Season> GetSeasons();
+         Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFiles(Series selectedSeries, Season selectedSeason);
     }
 
     public class APIService : IAPIService
@@ -46,7 +51,8 @@ namespace MAUI.Services
         {
             try
             {
-                var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getNew");
+                var list = await _httpClientAuth
+                    .GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getNew");
                 return list;
             }
             catch (Exception ex)
@@ -85,5 +91,44 @@ namespace MAUI.Services
     //};
     //return list1;
 }
+
+        public async Task<IEnumerable<Series>> GetSeries()
+        {
+            try
+            {
+                var list = await _httpClientAuth.GetAsync<IEnumerable<Series>>($"series/getAllByOrigin");
+                return list;
+            }
+            catch (Exception ex)
+            {
+                return new List<Series>();
+            }
+        }
+
+        //public async Task<IEnumerable<Season>> GetSeasons()
+        //{
+        //    try
+        //    {
+        //        var list = await _httpClientAuth.GetAsync<IEnumerable<Season>>($"files/getFilesBySeason?id={selectedSeason.Id}&count={20}&isRandom=false");
+        //        return list;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new List<Season>();
+        //    }
+        //}
+
+        public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFiles(Series selectedSeries, Season selectedSeason)
+        {
+            try
+            {
+                var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getFilesBySeason?id={selectedSeason.Id}&count={20}&isRandom=false");
+                return list;
+            }
+            catch (Exception ex)
+            {
+                return new List<VideoFileResultDtoDownloaded>();
+            }
+        }
     }
 }

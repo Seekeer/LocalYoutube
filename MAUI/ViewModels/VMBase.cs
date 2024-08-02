@@ -23,5 +23,8 @@ namespace MAUI.ViewModels
             var dto = query["dto"] as T;
             _dtoAssign(dto);
         }
+
+        [ObservableProperty]
+        public bool isBusy = false;
     }
 }
