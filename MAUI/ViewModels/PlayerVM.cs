@@ -59,7 +59,7 @@ namespace MAUI.ViewModels
             //using var fileService = GetFileService();
             _mauiDBService.AddFileIfNeeded(File);
 
-            DownloadAndReplace();
+            //DownloadAndReplace();
         }
 
         public async Task InitPosition()

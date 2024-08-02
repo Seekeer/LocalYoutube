@@ -92,6 +92,8 @@
                                     Grid.RowSpan="2"
                                     Padding="5"
                                     Text="Скачать"
+                                    IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"
+                                    Clicked="Button_Clicked"
                                     VerticalOptions="Center"
                                     Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
                                     CommandParameter="{Binding Id}"
