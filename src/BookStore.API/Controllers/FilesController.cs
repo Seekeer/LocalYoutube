@@ -70,7 +70,8 @@ namespace FileStore.API.Controllers
         {
             var File = await _fileService.GetById(fileId);
 
-            if (File == null) return NotFound();
+            if (File == null) 
+                return NotFound();
 
             await _tgBot.SendFile(File, await GetUser(_userManager));
 
