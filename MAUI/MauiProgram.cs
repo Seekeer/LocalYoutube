@@ -46,7 +46,7 @@ namespace MAUI
 
             var app =  builder.Build();
 
-		    //app.SeedDatabase();
+            app.SeedDatabase();
 
             return app;
         }

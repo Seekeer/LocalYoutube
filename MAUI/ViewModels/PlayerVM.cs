@@ -8,6 +8,9 @@ using System.Timers;
 using FileStore.Domain.Dtos;
 using MAUI.Downloading;
 using CommunityToolkit.Maui.Views;
+using Infrastructure;
+using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace MAUI.ViewModels
 {
@@ -35,6 +38,8 @@ namespace MAUI.ViewModels
         [ObservableProperty]
         private TimeSpan _position;
 
+        [ObservableProperty]
+        private IEnumerable<DescriptionRow> _description;
         public Player Page { get; internal set; }
 
         public PlayerVM(IAPIService api, IMAUIService positionRepository, DownloadManager downloadManager)
@@ -44,6 +49,7 @@ namespace MAUI.ViewModels
             _downloadManager = downloadManager;
 
             _dtoAssign = AssignDTO;
+            
         }
 
         private void AssignDTO(VideoFileResultDtoDownloaded dto)
@@ -51,8 +57,11 @@ namespace MAUI.ViewModels
             this.File = dto;
             this.VideoUrl = HttpClientAuth.GetVideoUrlById(dto.Id);
 
+            Description = DescriptionRow.ParseDescription(dto.Description);
+
             ProcessFile();
         }
+
 
         private async Task ProcessFile()
         {
@@ -98,7 +107,6 @@ namespace MAUI.ViewModels
                 var remotePosition = await _api.GetPositionAsync(File.Id);
                 if(remotePosition != null)
                 {
-                    //using var fileService = GetFileService();
                     if (await _mauiDBService.SetPositionAsync(File.Id, remotePosition))
                         await Page.SetPosition(TimeSpan.FromSeconds(remotePosition.Position));
                 }
@@ -152,6 +160,50 @@ namespace MAUI.ViewModels
 
     }
 
+    public class DescriptionRow
+    {
+        public DescriptionRow(string paragraph, string value)
+        {
+            Paragraph = paragraph;
+            Timestamp = value;
+        }
+
+        public string Paragraph { get; }
+        public string Timestamp { get; }
+
+        public TimeSpan GetPosition()
+        {
+            var ts = TimeSpan.Parse(Timestamp);
+            return ts;
+        }
+
+        private int CountInstances(string str, string substring)
+        {
+            return str.Split(substring).Length - 1;
+        }
+
+        public static IEnumerable<DescriptionRow> ParseDescription(string description)
+        {
+            var result = new List<DescriptionRow>();
+            if (string.IsNullOrEmpty(description))
+                return result;
+
+            var paragraphs = description.SplitByNewLine().Select(paragraph =>
+            {
+                var convertedWords = paragraph.Trim().Split(" ");
+                var firstWord = convertedWords[0];
+                var match = Regex.Match(firstWord, @"((\d{1,2}:)?[0-5]?\d:[0-5]?\d)");
+                if (match.Success)
+                    return new DescriptionRow(paragraph.Replace(firstWord, ""), match.Value);
+                else
+                    return new DescriptionRow(paragraph, null);
+
+            }).ToList();
+
+            return paragraphs;
+        }
+    }
+
     public class SeekPosition
     {
         public TimeSpan OriginalPosition { get; set; }
@@ -161,34 +213,50 @@ namespace MAUI.ViewModels
     public partial class SeekPositionCollection : ObservableObject
     {
         [ObservableProperty]
-        private ObservableCollection<SeekPosition> _positions = new ObservableCollection<SeekPosition>();
+        List<SeekPosition> _positions  = new List<SeekPosition>();
 
-        public void TryAddPosition(List<TimeSpan> positions, TimeSpan newPosition)
+        // TODO - for some reason throw Ex on adding. Threads?
+        //[ObservableProperty]
+        //private ObservableCollection<SeekPosition> _positions = new ObservableCollection<SeekPosition>();
+
+        public bool TryAddPosition(List<TimeSpan> positions, TimeSpan newPosition)
         {
-            var diffPositions = positions.Where(x => Math.Abs((newPosition - x).TotalSeconds) > 5);
-            var originalPosition = diffPositions.LastOrDefault();
-
-            if (newPosition == originalPosition)
-                return;
-
-            if (this.Positions.Count > 0)
+            try
             {
 
-                var lastPosition = this.Positions[this.Positions.Count - 1];
-                if (lastPosition.OriginalPosition == originalPosition)
+                var diffPositions = positions.Where(x => Math.Abs((newPosition - x).TotalSeconds) > 5);
+                var originalPosition = diffPositions.LastOrDefault();
+
+                if (newPosition == originalPosition)
+                    return false;
+
+                if (this.Positions.Count > 0)
                 {
-                    lastPosition.NewPosition = newPosition;
-                    return;
+
+                    var lastPosition = this.Positions[this.Positions.Count - 1];
+                    if (lastPosition.OriginalPosition == originalPosition)
+                    {
+                        lastPosition.NewPosition = newPosition;
+                        return false;
+                    }
                 }
+
+                if (this.Positions.Any(x => x.NewPosition == newPosition && x.OriginalPosition == originalPosition))
+                    return false;
+
+                var seekPosition = new SeekPosition();
+                seekPosition.OriginalPosition = originalPosition;
+                seekPosition.NewPosition = newPosition;
+                //this.Positions.Add(seekPosition);
+
+                this.Positions.Insert(0, seekPosition);
+                this.Positions = new List<SeekPosition>(this.Positions);
+                return true;
             }
-
-            if (this.Positions.Any(x => x.NewPosition == newPosition && x.OriginalPosition == originalPosition))
-                return;
-
-            var seekPosition = new SeekPosition();
-            seekPosition.OriginalPosition = originalPosition;
-            seekPosition.NewPosition = newPosition;
-            this.Positions.Add(seekPosition);
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
     } 
 }

@@ -16,7 +16,7 @@ public partial class FileListView : ContentView
     private void Button_Clicked(object sender, EventArgs e)
     {
         var button = (Button)sender;
-        var stack = (VerticalStackLayout)button.Parent;
+        var stack = (Layout)button.Parent;
         stack.Remove(button);
     }
 }

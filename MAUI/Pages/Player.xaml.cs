@@ -16,7 +16,6 @@ public partial class Player : ContentPage
 		InitializeComponent();
 
         this.NavigatedFrom += Player_NavigatedFrom;
-        this.
         BindingContext = vm;
         vm.Page = this;
     }
@@ -35,6 +34,9 @@ public partial class Player : ContentPage
 
     internal async Task SetPosition(TimeSpan time)
     {
+        if (time == TimeSpan.Zero)
+            return;
+
         var toast = Toast.Make($"Navigate to {viewModel.VideoUrl}", ToastDuration.Short, 14);
         //var toast = Toast.Make($"Navigate to {time.TotalSeconds}", ToastDuration.Short, 14);
         await toast.Show();
@@ -53,17 +55,35 @@ public partial class Player : ContentPage
 
     private PlayerVM viewModel => BindingContext as PlayerVM;
 
-    private void OnPositionChanged(object sender, 
-        CommunityToolkit.Maui.Core.Primitives.MediaPositionChangedEventArgs e)
+    private void OnPositionChanged(object sender, CommunityToolkit.Maui.Core.Primitives.MediaPositionChangedEventArgs e)
     {
-        
-
+        var toast = Toast.Make($"OnPositionChanged {e.Position}", ToastDuration.Short, 14);
         _lastPosition.Add(e.Position);
     }
 
     private void MediaElement_SeekCompleted(object sender, EventArgs e)
     {
-        viewModel.SeekPositionCollection.TryAddPosition(_lastPosition, MediaElement.Position);
+        var toast = Toast.Make($"MediaElement_SeekCompleted {MediaElement.Position}", ToastDuration.Short, 14);
+        if(viewModel.SeekPositionCollection.TryAddPosition(_lastPosition, MediaElement.Position))
+        {
+            var snackbarOptions = new SnackbarOptions
+            {
+                //BackgroundColor = Colors.Red,
+                //TextColor = Colors.Green,
+                ActionButtonTextColor = Colors.Purple,
+                CornerRadius = new CornerRadius(10),
+                //Font = Font.SystemFontOfSize(14),
+                //ActionButtonFont = Font.SystemFontOfSize(14),
+                //CharacterSpacing = 0.5
+            };
+
+            string text = $"Вы переместились на {MediaElement.Position}";
+            string actionButtonText = "Вернуться обратно";
+            Action action = async () => await SetPosition(viewModel.SeekPositionCollection.Positions.First().OriginalPosition);
+            TimeSpan duration = TimeSpan.FromSeconds(8);
+
+            Snackbar.Make(text, action, actionButtonText, duration, snackbarOptions).Show();
+        }
     }
 
     private void OnMediaOpened(object sender, EventArgs e)
@@ -86,9 +106,6 @@ public partial class Player : ContentPage
     {
         var label = sender as Label;
         var ts = (TimeSpan)label.BindingContext;
-
-        if (ts == TimeSpan.Zero)
-            return;
 
         SetPosition(ts);
     }
@@ -113,4 +130,11 @@ public partial class Player : ContentPage
         Toast.Make($"Player_NavigatingFrom", ToastDuration.Long, 20).Show();
     }
 
+    private void OnTimeClicked(object sender, TappedEventArgs e)
+    {
+        var label = sender as Label;
+        var descriptionRow = (DescriptionRow)label.BindingContext;
+
+        SetPosition(descriptionRow.GetPosition());
+    }
 }
