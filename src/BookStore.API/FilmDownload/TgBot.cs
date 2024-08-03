@@ -11,7 +11,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
-using Telegram.Bot.Extensions.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using Tg = Telegram.Bot.Types.Enums;
@@ -31,9 +30,9 @@ using static API.FilmDownload.TgBot;
 using QBittorrent.Client;
 using Google.Apis.CustomSearchAPI.v1.Data;
 using API.Resources;
-using YoutubeExplode.Common;
 using NLog.Web.LayoutRenderers;
 using System.Xml.Linq;
+using Telegram.Bot.Polling;
 //using Polly;
 
 namespace API.FilmDownload
@@ -361,7 +360,7 @@ namespace API.FilmDownload
                 try
                 {
                     await _botClient.SendTextMessageAsync(new ChatId(userId), $"Ошибка при обработке торрента",
-                        null, null, null, null, null, messageId);
+                        replyToMessageId: messageId);
                 }
                 catch (Exception)
                 {
@@ -398,7 +397,7 @@ namespace API.FilmDownload
 
             using (var stream = System.IO.File.OpenRead(@"Assets\bat.zip"))
             {
-                var file = new Telegram.Bot.Types.InputFiles.InputOnlineFile(stream, "bat.zip");
+                var file = new InputFileStream(stream, "bat.zip");
 
                 await _botClient.SendDocumentAsync(
                     caption: message,
@@ -472,7 +471,7 @@ namespace API.FilmDownload
                     var guid = Guid.NewGuid().ToString();
                     keyboard.Add(new InlineKeyboardButton($"Использовать эту обложку") { CallbackData = CommandParser.GetMessageFromData(CommandType.FixCover, guid.ToString()) });
                     var tgMessage = await _botClient.SendPhotoAsync(new ChatId(tgAccountId),
-                        new Telegram.Bot.Types.InputFiles.InputOnlineFile(image.Url),
+                        new InputFileUrl(image.Url),
                         caption: $"{file.Name} {file.VideoFileExtendedInfo.Year} высота {image.Bitmap.Height} px", replyMarkup: new InlineKeyboardMarkup(keyboard));
 
                     image.File = file;
@@ -808,7 +807,7 @@ namespace API.FilmDownload
             var fInfo = new FileInfo(dbFile.Path);
             using (var stream = System.IO.File.OpenRead(dbFile.Path))
             {
-                var file = new Telegram.Bot.Types.InputFiles.InputOnlineFile(stream, $"{dbFile.Name}.{fInfo.Extension}");
+                var file = new InputFileStream(stream, $"{dbFile.Name}.{fInfo.Extension}");
 
                 await _botClient.SendDocumentAsync(
                     caption: dbFile.Name,

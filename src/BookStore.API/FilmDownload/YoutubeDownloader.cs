@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using VkNet.Exception;
 using YoutubeExplode;
@@ -26,20 +27,25 @@ namespace API.FilmDownload
 
         public YoutubeDownloader(AppConfig config) : base(config)
         {
+            _useProxy = true;
         }
 
         protected override async Task<DownloadInfo> GetVideoInfo(string url, string rootDownloadFolder)
         {
             var result = new DownloadInfo();
-            var youtube = new YoutubeClient();
 
-            // You can specify both video ID or URL
-            var video = await youtube.Videos.GetAsync(url);
-            result.ChannelName = video.Author.ChannelTitle; // "Blender"
+            using (var httpClient = ProxyManager.GetHttpClientWithProxy())
+            {
+                var youtube = new YoutubeClient(httpClient);
 
-            var file = await GetFileFromVideo(video, rootDownloadFolder, result.ChannelName, youtube);
-            result.Records.Add(video.Url, file);
-            return result;
+                // You can specify both video ID or URL
+                var video = await youtube.Videos.GetAsync(url);
+                result.ChannelName = video.Author.ChannelTitle; // "Blender"
+
+                var file = await GetFileFromVideo(video, rootDownloadFolder, result.ChannelName, youtube);
+                result.Records.Add(video.Url, file);
+                return result;
+            }
         }
 
         private static async Task<VideoFile> GetFileFromVideo(IVideo video, string rootDownloadFolder,string channelName, YoutubeClient youtube)
@@ -78,19 +84,22 @@ namespace API.FilmDownload
 
         protected override async Task<DownloadInfo> GetPlaylistInfo(string url, string rootDownloadFolder)
         {
-            var youtube = new YoutubeClient();
-            var result = new DownloadInfo();
+            using (var httpClient = ProxyManager.GetHttpClientWithProxy())
+            {
+                var youtube = new YoutubeClient(httpClient);
+                var result = new DownloadInfo();
 
-            var playlist = await youtube.Playlists.GetAsync(url);
+                var playlist = await youtube.Playlists.GetAsync(url);
 
-            result.ChannelName = playlist.Title;
+                result.ChannelName = playlist.Title;
 
-            // Get all playlist videos
-            var videos = await youtube.Playlists.GetVideosAsync(url);
-            foreach (var video in videos)
-                result.Records.Add(video.Url, await GetFileFromVideo(video, rootDownloadFolder, playlist.Author.ChannelTitle, youtube));
+                // Get all playlist videos
+                var videos = await youtube.Playlists.GetVideosAsync(url);
+                foreach (var video in videos)
+                    result.Records.Add(video.Url, await GetFileFromVideo(video, rootDownloadFolder, playlist.Author.ChannelTitle, youtube));
 
-            return result;
+                return result;
+            }
         }
 
         protected override bool IsPlaylist(string url)

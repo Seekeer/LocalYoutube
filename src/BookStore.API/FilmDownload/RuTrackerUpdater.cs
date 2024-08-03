@@ -1,5 +1,6 @@
 ﻿using AngleSharp.Html.Parser;
 using AngleSharp.Io;
+using API.FilmDownload;
 using API.TG;
 using FileStore.API;
 using FileStore.Domain;
@@ -52,28 +53,8 @@ namespace API.Controllers
         public async Task Init()
         {
             _qclient = new QBittorrentClient(new Uri(_config.QBittorrentWebUI));
+            _httpClient = ProxyManager.GetHttpClientWithProxy();
 
-            _proxy = new WebProxy
-            {
-                Address = new Uri($"http://serv.bitterman.ru:3128"),
-                BypassProxyOnLocal = false,
-                UseDefaultCredentials = false,
-
-                // *** These creds are given to the proxy server, not the web server ***
-                Credentials = new NetworkCredential(
-                userName: "timonin",
-                password: "BzNwuL4hrLgs")
-            };
-
-            // Now create a client handler which uses that proxy
-            var httpClientHandler = new HttpClientHandler
-            {
-                Proxy = _proxy,
-                UseProxy = true,
-            };
-
-            // Finally, create the HTTP client object
-            _httpClient = new HttpClient(handler: httpClientHandler, disposeHandler: true);
             RuTrackerClientEnvironment env = new RuTrackerClientEnvironment(_httpClient, new Uri(@"https://rutracker.org"));
 
             try
