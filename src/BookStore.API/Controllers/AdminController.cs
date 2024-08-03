@@ -23,6 +23,7 @@ using Microsoft.Identity.Client;
 using Infrastructure.Scheduler;
 using FileStore.Infrastructure.Repositories;
 using FileStore.Domain.Interfaces;
+using System.Collections.Concurrent;
 
 namespace FileStore.API.Controllers
 {
@@ -53,6 +54,10 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> DoAction()
         {
+            //await CheckWrongPaths();
+            await MoveDownloadedJob();
+
+            //var dbUpdater = new DbUpdateManager(_db);
             //var files = await _observer.GetUpdates();
 
             //await RemoveFile(55625, true, false);
@@ -189,6 +194,33 @@ namespace FileStore.API.Controllers
 
             //await RestoreFiles(deleted);
         }
+        [HttpGet]
+        [Route("checkWrongPaths")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task CheckWrongPaths()
+        {
+            var files = _db.Files.ToList();
+
+            var concurrentQueue = new ConcurrentBag<string>();
+            Parallel.ForEach(files, file =>
+            {
+                if (!System.IO.File.Exists(file.Path))
+                    concurrentQueue.Add(file.Path);
+            });
+
+            var filesIds = new List<int>();
+            foreach (var path in concurrentQueue)
+            {
+                var cleared = path.Replace("Z:\\VideoServer\\", "");
+
+                var filesDup = files.Where(x => x.Path.Contains(cleared)).ToList();
+
+                //filesDup.ForEach(async x => await RemoveFile(x.Id, false, false));
+                filesIds.AddRange(filesDup.Select(x => x.Id));
+            }
+
+            var ids = string.Join(Environment.NewLine, filesIds);
+        }
 
         private async Task RestoreFiles(List<DbFile> files)
         {
@@ -204,6 +236,18 @@ namespace FileStore.API.Controllers
                 else
                     await downloader.Download(file.VideoFileExtendedInfo.ExternalLink, file.Path);
             }
+        }
+
+        [HttpGet]
+        [Route("moveDownloadedJob")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveDownloadedJob()
+        {
+
+            var job = new MoveDownloadedJob(_serviceScopeFactory.CreateScope().ServiceProvider, _config);
+            await job.Execute(null);
+
+            return Ok();
         }
 
         [HttpGet]

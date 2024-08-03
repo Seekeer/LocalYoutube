@@ -1,6 +1,7 @@
 ﻿using API.FilmDownload;
 using FileStore.API;
 using FileStore.Domain;
+using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TL;
 using WTelegram;
+using YoutubeExplode.Channels;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace API.TG
@@ -22,9 +24,10 @@ namespace API.TG
     public interface ITgAPIClient
     {
         public Task ImportMessages(DateTime startDate, DateTime finihsDate);
+        Task SendFile(VideoFile dbFile, ApplicationUser user);
     }
 
-    internal class TgAPIClient : ITgAPIClient
+    internal class TgAPIClient : ITgAPIClient, IDisposable
     {
         public TgAPIClient(IMessageProcessor messageProcessor, AppConfig config, VideoCatalogDbContext db)
         {
@@ -62,6 +65,21 @@ namespace API.TG
                 _messageProcessor.ClearAll();
             }
 
+        }
+
+        public async Task SendFile(VideoFile dbFile, ApplicationUser user)
+        {
+            var fInfo = new FileInfo(dbFile.Path);
+            var my = await _client.LoginUserIfNeeded();
+
+            var chats = await _client.Messages_GetAllDialogs();
+            var peer = chats.users[user.TgId]; // the chat we want
+
+            if(peer != null)
+            {
+                var file = await _client.UploadFileAsync(dbFile.Path);
+                await _client.SendMediaAsync(peer, $"{dbFile.Name}.{fInfo.Extension}", file, "video/mp4");
+            }
         }
 
         public async Task ImportMessages(DateTime startDate, DateTime finihsDate)
@@ -434,5 +452,9 @@ namespace API.TG
         private static string Peer(Peer peer) => peer is null ? null : peer is PeerUser user ? User(user.user_id)
             : peer is PeerChat or PeerChannel ? Chat(peer) : $"Peer {peer.ID}";
 
+        public void Dispose()
+        {
+            _client.Dispose();
+        }
     }
 }

@@ -802,19 +802,5 @@ namespace API.FilmDownload
             }
         }
 
-        internal async Task SendFile(VideoFile dbFile, ApplicationUser user)
-        {
-            var fInfo = new FileInfo(dbFile.Path);
-            using (var stream = System.IO.File.OpenRead(dbFile.Path))
-            {
-                var file = new InputFileStream(stream, $"{dbFile.Name}.{fInfo.Extension}");
-
-                await _botClient.SendDocumentAsync(
-                    caption: dbFile.Name,
-                    chatId: user.TgId,
-                    document: file
-                );
-            }
-        }
     }
 }

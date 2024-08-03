@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TL;
+using VkNet;
 
 namespace FileStore.API.Controllers
 {
@@ -34,14 +35,16 @@ namespace FileStore.API.Controllers
         private readonly IRuTrackerUpdater _ruTrackerUpdater;
         private readonly ISeriesService _seriesService;
         private readonly TgBot _tgBot;
+        private readonly ITgAPIClient _tgAPi;
         private readonly static Dictionary<string, int> _randomFileDict = new Dictionary<string, int>();
 
         public FilesController(UserManager<ApplicationUser> userManager, IMapper mapper, IVideoFileService FileService, 
-            ISeriesService seriesService, IRuTrackerUpdater ruTrackerUpdater, TgBot tgBot) : base(userManager, mapper, FileService)
+            ISeriesService seriesService, IRuTrackerUpdater ruTrackerUpdater, TgBot tgBot, ITgAPIClient tgAPi) : base(userManager, mapper, FileService)
         {
             _ruTrackerUpdater = ruTrackerUpdater;
             _seriesService = seriesService;
             _tgBot = tgBot;
+            _tgAPi = tgAPi;
         }
 
         //[AllowAnonymous]
@@ -64,7 +67,7 @@ namespace FileStore.API.Controllers
 
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [Route("sendToTG/{videoId}")]
+        [Route("sendToTG/{fileId}")]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> SendToTg(int fileId)
         {
@@ -73,7 +76,7 @@ namespace FileStore.API.Controllers
             if (File == null) 
                 return NotFound();
 
-            await _tgBot.SendFile(File, await GetUser(_userManager));
+            await _tgAPi.SendFile(File, await GetUser(_userManager));
 
             return Ok();
         }
