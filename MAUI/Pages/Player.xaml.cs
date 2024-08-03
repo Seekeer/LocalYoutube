@@ -16,13 +16,16 @@ public partial class Player : ContentPage
 		InitializeComponent();
 
         this.NavigatedFrom += Player_NavigatedFrom;
+        this.
         BindingContext = vm;
         vm.Page = this;
     }
+
     private void Player_NavigatedFrom(object? sender, NavigatedFromEventArgs e)
     {
-        MediaElement.Dispose();
         MediaElement.Stop();
+        MediaElement.Dispose();
+        Toast.Make($"Player_NavigatedFrom", ToastDuration.Long, 20).Show();
     }
 
     internal TimeSpan GetCurrentPosition()
@@ -89,4 +92,25 @@ public partial class Player : ContentPage
 
         SetPosition(ts);
     }
+
+    private void MediaElement_MediaFailed(object sender, CommunityToolkit.Maui.Core.Primitives.MediaFailedEventArgs e)
+    {
+        Toast.Make($"MediaElement_MediaFailed", ToastDuration.Long, 20).Show();
+    }
+
+    private void MediaElement_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        Toast.Make($"MediaElement_PropertyChanged", ToastDuration.Long, 20).Show();
+    }
+
+    private void MediaElement_Unloaded(object sender, EventArgs e)
+    {
+        Toast.Make($"MediaElement_Unloaded", ToastDuration.Long, 20).Show();
+
+    }
+    private void Player_NavigatingFrom(object? sender, NavigatingFromEventArgs e)
+    {
+        Toast.Make($"Player_NavigatingFrom", ToastDuration.Long, 20).Show();
+    }
+
 }
