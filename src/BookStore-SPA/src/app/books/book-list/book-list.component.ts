@@ -409,14 +409,18 @@ watchedChanged(event){
   this.showFilteredBooks();
 }
 
-  public deleteFilm(content,film: Book){
-    let that = this;
-    if (window.confirm("Фильм будет удален из базы и с диска?")) {
-        this.service.deleteBook(film.id).subscribe(x => that.displayListForType());
-    }
+public deleteFilm(content,film: Book){
+  let that = this;
+  if (window.confirm("Фильм будет удален из базы и с диска?")) {
+      this.service.deleteBook(film.id).subscribe(x => that.displayListForType());
+  }
 
-    // this.modalService.open(content, { centered: true });
-    // this.toastr.warning('Выберите название файла или сериала');
+  // this.modalService.open(content, { centered: true });
+  // this.toastr.warning('Выберите название файла или сериала');
+}
+
+public sendToTG(film: Book){
+  this.service.sendToTg(film.id).subscribe();
 }
 
   showBooks(books: Book[]) {

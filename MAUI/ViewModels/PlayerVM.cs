@@ -59,7 +59,7 @@ namespace MAUI.ViewModels
             //using var fileService = GetFileService();
             _mauiDBService.AddFileIfNeeded(File);
 
-            DownloadAndReplace();
+            //DownloadAndReplace();
         }
 
         public async Task InitPosition()
@@ -117,14 +117,14 @@ namespace MAUI.ViewModels
         {
             System.Timers.Timer aTimer = new System.Timers.Timer();
             aTimer.Elapsed += new ElapsedEventHandler((_,__) => UpdatePositionByControl());
-            aTimer.Interval = 1000;
+            aTimer.Interval = 2000;
             aTimer.Enabled = true;
         }
 
         public void UpdatePositionByControl()
         {
             var position = Page.GetCurrentPosition().TotalSeconds;
-            if (position < 5)
+            if (position < 15)
                 return;
 
             var positionDTO = new PositionDTO { Position = position };

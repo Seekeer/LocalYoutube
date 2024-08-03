@@ -8,7 +8,7 @@ using System.Collections.ObjectModel;
 
 namespace MAUI.ViewModels
 {
-    public partial class ListVM :  VMBase<IEnumerable<VideoFileResultDtoDownloaded>>
+    public partial class ListVM : VMBase<IEnumerable<VideoFileResultDtoDownloaded>>
     {
         public ListVM(INavigationService navigationService, DownloadManager downloadManager)
         {

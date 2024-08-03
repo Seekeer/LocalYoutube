@@ -15,7 +15,15 @@ using System.Threading.Tasks;
 
 namespace MAUI.Downloading
 {
-    class DownloaderMaui 
+    interface IDownloader
+    {
+        event AsyncCompletedEventHandler? DownloadFileCompleted;
+        event DownloadProgressChangedEventHandler? DownloadProgressChanged;
+
+        Task StartDownload(string fileWriteTo, string url);
+    }
+
+    class DownloaderMaui : IDownloader
     {
         private readonly IHttpTransferManager _transferManager;
         private string _filePath;
@@ -68,7 +76,8 @@ namespace MAUI.Downloading
         }
     }
 
-    public class DownloaderBase 
+
+    public class DownloaderBase : IDownloader
     {
         public event DownloadProgressChangedEventHandler? DownloadProgressChanged;
         public event AsyncCompletedEventHandler? DownloadFileCompleted;
@@ -96,7 +105,7 @@ namespace MAUI.Downloading
             this.DownloadFileCompleted?.Invoke(this, e);
         }
 
-        static HttpClient Client = new HttpClient((new Xamarin.Android.Net.AndroidMessageHandler()));
+        static HttpClient Client = new HttpClient();
 
         public static void UseCustomHttpClient(HttpClient client)
         {

@@ -46,7 +46,7 @@ namespace MAUI
 
             var app =  builder.Build();
 
-		    app.SeedDatabase();
+		    //app.SeedDatabase();
 
             return app;
         }
@@ -173,6 +173,7 @@ namespace MAUI
             // pages that are navigated to
             builder.Services.AddTransient<ButtonsPage>();
             builder.Services.AddTransient<ListPage>();
+            builder.Services.AddTransient<SeriesPage>();
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<Player>();
 
@@ -186,6 +187,7 @@ namespace MAUI
             builder.Services.AddTransient<LoginVM>();
             builder.Services.AddTransient<ButtonsVM>();
             builder.Services.AddTransient<ListVM>();
+            builder.Services.AddTransient<SeriesVM>();
             builder.Services.AddTransient<PlayerVM>();
             builder.Services.AddTransient<TESTMainViewModel>();
             //builder.Services.AddTransient<EpisodeDetailViewModel>();

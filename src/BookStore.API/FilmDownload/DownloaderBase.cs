@@ -128,6 +128,7 @@ namespace API.FilmDownload
         }
 
         protected AppConfig _config;
+        protected bool _useProxy;
         public abstract DownloadType DownloadType { get; }
         public abstract bool IsVideoPropertiesFilled { get;}
 
@@ -192,9 +193,11 @@ namespace API.FilmDownload
             var fileName = fInfo.FullName.Replace(fInfo.Extension, "");
 
             var downloadUtilitiesScript = File.ReadAllText(@"Assets\downloadScript.txt");
+            //var proxyStr = "";
+            var proxyStr = !_useProxy ? "" : $"--proxy {ProxyManager.GetProxyString()}";
             var downloadVideoScript = @$"
             $ytdlp = 'yt-dlp.exe'
-            $cmd = '-f ""bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"" --merge-output-format mp4 {url} -o """"{fileName}""""'
+            $cmd = '-f ""bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"" {proxyStr} --merge-output-format mp4 {url} -o """"{fileName}""""'
             Start-Process -FilePath $ytdlp -ArgumentList $cmd -Wait 
 ";
 

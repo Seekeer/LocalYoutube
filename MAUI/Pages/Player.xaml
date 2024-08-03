@@ -21,12 +21,18 @@
                 ShouldAutoPlay="True"
                 MediaOpened="OnMediaOpened"
                 HeightRequest="300"
-                Volume="0"
-                StateChanged="OnStateChanged"
+                
                 MetadataArtworkUrl="{Binding File.Id, Converter={StaticResource idToImageUrl}}"
                 MetadataTitle="{Binding File.Name}"
             />
                 <!--
+                StateChanged="OnStateChanged"
+    MediaFailed="MediaElement_MediaFailed"
+PropertyChanged="MediaElement_PropertyChanged"
+Unloaded="MediaElement_Unloaded"
+            
+            
+                Volume="0"
                 MetadataArtist="Blender Foundation"
             
         MediaEnded="OnMediaEnded"

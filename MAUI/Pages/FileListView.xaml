@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:converters="clr-namespace:MAUI.Converter"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="MAUI.Pages.FileListView">
+    <ContentView.Resources>
+        <converters:IdToImageUrlConverter x:Key="idToImageUrl" />
+        <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+    </ContentView.Resources>
+    <ListView ItemsSource="{Binding Files}" ItemTapped="ListView_ItemTapped" 
+              HasUnevenRows="True">
+        <ListView.ItemTemplate>
+            <DataTemplate>
+                <ViewCell>
+                    <VerticalStackLayout>
+
+                        <VerticalStackLayout IsVisible="{Binding BindingContext.IsVerticalOrientation, Source={RelativeSource AncestorType={x:Type ListView}}}" >
+                            <Image
+                                Source="{Binding Id, Converter={StaticResource idToImageUrl}}"
+                                Aspect="AspectFit"
+                                SemanticProperties.Description="dot net bot in a race car number eight" />
+
+                            <Label 
+                                    Padding="10"
+                                    FontSize="Large"
+                                    Text="{Binding Name}"
+                                    FontAttributes="Bold" />
+
+                            <Label 
+                                    Padding="10"
+                                    FontSize="Medium"
+                                    Text="{Binding Description}"
+                                    MaxLines="8"
+                                    FontAttributes="Italic"
+                                    VerticalOptions="End" />
+
+                            <Button 
+                                    Text="Скачать"
+                                    IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"
+                                    VerticalOptions="Center"
+                                    Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                    Clicked="Button_Clicked"
+                                    CommandParameter="{Binding Id}"
+                                    FontAttributes="Bold" />
+
+                            <Button 
+                                    BackgroundColor="Red"
+                                    Text="Удалить"
+                                    IsVisible="{Binding IsDownloaded}"
+                                    VerticalOptions="Center"
+                                    Command="{Binding Path=BindingContext.DeleteDownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                    CommandParameter="{Binding Id}"
+                                    FontAttributes="Bold" />
+                        </VerticalStackLayout>
+
+                        <Grid Margin="5" IsVisible="{Binding BindingContext.IsPortraitOrientation, Source={RelativeSource AncestorType={x:Type ListView}}}" >
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="6*" />
+                                <ColumnDefinition Width="6*" />
+                                <ColumnDefinition Width="2*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Image
+                                Grid.RowSpan="2"
+                                Source="{Binding Id, Converter={StaticResource idToImageUrl}}"
+                                HeightRequest="300"
+                                Aspect="AspectFit"
+                                SemanticProperties.Description="dot net bot in a race car number eight" />
+
+                            <VerticalStackLayout  Grid.Column="1" Padding="10">
+                                <Label Grid.Column="1"
+                                    FontSize="Large"
+                                    Text="{Binding Name}"
+                                    FontAttributes="Bold" />
+
+                                <Label Grid.Row="1"
+                                       Padding="0,10,0,0"
+                                    FontSize="Medium"
+                                    Grid.Column="1"
+                                    Text="{Binding Description}"
+                                    MaxLines="8"
+                                    FontAttributes="Italic"
+                                    VerticalOptions="End" />
+                            </VerticalStackLayout>
+
+                            <Button Grid.Column="2"
+                                    Grid.RowSpan="2"
+                                    Padding="5"
+                                    Text="Скачать"
+                                    IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"
+                                    Clicked="Button_Clicked"
+                                    VerticalOptions="Center"
+                                    Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                    CommandParameter="{Binding Id}"
+                                    FontAttributes="Bold" />
+                        </Grid>
+                    </VerticalStackLayout>
+
+                </ViewCell>
+            </DataTemplate>
+        </ListView.ItemTemplate>
+    </ListView>
+</ContentView>

@@ -54,9 +54,11 @@ namespace MAUI.ViewModels
         [RelayCommand(CanExecute = nameof(InternetEnabled))]
         public async Task ShowHistory()
         {
+            IsBusy = true;
             var dtos = await _api.GetHistoryAsync();
 
             await _navigationService.NavigateAsync(nameof(ListPage), dtos);
+            IsBusy = false;
         }
 
         [RelayCommand]
@@ -66,7 +68,7 @@ namespace MAUI.ViewModels
             await _navigationService.NavigateAsync(nameof(ListPage), dtos);
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(InternetEnabled))]
         public async Task ShowDownloading()
         {
             await _navigationService.NavigateAsync(nameof(MainPage), "");
@@ -75,17 +77,26 @@ namespace MAUI.ViewModels
         [RelayCommand(CanExecute = nameof(InternetEnabled))]
         public async Task ShowFresh()
         {
+            IsBusy = true;
+
             var dtos = await _api.GetFreshAsync();
 
             await _navigationService.NavigateAsync(nameof(ListPage), dtos);
+            IsBusy = false;
+        }
+
+        //[RelayCommand(CanExecute = nameof(InternetEnabled))]
+        [RelayCommand]
+        public async Task ShowSeries()
+        {
+            var dtos = await _videoFileRepository.GetFiles();
+            await _navigationService.NavigateAsync(nameof(SeriesPage), dtos);
         }
 
         [RelayCommand]
         public async Task Logout()
         {
-            var dtos = await _api.GetFreshAsync();
-
-            await _navigationService.NavigateAsync(nameof(ListPage), dtos);
+            await _api.LogoutAsync();
         }
 
     }

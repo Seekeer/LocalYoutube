@@ -18,6 +18,16 @@
     </ContentPage.Resources>
 
     <VerticalStackLayout>
+
+        <ActivityIndicator 
+                       IsVisible="{Binding IsBusy}"
+                       IsRunning="{Binding IsBusy}"
+                       Color="Red"/>
+        <Button
+            Text="Серии"
+            Background="Red"
+            Command="{Binding ShowSeriesCommand}"
+            />
         <Label 
             FontSize="Large"
             IsVisible="{Binding InternetDisabled}" 
