@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Dtos;
 using MAUI.Pages;
 using MAUI.Services;
 
@@ -38,7 +39,13 @@ namespace MAUI.ViewModels
 
         internal async Task OnNavigated()
         {
-            await TryToLogin();
+            //await TryToLogin();
+            await _navigationService.NavigateAsync(nameof(Player), new VideoFileResultDto
+            {
+                CoverURL = "http://80.68.9.86:55/api/Files/getFileById?fileId=54609"
+                //CoverURL = $"{HttpClientAuth.BASE_API_URL}Files/getFileById?fileId={id}"
+            });
+
         }
 
         private async Task TryToLogin()

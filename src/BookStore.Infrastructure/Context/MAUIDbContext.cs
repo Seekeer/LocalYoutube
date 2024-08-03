@@ -28,35 +28,35 @@ namespace Infrastructure.Context
         }
     }
 
-    public class DbContextMigrationFactory : IDesignTimeDbContextFactory<MAUIDbContext>
-    {
-        private readonly IFilePathProvider dbPathProvider;
+    //public class DbContextMigrationFactory : IDesignTimeDbContextFactory<MAUIDbContext>
+    //{
+    //    private readonly IFilePathProvider dbPathProvider;
 
-        public DbContextMigrationFactory() : this(new DesignTimePathProvider())
-        {
-        }
+    //    public DbContextMigrationFactory() : this(new DesignTimePathProvider())
+    //    {
+    //    }
 
-        private DbContextMigrationFactory(IFilePathProvider filePathProvider)
-        {
-            this.dbPathProvider = filePathProvider;
-        }
+    //    private DbContextMigrationFactory(IFilePathProvider filePathProvider)
+    //    {
+    //        this.dbPathProvider = filePathProvider;
+    //    }
 
-        public MAUIDbContext CreateDbContext(string[] args)
-        {
-            var builder = new DbContextOptionsBuilder<MAUIDbContext>();
+    //    public MAUIDbContext CreateDbContext(string[] args)
+    //    {
+    //        var builder = new DbContextOptionsBuilder<MAUIDbContext>();
 
-            var dbPath = dbPathProvider.GetFilePath();
-            // This filename can be anything
-            builder.UseSqlite($"FileName={dbPath}");
+    //        var dbPath = dbPathProvider.GetFilePath();
+    //        // This filename can be anything
+    //        builder.UseSqlite($"FileName={dbPath}");
 
-            return new MAUIDbContext(builder.Options);
-        }
-    }
+    //        return new MAUIDbContext(builder.Options);
+    //    }
+    //}
 
     // PM> cd .\src\BookStore.Infrastructure\
     // PM> dotnet ef migrations add InitialCreate --context MAUIDbContext --output-dir MigrationsSqlite
-    public class MAUIDbContext : VideoCatalogDbContext
-    {
-        public MAUIDbContext(DbContextOptions options) : base(options) { }
-    }
+    //public class MAUIDbContext : VideoCatalogDbContext
+    //{
+    //    public MAUIDbContext(DbContextOptions options) : base(options) { }
+    //}
 }

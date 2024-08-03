@@ -48,10 +48,15 @@ namespace MAUI.ViewModels
 
         private void AssignDTO(VideoFileResultDtoDownloaded dto)
         {
+            dto = new VideoFileResultDtoDownloaded
+            {
+                CoverURL = "http://80.68.9.86:55/api/Files/getFileById?fileId=54609"
+                //CoverURL = $"{HttpClientAuth.BASE_API_URL}Files/getFileById?fileId={id}"
+            };
             this.File = dto;
-            this.VideoUrl = HttpClientAuth.GetVideoUrlById(dto.Id);
+            this.VideoUrl = dto.CoverURL;
 
-            ProcessFile();
+            //ProcessFile();
         }
 
         private async Task ProcessFile()
@@ -64,8 +69,8 @@ namespace MAUI.ViewModels
 
         public async Task InitPosition()
         {
-            await UpdatePosition();
-            StartPositionUpdateTimer();
+            //await UpdatePosition();
+            //StartPositionUpdateTimer();
 
             //Task.Delay(TimeSpan.FromMilliseconds(10000))
             //    .ContinueWith(async task => 

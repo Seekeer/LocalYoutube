@@ -19,16 +19,17 @@ namespace MAUI.Services
 
     public class MAUIService : IMAUIService
     {
-        private readonly MAUIDbContext _db;
+        //private readonly MAUIDbContext _db;
 
-        public MAUIService(MAUIDbContext dbContext) {
+        public MAUIService(/*MAUIDbContext dbContext*/) {
 
-            _db = dbContext;
+            //_db = dbContext;
         }
 
         public FileUserInfo GetInfoById(int id)
         {
-            return _db.FilesUserInfo.AsNoTracking().FirstOrDefault(x => x.DbFile.Id == id);
+            return null;
+            //return _db.FilesUserInfo.AsNoTracking().FirstOrDefault(x => x.DbFile.Id == id);
         }
 
         public void AddFileIfNeeded(VideoFileResultDto file)

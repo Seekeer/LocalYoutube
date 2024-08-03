@@ -123,15 +123,15 @@ namespace MAUI
             builder.Services.AddTransient<IVideoFileService, VideoFileService>();
             builder.Services.AddTransient<IVideoFileRepository, VideoFileRepository>();
             builder.Services.AddTransient<ISeriesRepository, SeriesRepository>();
-            builder.Services.AddTransient<IDbFileRepository, DbFileRepository>();
-            builder.Services.AddTransient<VideoCatalogDbContext, MAUIDbContext>();
+            //builder.Services.AddTransient<IDbFileRepository, DbFileRepository>();
             //builder.Services.AddTransient<VideoCatalogDbContext, MAUIDbContext>();
-            builder.Services.AddDbContextFactory<MAUIDbContext>((services, options) =>
-            {
-                var dbProvider = services.GetRequiredService<IFilePathProvider>();
-                var dbPath = dbProvider.GetFilePath();
-                options.UseSqlite($"FileName={dbPath}");
-            });
+            //builder.Services.AddTransient<VideoCatalogDbContext, MAUIDbContext>();
+            //builder.Services.AddDbContextFactory<MAUIDbContext>((services, options) =>
+            //{
+            //    var dbProvider = services.GetRequiredService<IFilePathProvider>();
+            //    var dbPath = dbProvider.GetFilePath();
+            //    options.UseSqlite($"FileName={dbPath}");
+            //});
 
             //            builder.Services.AddMauiBlazorWebView();
             //            builder.Services.AddSingleton<SubscriptionsService>();

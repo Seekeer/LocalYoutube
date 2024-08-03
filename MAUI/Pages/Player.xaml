@@ -22,7 +22,6 @@
                 MediaOpened="OnMediaOpened"
                 HeightRequest="300"
                 
-                MetadataArtworkUrl="{Binding File.Id, Converter={StaticResource idToImageUrl}}"
                 MetadataTitle="{Binding File.Name}"
             />
                 <!--

@@ -8,18 +8,25 @@ namespace MAUI
     {
         public App()
         {
-            InitializeComponent();
+            try
+            {
 
-            MainPage = new AppShell();
+                InitializeComponent();
 
-            this.RegisterRoutes();
+                MainPage = new AppShell();
 
-            LogController.InitializeNavigation(
-                page => MainPage!.Navigation.PushModalAsync(page),
-                () => MainPage!.Navigation.PopModalAsync());
+                this.RegisterRoutes();
 
-            var logController = new LogController();
-            logController.IsShakeEnabled = true;
+                LogController.InitializeNavigation(
+                    page => MainPage!.Navigation.PushModalAsync(page),
+                    () => MainPage!.Navigation.PopModalAsync());
+
+                var logController = new LogController();
+                logController.IsShakeEnabled = true;
+            }
+            catch (Exception ex)
+            {
+            }
         }
 
         private void RegisterRoutes()

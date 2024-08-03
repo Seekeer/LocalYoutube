@@ -1,3 +1,4 @@
+using Dtos;
 using MAUI.ViewModels;
 
 namespace MAUI.Pages;
@@ -16,6 +17,7 @@ public partial class LoginPage : ContentPage
         await viewModel.OnNavigated();
 
         base.OnNavigatedTo(args);
+
     }
 
     protected override bool OnBackButtonPressed()
