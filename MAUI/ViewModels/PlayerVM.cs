@@ -14,7 +14,7 @@ namespace MAUI.ViewModels
     public partial class PlayerVM : VMBase<VideoFileResultDtoDownloaded>
     {
         private readonly IAPIService _api;
-        private readonly IMAUIService _mauiDBService;
+        //private readonly IMAUIService _mauiDBService;
         private readonly DownloadManager _downloadManager;
 
         [ObservableProperty]
@@ -40,7 +40,7 @@ namespace MAUI.ViewModels
         public PlayerVM(IAPIService api, IMAUIService positionRepository, DownloadManager downloadManager)
         {
             _api = api;
-            _mauiDBService = positionRepository;
+            //_mauiDBService = positionRepository;
             _downloadManager = downloadManager;
 
             _dtoAssign = AssignDTO;
@@ -51,13 +51,13 @@ namespace MAUI.ViewModels
             this.File = dto;
             this.VideoUrl = HttpClientAuth.GetVideoUrlById(dto.Id);
 
-            ProcessFile();
+            //ProcessFile();
         }
 
         private async Task ProcessFile()
         {
             //using var fileService = GetFileService();
-            _mauiDBService.AddFileIfNeeded(File);
+            //_mauiDBService.AddFileIfNeeded(File);
 
             //DownloadAndReplace();
         }
@@ -88,9 +88,9 @@ namespace MAUI.ViewModels
             //var remotePositionTask = _api.GetPositionAsync(File.Id);
             //var remotePosition = await setLocalPositionTask.ContinueWith(async x => await remotePositionTask);
 
-            var localPosition = _mauiDBService.GetInfoById(File.Id);
-            if (localPosition != null)
-                await Page.SetPosition(TimeSpan.FromSeconds(localPosition.Position));
+            //var localPosition = _mauiDBService.GetInfoById(File.Id);
+            //if (localPosition != null)
+            //    await Page.SetPosition(TimeSpan.FromSeconds(localPosition.Position));
 
             try
             {
@@ -99,7 +99,7 @@ namespace MAUI.ViewModels
                 if(remotePosition != null)
                 {
                     //using var fileService = GetFileService();
-                    if (await _mauiDBService.SetPositionAsync(File.Id, remotePosition))
+                    //if (await _mauiDBService.SetPositionAsync(File.Id, remotePosition))
                         await Page.SetPosition(TimeSpan.FromSeconds(remotePosition.Position));
                 }
             }
@@ -129,7 +129,7 @@ namespace MAUI.ViewModels
 
             var positionDTO = new PositionDTO { Position = position };
             //using var fileService = GetFileService();
-            _mauiDBService.SetPositionAsync(File.Id, positionDTO);
+            //_mauiDBService.SetPositionAsync(File.Id, positionDTO);
             _api.SetPositionAsync(File.Id, positionDTO);
         }
 
