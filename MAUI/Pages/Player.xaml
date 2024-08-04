@@ -58,7 +58,7 @@ Unloaded="MediaElement_Unloaded"
 		                                HorizontalOptions="Center" />
 
                                     <Label
-		                                BindingContext="{Binding OriginalPosition}"
+		                                BindingContext="{Binding OriginalPositionStr}"
                                         Text="{Binding Path=.,StringFormat='{mm\:ss}'}"
 		                                TextDecorations="Underline"
 		                                TextColor="Blue"

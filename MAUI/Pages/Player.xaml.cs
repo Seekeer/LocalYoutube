@@ -9,7 +9,6 @@ namespace MAUI.Pages;
 
 public partial class Player : ContentPage
 {
-    private List<TimeSpan> _lastPosition = new List<TimeSpan>();
 
     public Player(PlayerVM vm)
 	{
@@ -20,16 +19,16 @@ public partial class Player : ContentPage
         vm.Page = this;
     }
 
+    public MediaElement GetMedia()
+    {
+        return MediaElement;
+    }
+
     private void Player_NavigatedFrom(object? sender, NavigatedFromEventArgs e)
     {
         MediaElement.Stop();
         MediaElement.Dispose();
         Toast.Make($"Player_NavigatedFrom", ToastDuration.Long, 20).Show();
-    }
-
-    internal TimeSpan GetCurrentPosition()
-    {
-        return _lastPosition.LastOrDefault();
     }
 
     internal async Task SetPosition(TimeSpan time)
@@ -57,33 +56,33 @@ public partial class Player : ContentPage
 
     private void OnPositionChanged(object sender, CommunityToolkit.Maui.Core.Primitives.MediaPositionChangedEventArgs e)
     {
-        var toast = Toast.Make($"OnPositionChanged {e.Position}", ToastDuration.Short, 14);
-        _lastPosition.Add(e.Position);
+        //var toast = Toast.Make($"OnPositionChanged {e.Position}", ToastDuration.Short, 14);
+        //_lastPosition.Add(e.Position);
     }
 
     private void MediaElement_SeekCompleted(object sender, EventArgs e)
     {
-        var toast = Toast.Make($"MediaElement_SeekCompleted {MediaElement.Position}", ToastDuration.Short, 14);
-        if(viewModel.SeekPositionCollection.TryAddPosition(_lastPosition, MediaElement.Position))
-        {
-            var snackbarOptions = new SnackbarOptions
-            {
-                //BackgroundColor = Colors.Red,
-                //TextColor = Colors.Green,
-                ActionButtonTextColor = Colors.Purple,
-                CornerRadius = new CornerRadius(10),
-                //Font = Font.SystemFontOfSize(14),
-                //ActionButtonFont = Font.SystemFontOfSize(14),
-                //CharacterSpacing = 0.5
-            };
+        //var toast = Toast.Make($"MediaElement_SeekCompleted {MediaElement.Position}", ToastDuration.Short, 14);
+        //if(viewModel.SeekPositionCollection.TryAddPosition(_lastPosition, MediaElement.Position))
+        //{
+        //    var snackbarOptions = new SnackbarOptions
+        //    {
+        //        //BackgroundColor = Colors.Red,
+        //        //TextColor = Colors.Green,
+        //        ActionButtonTextColor = Colors.Purple,
+        //        CornerRadius = new CornerRadius(10),
+        //        //Font = Font.SystemFontOfSize(14),
+        //        //ActionButtonFont = Font.SystemFontOfSize(14),
+        //        //CharacterSpacing = 0.5
+        //    };
 
-            string text = $"Вы переместились на {MediaElement.Position}";
-            string actionButtonText = "Вернуться обратно";
-            Action action = async () => await SetPosition(viewModel.SeekPositionCollection.Positions.First().OriginalPosition);
-            TimeSpan duration = TimeSpan.FromSeconds(8);
+        //    string text = $"Вы переместились на {MediaElement.Position}";
+        //    string actionButtonText = "Вернуться обратно";
+        //    Action action = async () => await SetPosition(viewModel.SeekPositionCollection.Positions.First().OriginalPosition);
+        //    TimeSpan duration = TimeSpan.FromSeconds(8);
 
-            Snackbar.Make(text, action, actionButtonText, duration, snackbarOptions).Show();
-        }
+        //    Snackbar.Make(text, action, actionButtonText, duration, snackbarOptions).Show();
+        //}
     }
 
     private void OnMediaOpened(object sender, EventArgs e)

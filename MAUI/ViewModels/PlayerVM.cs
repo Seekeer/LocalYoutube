@@ -11,6 +11,8 @@ using CommunityToolkit.Maui.Views;
 using Infrastructure;
 using System.Text.RegularExpressions;
 using System.Linq;
+using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Core;
 
 namespace MAUI.ViewModels
 {
@@ -125,32 +127,51 @@ namespace MAUI.ViewModels
         {
             System.Timers.Timer aTimer = new System.Timers.Timer();
             aTimer.Elapsed += new ElapsedEventHandler((_,__) => UpdatePositionByControl());
-            aTimer.Interval = 2000;
+            aTimer.Interval = 1000;
             aTimer.Enabled = true;
         }
 
         public void UpdatePositionByControl()
         {
-            var position = Page.GetCurrentPosition().TotalSeconds;
-            if (position < 15)
+            var position = Page.GetMedia().Position.TotalSeconds;
+            if (position < 3)
                 return;
 
             var positionDTO = new PositionDTO { Position = position };
             //using var fileService = GetFileService();
-            _mauiDBService.SetPositionAsync(File.Id, positionDTO);
+            //_mauiDBService.SetPositionAsync(File.Id, positionDTO);
             _api.SetPositionAsync(File.Id, positionDTO);
+
+            if (SeekPositionCollection.PositionUpdated(Page.GetMedia().Position))
+                ShowSnackWithNavigation();
+        }
+
+        private void ShowSnackWithNavigation()
+        {
+            var snackbarOptions = new SnackbarOptions
+            {
+                ActionButtonTextColor = Colors.Purple,
+                CornerRadius = new CornerRadius(10),
+            };
+
+            string text = $"Вы переместились";
+            string actionButtonText = "Вернуться обратно на {SeekPositionCollection.Positions.First().OriginalPositionStr}";
+            Action action = async () => await Page.SetPosition(SeekPositionCollection.Positions.First().OriginalPosition);
+            TimeSpan duration = TimeSpan.FromSeconds(3);
+
+            Snackbar.Make(text, action, actionButtonText, duration, snackbarOptions).Show();
         }
 
         private async Task DownloadAndReplace()
         {
-            if(!this.File.IsDownloaded && (this.File == null || this.File.DurationMinutes > 60))
-                return;
+            //if(!this.File.IsDownloaded && (this.File == null || this.File.DurationMinutes > 60))
+            //    return;
 
-            var filePath = await _downloadManager.DownloadAsync(File);
-            var position = Page.GetCurrentPosition();
-            VideoUrl = (filePath);
-            if(position.TotalSeconds > 5)
-                await Page.SetPosition(position);
+            //var filePath = await _downloadManager.DownloadAsync(File);
+            //var position = Page.GetCurrentPosition();
+            //VideoUrl = (filePath);
+            //if(position.TotalSeconds > 5)
+            //    await Page.SetPosition(position);
         }
 
         [RelayCommand]
@@ -208,10 +229,28 @@ namespace MAUI.ViewModels
     {
         public TimeSpan OriginalPosition { get; set; }
         public TimeSpan NewPosition { get; set; }
+
+        public string OriginalPositionStr
+        {
+            get
+            {
+                if (OriginalPosition.TotalHours > 1)
+                    return OriginalPosition.ToString(@"hh\:mm\:ss");
+                else
+                    return OriginalPosition.ToString(@"mm\:ss");
+            }
+        }
     }
 
     public partial class SeekPositionCollection : ObservableObject
     {
+        private List<TimeSpan> _lastPosition = new List<TimeSpan>();
+
+        public TimeSpan GetCurrentPosition()
+        {
+            return _lastPosition.LastOrDefault();
+        }
+
         [ObservableProperty]
         List<SeekPosition> _positions  = new List<SeekPosition>();
 
@@ -223,7 +262,6 @@ namespace MAUI.ViewModels
         {
             try
             {
-
                 var diffPositions = positions.Where(x => Math.Abs((newPosition - x).TotalSeconds) > 5);
                 var originalPosition = diffPositions.LastOrDefault();
 
@@ -255,6 +293,24 @@ namespace MAUI.ViewModels
             }
             catch (Exception ex)
             {
+                return false;
+            }
+        }
+
+        internal bool PositionUpdated(TimeSpan position)
+        {
+            if (!Positions.Any())
+                Positions.Add(new SeekPosition { NewPosition = (position) });
+
+            if (Math.Abs((Positions.First().NewPosition - position).TotalSeconds) > 2)
+            {
+                Positions.Insert(0, (new SeekPosition { NewPosition = (position), OriginalPosition = Positions.First().NewPosition }));
+                this.Positions = new List<SeekPosition>(this.Positions);
+                return true;
+            }
+            else
+            {
+                Positions.First().NewPosition = position;
                 return false;
             }
         }
