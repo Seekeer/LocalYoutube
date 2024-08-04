@@ -42,7 +42,7 @@ namespace FileStore.API.Configuration
             services.AddScoped<IMessageProcessor, MessageProcessor>();
             services.AddSingleton<TgBot, TgBot>();
             //services.AddSingleton<IStartupInitService, StartupInitService>();
-            services.AddScoped<TgAPIClient, TgAPIClient>();
+            services.AddScoped<ITgAPIClient, TgAPIClient>();
 
             services.AddHostedService<StartupService>();
 

@@ -8,6 +8,11 @@ using System.Timers;
 using FileStore.Domain.Dtos;
 using MAUI.Downloading;
 using CommunityToolkit.Maui.Views;
+using Infrastructure;
+using System.Text.RegularExpressions;
+using System.Linq;
+using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Core;
 
 namespace MAUI.ViewModels
 {
@@ -35,6 +40,8 @@ namespace MAUI.ViewModels
         [ObservableProperty]
         private TimeSpan _position;
 
+        [ObservableProperty]
+        private IEnumerable<DescriptionRow> _description;
         public Player Page { get; internal set; }
 
         public PlayerVM(IAPIService api, IMAUIService positionRepository, DownloadManager downloadManager)
@@ -44,6 +51,7 @@ namespace MAUI.ViewModels
             _downloadManager = downloadManager;
 
             _dtoAssign = AssignDTO;
+            
         }
 
         private void AssignDTO(VideoFileResultDtoDownloaded dto)
@@ -51,8 +59,11 @@ namespace MAUI.ViewModels
             this.File = dto;
             this.VideoUrl = HttpClientAuth.GetVideoUrlById(dto.Id);
 
-            //ProcessFile();
+            Description = DescriptionRow.ParseDescription(dto.Description);
+
+            ProcessFile();
         }
+
 
         private async Task ProcessFile()
         {
@@ -98,7 +109,6 @@ namespace MAUI.ViewModels
                 var remotePosition = await _api.GetPositionAsync(File.Id);
                 if(remotePosition != null)
                 {
-                    //using var fileService = GetFileService();
                     //if (await _mauiDBService.SetPositionAsync(File.Id, remotePosition))
                         await Page.SetPosition(TimeSpan.FromSeconds(remotePosition.Position));
                 }
@@ -117,32 +127,51 @@ namespace MAUI.ViewModels
         {
             System.Timers.Timer aTimer = new System.Timers.Timer();
             aTimer.Elapsed += new ElapsedEventHandler((_,__) => UpdatePositionByControl());
-            aTimer.Interval = 2000;
+            aTimer.Interval = 1000;
             aTimer.Enabled = true;
         }
 
         public void UpdatePositionByControl()
         {
-            var position = Page.GetCurrentPosition().TotalSeconds;
-            if (position < 15)
+            var position = Page.GetMedia().Position.TotalSeconds;
+            if (position < 3)
                 return;
 
             var positionDTO = new PositionDTO { Position = position };
             //using var fileService = GetFileService();
             //_mauiDBService.SetPositionAsync(File.Id, positionDTO);
             _api.SetPositionAsync(File.Id, positionDTO);
+
+            if (SeekPositionCollection.PositionUpdated(Page.GetMedia().Position))
+                ShowSnackWithNavigation();
+        }
+
+        private void ShowSnackWithNavigation()
+        {
+            var snackbarOptions = new SnackbarOptions
+            {
+                ActionButtonTextColor = Colors.Purple,
+                CornerRadius = new CornerRadius(10),
+            };
+
+            string text = $"Вы переместились";
+            string actionButtonText = "Вернуться обратно на {SeekPositionCollection.Positions.First().OriginalPositionStr}";
+            Action action = async () => await Page.SetPosition(SeekPositionCollection.Positions.First().OriginalPosition);
+            TimeSpan duration = TimeSpan.FromSeconds(3);
+
+            Snackbar.Make(text, action, actionButtonText, duration, snackbarOptions).Show();
         }
 
         private async Task DownloadAndReplace()
         {
-            if(!this.File.IsDownloaded && (this.File == null || this.File.DurationMinutes > 60))
-                return;
+            //if(!this.File.IsDownloaded && (this.File == null || this.File.DurationMinutes > 60))
+            //    return;
 
-            var filePath = await _downloadManager.DownloadAsync(File);
-            var position = Page.GetCurrentPosition();
-            VideoUrl = (filePath);
-            if(position.TotalSeconds > 5)
-                await Page.SetPosition(position);
+            //var filePath = await _downloadManager.DownloadAsync(File);
+            //var position = Page.GetCurrentPosition();
+            //VideoUrl = (filePath);
+            //if(position.TotalSeconds > 5)
+            //    await Page.SetPosition(position);
         }
 
         [RelayCommand]
@@ -152,43 +181,138 @@ namespace MAUI.ViewModels
 
     }
 
+    public class DescriptionRow
+    {
+        public DescriptionRow(string paragraph, string value)
+        {
+            Paragraph = paragraph;
+            Timestamp = value;
+        }
+
+        public string Paragraph { get; }
+        public string Timestamp { get; }
+
+        public TimeSpan GetPosition()
+        {
+            var ts = TimeSpan.Parse(Timestamp);
+            return ts;
+        }
+
+        private int CountInstances(string str, string substring)
+        {
+            return str.Split(substring).Length - 1;
+        }
+
+        public static IEnumerable<DescriptionRow> ParseDescription(string description)
+        {
+            var result = new List<DescriptionRow>();
+            if (string.IsNullOrEmpty(description))
+                return result;
+
+            var paragraphs = description.SplitByNewLine().Select(paragraph =>
+            {
+                var convertedWords = paragraph.Trim().Split(" ");
+                var firstWord = convertedWords[0];
+                var match = Regex.Match(firstWord, @"((\d{1,2}:)?[0-5]?\d:[0-5]?\d)");
+                if (match.Success)
+                    return new DescriptionRow(paragraph.Replace(firstWord, ""), match.Value);
+                else
+                    return new DescriptionRow(paragraph, null);
+
+            }).ToList();
+
+            return paragraphs;
+        }
+    }
+
     public class SeekPosition
     {
         public TimeSpan OriginalPosition { get; set; }
         public TimeSpan NewPosition { get; set; }
+
+        public string OriginalPositionStr
+        {
+            get
+            {
+                if (OriginalPosition.TotalHours > 1)
+                    return OriginalPosition.ToString(@"hh\:mm\:ss");
+                else
+                    return OriginalPosition.ToString(@"mm\:ss");
+            }
+        }
     }
 
     public partial class SeekPositionCollection : ObservableObject
     {
-        [ObservableProperty]
-        private ObservableCollection<SeekPosition> _positions = new ObservableCollection<SeekPosition>();
+        private List<TimeSpan> _lastPosition = new List<TimeSpan>();
 
-        public void TryAddPosition(List<TimeSpan> positions, TimeSpan newPosition)
+        public TimeSpan GetCurrentPosition()
         {
-            var diffPositions = positions.Where(x => Math.Abs((newPosition - x).TotalSeconds) > 5);
-            var originalPosition = diffPositions.LastOrDefault();
+            return _lastPosition.LastOrDefault();
+        }
 
-            if (newPosition == originalPosition)
-                return;
+        [ObservableProperty]
+        List<SeekPosition> _positions  = new List<SeekPosition>();
 
-            if (this.Positions.Count > 0)
+        // TODO - for some reason throw Ex on adding. Threads?
+        //[ObservableProperty]
+        //private ObservableCollection<SeekPosition> _positions = new ObservableCollection<SeekPosition>();
+
+        public bool TryAddPosition(List<TimeSpan> positions, TimeSpan newPosition)
+        {
+            try
             {
+                var diffPositions = positions.Where(x => Math.Abs((newPosition - x).TotalSeconds) > 5);
+                var originalPosition = diffPositions.LastOrDefault();
 
-                var lastPosition = this.Positions[this.Positions.Count - 1];
-                if (lastPosition.OriginalPosition == originalPosition)
+                if (newPosition == originalPosition)
+                    return false;
+
+                if (this.Positions.Count > 0)
                 {
-                    lastPosition.NewPosition = newPosition;
-                    return;
+
+                    var lastPosition = this.Positions[this.Positions.Count - 1];
+                    if (lastPosition.OriginalPosition == originalPosition)
+                    {
+                        lastPosition.NewPosition = newPosition;
+                        return false;
+                    }
                 }
+
+                if (this.Positions.Any(x => x.NewPosition == newPosition && x.OriginalPosition == originalPosition))
+                    return false;
+
+                var seekPosition = new SeekPosition();
+                seekPosition.OriginalPosition = originalPosition;
+                seekPosition.NewPosition = newPosition;
+                //this.Positions.Add(seekPosition);
+
+                this.Positions.Insert(0, seekPosition);
+                this.Positions = new List<SeekPosition>(this.Positions);
+                return true;
             }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
 
-            if (this.Positions.Any(x => x.NewPosition == newPosition && x.OriginalPosition == originalPosition))
-                return;
+        internal bool PositionUpdated(TimeSpan position)
+        {
+            if (!Positions.Any())
+                Positions.Add(new SeekPosition { NewPosition = (position) });
 
-            var seekPosition = new SeekPosition();
-            seekPosition.OriginalPosition = originalPosition;
-            seekPosition.NewPosition = newPosition;
-            this.Positions.Add(seekPosition);
+            if (Math.Abs((Positions.First().NewPosition - position).TotalSeconds) > 2)
+            {
+                Positions.Insert(0, (new SeekPosition { NewPosition = (position), OriginalPosition = Positions.First().NewPosition }));
+                this.Positions = new List<SeekPosition>(this.Positions);
+                return true;
+            }
+            else
+            {
+                Positions.First().NewPosition = position;
+                return false;
+            }
         }
     } 
 }

@@ -18,7 +18,6 @@ using Telegram.Bot.Types;
 using System;
 using System.Runtime;
 using System.Security.AccessControl;
-using static System.Net.Mime.MediaTypeNames;
 using System.Diagnostics;
 using System.Xml.Serialization;
 using TL;
