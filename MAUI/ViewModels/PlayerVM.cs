@@ -57,7 +57,9 @@ namespace MAUI.ViewModels
         private void AssignDTO(VideoFileResultDtoDownloaded dto)
         {
             this.File = dto;
-            this.VideoUrl = HttpClientAuth.GetVideoUrlById(dto.Id);
+            this.VideoUrl = dto.IsDownloaded ?
+                 dto.Path :
+                HttpClientAuth.GetVideoUrlById(dto.Id);
 
             Description = DescriptionRow.ParseDescription(dto.Description);
 
