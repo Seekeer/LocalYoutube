@@ -36,7 +36,7 @@ public partial class Player : ContentPage
         if (time == TimeSpan.Zero)
             return;
 
-        var toast = Toast.Make($"Navigate to {viewModel.VideoUrl}", ToastDuration.Short, 14);
+        var toast = Toast.Make($"Navigated to {viewModel.VideoUrl}", ToastDuration.Short, 14);
         //var toast = Toast.Make($"Navigate to {time.TotalSeconds}", ToastDuration.Short, 14);
         await toast.Show();
 
@@ -103,8 +103,10 @@ public partial class Player : ContentPage
 
     private void OnUrlClicked(object sender, TappedEventArgs e)
     {
-        var label = sender as Label;
-        var ts = (TimeSpan)label.BindingContext;
+        var tsString = (sender as Label).BindingContext.ToString();
+        if (tsString.Length == 5)
+            tsString = $"00:{tsString}";
+        var ts = TimeSpan.Parse(tsString);
 
         SetPosition(ts);
     }

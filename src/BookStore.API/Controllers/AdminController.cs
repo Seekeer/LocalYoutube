@@ -243,8 +243,17 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> MoveDownloadedJob()
         {
-
             var job = new MoveDownloadedJob(_serviceScopeFactory.CreateScope().ServiceProvider, _config);
+            await job.Execute(null);
+
+            return Ok();
+        }
+        [HttpGet]
+        [Route("checkDownloadedJob")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> CheckDownloadedJob()
+        {
+            var job = new CheckDownloadedJob(_serviceScopeFactory.CreateScope().ServiceProvider, _config);
             await job.Execute(null);
 
             return Ok();

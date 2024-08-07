@@ -46,6 +46,7 @@ namespace FileStore.API.Configuration
 
             services.AddHostedService<StartupService>();
 
+#if !DEBUG
             services.AddQuartz(q =>
             {
                 q.ScheduleJob<BackuperJob>(trigger => trigger
@@ -89,6 +90,7 @@ namespace FileStore.API.Configuration
             });
 
             services.AddTransient<BackuperJob>();
+#endif
 
             var rutracker = new RuTrackerUpdater(config);
             services.AddSingleton<IRuTrackerUpdater>(rutracker);

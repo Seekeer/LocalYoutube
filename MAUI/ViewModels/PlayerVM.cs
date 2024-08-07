@@ -58,7 +58,7 @@ namespace MAUI.ViewModels
         {
             this.File = dto;
             this.VideoUrl = dto.IsDownloaded ?
-                 dto.Path :
+                dto.Path :
                 HttpClientAuth.GetVideoUrlById(dto.Id);
 
             Description = DescriptionRow.ParseDescription(dto.Description);
@@ -135,17 +135,23 @@ namespace MAUI.ViewModels
 
         public void UpdatePositionByControl()
         {
-            var position = Page.GetMedia().Position.TotalSeconds;
-            if (position < 3)
-                return;
+            try
+            {
+                var position = Page.GetMedia().Position.TotalSeconds;
+                if (position < 3)
+                    return;
 
-            var positionDTO = new PositionDTO { Position = position };
-            //using var fileService = GetFileService();
-            //_mauiDBService.SetPositionAsync(File.Id, positionDTO);
-            _api.SetPositionAsync(File.Id, positionDTO);
+                var positionDTO = new PositionDTO { Position = position };
+                //using var fileService = GetFileService();
+                //_mauiDBService.SetPositionAsync(File.Id, positionDTO);
+                _api.SetPositionAsync(File.Id, positionDTO);
 
-            if (SeekPositionCollection.PositionUpdated(Page.GetMedia().Position))
-                ShowSnackWithNavigation();
+                if (SeekPositionCollection.PositionUpdated(Page.GetMedia().Position))
+                    ShowSnackWithNavigation();
+            }
+            catch (Exception ex)
+            {
+            }
         }
 
         private void ShowSnackWithNavigation()
@@ -157,7 +163,7 @@ namespace MAUI.ViewModels
             };
 
             string text = $"Вы переместились";
-            string actionButtonText = "Вернуться обратно на {SeekPositionCollection.Positions.First().OriginalPositionStr}";
+            string actionButtonText = $"Вернуться обратно на {SeekPositionCollection.Positions.First().OriginalPositionStr}";
             Action action = async () => await Page.SetPosition(SeekPositionCollection.Positions.First().OriginalPosition);
             TimeSpan duration = TimeSpan.FromSeconds(3);
 

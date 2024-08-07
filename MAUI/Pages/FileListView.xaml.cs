@@ -19,4 +19,11 @@ public partial class FileListView : ContentView
         var stack = (Layout)button.Parent;
         stack.Remove(button);
     }
+
+    private void SwipeItem_Clicked(object sender, EventArgs e)
+    {
+        //var button = (SwipeItem)sender;
+        //var stack = (SwipeView)button.Parent;
+        //stack.Remove(button);
+    }
 }

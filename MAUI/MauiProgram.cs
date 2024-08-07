@@ -58,7 +58,7 @@ namespace MAUI
                 .AddTraceLogger(
                     options =>
                     {
-                        options.MinLevel = LogLevel.Error;
+                        options.MinLevel = LogLevel.Debug;
                         options.MaxLevel = LogLevel.Critical;
                     }) // Will write to the Debug Output
 #endif
@@ -91,7 +91,7 @@ namespace MAUI
                 .AddConsoleLogger(
                     options =>
                     {
-                        options.MinLevel = LogLevel.Error;
+                        options.MinLevel = LogLevel.Debug;
                         options.MaxLevel = LogLevel.Critical;
                     }); // Will write to the Console Output (logcat for android)
         }

@@ -14,6 +14,12 @@ namespace API.TG
         FixCover,
         [CommandName(TgBot.SETUP_VLC_Message)]
         SetupVLC,
+        [CommandName(TgBot.SUSPEND_PC_Message)]
+        SuspendPC,
+        [CommandName(TgBot.START_ANYDESK_MESSAGE)]
+        StartAnydesk,
+        [CommandName(TgBot.STOP_ANYDESK_MESSAGE)]
+        StopAnydesk,
         [CommandName(TgBot.SHOW_ALL_SEARCH_RESULT_Message)]
         ShowAllSearchResult,
         [CommandName("updatecover")]

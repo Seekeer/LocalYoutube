@@ -10,10 +10,11 @@ namespace MAUI.ViewModels
 {
     public partial class ListVM : VMBase<IEnumerable<VideoFileResultDtoDownloaded>>
     {
-        public ListVM(INavigationService navigationService, DownloadManager downloadManager)
+        public ListVM(INavigationService navigationService, DownloadManager downloadManager, IAPIService apiService)
         {
             _navigationService = navigationService;
             _downloadManager = downloadManager;
+            this._apiService = apiService;
 
             DeviceDisplay.Current.MainDisplayInfoChanged += Current_MainDisplayInfoChanged;
             UpdateOrientation();
@@ -63,7 +64,14 @@ namespace MAUI.ViewModels
             await _downloadManager.DeleteDownloaded(id);
         }
 
+        [RelayCommand]
+        public async Task DeleteVideoFromServer(int id)
+        {
+            await _apiService.DeleteVideoAsync(id);
+        }
+
         private readonly INavigationService _navigationService;
         private readonly DownloadManager _downloadManager;
+        private readonly IAPIService _apiService;
     }
 }

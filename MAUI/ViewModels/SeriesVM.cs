@@ -10,9 +10,8 @@ namespace MAUI.ViewModels
     {
         private readonly IAPIService _aPIService;
 
-        public SeriesVM(INavigationService navigationService, DownloadManager downloadManager, 
-            IAPIService aPIService) 
-            : base(navigationService, downloadManager)
+        public SeriesVM(INavigationService navigationService, DownloadManager downloadManager, IAPIService aPIService) 
+            : base(navigationService, downloadManager, aPIService)
         {
             _aPIService = aPIService;
 

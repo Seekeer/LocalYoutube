@@ -1,4 +1,5 @@
-﻿using FileStore.Domain.Dtos;
+﻿using Azure;
+using FileStore.Domain.Dtos;
 using MAUI.Pages;
 using System.Text.Json;
 
@@ -120,6 +121,25 @@ namespace MAUI.Services
             T? obj = await Parse<T>(response);
 
             return obj;
+        }
+
+        public async Task Delete(string url)
+        {
+            using var client = await GetClient();
+            url = !url.StartsWith(BASE_API_URL) ? $"{BASE_API_URL}{url}" : url;
+
+            var response = await client.DeleteAsync(url);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                if (!await RefreshToken())
+                {
+                    ClearTokens();
+                    await _navigationService.NavigateAsync(nameof(LoginPage));
+                }
+                else
+                    await Delete(url);
+            }
         }
 
         public async Task<T> GetAsync<T>(string url)

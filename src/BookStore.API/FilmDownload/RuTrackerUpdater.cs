@@ -229,9 +229,17 @@ namespace API.Controllers
 
         private async Task<string> StartDownload(int id, AddTorrentFilesRequest request)
         {
-            await _qclient.AddTorrentsAsync(request);
-            var hash = await GetTorrentHash(id.ToString());
-            return hash;
+            try
+            {
+                await _qclient.AddTorrentsAsync(request);
+                var hash = await GetTorrentHash(id.ToString());
+                return hash;
+            }
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                return null;
+            }
         }
 
         private void StartQBittorrent()

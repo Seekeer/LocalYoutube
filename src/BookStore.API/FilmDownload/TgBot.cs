@@ -61,6 +61,9 @@ namespace API.FilmDownload
         private readonly List<TgLink> _tgSeasonDict = new List<TgLink>();
         public const string UPDATECOVER_MESSAGE = "Обновить обложку";
         public const string SETUP_VLC_Message = "Настроить VLC";
+        public const string START_ANYDESK_MESSAGE = "Start anydesk";
+        public const string STOP_ANYDESK_MESSAGE = "Stop anydesk";
+        public const string SUSPEND_PC_Message = "Suspend PC";
         public const string SHOW_ALL_SEARCH_RESULT_Message = "Показать все результаты поиска";
         private Timer _timer;
 
@@ -129,14 +132,25 @@ namespace API.FilmDownload
             return t;
         }
 
-        private List<KeyboardButton> GetKeyboardButtons(bool isAdmin)
+        private List<List<KeyboardButton>> GetKeyboardButtons(bool isAdmin)
         {
-            var keyboard = new List<KeyboardButton>();
+            var keyboard = new List<List<KeyboardButton>>();
 
             if (isAdmin)
             {
-                keyboard.Add(new KeyboardButton(UPDATECOVER_MESSAGE));
-                keyboard.Add(new KeyboardButton(SETUP_VLC_Message));
+                var LTlist = new List<KeyboardButton>
+                {
+                    new KeyboardButton(UPDATECOVER_MESSAGE),
+                    new KeyboardButton(SETUP_VLC_Message)
+                };
+                keyboard.Add(LTlist);
+
+                keyboard.Add(new List<KeyboardButton>
+                {
+                    new KeyboardButton(SUSPEND_PC_Message),
+                    new KeyboardButton(START_ANYDESK_MESSAGE),
+                    new KeyboardButton(STOP_ANYDESK_MESSAGE)
+                });
             }
 
             return keyboard;
@@ -499,6 +513,15 @@ namespace API.FilmDownload
                 case CommandType.FixCover:
                     await UpdateCover(3, message.From.Id);
                     break;
+                case CommandType.SuspendPC:
+                    await SuspendPC(message.From.Id);
+                    break;
+                case CommandType.StartAnydesk:
+                    await StartAnydesk(message.From.Id);
+                    break;
+                case CommandType.StopAnydesk:
+                    await StopAnydesk(message.From.Id);
+                    break;
                 case CommandType.Series:
                     break;
                 case CommandType.Film:
@@ -517,6 +540,21 @@ namespace API.FilmDownload
                 default:
                     break;
             }
+        }
+
+        private async Task StartAnydesk(long id)
+        {
+            LocalPCHelper.StartAnydesk();
+        }
+
+        private async Task StopAnydesk(long id)
+        {
+            LocalPCHelper.StopAnydesk();
+        }
+
+        private async Task SuspendPC(long id)
+        {
+            LocalPCHelper.SuspendPC();
         }
 
         private async Task ProcessUserInput(Message message)

@@ -15,6 +15,7 @@ namespace MAUI.Services
          Task<IEnumerable<Series>> GetSeries();
         //IEnumerable<Season> GetSeasons();
          Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFiles(Series selectedSeries, Season selectedSeason);
+        Task DeleteVideoAsync(int id);
     }
 
     public class APIService : IAPIService
@@ -128,6 +129,17 @@ namespace MAUI.Services
             catch (Exception ex)
             {
                 return new List<VideoFileResultDtoDownloaded>();
+            }
+        }
+
+        public async Task DeleteVideoAsync(int id)
+        {
+            try
+            {
+                await _httpClientAuth.Delete($"files/{id}");
+            }
+            catch (Exception ex)
+            {
             }
         }
     }

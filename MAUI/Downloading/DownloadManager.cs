@@ -33,7 +33,10 @@ namespace MAUI.Downloading
             {
                 var dbFile = await _videoFileRepository.GetFileById(file.Id);
                 if (FileDownloaded(dbFile))
+                {
                     file.IsDownloaded = true;
+                    file.Path = dbFile.Path;
+                }
             }
         }
 

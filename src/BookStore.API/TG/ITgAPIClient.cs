@@ -37,7 +37,9 @@ namespace API.TG
             _config = config;
             _credentials = config.TelegramSettings.TgCredentials;
             _messageProcessor = messageProcessor;
-            _client = new WTelegram.Client(Config);
+
+            if (_client != null)
+                _client = new WTelegram.Client(Config);
         }
 
         private string[] IGNORE_WORDS = new string[] { "сборник", "Колобок" };
@@ -431,7 +433,7 @@ namespace API.TG
         private readonly AppConfig _config;
         private readonly TgCredentials _credentials;
         private readonly IMessageProcessor _messageProcessor;
-        private readonly Client _client;
+        private static Client _client;
         static readonly Dictionary<long, User> Users = new();
         static readonly Dictionary<long, ChatBase> Chats = new();
         private readonly string TELEGRAM_DOWNLOAD_FOLDER = "Telegram";

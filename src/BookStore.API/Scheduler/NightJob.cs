@@ -8,9 +8,6 @@ namespace Infrastructure.Scheduler
     {
         public async Task Execute(IJobExecutionContext context)
         {
-#if DEBUG
-            return;
-#endif
             await Execute();
         }
 

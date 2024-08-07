@@ -13,7 +13,39 @@
         <ListView.ItemTemplate>
             <DataTemplate>
                 <ViewCell>
-                    <VerticalStackLayout>
+                    <SwipeView>
+                        <SwipeView.LeftItems>
+                            <SwipeItems>
+
+                                <SwipeItem
+                                    Text="Скачать"
+                                    BackgroundColor="Green"
+                                    IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"
+                                    Command="{Binding Path=BindingContext.DeleteDownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                    CommandParameter="{Binding Id}"
+                                    />
+
+                                <SwipeItem 
+                                    BackgroundColor="Red"
+                                    Text="Удалить из скачанных"
+                                    IsVisible="{Binding IsDownloaded}"
+                                    Command="{Binding Path=BindingContext.DeleteDownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                    CommandParameter="{Binding Id}"
+                                    />
+                            </SwipeItems>
+                        </SwipeView.LeftItems>
+                        <SwipeView.RightItems>
+
+                            <SwipeItem 
+                                    BackgroundColor="Red"
+                                    Text="Удалить с сервера"
+                                    Clicked="SwipeItem_Clicked"
+                                    Command="{Binding Path=BindingContext.DeleteVideoFromServerCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                    CommandParameter="{Binding Id}"
+                                    />
+                        </SwipeView.RightItems>
+
+                        <VerticalStackLayout>
 
                         <VerticalStackLayout IsVisible="{Binding BindingContext.IsVerticalOrientation, Source={RelativeSource AncestorType={x:Type ListView}}}" >
                             <Image
@@ -44,14 +76,6 @@
                                     CommandParameter="{Binding Id}"
                                     FontAttributes="Bold" />
 
-                            <Button 
-                                    BackgroundColor="Red"
-                                    Text="Удалить"
-                                    IsVisible="{Binding IsDownloaded}"
-                                    VerticalOptions="Center"
-                                    Command="{Binding Path=BindingContext.DeleteDownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
-                                    CommandParameter="{Binding Id}"
-                                    FontAttributes="Bold" />
                         </VerticalStackLayout>
 
                         <Grid Margin="5" IsVisible="{Binding BindingContext.IsPortraitOrientation, Source={RelativeSource AncestorType={x:Type ListView}}}" >
@@ -98,8 +122,9 @@
                                     Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
                                     CommandParameter="{Binding Id}"
                                     FontAttributes="Bold" />
-                        </Grid>
+                            </Grid>
                     </VerticalStackLayout>
+                    </SwipeView>
 
                 </ViewCell>
             </DataTemplate>
