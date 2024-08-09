@@ -238,12 +238,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
     e.offsetX < videoWidth / 2 ? this.rewindVideo() : this.forwardVideo();
   }
   forwardVideo() {
-    this.updateCurrentTime(10);
-    this.animateNotificationIn(false);
+    this.updateCurrentTime(15);
   }
   rewindVideo() {
-    this.updateCurrentTime(-10);
-    this.animateNotificationIn(true);
+    this.updateCurrentTime(-5);
   }
   
   
@@ -280,33 +278,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   private updateCurrentTime(delta) {
-    let isRewinding = delta < 0;
-
-    if (isRewinding) {
-      this.rewindSpeed = this.rewindSpeed + delta;
-      this.forwardSpeed = 0;
-    } else {
-      this.forwardSpeed = this.forwardSpeed + delta;
-      this.rewindSpeed = 0;
-    }
-
-    //clear the timeout
-    clearTimeout(this.timer);
-
-    let speed = isRewinding ? this.rewindSpeed : this.forwardSpeed;
+   
     this.getVideoElement().currentTime =
-      this.getVideoElement().currentTime + speed;
-
-    let NotificationValue = isRewinding
-      ? this.rewindNotificationValue
-      : this.forwardNotificationValue;
-    NotificationValue.innerHTML = `${Math.abs(speed)} seconds`;
-
-    //reset accumulator within 2 seconds of a double click
-    this.timer = setTimeout(function () {
-      this.rewindSpeed = 0;
-      this.forwardSpeed = 0;
-    }, 2000); // you can edit this delay value for the timeout, i have it set for 2 seconds
+      this.getVideoElement().currentTime + delta;
   }
 
   public animateNotificationIn(isRewinding: boolean) {
