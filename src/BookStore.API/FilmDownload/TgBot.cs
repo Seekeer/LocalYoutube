@@ -33,6 +33,9 @@ using API.Resources;
 using NLog.Web.LayoutRenderers;
 using System.Xml.Linq;
 using Telegram.Bot.Polling;
+using NLog.Targets;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Security.Policy;
 //using Polly;
 
 namespace API.FilmDownload
@@ -101,16 +104,16 @@ namespace API.FilmDownload
         {
             var db = _GetDb();
             var manager = new DbUpdateManager(db);
-            var seriesDownload = db.Series.First(x => x.Id == 18);
+            _seriesDownload = manager.AddOrGetSeries("Telegram", false, false, VideoType.Web, false);
 
             // TODO hardcodes
             // Helen
-            _tgSeasonDict.Add(new TgLink { TgId = 360495063, FilmSeasonId = manager.AddOrUpdateSeason(seriesDownload, "Алена").Id});
+            _tgSeasonDict.Add(new TgLink { TgId = 360495063, FilmSeasonId = manager.AddOrUpdateSeason(_seriesDownload, "Алена").Id});
             // DIMA
-            _tgSeasonDict.Add(new TgLink { TgId = 176280269, FilmSeasonId = manager.AddOrUpdateSeason(seriesDownload, "Дима").Id });
-            _tgSeasonDict.Add(new TgLink { TgId = 1618298918, FilmSeasonId = manager.AddOrUpdateSeason(seriesDownload, "Дима").Id });
+            _tgSeasonDict.Add(new TgLink { TgId = 176280269, FilmSeasonId = manager.AddOrUpdateSeason(_seriesDownload, "Дима").Id });
+            _tgSeasonDict.Add(new TgLink { TgId = 1618298918, FilmSeasonId = manager.AddOrUpdateSeason(_seriesDownload, "Дима").Id });
             // Jully
-            _tgSeasonDict.Add(new TgLink { TgId = 76951227, FilmSeasonId = manager.AddOrUpdateSeason(seriesDownload, "Юля").Id });
+            _tgSeasonDict.Add(new TgLink { TgId = 76951227, FilmSeasonId = manager.AddOrUpdateSeason(_seriesDownload, "Юля").Id });
         }
 
         private async Task SendAdminMessage(string message)
@@ -261,7 +264,9 @@ namespace API.FilmDownload
                         if (!IsAuthorValid(update.Message.From.Id))
                             return;
 
-                        if(update.Message.ReplyToMessage != null)
+                        if (update.Message.Video != null)
+                            await SaveVideoFromMessage(update.Message);
+                        else if (update.Message.ReplyToMessage != null)
                             await ProcessReply(update.Message);
                         else if (_tgSeasonDict.Any(x => x.TgId == update.Message.From.Id))
                             await this.ProcessMessage(botClient, update.Message);
@@ -379,6 +384,43 @@ namespace API.FilmDownload
                 catch (Exception)
                 {
                 }
+            }
+        }
+
+        private async Task SaveVideoFromMessage(Message message)
+        {
+            var scope = _serviceScopeFactory.CreateScope();
+            using (var fileService = scope.ServiceProvider.GetRequiredService<DbUpdateManager>())
+            {
+                var file = new VideoFile { };
+                var name = message.Caption?.Substring(0, 100);
+                if (message.ForwardFromChat != null)
+                    name = message.ForwardFromChat.Title;
+                else if (message.ForwardFrom != null)
+                    name = message.ForwardFrom.Username;
+                file.Name = name;
+                file.VideoFileExtendedInfo = new FileExtendedInfo
+                {
+                    Description = message.Caption
+                };
+                var channelName = message.From.Username ?? message.From.LastName;
+                fileService.AddFromSiteDownload(file, _seriesDownload.Name, channelName);
+
+                // TODO download Type
+                string rootDownloadFolder = Path.Combine(_config.RootDownloadFolder, DownloadType.Common.ToString());
+                var path = Path.Combine(rootDownloadFolder, new string(channelName.Where(ch => !Path.InvalidPathChars.Contains(ch)).ToArray()));
+                Directory.CreateDirectory(path);
+
+                name = name ?? channelName;
+                var validFilename = new string(name.Where(ch => !Path.GetInvalidFileNameChars().Contains(ch)).ToArray());
+                file.Path = FileManager.GetUniquePath(path, validFilename, "mp4");
+
+                using (FileStream stream = new FileStream(file.Path, FileMode.OpenOrCreate, FileAccess.Write))
+                {
+                    await _botClient.GetInfoAndDownloadFileAsync(message.Video.FileId, stream);
+                }
+
+                await fileService.DownloadFinishedAsync(file, false);
             }
         }
 
@@ -679,6 +721,7 @@ namespace API.FilmDownload
         }
 
         private Dictionary<string, TgDownloadTask> _downloadTasks = new Dictionary<string, TgDownloadTask>();
+        private Series _seriesDownload;
 
         private async Task AddSearchAllButton(string text, long fromId)
         {
@@ -832,9 +875,9 @@ namespace API.FilmDownload
             foreach (var item in updated)
             {
                 var telegramId = _config.TelegramSettings.InfoGroupId;
-                var telegramLink = _tgSeasonDict.FirstOrDefault(x => x.FilmSeasonId == item.SeriesId);
-                if (telegramLink != null)
-                    telegramId = telegramLink.TgId;
+                //var telegramLink = _tgSeasonDict.FirstOrDefault(x => x.FilmSeasonId == item.SeriesId);
+                //if (telegramLink != null)
+                //    telegramId = telegramLink.TgId;
 
                 await NotifyDownloadEnded(telegramId, item);
             }

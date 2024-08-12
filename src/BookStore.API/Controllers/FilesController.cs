@@ -30,6 +30,39 @@ namespace FileStore.API.Controllers
     [Authorize]
     [Microsoft.AspNetCore.Cors.EnableCors("CorsPolicy")]
     [Route("api/[controller]")]
+    public class FilesDownloadController : MainController
+    {
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IVideoFileService _fileService;
+        private readonly ITgAPIClient _tgAPi;
+
+        public FilesDownloadController(UserManager<ApplicationUser> userManager, IVideoFileService FileService, ITgAPIClient tgAPi)
+        {
+            _userManager = userManager;
+            _fileService = FileService;
+            _tgAPi = tgAPi;
+        }
+
+        [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [Route("sendToTG/{fileId}")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> SendToTg(int fileId)
+        {
+            var File = await _fileService.GetById(fileId);
+
+            if (File == null)
+                return NotFound();
+
+            await _tgAPi.SendFile(File, await GetUser(_userManager));
+
+            return Ok();
+        }
+    }
+
+    [Authorize]
+    [Microsoft.AspNetCore.Cors.EnableCors("CorsPolicy")]
+    [Route("api/[controller]")]
     public class FilesController : FilesControllerBase<VideoFile, VideoType, VideoFileResultDto>
     {
         private readonly IRuTrackerUpdater _ruTrackerUpdater;
@@ -63,22 +96,6 @@ namespace FileStore.API.Controllers
             var Files = await _fileService.GetAll();
 
             return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files, await GetUserId(_userManager)));
-        }
-
-        [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [Route("sendToTG/{fileId}")]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> SendToTg(int fileId)
-        {
-            var File = await _fileService.GetById(fileId);
-
-            if (File == null) 
-                return NotFound();
-
-            await _tgAPi.SendFile(File, await GetUser(_userManager));
-
-            return Ok();
         }
 
         [HttpGet("{id:int}")]
