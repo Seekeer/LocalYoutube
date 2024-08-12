@@ -14,6 +14,10 @@ using Shiny;
 using Shiny.NET;
 using MAUI.Downloading;
 using MetroLog.MicrosoftExtensions;
+using System.Globalization;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Data;
 
 namespace MAUI
 {
@@ -42,6 +46,7 @@ namespace MAUI
 #if DEBUG
     		builder.Logging.AddDebug();
 #endif
+            SetDefaultCulture();
             AddLogging(builder);
 
             var app =  builder.Build();
@@ -51,6 +56,29 @@ namespace MAUI
             return app;
         }
 
+        public static void SetDefaultCulture()
+        {
+            CultureInfo cultureInfo = CultureInfo.CreateSpecificCulture("en-US");
+            Thread.CurrentThread.CurrentCulture = cultureInfo;
+            Thread.CurrentThread.CurrentUICulture = cultureInfo;
+            CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+            CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
+
+            Type type = typeof(CultureInfo);
+            type.InvokeMember("s_userDefaultCulture",
+                                BindingFlags.SetField | BindingFlags.NonPublic | BindingFlags.Static,
+                                null,
+                                cultureInfo,
+                                new object[] { cultureInfo });
+
+            type.InvokeMember("s_userDefaultUICulture",
+                                BindingFlags.SetField | BindingFlags.NonPublic | BindingFlags.Static,
+                                null,
+                                cultureInfo,
+                                new object[] { cultureInfo });
+
+            //Languages.Culture = cultureInfo;
+        }
         private static void AddLogging(MauiAppBuilder builder)
         {
             builder.Logging
