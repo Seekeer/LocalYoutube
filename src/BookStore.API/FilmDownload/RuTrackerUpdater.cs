@@ -247,7 +247,7 @@ namespace API.Controllers
             if (!string.IsNullOrEmpty(_config.QBittorrentPath))
             {
                 Process.Start(_config.QBittorrentPath);
-                Thread.Sleep(TimeSpan.FromSeconds(10));
+                Thread.Sleep(TimeSpan.FromSeconds(40));
             } 
         }
 

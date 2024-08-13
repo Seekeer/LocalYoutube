@@ -54,8 +54,9 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> DoAction()
         {
+            await ClearSeasonSeries();
             //await CheckWrongPaths();
-            await MoveDownloadedJob();
+            //await MoveDownloadedJob();
 
             //var dbUpdater = new DbUpdateManager(_db);
             //var files = await _observer.GetUpdates();
@@ -194,6 +195,23 @@ namespace FileStore.API.Controllers
 
             //await RestoreFiles(deleted);
         }
+
+        [HttpGet]
+        [Route("clearSeasonSeries")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task ClearSeasonSeries()
+        {
+            var seasons = _db.Seasons.ToList();
+
+            foreach (var season in seasons)
+            {
+                if (!_db.VideoFiles.Any(x => x.SeasonId == season.Id))
+                {
+                    RemoveSeason(season.Id, false);
+                }
+            }
+        }
+
         [HttpGet]
         [Route("checkWrongPaths")]
         [ProducesResponseType(StatusCodes.Status200OK)]
