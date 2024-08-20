@@ -394,7 +394,7 @@ namespace Infrastructure
             return series;
         }
 
-        public Series AddOrGetSeries(string folderName, bool analyzeFolderName, bool isChild)
+        public Series AddOrGetSeries(string folderName, bool analyzeFolderName, bool isChild, VideoType? type = null, bool? isOrderMatter = null)
         {
             var name = analyzeFolderName ? GetSeriesNameFromFolder(folderName) : folderName;
 
@@ -402,7 +402,8 @@ namespace Infrastructure
             if (series == null)
             {
                 series = new Series { Name = name, Origin = _origin };
-                series.IsOrderMatter = _type == VideoType.Courses;
+                series.Type = type;
+                series.IsOrderMatter = isOrderMatter == true;
                 series.IsChild = isChild;
                 _db.Series.Add(series);
                 _db.SaveChanges();
@@ -458,7 +459,7 @@ namespace Infrastructure
             return TrimDots(result);
         }
 
-        public void AddFromSiteDownload(VideoFile file, string seriesName, string seasonName, int numberInSeries)
+        public void AddFromSiteDownload(VideoFile file, string seriesName, string seasonName, int numberInSeries = 0)
         {
             var series = _db.Series.FirstOrDefault(x => x.Name == seriesName);
             var season = AddOrUpdateSeason(series, seasonName); 
@@ -684,7 +685,7 @@ namespace Infrastructure
         {
             var result = new List<DbFile>();
 
-            foreach (var info in files.Where(x => x is not VideoFile || (x as VideoFile).Type != VideoType.Youtube))
+            foreach (var info in files.Where(x => x is not VideoFile || (x as VideoFile).Type != VideoType.Web))
             {
                 try
                 {

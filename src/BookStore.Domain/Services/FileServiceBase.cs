@@ -26,7 +26,7 @@ namespace FileStore.Domain.Services
 
         public async Task MoveToAnotherSeriesByNameAsync(int fileId, string seriesName, bool moveWholeSeason)
         {
-            var series = _seriesRepository.AddOrUpdateSeries(seriesName, VideoType.Youtube, null);
+            var series = _seriesRepository.AddOrUpdateSeries(seriesName, VideoType.Web, null);
             var file = await _FileRepository.GetById(fileId);
 
             if (file.SeriesId == series.Id)
