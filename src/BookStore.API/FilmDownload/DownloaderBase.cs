@@ -168,6 +168,7 @@ namespace API.FilmDownload
                 }
                 catch (Exception ex)
                 {
+                    NLog.LogManager.GetCurrentClassLogger().Error($"DownloaderBase Error: {ex} message: {ex.Message}");
                     error(ex);
                 }
             }
