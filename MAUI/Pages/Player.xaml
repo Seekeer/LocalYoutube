@@ -9,7 +9,6 @@
         <converters:IdToImageUrlConverter x:Key="idToImageUrl" />
         <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
     </ContentPage.Resources>
-    <ScrollView>
 
         <VerticalStackLayout >
         <toolkit:MediaElement
@@ -23,6 +22,7 @@
                 HeightRequest="300"
                 MetadataArtworkUrl="{Binding File.Id, Converter={StaticResource idToImageUrl}}"
                 MetadataTitle="{Binding File.Name}"
+                
             />
                 <!--
                 StateChanged="OnStateChanged"
@@ -42,29 +42,30 @@ Unloaded="MediaElement_Unloaded"
             
             <!--<Button Text="Pause/Play" Clicked="Button_Clicked"/>-->
             <ScrollView>
-                <ListView ItemsSource="{Binding SeekPositionCollection.Positions}"
-                          MaximumHeightRequest="200"
-                          HasUnevenRows="True"
-                   >
+            <VerticalStackLayout>
+                <ListView ItemsSource="{Binding Bookmarks.Marks}"
+                              MaximumHeightRequest="400"
+                              HasUnevenRows="True"
+                       >
                     <ListView.ItemTemplate>
                         <DataTemplate>
                             <ViewCell>
                                 <HorizontalStackLayout Margin="5">
                                     <Label
-                                        Margin="0,0,5,0"
-		                                Text="Вернуть на"
-		                                SemanticProperties.HeadingLevel="Level1"
-		                                FontSize="Default"
-		                                HorizontalOptions="Center" />
+                                            Margin="0,0,5,0"
+		                                    Text="{Binding Caption}"
+		                                    SemanticProperties.HeadingLevel="Level1"
+		                                    FontSize="Default"
+		                                    HorizontalOptions="Center" />
 
                                     <Label
-		                                BindingContext="{Binding OriginalPositionStr}"
-                                        Text="{Binding Path=.,StringFormat='{mm\:ss}'}"
-		                                TextDecorations="Underline"
-		                                TextColor="Blue"
-		                                SemanticProperties.HeadingLevel="Level1"
-		                                FontSize="Default"
-		                                HorizontalOptions="Center" >
+		                                    BindingContext="{Binding PositionStr}"
+                                            Text="{Binding Path=.,StringFormat='{mm\:ss}'}"
+		                                    TextDecorations="Underline"
+		                                    TextColor="Blue"
+		                                    SemanticProperties.HeadingLevel="Level1"
+		                                    FontSize="Default"
+		                                    HorizontalOptions="Center" >
                                         <Label.GestureRecognizers>
                                             <TapGestureRecognizer Tapped="OnUrlClicked"/>
                                         </Label.GestureRecognizers>
@@ -75,48 +76,81 @@ Unloaded="MediaElement_Unloaded"
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
-            </ScrollView>
-
-            <toolkit:Expander Margin="5">
-                <toolkit:Expander.Header>
-                    <Label Text="Описание \|/"
-                       FontAttributes="Bold"
-                       FontSize="Medium" />
-                </toolkit:Expander.Header>
-
-                <ListView ItemsSource="{Binding Description}"
-                   >
-
+                <ListView ItemsSource="{Binding SeekPositionCollection.Positions}"
+                              MaximumHeightRequest="200"
+                              HasUnevenRows="True"
+                       >
                     <ListView.ItemTemplate>
                         <DataTemplate>
                             <ViewCell>
                                 <HorizontalStackLayout Margin="5">
-                                    <Label 
-                                        Text="{Binding Timestamp}"
-		                                TextDecorations="Underline"
-		                                TextColor="Blue"
-		                                SemanticProperties.HeadingLevel="Level1"
-		                                FontSize="Default"
-		                                HorizontalOptions="Center" >
+                                    <Label
+                                            Margin="0,0,5,0"
+		                                    Text="Вернуть на"
+		                                    SemanticProperties.HeadingLevel="Level1"
+		                                    FontSize="Default"
+		                                    HorizontalOptions="Center" />
+
+                                    <Label
+		                                    BindingContext="{Binding OriginalPositionStr}"
+                                            Text="{Binding Path=.,StringFormat='{mm\:ss}'}"
+		                                    TextDecorations="Underline"
+		                                    TextColor="Blue"
+		                                    SemanticProperties.HeadingLevel="Level1"
+		                                    FontSize="Default"
+		                                    HorizontalOptions="Center" >
                                         <Label.GestureRecognizers>
-                                            <TapGestureRecognizer Tapped="OnTimeClicked"/>
+                                            <TapGestureRecognizer Tapped="OnUrlClicked"/>
                                         </Label.GestureRecognizers>
                                     </Label>
 
-                                    <Label 
-                                        Margin="0,0,5,0"
-		                                SemanticProperties.HeadingLevel="Level1"
-		                                FontSize="Default"
-		                                HorizontalOptions="Center"
-                                        Text="{Binding Paragraph}"/>
                                 </HorizontalStackLayout>
                             </ViewCell>
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
 
-            </toolkit:Expander>
+                <toolkit:Expander Margin="5">
+                        <toolkit:Expander.Header>
+                            <Label Text="Описание \|/"
+                               FontAttributes="Bold"
+                               FontSize="Medium" />
+                        </toolkit:Expander.Header>
 
-        </VerticalStackLayout>
-    </ScrollView>
+                        <ListView ItemsSource="{Binding Description}"
+                           >
+
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <ViewCell>
+                                        <HorizontalStackLayout Margin="5">
+                                            <Label 
+                                                Text="{Binding Timestamp}"
+		                                        TextDecorations="Underline"
+		                                        TextColor="Blue"
+		                                        SemanticProperties.HeadingLevel="Level1"
+		                                        FontSize="Default"
+		                                        HorizontalOptions="Center" >
+                                                <Label.GestureRecognizers>
+                                                    <TapGestureRecognizer Tapped="OnTimeClicked"/>
+                                                </Label.GestureRecognizers>
+                                            </Label>
+
+                                            <Label 
+                                                Margin="0,0,5,0"
+		                                        SemanticProperties.HeadingLevel="Level1"
+		                                        FontSize="Default"
+		                                        HorizontalOptions="Center"
+                                                Text="{Binding Paragraph}"/>
+                                        </HorizontalStackLayout>
+                                    </ViewCell>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                    </toolkit:Expander>
+                </VerticalStackLayout>
+            </ScrollView>
+
+    </VerticalStackLayout>
 </ContentPage>

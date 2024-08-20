@@ -19,7 +19,7 @@ namespace MAUI.ViewModels
     public partial class PlayerVM : VMBase<VideoFileResultDtoDownloaded>
     {
         private readonly IAPIService _api;
-        //private readonly IMAUIService _mauiDBService;
+        private readonly IMAUIService _mauiDBService;
         private readonly DownloadManager _downloadManager;
 
         [ObservableProperty]
@@ -42,16 +42,21 @@ namespace MAUI.ViewModels
 
         [ObservableProperty]
         private IEnumerable<DescriptionRow> _description;
+
+        [ObservableProperty]
+        private BookmarksVM _bookmarks;
+        private double _lastPosition;
+        private bool _pausedCalled;
+
         public Player Page { get; internal set; }
 
         public PlayerVM(IAPIService api, IMAUIService positionRepository, DownloadManager downloadManager)
         {
             _api = api;
-            //_mauiDBService = positionRepository;
+            _mauiDBService = positionRepository;
             _downloadManager = downloadManager;
 
             _dtoAssign = AssignDTO;
-            
         }
 
         private void AssignDTO(VideoFileResultDtoDownloaded dto)
@@ -60,6 +65,7 @@ namespace MAUI.ViewModels
             this.VideoUrl = dto.IsDownloaded ?
                 dto.Path :
                 HttpClientAuth.GetVideoUrlById(dto.Id);
+            Bookmarks = new BookmarksVM(_api, () => Page.GetMedia().Position, dto.Id);
 
             Description = DescriptionRow.ParseDescription(dto.Description);
 
@@ -69,8 +75,8 @@ namespace MAUI.ViewModels
 
         private async Task ProcessFile()
         {
-            //using var fileService = GetFileService();
-            //_mauiDBService.AddFileIfNeeded(File);
+            var fileService = GetFileService();
+            _mauiDBService.AddFileIfNeeded(File);
 
             //DownloadAndReplace();
         }
@@ -81,7 +87,7 @@ namespace MAUI.ViewModels
             StartPositionUpdateTimer();
 
             //Task.Delay(TimeSpan.FromMilliseconds(10000))
-            //    .ContinueWith(async task => 
+            //    .ContinueWith(async task =>
             //    {
             //        await UpdatePosition();
             //        StartPositionUpdateTimer();
@@ -101,9 +107,7 @@ namespace MAUI.ViewModels
             //var remotePositionTask = _api.GetPositionAsync(File.Id);
             //var remotePosition = await setLocalPositionTask.ContinueWith(async x => await remotePositionTask);
 
-            //var localPosition = _mauiDBService.GetInfoById(File.Id);
-            //if (localPosition != null)
-            //    await Page.SetPosition(TimeSpan.FromSeconds(localPosition.Position));
+            double? position = _mauiDBService.GetInfoById(File.Id)?.Position;
 
             try
             {
@@ -111,13 +115,16 @@ namespace MAUI.ViewModels
                 var remotePosition = await _api.GetPositionAsync(File.Id);
                 if(remotePosition != null)
                 {
-                    //if (await _mauiDBService.SetPositionAsync(File.Id, remotePosition))
-                        await Page.SetPosition(TimeSpan.FromSeconds(remotePosition.Position));
+                    if (await _mauiDBService.SetPositionAsync(File.Id, remotePosition))
+                        position = remotePosition.Position;
                 }
             }
             catch (Exception ex)
             {
             }
+
+            if (position != null)
+                await Page.SetPosition(TimeSpan.FromSeconds(position.Value));
         }
 
         private IMAUIService GetFileService()
@@ -148,6 +155,22 @@ namespace MAUI.ViewModels
 
                 if (SeekPositionCollection.PositionUpdated(Page.GetMedia().Position))
                     ShowSnackWithNavigation();
+
+                if (_lastPosition == position)
+                {
+                    if (!_pausedCalled)
+                    {
+                        _pausedCalled = true;
+                        Bookmarks.Paused();
+                    }
+                }
+                else if (_pausedCalled)
+                {
+                    Bookmarks.Resumed();
+                    _pausedCalled = false;
+                }
+
+                _lastPosition = position;
             }
             catch (Exception ex)
             {

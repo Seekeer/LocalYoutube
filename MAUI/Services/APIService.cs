@@ -16,6 +16,9 @@ namespace MAUI.Services
         //IEnumerable<Season> GetSeasons();
          Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFiles(Series selectedSeries, Season selectedSeason);
         Task DeleteVideoAsync(int id);
+        Task<int> AddMarkAsync(MarkAddDto markAddDto);
+        Task RemoveMarkAsync(int id);
+        IEnumerable<MarkAddDto> GetMarksForFile(int fileId);
     }
 
     public class APIService : IAPIService
@@ -141,6 +144,21 @@ namespace MAUI.Services
             catch (Exception ex)
             {
             }
+        }
+
+        public Task<int> AddMarkAsync(MarkAddDto markAddDto)
+        {
+            return Task.FromResult(1);
+        }
+
+        public Task RemoveMarkAsync(int id)
+        {
+            return Task.CompletedTask;
+        }
+
+        public IEnumerable<MarkAddDto> GetMarksForFile(int fileId)
+        {
+            return (new List<MarkAddDto>().AsEnumerable());
         }
     }
 }
