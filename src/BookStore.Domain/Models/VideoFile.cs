@@ -41,7 +41,7 @@ namespace FileStore.Domain.Models
         [IsOnlineVideoAttribute]
         Courses,
         RutrackerDownloaded,
-        Web,
+        Youtube,
         EoT,
         Special
     }

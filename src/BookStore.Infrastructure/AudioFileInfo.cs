@@ -56,7 +56,7 @@ namespace Infrastructure
         internal string ClearFileName(string name)
         {
             return name.Split("##").First()
-                    .Replace(".mp3", "").Replace(BookTitle, "").Replace(BookTitle.ToUpper(), "").Replace(Author??"asdasdas", "");
+                    .Replace(".mp3", "").Replace(BookTitle, "").Replace(BookTitle.ToUpper(), "").Replace(!string.IsNullOrEmpty(Author)? Author : "asdasdas", "");
         }
     }
 }

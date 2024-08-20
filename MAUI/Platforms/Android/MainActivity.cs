@@ -12,7 +12,9 @@ namespace MAUI
         {
             base.OnCreate(savedInstanceState);
 
+ #if DEBUG
             this.SetLocale();
+ #endif
 
         }
         void SetLocale()

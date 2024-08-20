@@ -45,8 +45,8 @@ namespace MAUI
 
 #if DEBUG
     		builder.Logging.AddDebug();
-#endif
             SetDefaultCulture();
+#endif
             AddLogging(builder);
 
             var app =  builder.Build();

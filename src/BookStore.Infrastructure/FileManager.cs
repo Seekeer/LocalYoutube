@@ -57,21 +57,6 @@ namespace Infrastructure
             _db = db;
         }
 
-        public static string GetUniquePath(string folder, string desiredName, string extension)
-        {
-            var filePath = "";
-            var suffix = "";
-            do
-            {
-                var path = Path.Combine(folder, desiredName);
-                filePath = $"{path}_{suffix}.{extension}";
-                suffix = Guid.NewGuid().ToString().Substring(0, 2);
-            } 
-            while (File.Exists(filePath));
-
-            return filePath;
-        }
-
         public MoveResult MoveFileSync()
         {
             try
