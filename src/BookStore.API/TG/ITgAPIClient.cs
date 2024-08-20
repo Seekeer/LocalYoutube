@@ -27,7 +27,7 @@ namespace API.TG
         Task SendFile(VideoFile dbFile, ApplicationUser user);
     }
 
-    internal class TgAPIClient : ITgAPIClient, IDisposable
+    internal class TgAPIClient : ITgAPIClient
     {
         public TgAPIClient(IMessageProcessor messageProcessor, AppConfig config, VideoCatalogDbContext db)
         {
@@ -38,7 +38,7 @@ namespace API.TG
             _credentials = config.TelegramSettings.TgCredentials;
             _messageProcessor = messageProcessor;
 
-            if (_client != null)
+            if (_client == null)
                 _client = new WTelegram.Client(Config);
         }
 
@@ -454,9 +454,5 @@ namespace API.TG
         private static string Peer(Peer peer) => peer is null ? null : peer is PeerUser user ? User(user.user_id)
             : peer is PeerChat or PeerChannel ? Chat(peer) : $"Peer {peer.ID}";
 
-        public void Dispose()
-        {
-            _client.Dispose();
-        }
     }
 }
