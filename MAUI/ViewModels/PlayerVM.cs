@@ -61,9 +61,8 @@ namespace MAUI.ViewModels
             _dtoAssign = AssignDTO;
         }
 
-        public override void Dispose()
+        public void Dispose()
         {
-            base.Dispose();
             _positionTimer.Dispose();
         }
 
