@@ -71,6 +71,10 @@ Unloaded="MediaElement_Unloaded"
                                         </Label.GestureRecognizers>
                                     </Label>
 
+                                    <Button Padding="20,0" Text="X"
+                                            Command="{Binding Path=BindingContext.DeleteCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                            CommandParameter="{Binding Id}"/>
+
                                 </HorizontalStackLayout>
                             </ViewCell>
                         </DataTemplate>

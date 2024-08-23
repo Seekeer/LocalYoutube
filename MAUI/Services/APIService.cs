@@ -17,7 +17,7 @@ namespace MAUI.Services
          Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFiles(Series selectedSeries, Season selectedSeason);
         Task DeleteVideoAsync(int id);
         Task<int> AddMarkAsync(MarkAddDto markAddDto);
-        Task RemoveMarkAsync(int id);
+        Task<bool> DeleteMarkAsync(int id);
         IEnumerable<MarkAddDto> GetMarksForFile(int fileId);
     }
 
@@ -139,26 +139,49 @@ namespace MAUI.Services
         {
             try
             {
-                await _httpClientAuth.Delete($"files/{id}");
+                await _httpClientAuth.DeleteAsync($"files/{id}");
             }
             catch (Exception ex)
             {
             }
         }
 
-        public Task<int> AddMarkAsync(MarkAddDto markAddDto)
+        public async Task<int> AddMarkAsync(MarkAddDto markAddDto)
         {
-            return Task.FromResult(1);
+            try
+            {
+                return await _httpClientAuth.PostAsync<int>($"marks/add", markAddDto);
+            }
+            catch (Exception ex)
+            {
+                return (0);
+            }
         }
 
-        public Task RemoveMarkAsync(int id)
+        public async Task<bool> DeleteMarkAsync(int id)
         {
-            return Task.CompletedTask;
+            try
+            {
+                await _httpClientAuth.DeleteAsync($"marks/{id}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
 
         public IEnumerable<MarkAddDto> GetMarksForFile(int fileId)
         {
-            return (new List<MarkAddDto>().AsEnumerable());
+            try
+            {
+                var list = _httpClientAuth.Get<IEnumerable<MarkAddDto>>($"marks/getAllMarks?fileId={fileId}");
+                return list;
+            }
+            catch (Exception ex)
+            {
+                return new List<MarkAddDto>();
+            }
         }
     }
 }

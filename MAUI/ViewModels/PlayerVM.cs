@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using System.Linq;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
+using System.Diagnostics;
 
 namespace MAUI.ViewModels
 {
@@ -26,7 +27,7 @@ namespace MAUI.ViewModels
         private VideoFileResultDtoDownloaded _file;
 
         [ObservableProperty]
-        private SeekPositionCollection _seekPositionCollection = new SeekPositionCollection();
+        private SeekPositionCollectionVM _seekPositionCollection = new SeekPositionCollectionVM();
 
         [ObservableProperty]
         private string _videoUrl;
@@ -47,6 +48,7 @@ namespace MAUI.ViewModels
         private BookmarksVM _bookmarks;
         private double _lastPosition;
         private bool _pausedCalled;
+        private System.Timers.Timer _positionTimer;
 
         public Player Page { get; internal set; }
 
@@ -57,6 +59,12 @@ namespace MAUI.ViewModels
             _downloadManager = downloadManager;
 
             _dtoAssign = AssignDTO;
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+            _positionTimer.Dispose();
         }
 
         private void AssignDTO(VideoFileResultDtoDownloaded dto)
@@ -134,10 +142,10 @@ namespace MAUI.ViewModels
 
         private void StartPositionUpdateTimer()
         {
-            System.Timers.Timer aTimer = new System.Timers.Timer();
-            aTimer.Elapsed += new ElapsedEventHandler((_,__) => UpdatePositionByControl());
-            aTimer.Interval = 1000;
-            aTimer.Enabled = true;
+            _positionTimer = new System.Timers.Timer();
+            _positionTimer.Elapsed += new ElapsedEventHandler((_,__) => UpdatePositionByControl());
+            _positionTimer.Interval = 500;
+            _positionTimer.Enabled = true;
         }
 
         public void UpdatePositionByControl()
@@ -152,6 +160,7 @@ namespace MAUI.ViewModels
                 //using var fileService = GetFileService();
                 //_mauiDBService.SetPositionAsync(File.Id, positionDTO);
                 _api.SetPositionAsync(File.Id, positionDTO);
+                Trace.WriteLine($"Position : {position}");
 
                 if (SeekPositionCollection.PositionUpdated(Page.GetMedia().Position))
                     ShowSnackWithNavigation();
@@ -190,7 +199,8 @@ namespace MAUI.ViewModels
             Action action = async () => await Page.SetPosition(SeekPositionCollection.Positions.First().OriginalPosition);
             TimeSpan duration = TimeSpan.FromSeconds(3);
 
-            Snackbar.Make(text, action, actionButtonText, duration, snackbarOptions).Show();
+            if(DeviceInfo.Current.Platform == DevicePlatform.Android)
+                Snackbar.Make(text, action, actionButtonText, duration, snackbarOptions).Show();
         }
 
         private async Task DownloadAndReplace()
@@ -256,94 +266,4 @@ namespace MAUI.ViewModels
         }
     }
 
-    public class SeekPosition
-    {
-        public TimeSpan OriginalPosition { get; set; }
-        public TimeSpan NewPosition { get; set; }
-
-        public string OriginalPositionStr
-        {
-            get
-            {
-                if (OriginalPosition.TotalHours > 1)
-                    return OriginalPosition.ToString(@"hh\:mm\:ss");
-                else
-                    return OriginalPosition.ToString(@"mm\:ss");
-            }
-        }
-    }
-
-    public partial class SeekPositionCollection : ObservableObject
-    {
-        private List<TimeSpan> _lastPosition = new List<TimeSpan>();
-
-        public TimeSpan GetCurrentPosition()
-        {
-            return _lastPosition.LastOrDefault();
-        }
-
-        [ObservableProperty]
-        List<SeekPosition> _positions  = new List<SeekPosition>();
-
-        // TODO - for some reason throw Ex on adding. Threads?
-        //[ObservableProperty]
-        //private ObservableCollection<SeekPosition> _positions = new ObservableCollection<SeekPosition>();
-
-        public bool TryAddPosition(List<TimeSpan> positions, TimeSpan newPosition)
-        {
-            try
-            {
-                var diffPositions = positions.Where(x => Math.Abs((newPosition - x).TotalSeconds) > 5);
-                var originalPosition = diffPositions.LastOrDefault();
-
-                if (newPosition == originalPosition)
-                    return false;
-
-                if (this.Positions.Count > 0)
-                {
-
-                    var lastPosition = this.Positions[this.Positions.Count - 1];
-                    if (lastPosition.OriginalPosition == originalPosition)
-                    {
-                        lastPosition.NewPosition = newPosition;
-                        return false;
-                    }
-                }
-
-                if (this.Positions.Any(x => x.NewPosition == newPosition && x.OriginalPosition == originalPosition))
-                    return false;
-
-                var seekPosition = new SeekPosition();
-                seekPosition.OriginalPosition = originalPosition;
-                seekPosition.NewPosition = newPosition;
-                //this.Positions.Add(seekPosition);
-
-                this.Positions.Insert(0, seekPosition);
-                this.Positions = new List<SeekPosition>(this.Positions);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                return false;
-            }
-        }
-
-        internal bool PositionUpdated(TimeSpan position)
-        {
-            if (!Positions.Any())
-                Positions.Add(new SeekPosition { NewPosition = (position) });
-
-            if (Math.Abs((Positions.First().NewPosition - position).TotalSeconds) > 2)
-            {
-                Positions.Insert(0, (new SeekPosition { NewPosition = (position), OriginalPosition = Positions.First().NewPosition }));
-                this.Positions = new List<SeekPosition>(this.Positions);
-                return true;
-            }
-            else
-            {
-                Positions.First().NewPosition = position;
-                return false;
-            }
-        }
-    } 
 }

@@ -39,6 +39,9 @@ namespace MAUI.ViewModels
         {
             get
             {
+#if DEBUG
+                return true;
+#endif
                 return Connectivity.NetworkAccess == NetworkAccess.Internet;
             }
         }

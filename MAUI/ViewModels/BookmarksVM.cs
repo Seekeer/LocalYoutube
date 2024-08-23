@@ -1,12 +1,25 @@
-﻿using Dtos;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Dtos;
 using MAUI.Services;
+using System;
 using System.Collections.ObjectModel;
+using System.Security.Cryptography;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MAUI.ViewModels
 {
     public class MarkVM
     {
+        public MarkVM() { }
+        public MarkVM(MarkAddDto x)
+        {
+            Id = x.Id;
+            Caption = x.Caption;
+            DbFileId = x.DbFileId;
+            Position = TimeSpan.FromSeconds(x.Position);
+        }
+
         public int DbFileId { get; set; }
         public int Id { get; set; }
         public TimeSpan Position { get; set; }
@@ -32,16 +45,25 @@ namespace MAUI.ViewModels
                 DbFileId = DbFileId
             };
         }
+
+        public bool IsDifferenceGreater(MarkVM markVM, TimeSpan limit)
+        {
+            var diff = this.Position - markVM.Position;
+
+            return Math.Abs(diff.TotalMilliseconds) > limit.TotalMilliseconds;
+        }
     }
 
-    public class BookmarksVM
+    public partial class BookmarksVM : ObservableObject
     {
         private int _fileId;
-        private TimeSpan _lastCheckTime;
+        private DateTime _lastCheckTime;
         private readonly IAPIService _api;
         private readonly Func<TimeSpan> _getPosition;
 
-        private ObservableCollection<MarkVM> Marks { get; } 
+        [ObservableProperty]
+        List<MarkVM> _marks = new ();
+        //public ObservableCollection<MarkVM> Marks { get; } 
 
         public BookmarksVM(IAPIService api, Func<TimeSpan> getPosition, int fileId)
         {
@@ -49,48 +71,58 @@ namespace MAUI.ViewModels
             _api = api;
             _getPosition = getPosition;
 
-            Marks = new ObservableCollection<MarkVM>();
-            Marks.Add(new MarkVM
-            {
-                Caption = "asdf",
-                Position = TimeSpan.FromSeconds(555)
-            });
-            //Marks = new ObservableCollection<MarkVM>(_api.GetMarksForFile(fileId));
+            Marks = _api.GetMarksForFile(fileId).Select(x => new MarkVM(x)).ToList();
         }
 
         public void Paused()
         {
-            _lastCheckTime = _getPosition();
+            _lastCheckTime = DateTime.Now;
         }
 
         public async Task Resumed()
         {
-            var diffSeconds = (_lastCheckTime - _getPosition()).TotalSeconds;
-            if (diffSeconds < 3)
+            var diffSeconds = (DateTime.Now - _lastCheckTime).TotalSeconds;
+            if (diffSeconds < 5)
             {
                 await AddMarkAsync(_getPosition());
             }
+        }
+
+        [RelayCommand]
+        public async Task Delete(int id)
+        {
+            var mark = Marks.First(x => x.Id == id); 
+            Marks.Remove(mark);
+            UpdateMarks();
+            await _api.DeleteMarkAsync(mark.Id);
+        }
+
+        // Need cause have problems with ObservCollection
+        private void UpdateMarks()
+        {
+            Marks = new List<MarkVM>(Marks);
         }
 
         public async Task AddMarkAsync(TimeSpan time)
         {
             var markAddVM = new MarkVM
             {
+                Caption = "Закладка",
                 Position = time,
                 DbFileId = _fileId,
             };
 
-            if (Marks.Any(x => (x.Position - markAddVM.Position) < TimeSpan.FromSeconds(5)))
+            if (Marks.Any(x => !x.IsDifferenceGreater(markAddVM, TimeSpan.FromSeconds(5))))
                 return;
 
             markAddVM.Id = await _api.AddMarkAsync(markAddVM.GetDTO());
+            // TODO Notify
+            if(markAddVM.Id == 0)
+                return;
+
             Marks.Add(markAddVM);
+            UpdateMarks();
         }
 
-        public async Task RemoveMarkAsync(MarkVM mark)
-        {
-            Marks.Remove(mark);
-            await _api.RemoveMarkAsync(mark.Id);
-        }
     }
 }

@@ -28,6 +28,8 @@ public partial class Player : ContentPage
     {
         MediaElement.Stop();
         MediaElement.Dispose();
+        MediaElement.Handler?.DisconnectHandler();
+        viewModel.Dispose();
         Toast.Make($"Player_NavigatedFrom", ToastDuration.Long, 20).Show();
     }
 

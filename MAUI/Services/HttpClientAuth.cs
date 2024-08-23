@@ -1,10 +1,21 @@
 ﻿using Azure;
+using Dtos;
 using FileStore.Domain.Dtos;
 using MAUI.Pages;
+using Microsoft.Maui;
 using System.Text.Json;
 
 namespace MAUI.Services
 {
+
+    public class SystemTask
+    {
+        public static TResult RunSingleSync<TResult>(Func<System.Threading.Tasks.Task<TResult>> task)
+        {
+            return System.Threading.Tasks.Task.Run(task).GetAwaiter().GetResult();
+        }
+    }
+
     public class HttpClientAuth
     {
         public HttpClientAuth(INavigationService navigationService) 
@@ -95,14 +106,28 @@ namespace MAUI.Services
             }
         }
 
-        public async Task<T> Put<T>(string url, object data)
+        public T Post<T>(string url, object data)
         {
-            using var client = await GetClient();
+            return SystemTask.RunSingleSync(() => PostAsync<T>(url, data));
+        }
 
+        public async Task<T> PostAsync<T>(string url, object data)
+        {
+            return await SendData<T>(url, data, (url, data, client) => client.PostAsync(url, data));
+        }
+
+        public async Task<T> PutAsync<T>(string url, object data)
+        {
+            return await SendData<T>(url, data, (url, data, client) => client.PutAsync(url, data));
+        }
+
+        private async Task<T> SendData<T>(string url, object data, Func<string, StringContent, HttpClient, Task<HttpResponseMessage>> func)
+        {
+            HttpClient client = await GetClient();
             var json = JsonSerializer.Serialize(data);
             StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             url = !url.StartsWith(BASE_API_URL) ? $"{BASE_API_URL}{url}" : url;
-            var response = await client.PutAsync(url, httpContent);
+            var response = await func(url, httpContent, client);
 
             if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
@@ -112,7 +137,7 @@ namespace MAUI.Services
                     await _navigationService.NavigateAsync(nameof(LoginPage));
                 }
                 else
-                    return await Put<T>(url, data);
+                    return await SendData<T>(url, data, func);
             }
 
             if (typeof(T) == typeof(string))
@@ -123,7 +148,7 @@ namespace MAUI.Services
             return obj;
         }
 
-        public async Task Delete(string url)
+        public async Task DeleteAsync(string url)
         {
             using var client = await GetClient();
             url = !url.StartsWith(BASE_API_URL) ? $"{BASE_API_URL}{url}" : url;
@@ -138,8 +163,13 @@ namespace MAUI.Services
                     await _navigationService.NavigateAsync(nameof(LoginPage));
                 }
                 else
-                    await Delete(url);
+                    await DeleteAsync(url);
             }
+        }
+
+        public T Get<T>(string url)
+        {
+            return SystemTask.RunSingleSync(() => GetAsync<T>(url));
         }
 
         public async Task<T> GetAsync<T>(string url)
@@ -216,6 +246,5 @@ namespace MAUI.Services
             var token = await SecureStorage.GetAsync("accessToken");
             return !string.IsNullOrEmpty(token);
         }
-
     }
 }
