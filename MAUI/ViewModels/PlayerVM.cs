@@ -60,6 +60,8 @@ namespace MAUI.ViewModels
             _downloadManager = downloadManager;
 
             _dtoAssign = AssignDTO;
+
+            (App.Current as App).CurrentPlayerVM = this;
         }
 
         public void Dispose()

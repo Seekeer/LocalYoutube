@@ -1,4 +1,5 @@
 ﻿using MAUI.Pages;
+using MAUI.ViewModels;
 using MetroLog.Maui;
 using Shiny.NET;
 
@@ -21,6 +22,17 @@ namespace MAUI
             // DEBUG Shake for logs
             //var logController = new LogController();
             //logController.IsShakeEnabled = false;
+        }
+
+        public PlayerVM CurrentPlayerVM {  get; set; }
+
+        public void PausePlay()
+        {
+            CurrentPlayerVM?.Page.GetMedia()?.Pause();
+        }
+        public void ResumePlay()
+        {
+            CurrentPlayerVM?.Page.GetMedia()?.Play();
         }
 
         private void RegisterRoutes()
