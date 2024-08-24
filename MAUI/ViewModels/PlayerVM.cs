@@ -95,13 +95,6 @@ namespace MAUI.ViewModels
             StartPositionUpdateTimer();
 
             this.Page.GetMedia().StateChanged += PlayerVM_StateChanged;
-
-            //Task.Delay(TimeSpan.FromMilliseconds(10000))
-            //    .ContinueWith(async task =>
-            //    {
-            //        await UpdatePosition();
-            //        StartPositionUpdateTimer();
-            //    });
         }
 
         private void PlayerVM_StateChanged(object? sender, CommunityToolkit.Maui.Core.Primitives.MediaStateChangedEventArgs e)
@@ -182,7 +175,7 @@ namespace MAUI.ViewModels
 
                 var positionDTO = new PositionDTO { Position = position };
                 //using var fileService = GetFileService();
-                //_mauiDBService.SetPositionAsync(File.Id, positionDTO);
+                await _mauiDBService.SetPositionAsync(File.Id, positionDTO);
                 await _api.SetPositionAsync(File.Id, positionDTO);
                 Trace.WriteLine($"Position : {position}");
 
