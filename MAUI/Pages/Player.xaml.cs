@@ -89,7 +89,7 @@ public partial class Player : ContentPage
 
     private void OnMediaOpened(object sender, EventArgs e)
     {
-        viewModel.InitPosition();
+        viewModel.InitMedia();
     }
 
     private void OnStateChanged(object sender, CommunityToolkit.Maui.Core.Primitives.MediaStateChangedEventArgs e)

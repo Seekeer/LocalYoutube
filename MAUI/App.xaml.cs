@@ -18,8 +18,9 @@ namespace MAUI
                 page => MainPage!.Navigation.PushModalAsync(page),
                 () => MainPage!.Navigation.PopModalAsync());
 
-            var logController = new LogController();
-            logController.IsShakeEnabled = true;
+            // DEBUG Shake for logs
+            //var logController = new LogController();
+            //logController.IsShakeEnabled = false;
         }
 
         private void RegisterRoutes()

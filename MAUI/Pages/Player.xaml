@@ -43,8 +43,14 @@ Unloaded="MediaElement_Unloaded"
             <!--<Button Text="Pause/Play" Clicked="Button_Clicked"/>-->
             <ScrollView>
             <VerticalStackLayout>
-                <ListView ItemsSource="{Binding Bookmarks.Marks}"
-                              MaximumHeightRequest="400"
+                <HorizontalStackLayout>
+                    <Button Padding="20,0" Text="📑"
+                                            Command="{Binding Path=AddBookmarkCommand}"
+                                            />
+                </HorizontalStackLayout>
+                <ScrollView>
+                    <ListView ItemsSource="{Binding Bookmarks.Marks}"
+                              MaximumHeightRequest="200"
                               HasUnevenRows="True"
                        >
                     <ListView.ItemTemplate>
@@ -72,15 +78,16 @@ Unloaded="MediaElement_Unloaded"
                                     </Label>
 
                                     <Button Padding="20,0" Text="X"
-                                            Command="{Binding Path=BindingContext.DeleteCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                            Command="{Binding Path=BindingContext.Bookmarks.DeleteCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
                                             CommandParameter="{Binding Id}"/>
 
                                 </HorizontalStackLayout>
                             </ViewCell>
                         </DataTemplate>
                     </ListView.ItemTemplate>
-                </ListView>
-                <ListView ItemsSource="{Binding SeekPositionCollection.Positions}"
+                    </ListView>
+                        </ScrollView>
+                    <ListView ItemsSource="{Binding SeekPositionCollection.Positions}"
                               MaximumHeightRequest="200"
                               HasUnevenRows="True"
                        >

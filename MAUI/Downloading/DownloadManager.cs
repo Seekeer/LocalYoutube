@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using MAUI.Services;
 using System.Security.Policy;
 using FileStore.Domain.Models;
+using Infrastructure;
 
 namespace MAUI.Downloading
 {
@@ -59,7 +60,7 @@ namespace MAUI.Downloading
             if (FileDownloaded(file))
                 return file.Path;
 
-            var name = fileDTO.Name.ToString();
+            var name =  fileDTO.Name.GetCorrectFileName(); 
 
             var path = PlataformFolder();
             path = Path.Combine(path, Guid.NewGuid().ToString());

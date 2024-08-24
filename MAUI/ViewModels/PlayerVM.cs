@@ -14,6 +14,7 @@ using System.Linq;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using System.Diagnostics;
+using Xabe.FFmpeg;
 
 namespace MAUI.ViewModels
 {
@@ -88,10 +89,12 @@ namespace MAUI.ViewModels
             //DownloadAndReplace();
         }
 
-        public async Task InitPosition()
+        public async Task InitMedia()
         {
             await UpdatePosition();
             StartPositionUpdateTimer();
+
+            this.Page.GetMedia().StateChanged += PlayerVM_StateChanged;
 
             //Task.Delay(TimeSpan.FromMilliseconds(10000))
             //    .ContinueWith(async task =>
@@ -99,6 +102,25 @@ namespace MAUI.ViewModels
             //        await UpdatePosition();
             //        StartPositionUpdateTimer();
             //    });
+        }
+
+        private void PlayerVM_StateChanged(object? sender, CommunityToolkit.Maui.Core.Primitives.MediaStateChangedEventArgs e)
+        {
+            var state = Page.GetMedia().CurrentState;
+            if (state == CommunityToolkit.Maui.Core.Primitives.MediaElementState.Paused)
+            {
+                //var state = Page.GetMedia().CurrentState;
+                //if (!_pausedCalled)
+                {
+                    _pausedCalled = true;
+                    Bookmarks.Paused();
+                }
+            }
+            else if (_pausedCalled)
+            {
+                Bookmarks.Resumed();
+                _pausedCalled = false;
+            }
         }
 
         private async Task UpdatePosition()
@@ -142,12 +164,15 @@ namespace MAUI.ViewModels
         private void StartPositionUpdateTimer()
         {
             _positionTimer = new System.Timers.Timer();
-            _positionTimer.Elapsed += new ElapsedEventHandler((_,__) => UpdatePositionByControl());
+            _positionTimer.Elapsed += new ElapsedEventHandler(async (_, __) =>
+            {
+                await UpdatePositionByControl();
+            });
             _positionTimer.Interval = 500;
             _positionTimer.Enabled = true;
         }
 
-        public void UpdatePositionByControl()
+        public async Task UpdatePositionByControl()
         {
             try
             {
@@ -158,27 +183,28 @@ namespace MAUI.ViewModels
                 var positionDTO = new PositionDTO { Position = position };
                 //using var fileService = GetFileService();
                 //_mauiDBService.SetPositionAsync(File.Id, positionDTO);
-                _api.SetPositionAsync(File.Id, positionDTO);
+                await _api.SetPositionAsync(File.Id, positionDTO);
                 Trace.WriteLine($"Position : {position}");
 
                 if (SeekPositionCollection.PositionUpdated(Page.GetMedia().Position))
                     ShowSnackWithNavigation();
 
-                if (_lastPosition == position)
-                {
-                    if (!_pausedCalled)
-                    {
-                        _pausedCalled = true;
-                        Bookmarks.Paused();
-                    }
-                }
-                else if (_pausedCalled)
-                {
-                    Bookmarks.Resumed();
-                    _pausedCalled = false;
-                }
+                //if (_lastPosition == position)
+                //{
+                //    var state = Page.GetMedia().CurrentState;
+                //    if (!_pausedCalled)
+                //    {
+                //        _pausedCalled = true;
+                //        Bookmarks.Paused();
+                //    }
+                //}
+                //else if (_pausedCalled)
+                //{
+                //    await Bookmarks.Resumed();
+                //    _pausedCalled = false;
+                //}
 
-                _lastPosition = position;
+                //_lastPosition = position;
             }
             catch (Exception ex)
             {
@@ -219,6 +245,11 @@ namespace MAUI.ViewModels
         {
         }
 
+        [RelayCommand]
+        public async Task AddBookmark()
+        {
+            await Bookmarks.AddMarkAsync(Page.GetMedia().Position);
+        }
     }
 
     public class DescriptionRow

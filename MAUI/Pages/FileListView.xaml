@@ -21,7 +21,7 @@
                                     Text="Скачать"
                                     BackgroundColor="Green"
                                     IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"
-                                    Command="{Binding Path=BindingContext.DeleteDownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                    Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
                                     CommandParameter="{Binding Id}"
                                     />
 

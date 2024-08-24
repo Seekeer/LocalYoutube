@@ -16,11 +16,15 @@
                     ItemsSource="{Binding Series}"
                     SelectedItem="{Binding SelectedSeries}"
                     ItemDisplayBinding="{Binding Name}"
+                    WidthRequest="200"
+                    Title="Сериал"
                     />
             <Picker 
                     ItemsSource="{Binding Seasons}"
                     SelectedItem="{Binding SelectedSeason}"
                     ItemDisplayBinding="{Binding Name}"
+                    WidthRequest="200"
+                    Title="Сезон"
                     />
         </HorizontalStackLayout>
 

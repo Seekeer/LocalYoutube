@@ -31,28 +31,28 @@
             TextColor="Red"
             />
         <Button
-            Text="Серии"
-            Background="Red"
-            Command="{Binding ShowSeriesCommand}"
-            />
-        <Button
-            Text="История"
-            Background="LightBlue"
-            Command="{Binding ShowHistoryCommand}"
-            />
-        <Button
-            Text="Новинки"
-            Background="LightBlue"
-            Command="{Binding ShowFreshCommand}"
-            />
-        <Button
             Text="Скачанное"
-            Background="Orange"
+            Background="Green"
             Command="{Binding ShowDownloadedCommand}"
             />
         <Button
+            Text="Новинки"
+            Background="BlueViolet"
+            Command="{Binding ShowFreshCommand}"
+            />
+        <Button
+            Text="История"
+            Background="CadetBlue"
+            Command="{Binding ShowHistoryCommand}"
+            />
+        <Button
+            Text="Серии"
+            Background="Blue"
+            Command="{Binding ShowSeriesCommand}"
+            />
+        <Button
             Text="Скачиваемое"
-            Background="Green"
+            Background="Orange"
             Command="{Binding ShowDownloadingCommand}"
             />
         <Button

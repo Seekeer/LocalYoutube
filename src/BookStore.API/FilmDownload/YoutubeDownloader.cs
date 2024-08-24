@@ -69,11 +69,11 @@ namespace API.FilmDownload
             // Get highest quality muxed stream
             var streamInfo = streamManifest.GetMuxedStreams().GetWithHighestVideoQuality();
 
-            var path = Path.Combine(rootDownloadFolder, new string(channelName.Where(ch => !Path.InvalidPathChars.Contains(ch) && !Path.GetInvalidFileNameChars().Contains(ch)).ToArray()));
+            var path = Path.Combine(rootDownloadFolder, channelName.GetCorrectFilePath());
             // TODO 
             path = path.Trim('.');
 
-            var validFilename = new string(video.Title.Where(ch => !Path.GetInvalidFileNameChars().Contains(ch)).ToArray());
+            var validFilename = video.Title.GetCorrectFileName();
 
             path = Path.Combine(path, validFilename);
             path = path.Trim('.');

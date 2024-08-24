@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -28,6 +29,18 @@ namespace Infrastructure
 
     public static class StringHelper
     {
+
+        public static string GetCorrectFilePath(this string channelName)
+        {
+            return new string(channelName.Where(ch => !Path.InvalidPathChars.Contains(ch) && !Path.GetInvalidFileNameChars().Contains(ch)).ToArray());
+        }
+
+
+        public static string GetCorrectFileName(this string channelName)
+        {
+            return new string(channelName.Where(ch => !Path.GetInvalidFileNameChars().Contains(ch)).ToArray());
+        }
+
         public static string ClearEnd(this string text, string end, bool includeEndString = false)
         {
             var indexStart = text.IndexOf(end);

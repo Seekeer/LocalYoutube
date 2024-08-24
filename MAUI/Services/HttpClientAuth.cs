@@ -26,7 +26,14 @@ namespace MAUI.Services
         public static async Task<bool> LoginAsync(string login, string pass)
         {
             var json = JsonSerializer.Serialize(new LoginRequest { UserName = login, Password = pass });
-            return await SendLoginData( json, "login");
+            var loginResult = await SendLoginData( json, "login");
+            if (loginResult)
+            {
+                await SecureStorage.SetAsync("login", login);
+                await SecureStorage.SetAsync("password", pass);
+            }
+
+            return loginResult;
         }
 
         private static async Task<bool> SendLoginData(string json, string url)
@@ -51,6 +58,9 @@ namespace MAUI.Services
 
         private async Task<bool> RefreshToken()
         {
+            if(await TryToRelogin())
+                return true;
+
             var json = JsonSerializer.Serialize(new RefreshTokenRequest
             {
                 UserName = await SecureStorage.GetAsync("user_name"),
@@ -58,6 +68,11 @@ namespace MAUI.Services
             });
 
             return await SendLoginData(json, "refresh-token");
+        }
+
+        private static async Task<bool> TryToRelogin()
+        {
+            return await LoginAsync(await SecureStorage.GetAsync("login"), await SecureStorage.GetAsync("password"));
         }
 
         private static async Task SaveLoginResult(LoginResult result)
@@ -72,8 +87,9 @@ namespace MAUI.Services
             SecureStorage.Remove("user_name");
             SecureStorage.Remove("accessToken");
             SecureStorage.Remove("refresh_token");
+            SecureStorage.Remove("login");
+            SecureStorage.Remove("password");
         }
-
 
         //public const string BASE_API_URL = @"http://192.168.1.55:51951/api/";
         public const string BASE_API_URL = @"http://80.68.9.86:55/api/";
