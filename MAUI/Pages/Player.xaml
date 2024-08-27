@@ -47,6 +47,9 @@ Unloaded="MediaElement_Unloaded"
                     <Button Padding="20,0" Text="📑"
                                             Command="{Binding Path=AddBookmarkCommand}"
                                             />
+                    <Button Padding="20,0" Text="🔄"
+                                            Command="{Binding Path=RefreshCommand}"
+                                            />
                 </HorizontalStackLayout>
                 <ScrollView>
                     <ListView ItemsSource="{Binding Bookmarks.Marks}"

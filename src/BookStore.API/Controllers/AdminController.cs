@@ -109,22 +109,6 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
-        [Route("clearSeasonSeries")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task ClearSeasonSeries()
-        {
-            var seasons = _db.Seasons.ToList();
-
-            foreach (var season in seasons)
-            {
-                if (!_db.VideoFiles.Any(x => x.SeasonId == season.Id))
-                {
-                    RemoveSeason(season.Id, false);
-                }
-            }
-        }
-
-        [HttpGet]
         [Route("checkWrongPaths")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task CheckWrongPaths()
@@ -486,16 +470,16 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> FixFileTypeBySeries()
         {
-            var season = _db.VideoFiles.Where(x => x.Type == VideoType.Web).Include(x => x.Series);
-            foreach (var file in season)
-            {
-                if(file.Type != file.Series.Type)
-                {
-                    file.Type = file.Series.Type.Value;
-                }
-            }
+            //var season = _db.VideoFiles.Where(x => x.Type == VideoType.Web).Include(x => x.Series);
+            //foreach (var file in season)
+            //{
+            //    if(file.Type != file.Series.Type)
+            //    {
+            //        file.Type = file.Series.Type.Value;
+            //    }
+            //}
 
-            _db.SaveChanges();
+            //_db.SaveChanges();
 
             return Ok();
         }

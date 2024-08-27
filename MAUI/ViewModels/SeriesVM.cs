@@ -2,6 +2,7 @@
 using FileStore.Domain.Models;
 using MAUI.Downloading;
 using MAUI.Services;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace MAUI.ViewModels
@@ -21,7 +22,7 @@ namespace MAUI.ViewModels
         private async Task Init()
         {
             IsBusy = true;
-            Series = await _aPIService.GetSeries();
+            Series = (await _aPIService.GetSeries()).OrderBy(x => x.Name);
             IsBusy = false;
         }
 
@@ -40,7 +41,7 @@ namespace MAUI.ViewModels
             set
             {
                 //Seasons = _aPIService.GetSeasons();
-                Seasons = value.Seasons;
+                Seasons = value.Seasons.OrderBy(x => x.Name);
                 _selectedSeries = value;
             }
             get

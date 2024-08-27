@@ -66,7 +66,7 @@ namespace MAUI.ViewModels
 
         public void Dispose()
         {
-            _positionTimer.Dispose();
+            _positionTimer?.Dispose();
         }
 
         private void AssignDTO(VideoFileResultDtoDownloaded dto)
@@ -243,8 +243,9 @@ namespace MAUI.ViewModels
         }
 
         [RelayCommand]
-        public async Task Play()
+        public async Task Refresh()
         {
+            AssignDTO(File);
         }
 
         [RelayCommand]
