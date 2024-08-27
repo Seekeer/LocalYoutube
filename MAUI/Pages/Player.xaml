@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:converters="clr-namespace:MAUI.Converter"
+             xmlns:controls="clr-namespace:MAUI.Control"
              x:Class="MAUI.Pages.Player"
              Title="{Binding File.Name}">
     <ContentPage.Resources>
@@ -44,12 +45,24 @@ Unloaded="MediaElement_Unloaded"
             <ScrollView>
             <VerticalStackLayout>
                 <HorizontalStackLayout>
-                    <Button Padding="20,0" Text="📑"
+                    <controls:FontAwesomeLabel
                                             Command="{Binding Path=AddBookmarkCommand}"
-                                            />
-                    <Button Padding="20,0" Text="🔄"
+                         Text="{x:Static controls:FontAwesomeIcon.Bookmark}"
+                          UseSolidFont="False"
+                           FontSize="58"
+                            HorizontalOptions="Center" />
+                    <controls:FontAwesomeLabel
                                             Command="{Binding Path=RefreshCommand}"
-                                            />
+                         Text="{x:Static controls:FontAwesomeIcon.ArrowCircleUp}"
+                          UseSolidFont="False"
+                           FontSize="58"
+                            HorizontalOptions="Center" />
+                    <controls:FontAwesomeLabel
+                                            Command="{Binding Path=DeleteCommand}"
+                         Text="{x:Static controls:FontAwesomeIcon.Trash}"
+                          UseSolidFont="False"
+                           FontSize="58"
+                            HorizontalOptions="Center" />
                 </HorizontalStackLayout>
                 <ScrollView>
                     <ListView ItemsSource="{Binding Bookmarks.Marks}"
