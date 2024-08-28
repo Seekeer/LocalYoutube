@@ -253,6 +253,13 @@ namespace MAUI.ViewModels
         {
             await Bookmarks.AddMarkAsync(Page.GetMedia().Position);
         }
+
+        [RelayCommand]
+        public async Task Delete()
+        {
+            await _api.DeleteVideoAsync(File.Id);
+        }
+
     }
 
     public class DescriptionRow

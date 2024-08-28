@@ -44,11 +44,29 @@ Unloaded="MediaElement_Unloaded"
             <ScrollView>
             <VerticalStackLayout>
                 <HorizontalStackLayout>
-                    <Button Padding="20,0" Text="📑"
-                                            Command="{Binding Path=AddBookmarkCommand}"
+                    <Button Text="📑"
+                            Background="Transparent"
+                            FontSize="Header"
+                            BorderWidth="0"
+                            Margin="10,0,0,0"
+                            Padding="0, 0, 0, 0"
+                            Command="{Binding Path=AddBookmarkCommand}"
                                             />
-                    <Button Padding="20,0" Text="🔄"
-                                            Command="{Binding Path=RefreshCommand}"
+                    <Button Text="🔄"
+                            Background="Transparent"
+                            Margin="10,0,0,0"
+                            FontSize="Large"
+                            BorderWidth="0"
+                            Padding="0, 0, 0, 0"
+                            Command="{Binding Path=RefreshCommand}"
+                                            />
+                    <Button Text="❌"
+                            Background="Transparent"
+                            FontSize="Large"
+                            BorderWidth="0"
+                            Margin="10,0,0,0"
+                            Padding="0, 0, 0, 0"
+                            Command="{Binding Path=DeleteCommand}"
                                             />
                 </HorizontalStackLayout>
                 <ScrollView>
@@ -80,7 +98,12 @@ Unloaded="MediaElement_Unloaded"
                                         </Label.GestureRecognizers>
                                     </Label>
 
-                                    <Button Padding="20,0" Text="X"
+                                        <Button Text="❌"
+                                            Background="Transparent"
+                                            FontSize="Medium"
+                                            BorderWidth="0"
+                                            Margin="10,0,0,0"
+                                            Padding="0, 0, 0, 0"
                                             Command="{Binding Path=BindingContext.Bookmarks.DeleteCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
                                             CommandParameter="{Binding Id}"/>
 
