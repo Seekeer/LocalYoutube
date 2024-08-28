@@ -146,15 +146,16 @@ Unloaded="MediaElement_Unloaded"
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
-
-                <toolkit:Expander Margin="5">
+                    <!--<toolkit:Expander Margin="5">
                         <toolkit:Expander.Header>
                             <Label Text="Описание \|/"
                                FontAttributes="Bold"
                                FontSize="Medium" />
                         </toolkit:Expander.Header>
+                <ScrollView>-->
 
                         <ListView ItemsSource="{Binding Description}"
+                                  HeightRequest="200"
                            >
 
                             <ListView.ItemTemplate>
@@ -185,8 +186,9 @@ Unloaded="MediaElement_Unloaded"
                             </ListView.ItemTemplate>
                         </ListView>
 
-                    </toolkit:Expander>
-                </VerticalStackLayout>
+                <!--</ScrollView>
+                    </toolkit:Expander>-->
+            </VerticalStackLayout>
             </ScrollView>
 
     </VerticalStackLayout>

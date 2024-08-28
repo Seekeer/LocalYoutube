@@ -22,7 +22,7 @@ namespace MAUI.ViewModels
         private async Task Init()
         {
             IsBusy = true;
-            Series = (await _aPIService.GetSeries()).OrderBy(x => x.Name);
+            Series = (await _aPIService.GetSeries()).OrderBy(x => x.Name).ToList();
             IsBusy = false;
         }
 
@@ -40,8 +40,7 @@ namespace MAUI.ViewModels
         {
             set
             {
-                //Seasons = _aPIService.GetSeasons();
-                Seasons = value.Seasons.OrderBy(x => x.Name);
+                Seasons = value.Seasons.OrderBy(x => x.Name).ToList(); 
                 _selectedSeries = value;
             }
             get

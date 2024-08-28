@@ -263,12 +263,21 @@ namespace MAUI.ViewModels
         public async Task Delete()
         {
             const string delete = "Удалить";
-            string action = await Page.DisplayActionSheet("Удалить это видео с сервиса?", "Отмена", null, delete);
+            const string replayMessage = "Начать с начала";
+            string action = await Page.DisplayActionSheet("Удалить это видео с сервиса?", "Отмена", null, delete, replayMessage);
 
-            if(action == delete)
+            switch (action)
             {
-                await _api.DeleteVideoAsync(File.Id);
-                await _navigationService.GoBack();
+                case delete:
+                    await _api.DeleteVideoAsync(File.Id);
+                    await _navigationService.GoBack();
+                    break;
+                case replayMessage:
+                    await Page.SetPosition(TimeSpan.FromMilliseconds(1));
+                    Page.GetMedia().Play();
+                    break;
+                default:
+                    break;
             }
         }
     }
