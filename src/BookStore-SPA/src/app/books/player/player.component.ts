@@ -294,6 +294,13 @@ export class PlayerComponent implements OnInit, OnDestroy {
     dialog.showModal();
   }
 
+  public startOnceMore(){
+    const dialog = <any>document.getElementById('favDialog');
+    dialog.close(); 
+    this.getVideoElement().currentTime = 0;
+    this.getVideoElement().play();
+  }
+
   public deleteFilm(deleteFilm: boolean) {
     const dialog = <any>document.getElementById('favDialog');
     dialog.close();
@@ -380,11 +387,12 @@ export class PlayerComponent implements OnInit, OnDestroy {
     console.log(`Video ended ${this.videoURL} ${this.name}`);
     this.isDownloading = false;
     if (this.parameters.videosCount <= this.playedVideoCount) {
-      this.videoURL = null;
       if(this.parameters.showDeleteButton == true)
         this.showDeleteModal();
       else if(this.isSovietAnimation)
         this.showMoveModal();
+      else
+        this.videoURL = null;
       return false;
     }
 

@@ -1,11 +1,14 @@
 <dialog id="favDialog">
   <div>Вы уверены, что хотите удалить фильм?</div>
   <div class="mt-2" style="text-align: center">
-    <button class="btn btn-outline-warning" (click)="deleteFilm(false)">
+    <button class="btn btn-outline-warning " (click)="deleteFilm(false)">
       Нет
     </button>
-    <button class="btn btn-outline-danger ml-5" (click)="deleteFilm(true)">
+    <button class="btn btn-outline-danger ml-3" (click)="deleteFilm(true)">
       Да
+    </button>
+    <button class="btn btn-outline-success ml-3" (click)="startOnceMore()">
+      Начать заново
     </button>
   </div>
 </dialog>
