@@ -27,7 +27,7 @@
 
                                 <SwipeItem 
                                     BackgroundColor="Red"
-                                    Text="Удалить из скачанных"
+                                    Text="Из скачанных"
                                     IsVisible="{Binding IsDownloaded}"
                                     Command="{Binding Path=BindingContext.DeleteDownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
                                     CommandParameter="{Binding Id}"
@@ -38,7 +38,7 @@
 
                             <SwipeItem 
                                     BackgroundColor="Red"
-                                    Text="Удалить с сервера"
+                                    Text="С сервера"
                                     Clicked="SwipeItem_Clicked"
                                     Command="{Binding Path=BindingContext.DeleteVideoFromServerCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
                                     CommandParameter="{Binding Id}"

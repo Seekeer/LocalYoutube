@@ -23,7 +23,7 @@ namespace MAUI.ViewModels
         private readonly IAPIService _api;
         private readonly IMAUIService _mauiDBService;
         private readonly DownloadManager _downloadManager;
-
+        private readonly INavigationService _navigationService;
         [ObservableProperty]
         private VideoFileResultDtoDownloaded _file;
 
@@ -43,7 +43,7 @@ namespace MAUI.ViewModels
         private TimeSpan _position;
 
         [ObservableProperty]
-        private IEnumerable<DescriptionRow> _description;
+        private IEnumerable<VideoDescriptionRowVM> _description;
 
         [ObservableProperty]
         private BookmarksVM _bookmarks;
@@ -53,11 +53,12 @@ namespace MAUI.ViewModels
 
         public Player Page { get; internal set; }
 
-        public PlayerVM(IAPIService api, IMAUIService positionRepository, DownloadManager downloadManager)
+        public PlayerVM(IAPIService api, IMAUIService positionRepository, DownloadManager downloadManager, INavigationService navigationService)
         {
             _api = api;
             _mauiDBService = positionRepository;
             _downloadManager = downloadManager;
+            _navigationService = navigationService;
 
             _dtoAssign = AssignDTO;
 
@@ -66,7 +67,7 @@ namespace MAUI.ViewModels
 
         public void Dispose()
         {
-            _positionTimer.Dispose();
+            _positionTimer?.Dispose();
         }
 
         private void AssignDTO(VideoFileResultDtoDownloaded dto)
@@ -77,7 +78,7 @@ namespace MAUI.ViewModels
                 HttpClientAuth.GetVideoUrlById(dto.Id);
             Bookmarks = new BookmarksVM(_api, () => Page.GetMedia().Position, dto.Id);
 
-            Description = DescriptionRow.ParseDescription(dto.Description);
+            Description = VideoDescriptionRowVM.ParseDescription(dto.Description);
 
             ProcessFile();
         }
@@ -111,9 +112,13 @@ namespace MAUI.ViewModels
                     Bookmarks.Paused();
                 }
             }
-            else if (_pausedCalled)
+            else if (_pausedCalled && state == CommunityToolkit.Maui.Core.Primitives.MediaElementState.Playing)
             {
                 Bookmarks.Resumed();
+                _pausedCalled = false;
+            }
+            else 
+            {
                 _pausedCalled = false;
             }
         }
@@ -236,8 +241,9 @@ namespace MAUI.ViewModels
         }
 
         [RelayCommand]
-        public async Task Play()
+        public async Task Refresh()
         {
+            AssignDTO(File);
         }
 
         [RelayCommand]
@@ -245,49 +251,27 @@ namespace MAUI.ViewModels
         {
             await Bookmarks.AddMarkAsync(Page.GetMedia().Position);
         }
-    }
 
-    public class DescriptionRow
-    {
-        public DescriptionRow(string paragraph, string value)
+        [RelayCommand]
+        public async Task Delete()
         {
-            Paragraph = paragraph;
-            Timestamp = value;
-        }
+            const string delete = "Удалить";
+            const string replayMessage = "Начать с начала";
+            string action = await Page.DisplayActionSheet("Удалить это видео с сервиса?", "Отмена", null, delete, replayMessage);
 
-        public string Paragraph { get; }
-        public string Timestamp { get; }
-
-        public TimeSpan GetPosition()
-        {
-            var ts = TimeSpan.Parse(Timestamp);
-            return ts;
-        }
-
-        private int CountInstances(string str, string substring)
-        {
-            return str.Split(substring).Length - 1;
-        }
-
-        public static IEnumerable<DescriptionRow> ParseDescription(string description)
-        {
-            var result = new List<DescriptionRow>();
-            if (string.IsNullOrEmpty(description))
-                return result;
-
-            var paragraphs = description.SplitByNewLine().Select(paragraph =>
+            switch (action)
             {
-                var convertedWords = paragraph.Trim().Split(" ");
-                var firstWord = convertedWords[0];
-                var match = Regex.Match(firstWord, @"((\d{1,2}:)?[0-5]?\d:[0-5]?\d)");
-                if (match.Success)
-                    return new DescriptionRow(paragraph.Replace(firstWord, ""), match.Value);
-                else
-                    return new DescriptionRow(paragraph, null);
-
-            }).ToList();
-
-            return paragraphs;
+                case delete:
+                    await _api.DeleteVideoAsync(File.Id);
+                    await _navigationService.GoBack();
+                    break;
+                case replayMessage:
+                    await Page.SetPosition(TimeSpan.FromMilliseconds(1));
+                    Page.GetMedia().Play();
+                    break;
+                default:
+                    break;
+            }
         }
     }
 

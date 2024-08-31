@@ -78,7 +78,7 @@ namespace MAUI.ViewModels
             if (!Positions.Any())
                 Positions.Add(new SeekPositionVM { NewPosition = (position) });
 
-            if (Math.Abs((Positions.First().NewPosition - position).TotalSeconds) > 2)
+            if (Math.Abs((Positions.First().NewPosition - position).TotalSeconds) > 19)
             {
                 Positions.Insert(0, (new SeekPositionVM { NewPosition = (position), OriginalPosition = Positions.First().NewPosition }));
                 this.Positions = new List<SeekPositionVM>(this.Positions.Take(2));

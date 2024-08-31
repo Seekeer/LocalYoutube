@@ -2,6 +2,7 @@ using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Views;
 using Dtos;
+using Infrastructure;
 using MAUI.ViewModels;
 using System.Threading;
 
@@ -38,9 +39,9 @@ public partial class Player : ContentPage
         if (time == TimeSpan.Zero)
             return;
 
-        var toast = Toast.Make($"Navigated to {viewModel.VideoUrl}", ToastDuration.Short, 14);
+        //var toast = Toast.Make($"Navigated to {viewModel.VideoUrl}", ToastDuration.Short, 14);
         //var toast = Toast.Make($"Navigate to {time.TotalSeconds}", ToastDuration.Short, 14);
-        await toast.Show();
+        //await toast.Show();
 
         MainThread.BeginInvokeOnMainThread(async () =>
         {
@@ -136,7 +137,7 @@ public partial class Player : ContentPage
     private void OnTimeClicked(object sender, TappedEventArgs e)
     {
         var label = sender as Label;
-        var descriptionRow = (DescriptionRow)label.BindingContext;
+        var descriptionRow = (VideoDescriptionRowVM)label.BindingContext;
 
         SetPosition(descriptionRow.GetPosition());
     }
