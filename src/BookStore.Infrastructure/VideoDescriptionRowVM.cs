@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace Infrastructure
 {
@@ -22,7 +23,7 @@ namespace Infrastructure
             if (string.IsNullOrEmpty(Timestamp))
                 return TimeSpan.Zero;
 
-            var ts = TimeSpan.Parse(Timestamp);
+            var ts = TimeSpan.ParseExact(Timestamp, new string[] { "h\\:mm\\:ss", "mm\\:ss" }, CultureInfo.InvariantCulture);
             return ts;
         }
 
