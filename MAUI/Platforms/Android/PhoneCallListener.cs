@@ -1,6 +1,7 @@
 ﻿using Android.Content;
 using Android.Media;
 using Android.Telephony;
+using Android.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,6 +37,8 @@ namespace MAUI.Platforms.Android
     {
         public override void OnPlaybackConfigChanged(IList<AudioPlaybackConfiguration>? configs)
         {
+            Console.WriteLine("OnPlaybackConfigChanged");
+            Log.Warn("maui.devtube", "OnPlaybackConfigChanged");
             base.OnPlaybackConfigChanged(configs);
         }
     }
@@ -45,6 +48,7 @@ namespace MAUI.Platforms.Android
         public override void OnAudioDevicesRemoved(AudioDeviceInfo[]? removedDevices)
         {
             base.OnAudioDevicesRemoved(removedDevices);
+            (App.Current as App)?.PausePlay();
         }
     }
 
@@ -52,6 +56,7 @@ namespace MAUI.Platforms.Android
     {
         public override void OnReceive(Context? context, Intent? intent)
         {
+            Log.Warn("maui.devtube", "CustomReciever");
             Console.WriteLine("CustomReciever");
             //if (Android.Content.Intent.ACTION_MEDIA_BUTTON.equals(intent.getAction()))
             //{
