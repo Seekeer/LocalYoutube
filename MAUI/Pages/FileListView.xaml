@@ -59,7 +59,7 @@
                                     Text="{Binding Name}"
                                     FontAttributes="Bold" />
 
-                            <Label 
+                                <Label 
                                     Padding="10"
                                     FontSize="Medium"
                                     Text="{Binding Description}"
@@ -67,7 +67,16 @@
                                     FontAttributes="Italic"
                                     VerticalOptions="End" />
 
-                            <Button 
+                                <Label Grid.Row="1"
+                                       Padding="0,10,0,0"
+                                        FontAttributes="Bold" 
+                                    FontSize="Medium"
+                                    Grid.Column="1"
+                                    Text="{Binding DurationMinutes, StringFormat='{0} минут'}"
+                                    MaxLines="8"
+                                    VerticalOptions="End" />
+
+                                <Button 
                                     Text="Скачать"
                                     IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"
                                     VerticalOptions="Center"
@@ -102,7 +111,16 @@
                                     Text="{Binding Name}"
                                     FontAttributes="Bold" />
 
-                                <Label Grid.Row="1"
+                                    <Label Grid.Row="1"
+                                       Padding="0,10,0,0"
+                                        FontAttributes="Bold" 
+                                    FontSize="Medium"
+                                    Grid.Column="1"
+                                    Text="{Binding DurationMinutes, StringFormat='{0} минут'}"
+                                    MaxLines="8"
+                                    VerticalOptions="End" />
+
+                                    <Label Grid.Row="1"
                                        Padding="0,10,0,0"
                                     FontSize="Medium"
                                     Grid.Column="1"
@@ -110,7 +128,7 @@
                                     MaxLines="8"
                                     FontAttributes="Italic"
                                     VerticalOptions="End" />
-                            </VerticalStackLayout>
+                                </VerticalStackLayout>
 
                             <Button Grid.Column="2"
                                     Grid.RowSpan="2"

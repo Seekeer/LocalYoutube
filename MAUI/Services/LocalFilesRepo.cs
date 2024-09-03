@@ -40,7 +40,16 @@ namespace MAUI.Services
             //    localFiles.Add(localFiles[0]);
 
             var resultDTO = localFiles.Where(x => !string.IsNullOrEmpty(x.Path))
-                .Select(x => new VideoFileResultDtoDownloaded { Description = x.Description, Id = x.Id, Name = x.Name, IsDownloaded = true, Path = x.Path});
+                .OrderByDescending(x => x.UpdatedDate)
+                .Select(x => new VideoFileResultDtoDownloaded
+                {
+                    Description = x.Description,
+                    Id = x.Id,
+                    Name = x.Name,
+                    IsDownloaded = true,
+                    Path = x.Path,
+                    Duration = x.Duration
+                });
             //var resultDTO = _mapper.Map<IEnumerable<VideoFileResultDto>>(localFiles.Where(x => !string.IsNullOrEmpty(x.Path)));
             return resultDTO;
         }
