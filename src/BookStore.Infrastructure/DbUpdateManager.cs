@@ -22,6 +22,7 @@ using FileStore.Domain;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.Net;
+using Infrastructure.Migrations;
 
 namespace Infrastructure
 {
@@ -379,7 +380,7 @@ namespace Infrastructure
             return AddOrUpdateVideoSeries("Загрузки", false);
         }
 
-        public Series AddOrUpdateVideoSeries(string folderName, bool analyzeNameLikeFolderName = true, VideoType? type = null)
+        public Series AddOrUpdateVideoSeries(string folderName, bool analyzeNameLikeFolderName = true, VideoType? type = null, bool isOrderMatter =false)
         {
             if (type == null)
                 type = _type;
@@ -390,11 +391,10 @@ namespace Infrastructure
                 series.Type = type;
 
             _db.SaveChanges();
-
             return series;
         }
 
-        public Series AddOrGetSeries(string folderName, bool analyzeFolderName, bool isChild)
+        public Series AddOrGetSeries(string folderName, bool analyzeFolderName, bool isChild, bool isOrderMatter = false)
         {
             var name = analyzeFolderName ? GetSeriesNameFromFolder(folderName) : folderName;
 
@@ -402,7 +402,7 @@ namespace Infrastructure
             if (series == null)
             {
                 series = new Series { Name = name, Origin = _origin };
-                series.IsOrderMatter = _type == VideoType.Courses;
+                series.IsOrderMatter = isOrderMatter;
                 series.IsChild = isChild;
                 _db.Series.Add(series);
                 _db.SaveChanges();
