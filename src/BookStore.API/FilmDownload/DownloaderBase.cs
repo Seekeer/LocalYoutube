@@ -84,14 +84,6 @@ namespace API.FilmDownload
         }
     }
 
-    public enum DownloadType
-    {
-        Youtube = 0,
-        VK = 1,
-        Common = 2,
-        Rossaprimavera = 3,
-    }
-
     public class DownloaderFabric
     {
         public static DownloaderBase CreateDownloader(DownloadTask task, AppConfig config)
