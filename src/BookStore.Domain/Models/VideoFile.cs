@@ -107,7 +107,7 @@ namespace FileStore.Domain.Models
 
     }
 
-    public abstract class DbFile : Entity
+    public abstract class DbFile : TrackUpdateCreateTimeEntity
     {
         public string Path { get; set; }
         public string Name { get; set; }

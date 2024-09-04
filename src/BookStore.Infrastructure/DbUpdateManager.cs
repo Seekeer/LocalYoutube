@@ -31,13 +31,19 @@ namespace Infrastructure
     {
         public static void SetCoverByUrl(this FileExtendedInfo info, string url)
         {
-            byte[] imageAsByteArray;
-            using (var webClient = new WebClient())
+            try
             {
-                imageAsByteArray = webClient.DownloadData(url);
-            }
+                byte[] imageAsByteArray;
+                using (var webClient = new WebClient())
+                {
+                    imageAsByteArray = webClient.DownloadData(url);
+                }
 
-            info.SetCover(imageAsByteArray);
+                info.SetCover(imageAsByteArray);
+            }
+            catch (Exception)
+            {
+            }
         }
 
         public static void SetCover(this FileExtendedInfo info, byte[] cover)

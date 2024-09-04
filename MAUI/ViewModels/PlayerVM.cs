@@ -98,13 +98,6 @@ namespace MAUI.ViewModels
             StartPositionUpdateTimer();
 
             this.Page.GetMedia().StateChanged += PlayerVM_StateChanged;
-
-            //Task.Delay(TimeSpan.FromMilliseconds(10000))
-            //    .ContinueWith(async task =>
-            //    {
-            //        await UpdatePosition();
-            //        StartPositionUpdateTimer();
-            //    });
         }
 
         private void PlayerVM_StateChanged(object? sender, CommunityToolkit.Maui.Core.Primitives.MediaStateChangedEventArgs e)
@@ -189,7 +182,7 @@ namespace MAUI.ViewModels
 
                 var positionDTO = new PositionDTO { Position = position };
                 //using var fileService = GetFileService();
-                //_mauiDBService.SetPositionAsync(File.Id, positionDTO);
+                await _mauiDBService.SetPositionAsync(File.Id, positionDTO);
                 await _api.SetPositionAsync(File.Id, positionDTO);
                 Trace.WriteLine($"Position : {position}");
 
@@ -250,7 +243,8 @@ namespace MAUI.ViewModels
         [RelayCommand]
         public async Task Refresh()
         {
-            AssignDTO(File);
+            await _navigationService.GoBack();
+            await _navigationService.NavigateAsync(nameof(Player), File);
         }
 
         [RelayCommand]
@@ -264,10 +258,16 @@ namespace MAUI.ViewModels
         {
             const string delete = "Удалить";
             const string replayMessage = "Начать с начала";
-            string action = await Page.DisplayActionSheet("Удалить это видео с сервиса?", "Отмена", null, delete, replayMessage);
+            const string deleteEverywhere = "Удалить отовсюду";
+            string action = await Page.DisplayActionSheet("Удалить это видео с сервиса?", "Отмена", null, delete, replayMessage, deleteEverywhere);
 
             switch (action)
             {
+                case deleteEverywhere:
+                    await _api.DeleteVideoAsync(File.Id);
+                    await _downloadManager.DeleteDownloaded(File.Id);
+                    await _navigationService.GoBack();
+                    break;
                 case delete:
                     await _api.DeleteVideoAsync(File.Id);
                     await _navigationService.GoBack();

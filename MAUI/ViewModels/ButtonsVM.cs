@@ -4,6 +4,7 @@ using Dtos;
 using FileStore.Domain.Dtos;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
+using MAUI.Downloading;
 using MAUI.Pages;
 using MAUI.Services;
 using Shiny.NET;
@@ -22,11 +23,13 @@ namespace MAUI.ViewModels
         private readonly IAPIService _api;
         private readonly INavigationService _navigationService;
         private readonly LocalFilesRepo _videoFileRepository;
+        private readonly DownloadManager _downloadManager;
 
-        public ButtonsVM(IAPIService api, INavigationService navigationService, LocalFilesRepo localFileRepository) {
+        public ButtonsVM(IAPIService api, INavigationService navigationService, LocalFilesRepo localFileRepository, DownloadManager downloadManager) {
             _api = api;
             _navigationService = navigationService;
             _videoFileRepository = localFileRepository;
+            _downloadManager = downloadManager;
 
             Connectivity.ConnectivityChanged += (_, __) =>
             {
@@ -99,6 +102,10 @@ namespace MAUI.ViewModels
         [RelayCommand]
         public async Task Logout()
         {
+            var files = await _videoFileRepository.GetFiles();
+            foreach (var file in files)
+                await _downloadManager.DeleteDownloaded(file.Id);
+
             await _api.LogoutAsync();
         }
 

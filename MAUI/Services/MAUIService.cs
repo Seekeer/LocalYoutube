@@ -33,7 +33,14 @@ namespace MAUI.Services
 
         public void AddFileIfNeeded(VideoFileResultDto file)
         {
-            var videoFile = new VideoFile { Id = file.Id, Name = file.Name, SeriesId = MauiProgram.SERIES_ID, SeasonId = MauiProgram.SEASON_ID };
+            var videoFile = new VideoFile
+            {
+                Id = file.Id,
+                Name = file.Name,
+                SeriesId = MauiProgram.SERIES_ID,
+                SeasonId = MauiProgram.SEASON_ID,
+                Duration = file.Duration,
+            };
             Task.Run(async () =>
             {
                 using var fileService = GetFileService();
