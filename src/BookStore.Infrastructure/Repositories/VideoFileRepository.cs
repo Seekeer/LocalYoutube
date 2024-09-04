@@ -225,7 +225,7 @@ namespace FileStore.Infrastructure.Repositories
 
         public async Task<IEnumerable<T>> GetNew(int count)
         {
-            var files = DbSet.OrderByDescending(x => x.Id).Take(20);
+            var files = DbSet.Include(x => x.Series).Where(x => x.Series.Type != VideoType.ChildEpisode).OrderByDescending(x => x.Id).Take(20);
 
             return files;
         }
