@@ -15,6 +15,14 @@ namespace Infrastructure
             Timestamp = value;
         }
 
+        public bool IsTimeRow
+        {
+            get
+            {
+                return !string.IsNullOrEmpty(Timestamp);
+            }
+        }
+
         public string Paragraph { get; }
         public string Timestamp { get; }
 
@@ -51,6 +59,21 @@ namespace Infrastructure
             }).ToList();
 
             return paragraphs;
+        }
+
+        public static TimeSpan CalculateClosest(TimeSpan position, IEnumerable<VideoDescriptionRowVM> description)
+        {
+            var timeLine = description.Select(x => x.GetPosition()).Order().ToList();
+            var index = 0;
+            while (index < timeLine.Count)
+            {
+                if (timeLine[index] > position)
+                    return timeLine[index];
+
+                index++;
+            }
+
+            return TimeSpan.Zero;
         }
     }
 }
