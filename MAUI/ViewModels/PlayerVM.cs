@@ -248,6 +248,14 @@ namespace MAUI.ViewModels
         }
 
         [RelayCommand]
+        public async Task NextDescriptionTimestamp()
+        {
+            var closestTime = VideoDescriptionRowVM.CalculateClosest(Page.GetMedia().Position, Description);
+
+            Page.SetPosition(closestTime);
+        }
+
+        [RelayCommand]
         public async Task AddBookmark()
         {
             await Bookmarks.AddMarkAsync(Page.GetMedia().Position);
