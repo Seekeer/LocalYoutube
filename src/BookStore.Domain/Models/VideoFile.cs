@@ -78,6 +78,7 @@ namespace FileStore.Domain.Models
         Lessons,
         AudioBook,
         ChildMusic,
+        ChildBook,
     }
 
     public class FileExtendedInfo : Entity

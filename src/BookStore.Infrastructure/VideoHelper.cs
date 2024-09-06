@@ -141,6 +141,9 @@ namespace Infrastructure
 
         public static void FillVideoProperties(VideoFile videoFile)
         {
+            if (videoFile == null)
+                return;
+
             try
             {
                 var probe = FFProbe.Analyse(videoFile.Path);

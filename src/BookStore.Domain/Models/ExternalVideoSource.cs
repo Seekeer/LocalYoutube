@@ -6,6 +6,7 @@
         VK = 1,
         Common = 2,
         Rossaprimavera = 3,
+        Mishka = 4,
     }
 
     public class ExternalVideoSource : TrackUpdateCreateTimeEntity

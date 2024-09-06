@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -55,6 +56,8 @@ namespace Infrastructure.Scheduler
             //// Retrieve the contentDetails part of the channel resource for the authenticated user's channel.
             //var channelsListResponse = await channelsListRequest.ExecuteAsync();
 
+            var updates = await GetSubscribedChannelsUpdates(youtubeService, DateTime.Now.AddDays(-7));
+
             PlaylistItemListResponse playlistResponse = await GetLocalTubePlayListVideos(youtubeService);
             foreach (var item in playlistResponse.Items)
             {
@@ -72,6 +75,29 @@ namespace Infrastructure.Scheduler
                         await _bot.NotifyDownloadEnded(user.TgId, file);
                     });
             }
+        }
+
+        private async Task<List<string>> GetSubscribedChannelsUpdates(YouTubeService youtubeService, DateTime dateTime)
+        {
+            var req = youtubeService.Subscriptions.List(new Google.Apis.Util.Repeatable<string>(new string[] { "id" , "contentDetails" }));
+            req.Mine = true;
+            req.MaxResults = 50;
+            var channels = await req.ExecuteAsync();
+
+            var result = new List<string>();
+            foreach (var channel in channels.Items.Where(x =>x.ContentDetails.NewItemCount > 0))
+            {
+                var videoRequest = youtubeService.Search.List(new string[] { "snippet" });
+                videoRequest.ChannelId = channel.Id;
+                videoRequest.Order = SearchResource.ListRequest.OrderEnum.Date;
+                videoRequest.MaxResults = 50;
+                videoRequest.PublishedAfterDateTimeOffset = new DateTimeOffset(dateTime, TimeSpan.FromHours(-3));
+
+                var videos = await videoRequest.ExecuteAsync();
+                result.AddRange(videos.Items.Select(x =>x.Id.VideoId));
+            }
+
+            return result; 
         }
 
         private static async Task<PlaylistItemListResponse> GetLocalTubePlayListVideos(YouTubeService youtubeService)

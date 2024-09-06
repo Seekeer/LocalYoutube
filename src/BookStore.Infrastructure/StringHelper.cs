@@ -35,6 +35,12 @@ namespace Infrastructure
             return new string(channelName.Where(ch => !Path.InvalidPathChars.Contains(ch) && !Path.GetInvalidFileNameChars().Contains(ch)).ToArray());
         }
 
+        public static string AddFolder(this string folderPath, string newFolderName)
+        {
+            var newFolderNameCleared = new string(newFolderName.Where(ch => !Path.InvalidPathChars.Contains(ch) && !Path.GetInvalidFileNameChars().Contains(ch)).ToArray());
+
+            return Path.Combine(folderPath, newFolderNameCleared);
+        }
 
         public static string GetCorrectFileName(this string channelName)
         {

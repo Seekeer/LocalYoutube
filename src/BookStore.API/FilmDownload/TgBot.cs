@@ -744,7 +744,7 @@ namespace API.FilmDownload
             await _botClient.DeleteMessageAsync(new ChatId(task.FromId), task.QuestionMessageId);
         }
 
-        private async Task NotifyBotDownloadEnded(VideoFile item, TgDownloadTask task)
+        private async Task NotifyBotDownloadEnded(DbFile item, TgDownloadTask task)
         {
             var keyboard = new List<List<InlineKeyboardButton>>
                 {

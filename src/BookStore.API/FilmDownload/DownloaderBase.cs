@@ -18,7 +18,7 @@ namespace API.FilmDownload
         public string ListName { get; set; }
         public bool IsList { get; set; }
 
-        public Dictionary<string, VideoFile> Records { get; set; } = new Dictionary<string, VideoFile>();
+        public Dictionary<string, DbFile> Records { get; set; } = new Dictionary<string, DbFile>();
     }
 
     public class TgDownloadTask: DownloadTask
@@ -101,6 +101,8 @@ namespace API.FilmDownload
                 return new VKDownloader(config);
             else if (url.Contains("rossaprimavera"))
                 return new RossaDownloader(config);
+            else if (url.Contains("mishka-knizhka.ru"))
+                return new MishkaDownloader(config);
             else
                 return new CommonDownloader(config);
         }
@@ -113,7 +115,7 @@ namespace API.FilmDownload
         }
     }
 
-    public abstract class DownloaderBase
+    public abstract class DownloaderBase : IDisposable
     {
         protected DownloaderBase(AppConfig config) { 
             this._config = config;
@@ -125,7 +127,7 @@ namespace API.FilmDownload
         public abstract bool IsVideoPropertiesFilled { get;}
 
         public async Task DownloadAndProcess(DownloadTask task, IServiceScopeFactory serviceScopeFactory,
-            Action<Exception> error, Action<VideoFile> success)
+            Action<Exception> error, Action<DbFile> success)
         {
             var info = await GetInfo(task.Uri.ToString());
 
@@ -164,9 +166,11 @@ namespace API.FilmDownload
                     error(ex);
                 }
             }
+
+            this.Dispose();
         }
 
-        public async Task<DownloadInfo> GetInfo(string url)
+        protected async Task<DownloadInfo> GetInfo(string url)
         {
             string rootDownloadFolder = Path.Combine(_config.RootDownloadFolder, DownloadType.ToString());
 
@@ -244,7 +248,7 @@ namespace API.FilmDownload
                 .Replace("'", "");
         }
 
-        internal void UpdateFileByTask(VideoFile value, DownloadTask task)
+        internal void UpdateFileByTask(DbFile value, DownloadTask task)
         {
             if (!string.IsNullOrEmpty(task.VideoName))
                 value.Name = task.VideoName;
@@ -253,6 +257,10 @@ namespace API.FilmDownload
 
             if(!string.IsNullOrEmpty(task.CoverUrl))
                 value.VideoFileExtendedInfo.SetCoverByUrl(task.CoverUrl);
+        }
+
+        public virtual void Dispose()
+        {
         }
     }
 }

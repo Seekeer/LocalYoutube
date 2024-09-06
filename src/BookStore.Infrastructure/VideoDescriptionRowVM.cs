@@ -20,11 +20,7 @@ namespace Infrastructure
 
         public TimeSpan GetPosition()
         {
-            if (string.IsNullOrEmpty(Timestamp))
-                return TimeSpan.Zero;
-
-            var ts = TimeSpan.ParseExact(Timestamp, new string[] { "h\\:mm\\:ss", "mm\\:ss" }, CultureInfo.InvariantCulture);
-            return ts;
+            return Timestamp.ParseTS();
         }
 
         private int CountInstances(string str, string substring)

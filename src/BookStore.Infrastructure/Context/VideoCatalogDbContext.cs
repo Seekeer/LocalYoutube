@@ -39,6 +39,8 @@ namespace FileStore.Infrastructure.Context
         }
     }
 
+    // dotnet tool install --global dotnet-ef
+
     // cd .\src\BookStore.Infrastructure\
     // dotnet ef migrations add ShowLatest
     //  dotnet ef database update

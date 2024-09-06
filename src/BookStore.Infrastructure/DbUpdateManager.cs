@@ -464,22 +464,30 @@ namespace Infrastructure
             return TrimDots(result);
         }
 
-        public void AddFromSiteDownload(VideoFile file, string seriesName, string seasonName, int numberInSeries)
+        public void AddFromSiteDownload(DbFile file, string seriesName, string seasonName, int numberInSeries)
         {
             var series = _db.Series.FirstOrDefault(x => x.Name == seriesName);
+            if (series == null)
+            {
+                series = AddOrGetSeries(seriesName, false, true);
+                series.AudioType = AudioType.ChildBook;
+            }
             var season = AddOrUpdateSeason(series, seasonName); 
 
             file.Season = season;
             file.SeriesId = season.SeriesId;
-            file.Type = series.Type ?? VideoType.Unknown;
+            if(file is VideoFile )
+                (file as VideoFile).Type = series.Type ?? VideoType.Unknown;
+            else if (file is AudioFile)
+                (file as AudioFile).Type = series.AudioType ?? AudioType.Unknown;
             file.IsDownloading = true;
             file.Number = numberInSeries;
         }
 
-        public async Task<int> DownloadFinishedAsync(VideoFile file, bool isVideoPropertiesFilled)
+        public async Task<int> DownloadFinishedAsync(DbFile file, bool isVideoPropertiesFilled)
         {
             if(!isVideoPropertiesFilled)
-                VideoHelper.FillVideoProperties(file);
+                VideoHelper.FillVideoProperties(file as VideoFile);
 
             file.IsDownloading = false;
             await _db.Files.AddAsync(file);
