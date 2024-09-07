@@ -25,6 +25,7 @@ using FileStore.Infrastructure.Repositories;
 using FileStore.Domain.Interfaces;
 using System.Collections.Concurrent;
 using static System.Net.Mime.MediaTypeNames;
+using Quartz;
 
 namespace FileStore.API.Controllers
 {
@@ -35,14 +36,17 @@ namespace FileStore.API.Controllers
     public class AdminController : MainController
     {
         private  VideoCatalogDbContext _db;
+        private readonly ISchedulerFactory _factory;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly TgBot _tgBot;
         private readonly AppConfig _config;
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
         public AdminController(VideoCatalogDbContext dbContext, AppConfig config, 
-            IServiceScopeFactory serviceScopeFactory, TgBot tgBot, UserManager<ApplicationUser> userManager)
+            IServiceScopeFactory serviceScopeFactory, ISchedulerFactory factory,
+            TgBot tgBot, UserManager<ApplicationUser> userManager)
         {
+            _factory = factory;
             _userManager = userManager;
             _tgBot = tgBot;
             _db = dbContext;
@@ -55,6 +59,23 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> DoAction()
         {
+            await TriggerJob(nameof(CheckYoutubePlaylistJob));
+
+            await (new VideoHelper(_config)).GetPart("", TimeSpan.FromSeconds(72), TimeSpan.FromSeconds(156));
+
+            var files = _db.Files.AsNoTracking().ToList();
+            foreach (var file in files)
+            {
+                var newName = file.Name.ClearFileName();
+                if(newName != file.Name)
+                {
+                    file.Name = newName;
+                    _db.Update(file);
+                }
+            }
+
+            ClearSeasonSeries(111);
+
             await ConvertNewOnline();
             //await CheckWrongPaths();
             //await MoveDownloadedJob();
@@ -79,14 +100,20 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
+        private async Task TriggerJob(string jobName)
+        {
+            IScheduler scheduler = await _factory.GetScheduler();
+            await scheduler.TriggerJob(new JobKey(jobName));
+        }
+
         [HttpGet]
         [Route("clearSeasonSeries")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task ClearSeasonSeries()
+        public async Task ClearSeasonSeries(int seriesId)
         {
-            var seasons = _db.Seasons.Include(x => x.Series).ToList();
+            var series = _db.Series.Include(x => x.Seasons).First(x => x.Id == seriesId);
 
-            var seasonsToDelete = seasons.Where(x => x.Series.AudioType == null && !_db.Files.Any(file => file.SeasonId == x.Id));
+            var seasonsToDelete = series.Seasons.Where(x => !_db.Files.Any(file => file.SeasonId == x.Id));
             foreach (var season in seasonsToDelete)
             {
                 RemoveSeason(season.Id, false);

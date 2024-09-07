@@ -115,6 +115,32 @@ namespace Infrastructure
             return resultPath;
         }
 
+        public async Task<string> GetPart(string path, TimeSpan start, TimeSpan finish)
+        {
+            var format = FFMpeg.GetContainerFormat("mp4");
+            var fileInfo = new FileInfo(path);
+            var convertedPath = Path.Combine(_config.Config.PremierConvertedFolderPath,
+                    $"{new string(fileInfo.Name.Where(ch => !Path.InvalidPathChars.Contains(ch)).ToArray())}_{start.ToString("mm:ss")}_{finish.ToString("mm:ss")}");
+
+            await FFMpegArguments
+                .FromFileInput(path)
+                .OutputToFile(convertedPath, false, options => options
+                    .WithVideoCodec("libx264")
+                    //.WithConstantRateFactor(21)
+                    .WithAudioCodec(FFMpegCore.Enums.AudioCodec.Aac)
+                    //.WithVariableBitrate(4)
+                    .UsingMultithreading(true)
+                    .OverwriteExisting()
+                    .Seek(start)
+                    .WithDuration(finish - start)
+                    //.WithVideoFilters(filterOptions => filterOptions
+                    //    .Scale(VideoSize.Hd))
+                    .WithFastStart())
+                .ProcessAsynchronously();
+
+            return convertedPath;
+        }
+
         public async Task<string> EncodeToX264(string path)
         { 
             var format = FFMpeg.GetContainerFormat("mp4");

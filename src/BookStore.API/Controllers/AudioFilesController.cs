@@ -267,7 +267,7 @@ namespace FileStore.API.Controllers
 
         [HttpGet]
         [Route("getNew")]
-        public async Task<ActionResult<List<DTO>>> GetNew(int count = 20)
+        public async Task<ActionResult<List<DTO>>> GetNew(int count = 50)
         {
             var files = _mapper.Map<List<F>>(await _fileService.GetNew(count));
 

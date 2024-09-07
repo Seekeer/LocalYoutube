@@ -87,7 +87,7 @@ export class BookListComponent implements OnInit {
   
   public showOnlyWebSupported: boolean;
   
-  public showWatchedCheckbox: boolean = false;
+  public showWatchedCheckbox: boolean = true;
   public isSelectSeries: boolean = false;
   public isSelectSeason: boolean = false;
   public showKPINfo: boolean = false;
@@ -540,10 +540,10 @@ counter : number =0 ;
   continueWatch(){
     var film = this.books.find(x => !x.isFinished);
 
-    this.openVideo(film);
+    this.openVideo(film, false);
   }
 
-  openVideo(book: Book) {
+  openVideo(book: Book, inNewTab:boolean) {
 
     if(!book.isSupportedWebPlayer){
       window.open(`vlc://${this.service.getVideoURLById(book.id)}`, "_blank");
@@ -565,10 +565,19 @@ counter : number =0 ;
       queryParams.seasonId = book.seasonId;
 
     const navigationExtras: NavigationExtras = {
-      queryParams
+      queryParams,
    };
 
-   this.router.navigate(['/player'], navigationExtras);
+   if(!inNewTab)
+    this.router.navigate(['/player'], navigationExtras);
+   else{
+    
+    let newRelativeUrl = this.router.createUrlTree(['/player'], navigationExtras);
+    let baseUrl = window.location.href.replace(this.router.url, '');
+    // baseUrl = baseUrl.replace('/#','');
+    let url = baseUrl + newRelativeUrl;
+    window.open(url, '_blank');
+   }
   }
 }
 

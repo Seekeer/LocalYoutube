@@ -490,6 +490,7 @@ namespace Infrastructure
                 VideoHelper.FillVideoProperties(file as VideoFile);
 
             file.IsDownloading = false;
+            file.Name = file.Name.ClearFileName();
             await _db.Files.AddAsync(file);
             await _db.SaveChangesAsync();
 
@@ -511,7 +512,7 @@ namespace Infrastructure
 
         private VideoFile FillVideoInfo(Series series, Season season, FileInfo file, VideoFile video)
         {
-            video.Name = GetEpisodeNameFromFilenName(file.Name);
+            video.Name = GetEpisodeNameFromFilenName(file.Name).ClearFileName();
             video.Path = file.FullName;
             video.Type = _type ?? VideoType.Unknown;
             video.Origin = _origin;

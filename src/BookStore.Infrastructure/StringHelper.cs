@@ -284,6 +284,24 @@ namespace Infrastructure
             return tempo.Replace("&nbsp;", " ");
         }
 
+        public static string ClearFileName(this string name)
+        {
+            name = name.RemoveMany(new string[] { "WEB-DL" , "ATV3" });
+
+            name = name.EndingBefore("[");
+            return name;
+        }
+
+        public static string RemoveMany(this string tempo, string[] stringsToRemove)
+        {
+            var result = tempo;
+
+            foreach (var s in stringsToRemove)
+                result = result.Replace(s, "");
+
+            return result;
+        }
+
         public static string SkipLines(this string str, int linesToSkip)
         {
             string[] lines = str
