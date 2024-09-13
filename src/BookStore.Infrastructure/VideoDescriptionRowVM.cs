@@ -36,7 +36,7 @@ namespace Infrastructure
             return str.Split(substring).Length - 1;
         }
 
-        public static IEnumerable<VideoDescriptionRowVM> ParseDescription(string description)
+        public static IEnumerable<VideoDescriptionRowVM> ParseDescription(string description, bool onlyTimestamps)
         {
             var result = new List<VideoDescriptionRowVM>();
             if (string.IsNullOrEmpty(description))
@@ -49,10 +49,11 @@ namespace Infrastructure
                 var match = Regex.Match(firstWord, @"((\d{1,2}:)?[0-5]?\d:[0-5]?\d)");
                 if (match.Success)
                     return new VideoDescriptionRowVM(paragraph.Replace(firstWord, ""), match.Value);
-                else
+                else if (onlyTimestamps)
                     return new VideoDescriptionRowVM(paragraph, null);
-
-            }).ToList();
+                else
+                    return null;
+            }).Where(x => x != null).ToList();
 
             return paragraphs;
         }

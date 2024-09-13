@@ -55,7 +55,7 @@ namespace MAUI.ViewModels
         [RelayCommand]
         public async Task DownloadVideo(int id)
         {
-            await _downloadManager.DownloadAsync(Files.First(x => x.Id == id));
+            await _downloadManager.StartDownloadAsync(Files.First(x => x.Id == id));
         }
 
         [RelayCommand]

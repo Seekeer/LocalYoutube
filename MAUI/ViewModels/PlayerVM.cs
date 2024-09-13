@@ -228,16 +228,15 @@ namespace MAUI.ViewModels
                 Snackbar.Make(text, action, actionButtonText, duration, snackbarOptions).Show();
         }
 
-        private async Task DownloadAndReplace()
+        [RelayCommand]
+        public async Task Download()
         {
-            //if(!this.File.IsDownloaded && (this.File == null || this.File.DurationMinutes > 60))
-            //    return;
+            await _downloadManager.StartDownloadAsync(File);
+        }
 
-            //var filePath = await _downloadManager.DownloadAsync(File);
-            //var position = Page.GetCurrentPosition();
-            //VideoUrl = (filePath);
-            //if(position.TotalSeconds > 5)
-            //    await Page.SetPosition(position);
+        [RelayCommand]
+        public async Task FullScreen()
+        {
         }
 
         [RelayCommand]

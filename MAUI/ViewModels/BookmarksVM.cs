@@ -71,7 +71,12 @@ namespace MAUI.ViewModels
             _api = api;
             _getPosition = getPosition;
 
-            Marks = _api.GetMarksForFile(fileId).Select(x => new MarkVM(x)).ToList();
+            GetInfoAsync(fileId);
+        }
+
+        private async Task GetInfoAsync(int fileId)
+        {
+            Marks = (await _api.GetMarksForFile(fileId)).Select(x => new MarkVM(x)).ToList();
         }
 
         public void Paused()

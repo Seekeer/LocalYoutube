@@ -18,7 +18,7 @@ namespace MAUI.Services
         Task DeleteVideoAsync(int id);
         Task<int> AddMarkAsync(MarkAddDto markAddDto);
         Task<bool> DeleteMarkAsync(int id);
-        IEnumerable<MarkAddDto> GetMarksForFile(int fileId);
+        Task<IEnumerable<MarkAddDto>> GetMarksForFile(int fileId);
     }
 
     public class APIService : IAPIService
@@ -172,11 +172,11 @@ namespace MAUI.Services
             }
         }
 
-        public IEnumerable<MarkAddDto> GetMarksForFile(int fileId)
+        public async Task<IEnumerable<MarkAddDto>> GetMarksForFile(int fileId)
         {
             try
             {
-                var list = _httpClientAuth.Get<IEnumerable<MarkAddDto>>($"marks/getAllMarks?fileId={fileId}");
+                var list = await _httpClientAuth.GetAsync<IEnumerable<MarkAddDto>>($"marks/getAllMarks?fileId={fileId}");
                 return list;
             }
             catch (Exception ex)

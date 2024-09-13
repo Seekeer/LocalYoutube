@@ -52,7 +52,7 @@ Unloaded="MediaElement_Unloaded"
                             Padding="0, 0, 0, 0"
                             Command="{Binding Path=AddBookmarkCommand}"
                                             />
-                    <Button Text="⟳"
+                    <Button Text="🔄"
                             Background="Transparent"
                             TextColor="Green"
                             Margin="20,0,0,0"
@@ -67,7 +67,23 @@ Unloaded="MediaElement_Unloaded"
                             FontSize="45"
                             BorderWidth="0"
                             Padding="0, 0, 0, 0"
-                            Command="{Binding Path=NextDescriptionTimestampCommand}"
+                            Command="{Binding Path=NextDescriptionTimestampCommand}"/>
+
+                    <Button Text="💾"
+                            Background="Transparent"
+                            Margin="20,0,0,0"
+                            FontSize="45"
+                            BorderWidth="0"
+                            Padding="0, 0, 0, 0"
+                            Command="{Binding Path=DownloadCommand}"/>
+
+                    <Button Text="⛶"
+                            Background="Transparent"
+                            Margin="20,0,0,0"
+                            FontSize="55"
+                            BorderWidth="0"
+                            Padding="0, 0, 0, 0"
+                            Command="{Binding Path=FullScreenCommand}"
                                             />
                     <Button Text="❌"
                             Background="Transparent"

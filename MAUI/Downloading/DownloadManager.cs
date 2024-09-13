@@ -52,13 +52,13 @@ namespace MAUI.Downloading
             await _videoFileRepository.UpdateFilePathAsync(fileId, null);
         }
 
-        public async Task<string> DownloadAsync(VideoFileResultDtoDownloaded fileDTO)
+        public async Task StartDownloadAsync(VideoFileResultDtoDownloaded fileDTO)
         {
             _videoFileRepository.AddFileIfNeeded(fileDTO);
             var file = await _videoFileRepository.GetFileById(fileDTO.Id);
 
             if (FileDownloaded(file))
-                return file.Path;
+                return;
 
             var name =  fileDTO.Name.GetCorrectFileName(); 
 
@@ -66,8 +66,6 @@ namespace MAUI.Downloading
             path = Path.Combine(path, Guid.NewGuid().ToString());
 
             await DownloadFile(fileDTO, name, path);
-
-            return path;
         }
 
         private static bool FileDownloaded(VideoFile file)

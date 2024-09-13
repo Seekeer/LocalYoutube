@@ -40,7 +40,12 @@ namespace MAUI.Services
                 SeriesId = MauiProgram.SERIES_ID,
                 SeasonId = MauiProgram.SEASON_ID,
                 Duration = file.Duration,
+                VideoFileExtendedInfo = new FileExtendedInfo
+                {
+                    Description = file.Description
+                }
             };
+
             Task.Run(async () =>
             {
                 using var fileService = GetFileService();
