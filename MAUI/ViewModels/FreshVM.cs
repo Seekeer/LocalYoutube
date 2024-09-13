@@ -7,11 +7,11 @@ using Newtonsoft.Json.Linq;
 
 namespace MAUI.ViewModels
 {
-    public partial class SeriesVM : ListVM
+    public partial class FreshVM : ListVM
     {
         private readonly IAPIService _aPIService;
 
-        public SeriesVM(INavigationService navigationService, DownloadManager downloadManager, IAPIService aPIService) 
+        public FreshVM(INavigationService navigationService, DownloadManager downloadManager, IAPIService aPIService) 
             : base(navigationService, downloadManager, aPIService)
         {
             _aPIService = aPIService;
@@ -22,31 +22,8 @@ namespace MAUI.ViewModels
         private async Task Init()
         {
             IsBusy = true;
-            Series = (await _aPIService.GetSeries()).OrderBy(x => x.Name).ToList();
+            Seasons = (await _aPIService.GetNewSeasons()).ToList();
             IsBusy = false;
-        }
-
-        [ObservableProperty]
-        private IEnumerable<Series> _series;
-        //public IEnumerable<Series> Series
-        //{
-        //    get
-        //    {
-        //        return _aPIService.GetSeries();
-        //    }
-        //}
-
-        public Series SelectedSeries
-        {
-            set
-            {
-                Seasons = value.Seasons.OrderBy(x => x.Name).ToList(); 
-                _selectedSeries = value;
-            }
-            get
-            {
-                return _selectedSeries;
-            }
         }
 
         [ObservableProperty]

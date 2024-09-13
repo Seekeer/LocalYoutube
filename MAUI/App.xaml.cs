@@ -42,6 +42,7 @@ namespace MAUI
             Routing.RegisterRoute(nameof(Player), typeof(Player));
             Routing.RegisterRoute(nameof(ListPage), typeof(ListPage));
             Routing.RegisterRoute(nameof(SeriesPage), typeof(SeriesPage));
+            Routing.RegisterRoute(nameof(FreshPage), typeof(FreshPage));
 
             Routing.RegisterRoute(nameof(MainPage), typeof(MainPage));
         }

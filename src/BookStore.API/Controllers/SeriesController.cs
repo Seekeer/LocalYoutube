@@ -84,6 +84,18 @@ namespace FileStore.API.Controllers
             return await GetAll(null, origin);
         }
 
+        [HttpGet]
+        [Route("getFreshSeasons")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetFreshSeasons(int number = 20)
+        {
+            var seasons = await _SeriesRepository.GetFreshSeasonsAsync(number);
+            var freashSeries = new List<Series>{ new Series {
+                Seasons = seasons,
+            } };
+            return Ok(_mapper.Map<IEnumerable<SeriesResultDto>>(freashSeries));
+        }
+
         private async Task<IActionResult> GetAll(VideoType? type = null, Origin? origin = null)
         {
             var Series = await _SeriesService.GetAllByType(type, origin);

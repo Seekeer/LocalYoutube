@@ -85,9 +85,7 @@ namespace MAUI.ViewModels
         {
             IsBusy = true;
 
-            var dtos = await _api.GetFreshAsync();
-
-            await _navigationService.NavigateAsync(nameof(ListPage), dtos);
+            await _navigationService.NavigateAsync(nameof(FreshPage), "");
             IsBusy = false;
         }
 

@@ -204,6 +204,7 @@ namespace MAUI
             builder.Services.AddTransient<SeriesPage>();
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<Player>();
+            builder.Services.AddTransient<FreshPage>();
 
             builder.Services.AddTransient<MainPage>();
 
@@ -217,6 +218,7 @@ namespace MAUI
             builder.Services.AddTransient<ListVM>();
             builder.Services.AddTransient<SeriesVM>();
             builder.Services.AddTransient<PlayerVM>();
+            builder.Services.AddTransient<FreshVM>();
             builder.Services.AddTransient<TESTMainViewModel>();
             //builder.Services.AddTransient<EpisodeDetailViewModel>();
             //builder.Services.AddSingleton<EpisodeViewModel>();

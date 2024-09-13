@@ -12,9 +12,9 @@ namespace MAUI.Services
         Task<PositionDTO> GetPositionAsync(int id);
         Task SetPositionAsync(int id, PositionDTO positionDTO);
         Task LogoutAsync();
-         Task<IEnumerable<Series>> GetSeries();
-        //IEnumerable<Season> GetSeasons();
-         Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFiles(Series selectedSeries, Season selectedSeason);
+        Task<IEnumerable<Series>> GetSeries();
+        Task<IEnumerable<Season>> GetNewSeasons();
+        Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFiles(Season selectedSeason);
         Task DeleteVideoAsync(int id);
         Task<int> AddMarkAsync(MarkAddDto markAddDto);
         Task<bool> DeleteMarkAsync(int id);
@@ -109,20 +109,21 @@ namespace MAUI.Services
             }
         }
 
-        //public async Task<IEnumerable<Season>> GetSeasons()
-        //{
-        //    try
-        //    {
-        //        var list = await _httpClientAuth.GetAsync<IEnumerable<Season>>($"files/getFilesBySeason?id={selectedSeason.Id}&count={20}&isRandom=false");
-        //        return list;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return new List<Season>();
-        //    }
-        //}
+        public async Task<IEnumerable<Season>> GetNewSeasons()
+        {
+            try
+            {
+                var series = await _httpClientAuth.GetAsync<IEnumerable<Series>>($"series/getFreshSeasons");
+                var list = series.FirstOrDefault()?.Seasons;
+                return list;
+            }
+            catch (Exception ex)
+            {
+                return new List<Season>();
+            }
+        }
 
-        public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFiles(Series selectedSeries, Season selectedSeason)
+        public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFiles(Season selectedSeason)
         {
             try
             {

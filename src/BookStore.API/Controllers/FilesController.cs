@@ -114,14 +114,16 @@ namespace FileStore.API.Controllers
         [Route("getFilesBySeason")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetFilesBySeason(int id, int count, bool isRandom, int startId)
+        public async Task<IActionResult> GetFilesBySeason(int id, int count, bool isRandom, int startId, bool reverseOrder = false)
         {
-            var Files = await _fileService.GetFilesBySeason(id, isRandom, count, startId);
+            var files = await _fileService.GetFilesBySeason(id, isRandom, count, startId);
+            if(reverseOrder)
+                files = files.OrderByDescending(x => x.Id);
 
-            if (!Files.Any())
+            if (!files.Any())
                 return NotFound();
 
-            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files, await GetUserId(_userManager)));
+            return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(files, await GetUserId(_userManager)));
         }
 
         [HttpPut]

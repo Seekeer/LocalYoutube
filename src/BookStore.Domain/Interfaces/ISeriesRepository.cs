@@ -14,5 +14,6 @@ namespace FileStore.Domain.Interfaces
         Task MoveSeasonToSeriesAsync(int fileId, int seriesId);
         Series AddOrUpdateSeries(string name, VideoType? type, AudioType? audioType);
         Season AddOrUpdateSeason(Series series, string name, bool doNotIgnoreSeriesId = true, bool isOrderMatter = false);
+        Task<IEnumerable<Season>> GetFreshSeasonsAsync(int number);
     }
 }

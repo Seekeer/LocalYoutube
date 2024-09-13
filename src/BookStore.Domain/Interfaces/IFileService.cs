@@ -23,6 +23,15 @@ namespace FileStore.Domain.Interfaces
         Task<bool> Remove(T File);
         Task<bool> Remove(int fileId);
         Task<IEnumerable<T>> GetFilesBySearies(int seriesId, int count, bool isRandom, int startId);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="seriesId"></param>
+        /// <param name="isRandom"></param>
+        /// <param name="count">Only in case of random</param>
+        /// <param name="startId">Only in case of non-random</param>
+        /// <returns></returns>
         Task<IEnumerable<T>> GetFilesBySeason(int seriesId, bool isRandom, int count, int startId);
         Task<IEnumerable<T>> Search(string FileName);
         Task<IEnumerable<T>> SearchFileByType(V type);

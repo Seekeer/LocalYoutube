@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pages="clr-namespace:MAUI.Pages"
+             x:Class="MAUI.Pages.FreshPage"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             Title="Новинки">
+    <ScrollView>
+
+        <VerticalStackLayout>
+            <ActivityIndicator 
+                       IsVisible="{Binding IsBusy}"
+                       IsRunning="{Binding IsBusy}"
+                       Color="Red"/>
+            
+            <HorizontalStackLayout>
+                <Picker 
+                    ItemsSource="{Binding Seasons}"
+                    SelectedItem="{Binding SelectedSeason}"
+                    ItemDisplayBinding="{Binding Name}"
+                    WidthRequest="200"
+                    Title="Сезон"
+                    />
+        </HorizontalStackLayout>
+
+            <pages:FileListView BindingContext="{Binding}"/>
+    </VerticalStackLayout>
+        </ScrollView>
+</ContentPage>

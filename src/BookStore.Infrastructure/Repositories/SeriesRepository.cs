@@ -135,5 +135,11 @@ namespace FileStore.Infrastructure.Repositories
 
             await Db.SaveChangesAsync();
         }
+
+        public async Task<IEnumerable<Season>> GetFreshSeasonsAsync(int number)
+        {
+            var seasons = await Db.Seasons.Include(x => x.Files).OrderByDescending(x => x.Files.Max(file => file.CreatedDate)).Take(number).ToListAsync();
+            return seasons;
+        }
     }
 }
