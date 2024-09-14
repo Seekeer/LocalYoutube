@@ -26,4 +26,5 @@ public partial class FileListView : ContentView
         //var stack = (SwipeView)button.Parent;
         //stack.Remove(button);
     }
+
 }

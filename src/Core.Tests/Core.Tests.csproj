@@ -16,11 +16,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BookStore.API\API.csproj" />
+    <Folder Include="Resources\" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Resources\" />
+    <ProjectReference Include="..\BookStore.Domain\FileStore.Domain.csproj" />
+    <ProjectReference Include="..\BookStore.Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

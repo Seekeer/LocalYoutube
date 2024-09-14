@@ -8,6 +8,7 @@ using MAUI.Downloading;
 using MAUI.Pages;
 using MAUI.Services;
 using Shiny.NET;
+using System.Collections.ObjectModel;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MAUI.ViewModels
@@ -16,6 +17,14 @@ namespace MAUI.ViewModels
     {
         public bool IsDownloaded { get; set; }
         public string Path { get; set; }
+        public IEnumerable<Playlist> Playlists { get; internal set; }
+
+        public Playlist SelectedPlaylist
+        {
+            set { APIService.AddToPlaylists(Id, value.Id); }
+        }
+
+        public IAPIService APIService { get; internal set; }
     }
 
     public partial class ButtonsVM : VMBase<string>

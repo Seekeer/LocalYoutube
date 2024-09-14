@@ -13,15 +13,22 @@ namespace FileStore.Infrastructure.Repositories
 
     public interface IPlaylistRepository : IRepository<Playlist>
     {
+        Task<bool> AddToListAsync(int listId, int fileId);
+        Task<bool> RemoveFromListAsync(int listId, int fileId);
     }
 
     public class PlaylistRepository : Repository<Playlist>, IPlaylistRepository
     {
         public PlaylistRepository(VideoCatalogDbContext context) : base(context) { }
 
-        public async Task<bool> AddToList(int listId, int fileId)
+        public override async Task<Playlist> GetById(int listId)
         {
-            var list = await  DbSet.Include(x => x.Files).FirstOrDefaultAsync(x => x.Id == listId);
+            return await DbSet.Include(x => x.Files).FirstOrDefaultAsync(x => x.Id == listId);
+        }
+
+        public async Task<bool> AddToListAsync(int listId, int fileId)
+        {
+            var list = await GetById(listId);
             if (list == null)
                 return false;
 
@@ -37,9 +44,9 @@ namespace FileStore.Infrastructure.Repositories
             return true;
         }
 
-        public async Task<bool> RemoveFromList(int listId, int fileId)
+        public async Task<bool> RemoveFromListAsync(int listId, int fileId)
         {
-            var list = await DbSet.Include(x => x.Files).FirstOrDefaultAsync(x => x.Id == listId);
+            var list = await GetById(listId);
             if (list == null)
                 return false;
 

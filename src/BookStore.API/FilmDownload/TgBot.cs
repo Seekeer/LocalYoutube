@@ -615,7 +615,10 @@ namespace API.FilmDownload
                             });
                     }
                     else
+                    {
                         await TryRutrackerDownload(task.OriginalLine, message.From.Id);
+                        await _botClient.DeleteMessageAsync(message.From.Id, processMessage.MessageId);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -624,7 +627,7 @@ namespace API.FilmDownload
                 }
             }
 
-            var totalCount = lines.Skip(1).Count();
+            var totalCount = tasks.count;
             var endMessage = $"Скачивание завершено. Скачано {totalCount - errorLines.Count}/{totalCount}";
             if (errorLines.Any())
                 endMessage += Environment.NewLine + $"Ошибка, файл не скачан:{Environment.NewLine}{string.Join(Environment.NewLine, errorLines)}";

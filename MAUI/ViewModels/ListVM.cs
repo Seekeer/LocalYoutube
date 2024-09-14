@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dtos;
+using FileStore.Domain.Models;
 using MAUI.Downloading;
 using MAUI.Pages;
 using MAUI.Services;
@@ -19,9 +20,15 @@ namespace MAUI.ViewModels
             DeviceDisplay.Current.MainDisplayInfoChanged += Current_MainDisplayInfoChanged;
             UpdateOrientation();
 
-            _dtoAssign = dto =>
+            _dtoAssign = async dto => 
             {
                 dto = dto ?? new List<VideoFileResultDtoDownloaded>();
+                var playlists = await _apiService.GetPlaylistsAsync();
+                dto.ToList().ForEach(x =>
+                    {
+                        x.Playlists = playlists;
+                        x.APIService = apiService;
+                    });
                 downloadManager.CheckDownloaded(dto);
                 this.Files = new ObservableCollection<VideoFileResultDtoDownloaded>(dto);
             };
@@ -41,6 +48,7 @@ namespace MAUI.ViewModels
         [ObservableProperty]
         ObservableCollection<VideoFileResultDtoDownloaded> _files;
 
+
         [ObservableProperty]
         bool _isVerticalOrientation;
         [ObservableProperty]
@@ -56,6 +64,14 @@ namespace MAUI.ViewModels
         public async Task DownloadVideo(int id)
         {
             await _downloadManager.StartDownloadAsync(Files.First(x => x.Id == id));
+        }
+
+        [RelayCommand]
+        public async Task AddPlaylist()
+        {
+            string playlistName = await App.Current.MainPage.DisplayPromptAsync("Создать плейлист", "Введите название");
+            await _apiService.AddPlaylistAsync(playlistName);
+            _dtoAssign(Files);
         }
 
         [RelayCommand]
