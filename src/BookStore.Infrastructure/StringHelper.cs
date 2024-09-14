@@ -27,6 +27,27 @@ namespace Infrastructure
         }
     }
 
+    public static class MarkDownHelper
+    {
+        public static string AddLinkWithNewLine(this string caption, string link)
+        {
+            return AddNewLineBefore(AddLink(caption, link));
+        }
+        public static string MakeBold(this string text)
+        {
+            return $"**{text}**";
+        }
+        public static string AddLink(this string caption, string link)
+        {
+            return $"[{caption}]({link})";
+        }
+
+        public static string AddNewLineBefore(this string text)
+        {
+            return $"{Environment.NewLine}{text}";
+        }
+    }
+
     public static class StringHelper
     {
 

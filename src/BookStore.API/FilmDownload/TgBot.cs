@@ -33,6 +33,7 @@ using API.Resources;
 using NLog.Web.LayoutRenderers;
 using System.Xml.Linq;
 using Telegram.Bot.Polling;
+using OpenQA.Selenium.DevTools.V126.CSS;
 //using Polly;
 
 namespace API.FilmDownload
@@ -174,15 +175,6 @@ namespace API.FilmDownload
             await _rutracker.Init();
         }
 
-        public async Task NotifyDownloadEnded(long telegramId, DbFile item)
-        {
-            var keyboard = new List<InlineKeyboardButton>
-                {
-                    new InlineKeyboardButton("Неправильный фильм! Удалить.") { CallbackData = CommandParser.GetMessageFromData(CommandType.DeleteByRutracker, item.Id.ToString()) },
-                };
-
-            await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Посмотреть: {item.GetUrl(_config)}", replyMarkup: new InlineKeyboardMarkup(keyboard));
-        }
 
         public async Task NotifyDownloadProblem(long telegramId, string link)
         {
@@ -477,9 +469,10 @@ namespace API.FilmDownload
 
         public async Task ProcessTelegram(DbFile file, long tgFromId, SearchRecord record)
         {
+            var watchString = "Посмотреть".AddLink(file.GetUrl(_config));
             var result = @$"Название: {file.Name}
 Длительность: {file.Duration}
-Посмотреть: {file.GetUrl(_config)}
+{watchString}
 Год: {file.Year}
 Описание: {file.Description}";
 
@@ -565,6 +558,7 @@ namespace API.FilmDownload
                     if (await Rename(command))
                         await _botClient.SendTextMessageAsync(message.From.Id, "Файл переименован", replyToMessageId: message.MessageId);
                     break;
+                    break;
                 default:
                     break;
             }
@@ -593,62 +587,51 @@ namespace API.FilmDownload
             var processMessage = await _botClient.SendTextMessageAsync(message.From.Id, "Начата обработка запроса", replyToMessageId: message.MessageId);
             var lines = message.Text.SplitByNewLine();
 
-            if (await ProcessDownloadByCommand(message, lines))
-                return;
-
-            foreach (var line in lines)
-            {
-                var text = line;
-
-                var task = new TgDownloadTask(message.MessageId, message.From.Id, line);
-                _downloadTasks.Add(task.Id, task);
-
-                if (DownloaderFabric.CanDownload(task))
-                    await DownloadByCustomDownloader(task.Id);
-                else
-                    await TryRutrackerDownload(text, message.From.Id);
-            }
-
-            await _botClient.DeleteMessageAsync(message.From.Id, processMessage.MessageId);
-        }
-
-        private async Task<bool> ProcessDownloadByCommand(Message message, IEnumerable<string> lines)
-        {
-            if (!lines.First().StartsWith(DownloadTask.PARTS_SEPARATOR))
-                return false;
-
-            var commands = lines.First().Split(DownloadTask.PARTS_SEPARATOR, StringSplitOptions.RemoveEmptyEntries);
+            var tasks = TgDownloadTask.IsDownloadCommand(lines) ? 
+                TgDownloadTask.ParseTasks(message, lines) :
+                lines.Select(line => new TgDownloadTask(message.MessageId, message.From.Id, line));
 
             var errorLines = new List<string>();
-            foreach (var line in lines.Skip(1).ToList())
+            foreach (var task in tasks)
             {
                 try
                 {
-                    var task = new TgDownloadTask(message.MessageId, message.From.Id, line);
-                    if (!string.IsNullOrEmpty(commands[0]))
-                        task.SeriesName = commands[0]; 
-                    
-                    if (!string.IsNullOrEmpty(commands[1]))
-                        task.SeasonName = commands[1];
-
                     _downloadTasks.Add(task.Id, task);
-                    await DownloadByCustomDownloader(task.Id);
+
+                    if (DownloaderFabric.CanDownload(task))
+                    {
+                        var downloader = DownloaderFabric.CreateDownloader(task, _config);
+                        task.DownloadType = downloader.DownloadType;
+
+                        await downloader.DownloadAndProcess(task, _serviceScopeFactory,
+                            async ex =>
+                            {
+                                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                                errorLines.Add(task.OriginalLine);
+                            },
+                            async videoFile =>
+                            {
+                                await NotifyBotDownloadEnded(videoFile, task);
+                            });
+                    }
+                    else
+                        await TryRutrackerDownload(task.OriginalLine, message.From.Id);
                 }
                 catch (Exception ex)
                 {
                     NLog.LogManager.GetCurrentClassLogger().Error(ex);
-                    errorLines.Add(line);
+                    errorLines.Add(task.OriginalLine);
                 }
             }
 
             var totalCount = lines.Skip(1).Count();
             var endMessage = $"Скачивание завершено. Скачано {totalCount - errorLines.Count}/{totalCount}";
             if (errorLines.Any())
-                endMessage += Environment.NewLine + $"Ошибка, файл не скачан!{Environment.NewLine}{string.Join(Environment.NewLine, errorLines)}";
+                endMessage += Environment.NewLine + $"Ошибка, файл не скачан:{Environment.NewLine}{string.Join(Environment.NewLine, errorLines)}";
 
-            await _botClient.SendTextMessageAsync(new ChatId(message.From.Id), endMessage, replyToMessageId: message.MessageId);
-
-            return true;
+            await _botClient.SendTextMessageAsync(new ChatId(message.From.Id), endMessage, 
+                replyToMessageId: message.MessageId, disableWebPagePreview: true);
+            await _botClient.DeleteMessageAsync(message.From.Id, processMessage.MessageId);
         }
 
         private async Task TryRutrackerDownload(string text, long fromId, CommandType? type = null)
@@ -724,33 +707,6 @@ namespace API.FilmDownload
             }
         }
 
-        public async Task DownloadByCustomDownloader(string taskId)
-        {
-            var task = _downloadTasks[taskId];
-            var downloader = DownloaderFabric.CreateDownloader(task, _config);
-            task.DownloadType = downloader.DownloadType;
-
-            try
-            {
-                await downloader.DownloadAndProcess(task, _serviceScopeFactory,
-                    async ex =>
-                    {
-                        await _botClient.SendTextMessageAsync(new ChatId(task.FromId), "Ошибка, файл не скачан!", replyToMessageId: task.OriginalMessageId);
-                        NLog.LogManager.GetCurrentClassLogger().Error(ex);
-                    },
-                    async videoFile =>
-                    {
-                        await NotifyBotDownloadEnded(videoFile, task);
-                    });
-            }
-            catch (Exception)
-            {
-                var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(task.FromId),
-                    "Ошибка, файл не скачан!", replyToMessageId: task.OriginalMessageId);
-                return;
-            }
-        }
-
         private async Task MoveToSeries(string taskId, string seriesName)
         {
             var task = _downloadTasks[taskId];
@@ -772,6 +728,25 @@ namespace API.FilmDownload
             await _botClient.DeleteMessageAsync(new ChatId(task.FromId), task.QuestionMessageId);
         }
 
+        public async Task NotifyDownloadEnded(long telegramId, DbFile item)
+        {
+            var keyboard = new List<InlineKeyboardButton>
+                {
+                    new InlineKeyboardButton("Неправильный фильм! Удалить") { CallbackData = CommandParser.GetMessageFromData(CommandType.DeleteByRutracker, item.Id.ToString()) },
+                };
+
+            await _botClient.SendTextMessageAsync(new ChatId(telegramId), GetDownloadEndMessage(item),
+                //await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Посмотреть: {item.GetUrl(_config)}", 
+                parseMode: Tg.ParseMode.Markdown, replyMarkup: new InlineKeyboardMarkup(keyboard));
+        }
+
+        private string GetDownloadEndMessage(DbFile file) 
+        {
+            var linkText = "Посмотреть".AddLinkWithNewLine(file.GetUrl(_config));
+            var message = $"Закончена закачка {file.Name} в {file.Series?.Name.MakeBold()}|{file.Season?.Name.MakeBold()}{linkText}";
+            return message;
+        }
+
         private async Task NotifyBotDownloadEnded(DbFile item, TgDownloadTask task)
         {
             var keyboard = new List<List<InlineKeyboardButton>>
@@ -791,7 +766,7 @@ namespace API.FilmDownload
                     }};
 
             var tgMessage =  await _botClient.SendTextMessageAsync(new ChatId(task.FromId), 
-                $"Закончена закачка {Environment.NewLine}{item.Name} в {item.Series?.Name}|{item.Season?.Name} {Environment.NewLine}{task.Uri}{Environment.NewLine}Открыть: {item.GetUrl(_config)}{Environment.NewLine}Как храним скачанное?",
+                $"{GetDownloadEndMessage(item)}{Environment.NewLine}Как храним скачанное?",
                 replyToMessageId: task.OriginalMessageId,
                 disableWebPagePreview: true,
                 replyMarkup: new InlineKeyboardMarkup(keyboard));

@@ -169,6 +169,9 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime>("LastCheckDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("Network")
                         .HasColumnType("int");
 
