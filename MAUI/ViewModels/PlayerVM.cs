@@ -232,6 +232,7 @@ namespace MAUI.ViewModels
         public async Task Download()
         {
             await _downloadManager.StartDownloadAsync(File);
+            Toast.Make($"Загрузка началась", ToastDuration.Short, 20).Show();
         }
 
         [RelayCommand]

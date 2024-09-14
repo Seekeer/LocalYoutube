@@ -14,7 +14,7 @@ namespace MAUI.Services
         Task LogoutAsync();
         Task<IEnumerable<Series>> GetSeries();
         Task<IEnumerable<Season>> GetNewSeasons();
-        Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFiles(Season selectedSeason);
+        Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFilesForSeason(Season selectedSeason, int count = 20);
         Task DeleteVideoAsync(int id);
         Task<int> AddMarkAsync(MarkAddDto markAddDto);
         Task<bool> DeleteMarkAsync(int id);
@@ -123,11 +123,11 @@ namespace MAUI.Services
             }
         }
 
-        public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFiles(Season selectedSeason)
+        public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFilesForSeason(Season selectedSeason, int count = 20)
         {
             try
             {
-                var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getFilesBySeason?id={selectedSeason.Id}&count={20}&isRandom=false");
+                var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getFilesBySeason?id={selectedSeason.Id}&count={count}&isRandom=true");
                 return list;
             }
             catch (Exception ex)
