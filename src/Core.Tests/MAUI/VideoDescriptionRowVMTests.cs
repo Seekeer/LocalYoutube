@@ -67,7 +67,7 @@ _
             Размещение рекламы — reklama @asafev.ru
             _
 00.00 Реклама.Рекламодатель ООО «МАРКЕТПЛЕЙС», ИНН 9701048328 erid: 2VtzqurP565
-14.53 Реклама.ООО «Эдюсон», ИНН 7729779476.erid: LjN8JziJg"
+14.53 Реклама.ООО «Эдюсон», ИНН 7729779476.erid: LjN8JziJg", false
                 );
 
             Assert.IsTrue(descriptionRowVMs.Count() > 1);

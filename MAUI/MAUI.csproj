@@ -131,6 +131,9 @@
 	  <Compile Update="Pages\FreshPage.xaml.cs">
 	    <DependentUpon>FreshPage.xaml</DependentUpon>
 	  </Compile>
+	  <Compile Update="Platforms\Windows\DeviceOrientationService.cs">
+	    <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
+	  </Compile>
 	</ItemGroup>
 
 	<ItemGroup>

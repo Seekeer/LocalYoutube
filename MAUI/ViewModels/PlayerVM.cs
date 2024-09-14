@@ -24,6 +24,7 @@ namespace MAUI.ViewModels
         private readonly IMAUIService _mauiDBService;
         private readonly DownloadManager _downloadManager;
         private readonly INavigationService _navigationService;
+        private readonly IDeviceOrientationService _deviceOrientationService;
         [ObservableProperty]
         private VideoFileResultDtoDownloaded _file;
 
@@ -53,12 +54,14 @@ namespace MAUI.ViewModels
 
         public Player Page { get; internal set; }
 
-        public PlayerVM(IAPIService api, IMAUIService positionRepository, DownloadManager downloadManager, INavigationService navigationService)
+        public PlayerVM(IAPIService api, IMAUIService positionRepository, DownloadManager downloadManager, 
+            INavigationService navigationService, IDeviceOrientationService deviceOrientationService)
         {
             _api = api;
             _mauiDBService = positionRepository;
             _downloadManager = downloadManager;
             _navigationService = navigationService;
+            _deviceOrientationService = deviceOrientationService;
 
             _dtoAssign = AssignDTO;
 
@@ -78,7 +81,7 @@ namespace MAUI.ViewModels
                 HttpClientAuth.GetVideoUrlById(dto.Id);
             Bookmarks = new BookmarksVM(_api, () => Page.GetMedia().Position, dto.Id);
 
-            Description = VideoDescriptionRowVM.ParseDescription(dto.Description);
+            Description = VideoDescriptionRowVM.ParseDescription(dto.Description, true);
 
             ProcessFile();
         }
@@ -237,6 +240,7 @@ namespace MAUI.ViewModels
         [RelayCommand]
         public async Task FullScreen()
         {
+            _deviceOrientationService.SetDeviceOrientation(DisplayOrientation.Landscape);
         }
 
         [RelayCommand]

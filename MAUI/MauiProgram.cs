@@ -140,6 +140,7 @@ namespace MAUI
 #endif
 
             builder.Services.AddTransient<INavigationService, NavigationService>();
+            builder.Services.AddTransient<IDeviceOrientationService, DeviceOrientationService>();
             builder.Services.AddTransient<IAPIService, APIService>();
             builder.Services.AddSingleton<DownloadManager, DownloadManager>();
             builder.Services.AddTransient<HttpClientAuth, HttpClientAuth>();

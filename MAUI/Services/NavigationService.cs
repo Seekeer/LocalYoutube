@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static MAUI.Services.DeviceOrientationService;
 
 namespace MAUI.Services
 {
@@ -31,5 +32,14 @@ namespace MAUI.Services
 
             return this.NavigateAsync(route, dic);
         }
+    }
+    public partial class DeviceOrientationService : IDeviceOrientationService
+    {
+        public partial void SetDeviceOrientation(DisplayOrientation displayOrientation);
+    }
+
+    public interface IDeviceOrientationService
+    {
+        void SetDeviceOrientation(DisplayOrientation displayOrientation);
     }
 }
