@@ -39,8 +39,10 @@ namespace API.TG
         ChildSeries,
         [CommandName("Сказка")]
         FairyTale,
+        [CommandName("УдалитьРутрекер")]
+        DeleteByRutracker,
         [CommandName("Удалить")]
-        Delete,
+        DeleteById,
         [CommandName("Искусство")]
         Art,
         [CommandName("Аудиосказка")]

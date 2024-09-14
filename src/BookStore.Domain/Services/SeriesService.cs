@@ -43,7 +43,7 @@ namespace FileStore.Domain.Services
             if (_seriesRepository.SearchRandom(c => c.Name == Series.Name).Result.Any())
                 return null;
 
-            await _seriesRepository.Add(Series);
+            await _seriesRepository.AddAsync(Series);
             return Series;
         }
 
@@ -52,7 +52,7 @@ namespace FileStore.Domain.Services
             if (_seriesRepository.SearchRandom(c => c.Name == Series.Name && c.Id != Series.Id).Result.Any())
                 return null;
 
-            await _seriesRepository.Update(Series);
+            await _seriesRepository.UpdateAsync(Series);
             return Series;
         }
 

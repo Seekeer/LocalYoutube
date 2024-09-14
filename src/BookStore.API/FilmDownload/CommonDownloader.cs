@@ -50,7 +50,7 @@ namespace API.FilmDownload
 
         private VideoFile GetFileInfo(Uri uri, string rootDownloadFolder)
         {
-            var file = new VideoFile();
+            var file = new VideoFile { Type = VideoType.ExternalVideo };
 
             file.Name = uri.OriginalString.Replace(uri.Host, string.Empty).Replace("https:", "").Replace("video", "").Replace("/","");
             HtmlWeb web = new HtmlWeb();

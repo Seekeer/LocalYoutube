@@ -20,8 +20,8 @@ namespace FileStore.API.Configuration
 
         public async Task Init()
         {
-            _DbUpdateManager.AddOrUpdateVideoSeries(SeasonNames.OneTime, false, Domain.Models.VideoType.Youtube);
-            _DbUpdateManager.AddOrUpdateVideoSeries(SeasonNames.India, false, Domain.Models.VideoType.Youtube);
+            _DbUpdateManager.AddOrUpdateVideoSeries(SeasonNames.OneTime, false, Domain.Models.VideoType.ExternalVideo);
+            _DbUpdateManager.AddOrUpdateVideoSeries(SeasonNames.India, false, Domain.Models.VideoType.ExternalVideo);
         }
     }
 }

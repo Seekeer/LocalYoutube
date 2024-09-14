@@ -129,7 +129,7 @@ namespace FileStore.Infrastructure.Repositories
 
         private async Task<IEnumerable<T>> SearchFile(Expression<Func<T, bool>> predicate)
         {
-            return (await base.Search(predicate)).Where(x => !x.NeedToDelete);
+            return (await base.SearchAsync(predicate)).Where(x => !x.NeedToDelete);
         }
 
         public async Task<IEnumerable<T>> SearchByName(string searchedValue)

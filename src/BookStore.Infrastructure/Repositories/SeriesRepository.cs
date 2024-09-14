@@ -104,7 +104,7 @@ namespace FileStore.Infrastructure.Repositories
             var season = Db.Seasons.FirstOrDefault(x => x.Name == name);
             if (season == null || (season.SeriesId != series.Id && doNotIgnoreSeriesId))
             {
-                season = new Season { Name = name, Series = series };
+                season = new Season { Name = name, SeriesId = series.Id };
                 season.IsOrderMatter = isOrderMatter;
                 Db.Seasons.Add(season);
                 Db.SaveChanges();

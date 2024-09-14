@@ -49,7 +49,7 @@ namespace API.TG
             FillVideoSeriesSeasonType(tgFromId, _type, info, videoFile);
 
             await AnalyzeTorrentData(videoFile, tgFromId, _type, torrentFiles);
-            await _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IVideoFileRepository>().Add(videoFile);
+            await _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IVideoFileRepository>().AddAsync(videoFile);
 
             return videoFile;
         }
@@ -148,7 +148,7 @@ namespace API.TG
             }
 
             FillAudioSeriesSeasonType(tgFromId, _type, info, audioFile);
-            await _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IAudioFileRepository>().Add(audioFile);
+            await _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IAudioFileRepository>().AddAsync(audioFile);
 
             return audioFile;
         }

@@ -1,5 +1,7 @@
-﻿using FileStore.Domain;
+﻿using API.Resources;
+using FileStore.Domain;
 using FileStore.Domain.Models;
+using FileStore.Infrastructure.Repositories;
 using Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Polly;
@@ -12,9 +14,8 @@ using System.Threading.Tasks;
 
 namespace API.FilmDownload
 {
-    public class DownloadInfo
+    public class DownloadInfo : ChannelInfo
     {
-        public string ChannelName { get; set; }
         public string ListName { get; set; }
         public bool IsList { get; set; }
 
@@ -72,16 +73,6 @@ namespace API.FilmDownload
         public string CoverUrl { get; protected set; }
         public Uri Uri { get; set; }
         public DownloadType DownloadType { get; internal set; }
-
-        internal string GetSeasonName(string channelName)
-        {
-            return SeasonName ?? channelName ?? $"{DownloadType}";
-        }
-
-        internal string GetSeriesName()
-        {
-            return SeriesName ?? DownloadType.ToString();
-        }
     }
 
     public class DownloaderFabric
@@ -136,9 +127,11 @@ namespace API.FilmDownload
                 try
                 {
                     var scope = serviceScopeFactory.CreateScope();
-                    using (var fileService = scope.ServiceProvider.GetRequiredService<DbUpdateManager>())
+                    using (var fileService = scope.ServiceProvider.GetRequiredService<IExternalVideoMappingsService>())
                     {
-                        fileService.AddFromSiteDownload(record.Value, task.GetSeriesName(), task.GetSeasonName(info.ChannelName), task.NumberInSeries);
+                        UpdateInfoByTask(task, info);
+                        if (!await fileService.FillFileFromSiteDownloadTask(record.Value, info, DownloadType, task.NumberInSeries))
+                            continue;
 
                         var policy = Policy
                             .Handle<Exception>()
@@ -170,6 +163,25 @@ namespace API.FilmDownload
             this.Dispose();
         }
 
+        private void UpdateInfoByTask(DownloadTask task, ChannelInfo info)
+        {
+            if (string.IsNullOrEmpty(task.SeasonName) && task.SeriesName != null)
+                throw new ArgumentException();
+
+            if(task.SeasonName != null)
+            {
+                info.ChannelId = null;
+                info.ChannelName = task.SeasonName;
+                info.SeriesName = DownloadType.ToString();
+            }
+
+            if(task.SeriesName != null) 
+                info.SeriesName = task.SeriesName;
+
+            if(string.IsNullOrEmpty(info.SeriesName))
+                info.SeriesName = DownloadType.ToString();
+        }
+
         protected async Task<DownloadInfo> GetInfo(string url)
         {
             string rootDownloadFolder = Path.Combine(_config.RootDownloadFolder, DownloadType.ToString());
@@ -194,9 +206,11 @@ namespace API.FilmDownload
             var proxyStr = !_useProxy ? "" : $"--proxy {ProxyManager.GetProxyString()}";
             var downloadVideoScript = @$"
             $ytdlp = 'yt-dlp.exe'
-            $cmd = '-f ""bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"" {proxyStr} --merge-output-format mp4 {url} -o """"{fileName}""""'
-            Start-Process -FilePath $ytdlp -ArgumentList $cmd -Wait 
+            $cmd = '-f ""bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"" {proxyStr} --write-info-json --merge-output-format mp4 {url} -o """"{fileName}""""' 
+            Start-Process -FilePath $ytdlp -ArgumentList $cmd -Wait -WindowStyle Minimized
 ";
+            //$cmd = '-f ""bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"" {proxyStr} --merge-output-format mp4 {url} --sponsorblock-remove sponsor --ffmpeg-location ./ffmpegytdlp -o """"{fileName}""""' 
+            // add --verbose and run in cmd for debug.
 
             var finalScript = downloadUtilitiesScript + downloadVideoScript;
 

@@ -26,7 +26,7 @@ namespace FileStore.Domain.Services
 
         public async Task MoveToAnotherSeriesByNameAsync(int fileId, string seriesName, bool moveWholeSeason)
         {
-            var series = _seriesRepository.AddOrUpdateSeries(seriesName, VideoType.Youtube, null);
+            var series = _seriesRepository.AddOrUpdateSeries(seriesName, VideoType.ExternalVideo, null);
             var file = await _FileRepository.GetById(fileId);
 
             if (file.SeriesId == series.Id)
@@ -39,7 +39,7 @@ namespace FileStore.Domain.Services
                 file.Series = series;
                 file.Season = season;
 
-                await _FileRepository.Update(file);
+                await _FileRepository.UpdateAsync(file);
             }
             else
             {
@@ -74,12 +74,18 @@ namespace FileStore.Domain.Services
             return await _FileRepository.GetById(id);
         }
 
-        public async Task<T> Add(T File)
+        public async Task<T> AddAsync(T File)
         {
             if (await _FileRepository.Any(b => b.Name == File.Name))
                 return null;
 
-            await _FileRepository.Add(File);
+            var season = File.Season;
+            var series = File.Series;
+            File.Season = null;
+            File.Series = null;
+            await _FileRepository.AddAsync(File);
+            File.Series = series;
+            File.Season = season;
             return File;
         }
 
@@ -88,12 +94,14 @@ namespace FileStore.Domain.Services
             if (_FileRepository.SearchRandom(b => b.Name == File.Name && b.Id != File.Id).Result.Any())
                 return null;
 
-            await _FileRepository.Update(File);
+            await _FileRepository.UpdateAsync(File);
             return File;
         }
 
         public async Task<bool> Remove( T file)
         {
+            if (file == null)
+                return true;
 
             if (System.IO.File.Exists(file.Path))
             {
@@ -182,7 +190,7 @@ namespace FileStore.Domain.Services
             if (position != null)
                 info.Position = position.Value;
 
-            await _FileRepository.Update(video);
+            await _FileRepository.UpdateAsync(video);
             
             return true;
         }

@@ -176,14 +176,23 @@ namespace API.FilmDownload
 
         public async Task NotifyDownloadEnded(long telegramId, DbFile item)
         {
-             await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Посмотреть: {item.GetUrl(_config)}");
+            var keyboard = new List<InlineKeyboardButton>
+                {
+                    new InlineKeyboardButton("Неправильный фильм! Удалить.") { CallbackData = CommandParser.GetMessageFromData(CommandType.DeleteByRutracker, item.Id.ToString()) },
+                };
+
+            await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Посмотреть: {item.GetUrl(_config)}", replyMarkup: new InlineKeyboardMarkup(keyboard));
+        }
+
+        public async Task NotifyDownloadProblem(long telegramId, string link)
+        {
+            await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Проблема с закачкой видео {link}. Попробуй скачать позже вручную.");
         }
 
         private FileStore.Infrastructure.Context.VideoCatalogDbContext _GetDb()
         {
             return _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<FileStore.Infrastructure.Context.VideoCatalogDbContext>();
         }
-
 
         private async Task UpdateFile(SearchResult data)
         {
@@ -198,7 +207,7 @@ namespace API.FilmDownload
                 var bytes = (byte[])converter.ConvertTo(data.Bitmap, typeof(byte[]));
 
                 file.VideoFileExtendedInfo.SetCover(bytes);
-                await fileRepo.Update(file);
+                await fileRepo.UpdateAsync(file);
 
                 var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(data.TgId),
                     "Картинка обновлена", replyToMessageId: data.TgMessageId);
@@ -331,8 +340,11 @@ namespace API.FilmDownload
                             case CommandType.DownloadOneTime:
                                 await MoveToSeries(command.Data, SeasonNames.OneTime);
                                 break;
-                            case CommandType.Delete:
-                                await DeleteFile(update.CallbackQuery.Id, command.Data);
+                            case CommandType.DeleteByRutracker:
+                                await DeleteFileByRutrackerId(update.CallbackQuery.Id, command.Data);
+                                break;
+                            case CommandType.DeleteById:
+                                await DeleteFileById(update.CallbackQuery.Id, command.Data);
                                 break;
                             case CommandType.Unknown:
                                 break;
@@ -400,7 +412,7 @@ namespace API.FilmDownload
             {
                 var file = await fileService.GetById(task.Value.FileId);
                 file.Name = message.Text;
-                await fileService.Update(file);
+                await fileService.UpdateAsync(file);
             }
         }
 
@@ -421,19 +433,35 @@ namespace API.FilmDownload
             }
         }
 
-        private async Task DeleteFile(string callbackId, string data)
+        private async Task DeleteFileById(string callbackId, string idStr)
         {
             try
             {
-                await _rutracker.DeleteTorrent(data);
+                var id = int.Parse(idStr);
+                using var fileService = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IDbFileService>();
+                    await fileService.Remove(id);
+                await _botClient.AnswerCallbackQueryAsync(callbackId, "Видео удалено");
+            }
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                await _botClient.AnswerCallbackQueryAsync(callbackId, "Ошибка при удалении");
+            }
+        }
+
+        private async Task DeleteFileByRutrackerId(string callbackId, string rutrackerId)
+        {
+            try
+            {
+                await _rutracker.DeleteTorrent(rutrackerId);
 
                 var db = _GetDb();
-                var id = int.Parse(data);
+                var id = int.Parse(rutrackerId);
                 var file = db.FilesInfo.FirstOrDefault(x => x.RutrackerId == id);
                 if (file != null)
-                { 
+                {
                     db.Entry(file).State = EntityState.Detached;
-                    using var fileService = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IDbFileService> ();
+                    using var fileService = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IDbFileService>();
                     await fileService.Remove(file.VideoFileId);
                 }
 
@@ -457,7 +485,7 @@ namespace API.FilmDownload
 
             var keyboard = new List<InlineKeyboardButton>
                 {
-                    new InlineKeyboardButton("Неправильный фильм! Удалить.") { CallbackData = CommandParser.GetMessageFromData(CommandType.Delete, record.Topic.Id.ToString()) },
+                    new InlineKeyboardButton("Неправильный фильм! Удалить.") { CallbackData = CommandParser.GetMessageFromData(CommandType.DeleteByRutracker, record.Topic.Id.ToString()) },
                 };
 
             await _botClient.SendTextMessageAsync(tgFromId, $"{result}", replyMarkup: new InlineKeyboardMarkup(keyboard));
@@ -752,7 +780,7 @@ namespace API.FilmDownload
                     new InlineKeyboardButton(SeasonNames.OneTime) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadOneTime, task.Id) },
                     new InlineKeyboardButton(SeasonNames.AsDesigned) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadAsDesigned, task.Id) },
                     new InlineKeyboardButton(SeasonNames.Premiere) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadPremier, task.Id) },
-                    new InlineKeyboardButton(SeasonNames.Premiere) { CallbackData = CommandParser.GetMessageFromData(CommandType.Delete, task.Id) },
+                    new InlineKeyboardButton(SeasonNames.Delete) { CallbackData = CommandParser.GetMessageFromData(CommandType.DeleteById, item.Id.ToString()) },
                  },
                  new List<InlineKeyboardButton>{
                     new InlineKeyboardButton(SeasonNames.India) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadIndia, task.Id) },
@@ -763,7 +791,7 @@ namespace API.FilmDownload
                     }};
 
             var tgMessage =  await _botClient.SendTextMessageAsync(new ChatId(task.FromId), 
-                $"Закончена закачка {Environment.NewLine}{item.Name} в {item.Series.Name}|{item.Season.Name} {Environment.NewLine}{task.Uri}{Environment.NewLine}Как храним скачанное?{Environment.NewLine}Открыть: {item.GetUrl(_config)}",
+                $"Закончена закачка {Environment.NewLine}{item.Name} в {item.Series?.Name}|{item.Season?.Name} {Environment.NewLine}{task.Uri}{Environment.NewLine}Открыть: {item.GetUrl(_config)}{Environment.NewLine}Как храним скачанное?",
                 replyToMessageId: task.OriginalMessageId,
                 disableWebPagePreview: true,
                 replyMarkup: new InlineKeyboardMarkup(keyboard));

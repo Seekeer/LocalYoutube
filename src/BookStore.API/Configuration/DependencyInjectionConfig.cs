@@ -37,6 +37,8 @@ namespace FileStore.API.Configuration
             services.AddScoped<FileManager, FileManager>();
             services.AddScoped<IVideoFileService, VideoFileService>();
             services.AddScoped<IDbFileService, DbFileService>();
+            services.AddScoped<IExternalVideoMappingsRepository, ExternalVideoMappingsRepository>();
+            services.AddScoped<IExternalVideoMappingsService, ExternalVideoMappingsService>();
 
             services.AddScoped<DbUpdateManager, DbUpdateManager>();
             services.AddScoped<IMessageProcessor, MessageProcessor>();
@@ -46,6 +48,17 @@ namespace FileStore.API.Configuration
 
             services.AddHostedService<StartupService>();
 
+#if DEBUG
+
+            services.AddQuartz(q =>
+            {
+                q.ScheduleJob<CheckYoutubePlaylistJob>(trigger => trigger
+                    .WithIdentity("trigger5", "group5")
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(1)).RepeatForever())
+                );
+            });
+#endif
 #if !DEBUG
             services.AddQuartz(q =>
             {

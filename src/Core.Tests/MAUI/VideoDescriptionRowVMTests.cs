@@ -68,7 +68,7 @@ _
             _
 00.00 Реклама.Рекламодатель ООО «МАРКЕТПЛЕЙС», ИНН 9701048328 erid: 2VtzqurP565
 14.53 Реклама.ООО «Эдюсон», ИНН 7729779476.erid: LjN8JziJg"
-                );
+                , true);
 
             Assert.IsTrue(descriptionRowVMs.Count() > 1);
             Assert.IsTrue(descriptionRowVMs.Any(x => !string.IsNullOrEmpty(x.Timestamp)));

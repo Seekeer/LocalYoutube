@@ -1,6 +1,8 @@
 ﻿using API.FilmDownload;
 using FileStore.Domain;
 using FileStore.Domain.Models;
+using FileStore.Infrastructure.Context;
+using FileStore.Infrastructure.Repositories;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
@@ -15,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using VkNet.Model;
 
 namespace Infrastructure.Scheduler
 {
@@ -29,75 +32,112 @@ namespace Infrastructure.Scheduler
         private readonly AppConfig _appConfig;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly TgBot _bot;
+        private readonly IExternalVideoMappingsRepository _externalVideoRepository;
+        private readonly IExternalVideoMappingsService _externalVideoService;
 
         public CheckYoutubePlaylistJob(UserManager<ApplicationUser> userManager, TgBot bot,
-            IServiceScopeFactory serviceScopeFactory , AppConfig appConfig) 
+            IServiceScopeFactory serviceScopeFactory, AppConfig appConfig,
+            IExternalVideoMappingsRepository externalVideoRepository, IExternalVideoMappingsService externalVideoService) 
         {
             _scopeFactory = serviceScopeFactory;
             _appConfig = appConfig;
             _userManager = userManager;
             _bot = bot;
+            _externalVideoRepository = externalVideoRepository;
+            _externalVideoService = externalVideoService;
         }
 
         protected override async Task Execute()
         {
-            var user  = await _userManager.FindByNameAsync("dim");
+            var user = await _userManager.FindByNameAsync("dim");
 
-            await CheckVideoByUser(user);
-        }
-
-        private async Task CheckVideoByUser(ApplicationUser user)
-        {
             YouTubeService youtubeService = GetYoutubeService(user);
 
-            //var channelsListRequest = youtubeService.Channels.List("contentDetails");
-            //channelsListRequest.Mine = true;
+            // Track New channels
+            //await FillChanelsMapping(youtubeService);
 
-            //// Retrieve the contentDetails part of the channel resource for the authenticated user's channel.
-            //var channelsListResponse = await channelsListRequest.ExecuteAsync();
-
-            var updates = await GetSubscribedChannelsUpdates(youtubeService, DateTime.Now.AddDays(-7));
+            await CheckChannelsUpdates(youtubeService);
 
             PlaylistItemListResponse playlistResponse = await GetLocalTubePlayListVideos(youtubeService);
             foreach (var item in playlistResponse.Items)
             {
-                var videoLink = $"https://www.youtube.com/watch?v={item.ContentDetails.VideoId}";
-                var coverUrl = $"https://i.ytimg.com/vi/{item.ContentDetails.VideoId}/maxresdefault.jpg";
-
-                var youtubeDownloader = new YoutubeDownloader(_appConfig);
-                await youtubeDownloader.DownloadAndProcess(new DownloadTask(videoLink, coverUrl), _scopeFactory, 
-                    ex => 
-                    { 
-                    },
-                    async file =>
-                    {
-                        await youtubeService.PlaylistItems.Delete(item.Id).ExecuteAsync();
-                        await _bot.NotifyDownloadEnded(user.TgId, file);
-                    });
+                if (await this.DownloadVideo(user, youtubeService, item.ContentDetails.VideoId))
+                    await youtubeService.PlaylistItems.Delete(item.Id).ExecuteAsync();
             }
         }
 
-        private async Task<List<string>> GetSubscribedChannelsUpdates(YouTubeService youtubeService, DateTime dateTime)
+        private async Task<bool> DownloadVideo(ApplicationUser user, YouTubeService youtubeService, string videoId)
         {
-            var req = youtubeService.Subscriptions.List(new Google.Apis.Util.Repeatable<string>(new string[] { "id" , "contentDetails" }));
+            var videoLink = $"https://www.youtube.com/watch?v={videoId}";
+            var coverUrl = $"https://i.ytimg.com/vi/{videoId}/maxresdefault.jpg";
+
+            var youtubeDownloader = new YoutubeDownloader(_appConfig);
+
+            var result = false;
+            await youtubeDownloader.DownloadAndProcess(new DownloadTask(videoLink, coverUrl), _scopeFactory,
+                async ex =>
+                {
+                    await _bot.NotifyDownloadProblem(user.TgId, videoLink);
+                },
+                async file =>
+                {
+                    result = true;
+                    await _bot.NotifyDownloadEnded(user.TgId, file);
+                });
+
+            return result;
+        }
+
+        private async Task FillChanelsMapping(YouTubeService youtubeService)
+        {
+            var req = youtubeService.Subscriptions.List(new Google.Apis.Util.Repeatable<string>(["id", "contentDetails", "snippet"]));
             req.Mine = true;
             req.MaxResults = 50;
-            var channels = await req.ExecuteAsync();
+            var subscriptions = await req.ExecuteAsync();
 
-            var result = new List<string>();
-            foreach (var channel in channels.Items.Where(x =>x.ContentDetails.NewItemCount > 0))
+            var channelInfos = subscriptions.Items.Select(subscription =>
+                new ChannelInfo { ChannelId = subscription.Snippet.ResourceId.ChannelId, ChannelName = subscription.Snippet.Title });
+            await _externalVideoService.AddExternalSourceMapping(channelInfos, DownloadType.Youtube);
+        }
+
+        private async Task CheckChannelsUpdates(YouTubeService youtubeService)
+        {
+            var list = new List<string>();
+            IEnumerable<ExternalVideoSourceMapping> records =
+                (await _externalVideoRepository.SearchAsync(x => x.Network == DownloadType.Youtube &&
+                    x.UpdatedDate < DateTime.UtcNow.AddHours(-6) &&
+                    x.CheckNewVideo
+                )).ToList();
+
+            var user = await _userManager.FindByNameAsync("dim");
+
+            foreach (var subscription in records)
             {
-                var videoRequest = youtubeService.Search.List(new string[] { "snippet" });
-                videoRequest.ChannelId = channel.Id;
+                var videoRequest = youtubeService.Search.List(new string[] { "snippet", "id" });
+                videoRequest.ChannelId = subscription.ChannelId;
                 videoRequest.Order = SearchResource.ListRequest.OrderEnum.Date;
                 videoRequest.MaxResults = 50;
-                videoRequest.PublishedAfterDateTimeOffset = new DateTimeOffset(dateTime, TimeSpan.FromHours(-3));
+                videoRequest.PublishedAfterDateTimeOffset = new DateTimeOffset(subscription.UpdatedDate);
+                var response = (await videoRequest.ExecuteAsync());
+                var videos = response.Items.ToList();
+                //videos.Clear();
+                while(response.NextPageToken != null)
+                {
+                    videoRequest.PageToken = response.NextPageToken;
+                    response = (await videoRequest.ExecuteAsync());
+                    videos.AddRange(response.Items);
+                }
 
-                var videos = await videoRequest.ExecuteAsync();
-                result.AddRange(videos.Items.Select(x =>x.Id.VideoId));
+                videos.Reverse();
+                foreach (var video in videos)
+                {
+                    if (video.Id.Kind == "youtube#video")
+                        await DownloadVideo(user, youtubeService, video.Id.VideoId);
+                }
+
+                subscription.UpdatedDate = DateTime.UtcNow;
+                await _externalVideoRepository.UpdateAsync(subscription);
             }
-
-            return result; 
         }
 
         private static async Task<PlaylistItemListResponse> GetLocalTubePlayListVideos(YouTubeService youtubeService)

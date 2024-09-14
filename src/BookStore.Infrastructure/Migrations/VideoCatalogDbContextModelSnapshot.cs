@@ -149,6 +149,46 @@ namespace Infrastructure.Migrations
                     b.UseTptMappingStrategy();
                 });
 
+            modelBuilder.Entity("FileStore.Domain.Models.ExternalVideoSourceMapping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ChannelId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ChannelName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("CheckNewVideo")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Network")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PlaylistId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SeasonId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SeriesId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ExternalVideoSource");
+                });
+
             modelBuilder.Entity("FileStore.Domain.Models.FileExtendedInfo", b =>
                 {
                     b.Property<int>("Id")

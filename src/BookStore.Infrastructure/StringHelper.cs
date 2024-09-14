@@ -284,11 +284,15 @@ namespace Infrastructure
             return tempo.Replace("&nbsp;", " ");
         }
 
-        public static string ClearFileName(this string name)
+        public static string ClearFileName(this string path)
         {
-            name = name.RemoveMany(new string[] { "WEB-DL" , "ATV3" });
+            var fInfo = new FileInfo(path);
 
-            name = name.EndingBefore("[");
+            var name = fInfo.Name;
+            name = name.RemoveMany(new string[] { "WEB-DL" , "ATV3", "1080p", "720p", ".mkv", ".mp4" });
+
+            name = name.EndingBefore("[", 10);
+            name = name.Trim('.');
             return name;
         }
 
@@ -346,12 +350,12 @@ namespace Infrastructure
             return name.Trim().Trim('.').Trim('.').Trim('-').Trim();
         }
 
-        public static string EndingBefore(this string text, string endStr)
+        public static string EndingBefore(this string text, string endStr, int startIndex = 0)
         {
             if (string.IsNullOrEmpty(text))
                 return text;
 
-            var qualityStart = text.IndexOf(endStr);
+            var qualityStart = text.IndexOf(endStr, Math.Min(startIndex, text.Length));
             if (qualityStart != -1)
                 text = text.Substring(0, qualityStart);
 

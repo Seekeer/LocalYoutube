@@ -40,7 +40,8 @@ namespace API.FilmDownload
 
                 // You can specify both video ID or URL
                 var video = await youtube.Videos.GetAsync(url);
-                result.ChannelName = video.Author.ChannelTitle; // "Blender"
+                result.ChannelName = video.Author.ChannelTitle;
+                result.ChannelId = video.Author.ChannelId;
 
                 var file = await GetFileFromVideo(video, rootDownloadFolder, result.ChannelName, youtube);
                 result.Records.Add(video.Url, file);
@@ -50,7 +51,7 @@ namespace API.FilmDownload
 
         private static async Task<VideoFile> GetFileFromVideo(IVideo video, string rootDownloadFolder,string channelName, YoutubeClient youtube)
         {
-            var file = new VideoFile();
+            var file = new VideoFile { Type = VideoType.ExternalVideo};
 
             file.Name = video.Title; // "Collections - Blender 2.80 Fundamentals"
             file.Duration = video.Duration ?? TimeSpan.Zero; // 00:07:20
@@ -65,9 +66,9 @@ namespace API.FilmDownload
             }
             file.VideoFileExtendedInfo.SetCover(imageAsByteArray);
 
-            var streamManifest = await youtube.Videos.Streams.GetManifestAsync(video.Url);
-            // Get highest quality muxed stream
-            var streamInfo = streamManifest.GetMuxedStreams().GetWithHighestVideoQuality();
+            //var streamManifest = await youtube.Videos.Streams.GetManifestAsync(video.Url);
+            //// Get highest quality muxed stream
+            //var streamInfo = streamManifest.GetMuxedStreams().GetWithHighestVideoQuality();
 
             var path = Path.Combine(rootDownloadFolder, channelName.GetCorrectFilePath());
             // TODO 
@@ -77,7 +78,7 @@ namespace API.FilmDownload
 
             path = Path.Combine(path, validFilename);
             path = path.Trim('.');
-            file.Path = $"{path}.{streamInfo.Container}";
+            file.Path = $"{path}.mp4";
 
             return file;
         }

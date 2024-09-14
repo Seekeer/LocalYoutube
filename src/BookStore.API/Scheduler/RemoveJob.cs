@@ -34,7 +34,7 @@ namespace Infrastructure.Scheduler
                 var rutracker = provider.GetService<IRuTrackerUpdater>();
 
 
-                var filesToDelete = await fileRepo.Search(x => x.NeedToDelete);
+                var filesToDelete = await fileRepo.SearchAsync(x => x.NeedToDelete);
 
                 NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger().Debug($"{filesToDelete.Count()} files to delete");
 

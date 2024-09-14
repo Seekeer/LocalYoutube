@@ -53,7 +53,7 @@ namespace API.Controllers
 
             var mark = _mapper.Map<FileMark>(dto);
             mark.UserId = userId;
-            var addedMark = await _marksRepository.Add(mark);
+            var addedMark = await _marksRepository.AddAsync(mark);
 
             return Ok(addedMark.Id);
         }
@@ -69,7 +69,7 @@ namespace API.Controllers
 
             var mark = _mapper.Map<FileMark>(dto);
             mark.UserId = userId;
-            await _marksRepository.Update(mark);
+            await _marksRepository.UpdateAsync(mark);
 
             return Ok();
         }

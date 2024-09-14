@@ -124,6 +124,7 @@ namespace API.FilmDownload
             var path = Path.Combine(folderPath, validFilename);
             path = path.Trim('.');
             file.Path = $"{path}.mp3";
+            file.Type = AudioType.FairyTale;
 
             return file;
         }

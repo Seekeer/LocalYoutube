@@ -8,14 +8,15 @@ namespace FileStore.Domain.Interfaces
 {
     public interface IRepository<TEntity> : IDisposable where TEntity : Entity
     {
-        Task<TEntity> Add(TEntity entity);
+        Task<TEntity> AddAsync(TEntity entity);
         Task<List<TEntity>> GetAll();
         Task<TEntity> GetById(int id);
-        Task Update(TEntity entity);
+        Task UpdateAsync(TEntity entity);
         Task Remove(TEntity entity);
         Task Remove(int id);
         Task<IEnumerable<TEntity>> SearchRandom(Expression<Func<TEntity, bool>> predicate, int resultCount = 10);
         Task<int> SaveChangesAsync();
-        Task<IEnumerable<TEntity>> Search(Expression<Func<TEntity, bool>> predicate);
+        Task<IEnumerable<TEntity>> SearchAsync(Expression<Func<TEntity, bool>> predicate);
+        Task<TEntity> FindByQueryAsync(Expression<Func<TEntity, bool>> predicate);
     }
 }

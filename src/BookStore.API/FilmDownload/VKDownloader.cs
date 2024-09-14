@@ -91,6 +91,7 @@ namespace API.FilmDownload
             var info = new DownloadInfo
             {
                 ChannelName = $"VK|{group.FirstOrDefault().Name}",
+                ChannelId = Math.Abs(groupId).ToString(),
                 IsList = false,
             };
 
@@ -102,7 +103,7 @@ namespace API.FilmDownload
 
         private async Task<VideoFile> GetFileFromVideo(Video video, string rootDownloadFolder, string channelName)
         {
-            var file = new VideoFile();
+            var file = new VideoFile { Type = VideoType.ExternalVideo };
 
             file.Name = video.Title;
             var durationSeconds = video.Duration ?? 0;
@@ -124,6 +125,7 @@ namespace API.FilmDownload
 
             path = Path.Combine(path, validFilename);
             file.Path = $"{path}.mp4";
+            file.Type = VideoType.ExternalVideo;
 
             return file;
         }

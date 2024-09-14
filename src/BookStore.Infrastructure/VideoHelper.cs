@@ -119,22 +119,24 @@ namespace Infrastructure
         {
             var format = FFMpeg.GetContainerFormat("mp4");
             var fileInfo = new FileInfo(path);
-            var convertedPath = Path.Combine(_config.Config.PremierConvertedFolderPath,
-                    $"{new string(fileInfo.Name.Where(ch => !Path.InvalidPathChars.Contains(ch)).ToArray())}_{start.ToString("mm:ss")}_{finish.ToString("mm:ss")}");
+            var name = fileInfo.Name.Replace(fileInfo.Extension, string.Empty);
+            var convertedPath = "";
+            var index = 0;
+            do
+            {
+                convertedPath = Path.Combine(_config.Config.PremierConvertedFolderPath,
+                    $"{new string(name.Where(ch => !Path.InvalidPathChars.Contains(ch)).ToArray())}_Part_{++index}{format.Extension}");
 
+            } while (File.Exists(convertedPath));
             await FFMpegArguments
                 .FromFileInput(path)
                 .OutputToFile(convertedPath, false, options => options
                     .WithVideoCodec("libx264")
-                    //.WithConstantRateFactor(21)
                     .WithAudioCodec(FFMpegCore.Enums.AudioCodec.Aac)
-                    //.WithVariableBitrate(4)
                     .UsingMultithreading(true)
                     .OverwriteExisting()
                     .Seek(start)
                     .WithDuration(finish - start)
-                    //.WithVideoFilters(filterOptions => filterOptions
-                    //    .Scale(VideoSize.Hd))
                     .WithFastStart())
                 .ProcessAsynchronously();
 

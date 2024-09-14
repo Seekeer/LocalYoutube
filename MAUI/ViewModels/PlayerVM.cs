@@ -78,7 +78,7 @@ namespace MAUI.ViewModels
                 HttpClientAuth.GetVideoUrlById(dto.Id);
             Bookmarks = new BookmarksVM(_api, () => Page.GetMedia().Position, dto.Id);
 
-            Description = VideoDescriptionRowVM.ParseDescription(dto.Description);
+            Description = VideoDescriptionRowVM.ParseDescription(dto.Description, true);
 
             ProcessFile();
         }

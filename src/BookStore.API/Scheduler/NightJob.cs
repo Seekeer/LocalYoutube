@@ -8,6 +8,8 @@ namespace Infrastructure.Scheduler
     {
         public async Task Execute(IJobExecutionContext context)
         {
+            NLog.LogManager.GetCurrentClassLogger().Info($"Job started");
+
             await Execute();
         }
 

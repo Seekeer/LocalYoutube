@@ -22,7 +22,7 @@ namespace FileStore.Infrastructure.Repositories
             DbSet = db.Set<TEntity>();
         }
 
-        public virtual async Task<TEntity> Add(TEntity entity)
+        public virtual async Task<TEntity> AddAsync(TEntity entity)
         {
             DbSet.Add(entity);
             await SaveChangesAsync();
@@ -40,7 +40,7 @@ namespace FileStore.Infrastructure.Repositories
             return await DbSet.FindAsync(id);
         }
         
-        public virtual async Task Update(TEntity entity)
+        public virtual async Task UpdateAsync(TEntity entity)
         {
             DbSet.Update(entity);
             await SaveChangesAsync();
@@ -63,7 +63,7 @@ namespace FileStore.Infrastructure.Repositories
             return await Random(DbSet.AsNoTracking().Where(predicate), resultCount).ToListAsync();
         }
 
-        public async Task<IEnumerable<TEntity>> Search(Expression<Func<TEntity, bool>> predicate)
+        public async Task<IEnumerable<TEntity>> SearchAsync(Expression<Func<TEntity, bool>> predicate)
         {
             return await (DbSet.AsNoTracking().Where(predicate).OrderBy(x => x.Id).ToListAsync());
         }
@@ -84,6 +84,11 @@ namespace FileStore.Infrastructure.Repositories
                 return query.OrderBy(o => Guid.NewGuid()).Take(resultCount);
             else
                 return query.OrderBy(o => Guid.NewGuid());
+        }
+
+        public async Task<TEntity> FindByQueryAsync(Expression<Func<TEntity, bool>> predicate)
+        {
+            return await DbSet.AsNoTracking().FirstOrDefaultAsync(predicate);
         }
     }
 }

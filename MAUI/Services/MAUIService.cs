@@ -49,7 +49,7 @@ namespace MAUI.Services
             Task.Run(async () =>
             {
                 using var fileService = GetFileService();
-                await fileService.Add(videoFile);
+                await fileService.AddAsync(videoFile);
             }).Wait();
         }
 
@@ -72,7 +72,7 @@ namespace MAUI.Services
 
             var file = await videoFileRepository.GetById(fileId);
             file.Path = finalPath;
-            await videoFileRepository.Update(file);
+            await videoFileRepository.UpdateAsync(file);
         }
 
         public async Task<VideoFile> GetFileById(int fileId)

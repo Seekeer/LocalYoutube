@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore.Design;
 using System.Threading.Tasks;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace FileStore.Infrastructure.Context
 {
@@ -43,7 +44,8 @@ namespace FileStore.Infrastructure.Context
 
     // cd .\src\BookStore.Infrastructure\
     // dotnet ef migrations add ShowLatest
-    //  dotnet ef database update
+    // dotnet ef migrations add ExternalServiceMapping --context VideoCatalogDbContext
+    // dotnet ef database update --context VideoCatalogDbContext
     public class VideoCatalogDbContext : IdentityUserContext<ApplicationUser>
     {
         public VideoCatalogDbContext(DbContextOptions options) : base(options)
@@ -59,7 +61,7 @@ namespace FileStore.Infrastructure.Context
         public DbSet<FileExtendedInfo> FilesInfo { get; set; }
         public DbSet<FileUserInfo> FilesUserInfo { get; set; }
         public DbSet<FileMark> FileMarks { get; set; }
-        public DbSet<ExternalVideoSource> ExternalVideoSource { get; set; }
+        public DbSet<ExternalVideoSourceMapping> ExternalVideoSource { get; set; }
 
         public DbSet<Series> Series { get; set; }
 

@@ -464,39 +464,6 @@ namespace Infrastructure
             return TrimDots(result);
         }
 
-        public void AddFromSiteDownload(DbFile file, string seriesName, string seasonName, int numberInSeries)
-        {
-            var series = _db.Series.FirstOrDefault(x => x.Name == seriesName);
-            if (series == null)
-            {
-                series = AddOrGetSeries(seriesName, false, true);
-                series.AudioType = AudioType.ChildBook;
-            }
-            var season = AddOrUpdateSeason(series, seasonName); 
-
-            file.Season = season;
-            file.SeriesId = season.SeriesId;
-            if(file is VideoFile )
-                (file as VideoFile).Type = series.Type ?? VideoType.Unknown;
-            else if (file is AudioFile)
-                (file as AudioFile).Type = series.AudioType ?? AudioType.Unknown;
-            file.IsDownloading = true;
-            file.Number = numberInSeries;
-        }
-
-        public async Task<int> DownloadFinishedAsync(DbFile file, bool isVideoPropertiesFilled)
-        {
-            if(!isVideoPropertiesFilled)
-                VideoHelper.FillVideoProperties(file as VideoFile);
-
-            file.IsDownloading = false;
-            file.Name = file.Name.ClearFileName();
-            await _db.Files.AddAsync(file);
-            await _db.SaveChangesAsync();
-
-            return file.Id;
-        }
-
         private static string TrimDots(string result)
         {
             return result.Trim().Trim('.').Trim().Trim('-').Trim();
@@ -699,7 +666,7 @@ namespace Infrastructure
         {
             var result = new List<DbFile>();
 
-            foreach (var info in files.Where(x => x is not VideoFile || (x as VideoFile).Type != VideoType.Youtube))
+            foreach (var info in files.Where(x => x is not VideoFile || (x as VideoFile).Type != VideoType.ExternalVideo))
             {
                 try
                 {
@@ -1112,5 +1079,6 @@ namespace Infrastructure
                 //NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }
         }
+
     }
 }

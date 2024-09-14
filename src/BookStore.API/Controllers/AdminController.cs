@@ -59,51 +59,9 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> DoAction()
         {
-            await TriggerJob(nameof(CheckYoutubePlaylistJob));
-
-            await (new VideoHelper(_config)).GetPart("", TimeSpan.FromSeconds(72), TimeSpan.FromSeconds(156));
-
-            var files = _db.Files.AsNoTracking().ToList();
-            foreach (var file in files)
-            {
-                var newName = file.Name.ClearFileName();
-                if(newName != file.Name)
-                {
-                    file.Name = newName;
-                    _db.Update(file);
-                }
-            }
-
-            ClearSeasonSeries(111);
-
-            await ConvertNewOnline();
-            //await CheckWrongPaths();
-            //await MoveDownloadedJob();
-
-            //var dbUpdater = new DbUpdateManager(_db);
-            //var files = await _observer.GetUpdates();
-
-            //await RemoveFile(55625, true, false);
-            //var dbUpdater = new DbUpdateManager(_db);
-            //dbUpdater.AddAudioFilesFromFolder("D:\\VideoServer\\Анюта\\Музыка", AudioType.FairyTale, Origin.Russian, false, "Сказка о царе Салтане", "А.С. Пушкин - Сказки");
-
-            //await RestoreFiles();
-
-            //await MoveFileToSeasonByName(55558, "Лекции об Индии", "Индия", VideoType.Special);
-
-            //var fules = _db.Files.Where(x => x.Id >= 55559).Include(x => x.VideoFileExtendedInfo).ToList();
-            //foreach (var file in fules)
-            //{
-            //    await MoveFileToSeasonByName(file.Id, "Лекции об Индии", "Индия", VideoType.Special);
-            //}
+            await CheckYoutubePlaylistJob();
 
             return Ok();
-        }
-
-        private async Task TriggerJob(string jobName)
-        {
-            IScheduler scheduler = await _factory.GetScheduler();
-            await scheduler.TriggerJob(new JobKey(jobName));
         }
 
         [HttpGet]
@@ -177,6 +135,21 @@ namespace FileStore.API.Controllers
                 else
                     await downloader.Download(file.VideoFileExtendedInfo.ExternalLink, file.Path);
             }
+        }
+
+        [HttpGet]
+        [Route("checkYoutubePlaylistJob")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> CheckYoutubePlaylistJob()
+        {
+            var factory = _serviceScopeFactory;
+
+            var job = new CheckYoutubePlaylistJob(_serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(), _tgBot, _serviceScopeFactory, _config,
+                _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalVideoMappingsRepository>(),
+                _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalVideoMappingsService>());
+            await job.Execute(null);
+
+            return Ok();
         }
 
         [HttpGet]
@@ -280,6 +253,10 @@ namespace FileStore.API.Controllers
                 _db.Series.Remove(serie);
             }
 
+            var mapping = _db.ExternalVideoSource.FirstOrDefault(x => x.SeasonId == seasonId);
+            if (mapping != null)
+                _db.ExternalVideoSource.Remove(mapping);
+
             _db.SaveChanges();
         }
 
@@ -359,8 +336,11 @@ namespace FileStore.API.Controllers
             var files = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).ToList();
             foreach (var file in files)
             {
-                if ((!System.IO.File.Exists(file.Path) && !file.IsDownloading))
+                if ((!System.IO.File.Exists(file.Path)))
+                {
+                    if (!file.IsDownloading)
                     manager.RemoveFileCompletely(file);
+                }
             }
 
             _db.SaveChanges();

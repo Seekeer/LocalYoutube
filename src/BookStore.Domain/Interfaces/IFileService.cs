@@ -18,7 +18,7 @@ namespace FileStore.Domain.Interfaces
     {
         Task<IEnumerable<T>> GetAll();
         Task<T> GetById(int id);
-        Task<T> Add(T File);
+        Task<T> AddAsync(T File);
         Task<T> Update(T File);
         Task<bool> Remove(T File);
         Task<bool> Remove(int fileId);
