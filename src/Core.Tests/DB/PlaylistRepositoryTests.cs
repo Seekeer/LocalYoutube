@@ -23,8 +23,8 @@ namespace Core.Tests.DB
 
             var adddedPlaylist = await repo.GetById(1);
 
-            Assert.IsNotEmpty(adddedPlaylist.Files);
-            Assert.AreEqual(1, adddedPlaylist.Files.First().Id);
+            Assert.IsNotEmpty(adddedPlaylist.Items);
+            Assert.AreEqual(1, adddedPlaylist.Items.First().File.Id);
         }
 
         [Test]
@@ -32,14 +32,14 @@ namespace Core.Tests.DB
         {
             var repo = serviceProvider.GetService<IPlaylistRepository>();
             await repo.AddToListAsync(1,1);
+
             var playList = await repo.GetById(1);
-            Assert.IsNotEmpty(playList.Files);
+            Assert.IsNotEmpty(playList.Items);
 
             await repo.RemoveFromListAsync(1, 1);
 
             playList = await repo.GetById(1);
-
-            Assert.IsEmpty(playList.Files);
+            Assert.IsEmpty(playList.Items);
         }
     }
 }

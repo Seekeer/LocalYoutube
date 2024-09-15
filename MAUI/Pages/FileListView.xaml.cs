@@ -9,10 +9,6 @@ public partial class FileListView : ContentView
 		InitializeComponent();
 	}
 
-    private void ListView_ItemTapped(object sender, ItemTappedEventArgs e)
-    {
-        (BindingContext as ListVM).ItemTapped(e.Item as VideoFileResultDtoDownloaded);
-    }
     private void Button_Clicked(object sender, EventArgs e)
     {
         var button = (Button)sender;
@@ -27,4 +23,9 @@ public partial class FileListView : ContentView
         //stack.Remove(button);
     }
 
+    private void OnUrlClicked(object sender, TappedEventArgs e)
+    {
+        var dto = (VideoFileResultDtoDownloaded)e.Parameter;
+        (BindingContext as ListVM).ItemTapped(dto);
+    }
 }

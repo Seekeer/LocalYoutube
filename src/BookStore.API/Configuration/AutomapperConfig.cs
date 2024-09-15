@@ -41,6 +41,7 @@ namespace FileStore.API.Configuration
             //CreateMap<byte[], string>().ConvertUsing(new Base64Converter());
             CreateMap<Season, SeasonResultDto>().ReverseMap();
             CreateMap<Series, SeriesResultDto>().ReverseMap();
+            CreateMap<Playlist, DtoIdBase>().ReverseMap();
             CreateMap<VideoFile, VideoFileResultDto>().ReverseMap();
             CreateMap<AudioFile, VideoFileResultDto>().ReverseMap();
             CreateMap<FileMark, MarkAddDto>().ReverseMap();

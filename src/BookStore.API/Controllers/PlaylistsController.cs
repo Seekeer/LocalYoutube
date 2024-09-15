@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using FileStore.API.Configuration;
+using System.Linq;
 
 namespace FileStore.API.Controllers
 {
@@ -19,11 +21,13 @@ namespace FileStore.API.Controllers
     [Authorize]
     public class PlaylistsController : MainController
     {
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMapper _mapper;
         private readonly IPlaylistRepository _playlistRepository;
 
-        public PlaylistsController(IMapper mapper, IPlaylistRepository playlistRepository)
+        public PlaylistsController(UserManager<ApplicationUser> userManager, IMapper mapper, IPlaylistRepository playlistRepository)
         {
+            _userManager = userManager;
             _mapper = mapper;
             _playlistRepository = playlistRepository;
         }
@@ -33,7 +37,19 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll()
         {
-            return Ok(_playlistRepository.GetAll());
+            var playlists = await _playlistRepository.GetAll();
+            return Ok(_mapper.Map<IEnumerable<DtoIdBase>>(playlists));
+        }
+
+        [HttpGet]
+        [Route("getFiles/{playlistId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetFilesFromPlaylist(int playlistId)
+        {
+            var playlist = await _playlistRepository.GetById(playlistId);
+
+            var itemsFiles = playlist.Items.OrderBy(x => x.Index).Select(x => x.File);
+            return Ok(_mapper.GetFiles<DbFile, VideoFileResultDto>(itemsFiles, await GetUserId(_userManager)));
         }
 
         [HttpPost]

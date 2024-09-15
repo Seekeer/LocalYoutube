@@ -21,7 +21,7 @@ namespace MAUI.ViewModels
 
         public Playlist SelectedPlaylist
         {
-            set { APIService.AddToPlaylists(Id, value.Id); }
+            set { if(value != null) APIService.AddToPlaylists(Id, value.Id); }
         }
 
         public IAPIService APIService { get; internal set; }

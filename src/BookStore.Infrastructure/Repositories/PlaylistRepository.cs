@@ -17,13 +17,13 @@ namespace FileStore.Infrastructure.Repositories
         Task<bool> RemoveFromListAsync(int listId, int fileId);
     }
 
-    public class PlaylistRepository : Repository<Playlist>, IPlaylistRepository
+    public class PlaylistRepository : Repository<Playlist>, IPlaylistRepository, tem
     {
         public PlaylistRepository(VideoCatalogDbContext context) : base(context) { }
 
         public override async Task<Playlist> GetById(int listId)
         {
-            return await DbSet.Include(x => x.Files).FirstOrDefaultAsync(x => x.Id == listId);
+            return await DbSet.Include(x => x.Items).ThenInclude(x => x.File).FirstOrDefaultAsync(x => x.Id == listId);
         }
 
         public async Task<bool> AddToListAsync(int listId, int fileId)
@@ -32,14 +32,14 @@ namespace FileStore.Infrastructure.Repositories
             if (list == null)
                 return false;
 
-            if (list.Files.Any(x => x.Id == fileId))
+            if (list.Items.Any(x => x.File.Id == fileId))
                 return false;
 
             var file = await Db.Files.FirstOrDefaultAsync(x => x.Id == fileId);
             if (file == null)
                 return false;
 
-            list.Files.Add(file);
+            list.Items.Add(new PlaylistItem { File = file, Index = list.Items.Count + 1 });
             await Db.SaveChangesAsync();
             return true;
         }
@@ -50,16 +50,17 @@ namespace FileStore.Infrastructure.Repositories
             if (list == null)
                 return false;
 
-            var file = list.Files.FirstOrDefault(x => x.Id == fileId);
-            if (file == null)
+            var item = list.Items.FirstOrDefault(x => x.File.Id == fileId);
+
+            if (item == null)
                 return false;
             else
-                list.Files.Remove(file);  
+                list.Items.Remove(item);
             await Db.SaveChangesAsync();
             return true;
         }
 
-        public async Task AddToFavorite(string userName, int fileId) 
+        public async Task AddToFavorite(string userName, int fileId)
         {
             var favorite = await this.FindByQueryAsync(x => x.Name == $"Избранное {userName}");
         }

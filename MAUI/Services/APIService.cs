@@ -205,7 +205,8 @@ namespace MAUI.Services
         {
             try
             {
-                await _httpClientAuth.PostAsync<string>($"playlists/addToPlaylist", playlistId);
+                await _httpClientAuth.PostAsync<string>($"playlists/addToPlaylist", new AddToPlaylistDTO { FileId = fileId, PlaylistId = playlistId });
+                //await _httpClientAuth.PostAsync<string>($"playlists/addToPlaylist?playlistId={playlistId}&fileId={fileId}", "");
             }
             catch (Exception ex)
             {

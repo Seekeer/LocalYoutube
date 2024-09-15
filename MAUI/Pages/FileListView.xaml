@@ -8,7 +8,7 @@
         <converters:IdToImageUrlConverter x:Key="idToImageUrl" />
         <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
     </ContentView.Resources>
-    <ListView ItemsSource="{Binding Files}" ItemTapped="ListView_ItemTapped" 
+    <ListView ItemsSource="{Binding Files}"
               HasUnevenRows="True">
         <ListView.ItemTemplate>
             <DataTemplate>
@@ -47,7 +47,7 @@
 
                         <VerticalStackLayout>
 
-                        <VerticalStackLayout IsVisible="{Binding BindingContext.IsVerticalOrientation, Source={RelativeSource AncestorType={x:Type ListView}}}" >
+                        <VerticalStackLayout  IsVisible="{Binding BindingContext.IsVerticalOrientation, Source={RelativeSource AncestorType={x:Type ListView}}}" >
                             <Image
                                 Source="{Binding Id, Converter={StaticResource idToImageUrl}}"
                                 Aspect="AspectFit"
@@ -113,12 +113,13 @@
                                 <ColumnDefinition Width="2*" />
                             </Grid.ColumnDefinitions>
 
-                            <Image
+                                <!--Command="{Binding Path=BindingContext.ItemTappedCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                CommandParameter="{Binding Id}"-->
+                            <ImageButton 
                                 Grid.RowSpan="2"
                                 Source="{Binding Id, Converter={StaticResource idToImageUrl}}"
                                 HeightRequest="300"
-                                Aspect="AspectFit"
-                                SemanticProperties.Description="dot net bot in a race car number eight" />
+                                Aspect="AspectFit" />
 
                             <VerticalStackLayout  Grid.Column="1" Padding="10">
                                 <Label Grid.Column="1"
@@ -137,12 +138,16 @@
 
                                     <Label Grid.Row="1"
                                        Padding="0,10,0,0"
-                                    FontSize="Medium"
-                                    Grid.Column="1"
-                                    Text="{Binding Description}"
-                                    MaxLines="8"
-                                    FontAttributes="Italic"
-                                    VerticalOptions="End" />
+                                        FontSize="Medium"
+                                        Grid.Column="1"
+                                        Text="{Binding Description}"
+                                        MaxLines="8"
+                                        FontAttributes="Italic"
+                                        VerticalOptions="End" >
+                                        <Label.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnUrlClicked" CommandParameter="{Binding}"/>
+                                        </Label.GestureRecognizers>
+                                    </Label>
                                 </VerticalStackLayout>
 
                             <Button Grid.Column="2"

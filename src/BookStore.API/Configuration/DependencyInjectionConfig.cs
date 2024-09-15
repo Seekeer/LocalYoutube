@@ -30,6 +30,7 @@ namespace FileStore.API.Configuration
             services.AddScoped<IDbFileRepository, DbFileRepository>();
             services.AddScoped<ISeriesRepository, SeriesRepository>();
             services.AddScoped<IMarksRepository, MarksRepository>();
+            services.AddScoped<IPlaylistRepository, PlaylistRepository>();
 
             services.AddScoped<ISeriesService, SeriesService>();
             services.AddScoped<IAudioFileService, AudioFileService>();
