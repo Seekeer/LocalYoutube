@@ -93,8 +93,8 @@ namespace MAUI.ViewModels
         public async Task ShowFresh()
         {
             IsBusy = true;
-
-            await _navigationService.NavigateAsync(nameof(FreshPage), "");
+            var dto = await _api.GetFreshAsync();
+            await _navigationService.NavigateAsync(nameof(FreshPage), dto);
             IsBusy = false;
         }
 

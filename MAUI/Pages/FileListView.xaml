@@ -122,10 +122,14 @@
                                 Aspect="AspectFit" />
 
                             <VerticalStackLayout  Grid.Column="1" Padding="10">
-                                <Label Grid.Column="1"
+                                    <Label Grid.Column="1"
                                     FontSize="Large"
                                     Text="{Binding Name}"
-                                    FontAttributes="Bold" />
+                                    FontAttributes="Bold">
+                                        <Label.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnUrlClicked" CommandParameter="{Binding}"/>
+                                        </Label.GestureRecognizers>
+                                    </Label>
 
                                     <Label Grid.Row="1"
                                        Padding="0,10,0,0"
@@ -134,7 +138,11 @@
                                     Grid.Column="1"
                                     Text="{Binding DurationMinutes, StringFormat='{0} минут'}"
                                     MaxLines="8"
-                                    VerticalOptions="End" />
+                                    VerticalOptions="End" >
+                                        <Label.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnUrlClicked" CommandParameter="{Binding}"/>
+                                        </Label.GestureRecognizers>
+                                    </Label>
 
                                     <Label Grid.Row="1"
                                        Padding="0,10,0,0"
