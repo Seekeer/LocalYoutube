@@ -17,7 +17,7 @@ namespace FileStore.Infrastructure.Repositories
         Task<bool> RemoveFromListAsync(int listId, int fileId);
     }
 
-    public class PlaylistRepository : Repository<Playlist>, IPlaylistRepository, tem
+    public class PlaylistRepository : Repository<Playlist>, IPlaylistRepository
     {
         public PlaylistRepository(VideoCatalogDbContext context) : base(context) { }
 
