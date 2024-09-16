@@ -8,7 +8,7 @@
         <converters:IdToImageUrlConverter x:Key="idToImageUrl" />
         <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
     </ContentView.Resources>
-    <ListView ItemsSource="{Binding Files}" ItemTapped="ListView_ItemTapped" 
+    <ListView ItemsSource="{Binding Files}"
               HasUnevenRows="True">
         <ListView.ItemTemplate>
             <DataTemplate>
@@ -47,7 +47,7 @@
 
                         <VerticalStackLayout>
 
-                        <VerticalStackLayout IsVisible="{Binding BindingContext.IsVerticalOrientation, Source={RelativeSource AncestorType={x:Type ListView}}}" >
+                        <VerticalStackLayout  IsVisible="{Binding BindingContext.IsVerticalOrientation, Source={RelativeSource AncestorType={x:Type ListView}}}" >
                             <Image
                                 Source="{Binding Id, Converter={StaticResource idToImageUrl}}"
                                 Aspect="AspectFit"
@@ -85,6 +85,21 @@
                                     CommandParameter="{Binding Id}"
                                     FontAttributes="Bold" />
 
+                                <HorizontalStackLayout>
+                                    <Picker 
+                                        ItemsSource="{Binding Playlists}"
+                                        SelectedItem="{Binding SelectedPlaylist}"
+                                        ItemDisplayBinding="{Binding Name}"
+                                        WidthRequest="300"
+                                        Title="Добавить в плейлист"/>
+
+                                    <Button 
+                                        Text="➕"
+                                        TextColor="LightCyan"
+                                        VerticalOptions="Center"
+                                        Command="{Binding Path=BindingContext.AddPlaylistCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                        FontAttributes="Bold" />
+                                </HorizontalStackLayout>
                         </VerticalStackLayout>
 
                         <Grid Margin="5" IsVisible="{Binding BindingContext.IsPortraitOrientation, Source={RelativeSource AncestorType={x:Type ListView}}}" >
@@ -98,18 +113,23 @@
                                 <ColumnDefinition Width="2*" />
                             </Grid.ColumnDefinitions>
 
-                            <Image
+                                <!--Command="{Binding Path=BindingContext.ItemTappedCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                CommandParameter="{Binding Id}"-->
+                            <ImageButton 
                                 Grid.RowSpan="2"
                                 Source="{Binding Id, Converter={StaticResource idToImageUrl}}"
                                 HeightRequest="300"
-                                Aspect="AspectFit"
-                                SemanticProperties.Description="dot net bot in a race car number eight" />
+                                Aspect="AspectFit" />
 
                             <VerticalStackLayout  Grid.Column="1" Padding="10">
-                                <Label Grid.Column="1"
+                                    <Label Grid.Column="1"
                                     FontSize="Large"
                                     Text="{Binding Name}"
-                                    FontAttributes="Bold" />
+                                    FontAttributes="Bold">
+                                        <Label.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnUrlClicked" CommandParameter="{Binding}"/>
+                                        </Label.GestureRecognizers>
+                                    </Label>
 
                                     <Label Grid.Row="1"
                                        Padding="0,10,0,0"
@@ -118,16 +138,24 @@
                                     Grid.Column="1"
                                     Text="{Binding DurationMinutes, StringFormat='{0} минут'}"
                                     MaxLines="8"
-                                    VerticalOptions="End" />
+                                    VerticalOptions="End" >
+                                        <Label.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnUrlClicked" CommandParameter="{Binding}"/>
+                                        </Label.GestureRecognizers>
+                                    </Label>
 
                                     <Label Grid.Row="1"
                                        Padding="0,10,0,0"
-                                    FontSize="Medium"
-                                    Grid.Column="1"
-                                    Text="{Binding Description}"
-                                    MaxLines="8"
-                                    FontAttributes="Italic"
-                                    VerticalOptions="End" />
+                                        FontSize="Medium"
+                                        Grid.Column="1"
+                                        Text="{Binding Description}"
+                                        MaxLines="8"
+                                        FontAttributes="Italic"
+                                        VerticalOptions="End" >
+                                        <Label.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnUrlClicked" CommandParameter="{Binding}"/>
+                                        </Label.GestureRecognizers>
+                                    </Label>
                                 </VerticalStackLayout>
 
                             <Button Grid.Column="2"
@@ -140,6 +168,7 @@
                                     Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
                                     CommandParameter="{Binding Id}"
                                     FontAttributes="Bold" />
+
                             </Grid>
                     </VerticalStackLayout>
                     </SwipeView>

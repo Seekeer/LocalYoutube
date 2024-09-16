@@ -615,7 +615,10 @@ namespace API.FilmDownload
                             });
                     }
                     else
+                    {
                         await TryRutrackerDownload(task.OriginalLine, message.From.Id);
+                        await _botClient.DeleteMessageAsync(message.From.Id, processMessage.MessageId);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -624,7 +627,7 @@ namespace API.FilmDownload
                 }
             }
 
-            var totalCount = lines.Skip(1).Count();
+            var totalCount = tasks.Count();
             var endMessage = $"Скачивание завершено. Скачано {totalCount - errorLines.Count}/{totalCount}";
             if (errorLines.Any())
                 endMessage += Environment.NewLine + $"Ошибка, файл не скачан:{Environment.NewLine}{string.Join(Environment.NewLine, errorLines)}";
@@ -736,7 +739,6 @@ namespace API.FilmDownload
                 };
 
             await _botClient.SendTextMessageAsync(new ChatId(telegramId), GetDownloadEndMessage(item),
-                //await _botClient.SendTextMessageAsync(new ChatId(telegramId), $"Закончена закачка {item.Name} {Environment.NewLine} Посмотреть: {item.GetUrl(_config)}", 
                 parseMode: Tg.ParseMode.Markdown, replyMarkup: new InlineKeyboardMarkup(keyboard));
         }
 
@@ -769,6 +771,7 @@ namespace API.FilmDownload
                 $"{GetDownloadEndMessage(item)}{Environment.NewLine}Как храним скачанное?",
                 replyToMessageId: task.OriginalMessageId,
                 disableWebPagePreview: true,
+                parseMode: Tg.ParseMode.Markdown,
                 replyMarkup: new InlineKeyboardMarkup(keyboard));
 
             task.QuestionMessageId = tgMessage.MessageId;

@@ -55,6 +55,8 @@ namespace Infrastructure
                     return null;
             }).Where(x => x != null).ToList();
 
+            if (!paragraphs.Any())
+                paragraphs.Add(new VideoDescriptionRowVM ( description, null));
             return paragraphs;
         }
 

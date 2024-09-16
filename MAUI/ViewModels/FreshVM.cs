@@ -41,7 +41,7 @@ namespace MAUI.ViewModels
         private async Task UpdateFiles(Season season)
         {
             IsBusy = true;
-            Files = new System.Collections.ObjectModel.ObservableCollection<VideoFileResultDtoDownloaded>(await _aPIService.GetFilesForSeason(season));
+            _dtoAssign(await _aPIService.GetFilesForSeason(season));
             IsBusy = false;
         }
     }

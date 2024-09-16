@@ -103,7 +103,6 @@ namespace FileStore.Infrastructure.Repositories
                 if (channelMapping == null)
                 {
                     createChannelMapping = true;
-                    channelMapping.CheckNewVideo = true;
                 }
             }
 
@@ -132,6 +131,7 @@ namespace FileStore.Infrastructure.Repositories
                 if (channelInfo.FullDownload)
                     channelMapping.LastCheckDate = new DateTime(2000, 1, 1);
 
+                channelMapping.CheckNewVideo = true;
                 await _externalVideoRepository.AddAsync(channelMapping);
             }
 
@@ -152,7 +152,7 @@ namespace FileStore.Infrastructure.Repositories
 
         public async Task<int> DownloadFinishedAsync(DbFile file, bool isVideoPropertiesFilled)
         {
-            if (!isVideoPropertiesFilled)
+            if (!isVideoPropertiesFilled || file.Duration == TimeSpan.Zero)
                 VideoHelper.FillVideoProperties(file as VideoFile);
 
             file.IsDownloading = false;

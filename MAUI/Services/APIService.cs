@@ -19,6 +19,9 @@ namespace MAUI.Services
         Task<int> AddMarkAsync(MarkAddDto markAddDto);
         Task<bool> DeleteMarkAsync(int id);
         Task<IEnumerable<MarkAddDto>> GetMarksForFile(int fileId);
+        Task<IEnumerable<Playlist>> GetPlaylistsAsync();
+        Task AddToPlaylists(int fileId, int playlistId);
+        Task AddPlaylistAsync(string playlistName);
     }
 
     public class APIService : IAPIService
@@ -182,6 +185,42 @@ namespace MAUI.Services
             catch (Exception ex)
             {
                 return new List<MarkAddDto>();
+            }
+        }
+
+        public async Task<IEnumerable<Playlist>> GetPlaylistsAsync()
+        {
+            try
+            {
+                var list = await _httpClientAuth.GetAsync<IEnumerable<Playlist>>($"playlists/getAll");
+                return list;
+            }
+            catch (Exception ex)
+            {
+                return new List<Playlist>();
+            }
+        }
+
+        public async Task AddToPlaylists(int fileId, int playlistId)
+        {
+            try
+            {
+                await _httpClientAuth.PostAsync<string>($"playlists/addToPlaylist", new AddToPlaylistDTO { FileId = fileId, PlaylistId = playlistId });
+                //await _httpClientAuth.PostAsync<string>($"playlists/addToPlaylist?playlistId={playlistId}&fileId={fileId}", "");
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        public async Task AddPlaylistAsync(string playlistName)
+        {
+            try
+            {
+                await _httpClientAuth.PostAsync<string>($"playlists/add", new Playlist { Name = playlistName});
+            }
+            catch (Exception ex)
+            {
             }
         }
     }
