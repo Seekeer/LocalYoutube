@@ -49,6 +49,7 @@
     <div>
 
     <mat-checkbox class="ml-2"  *ngIf="isSelectSeries && !showKPINfo"  [(ngModel)]="isRandom" >Случайный порядок</mat-checkbox>
+    <mat-checkbox class="ml-2"  *ngIf="isSelectSeries && !showKPINfo"  [(ngModel)]="isRevers" >Обратный порядок</mat-checkbox>
     <mat-checkbox class="ml-2"  *ngIf="showWatchedCheckbox"  [(ngModel)]="showWatched"  (change)="watchedChanged($event)">Показать просмотренное</mat-checkbox>
     <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showWatched"  (change)="watchedChanged($event)">Показать просмотренное</mat-checkbox>
     <mat-checkbox class="ml-2"  *ngIf="showKPINfo"  [(ngModel)]="showOnlyWebSupported"  (change)="showFilteredBooks()">Только в браузере</mat-checkbox>
@@ -74,7 +75,7 @@
       <mat-card class="mat-elevation-z4 mt-2">
         <mat-card-header >
           <mat-card-title >{{ book.displayName }}</mat-card-title>
-          <mat-card-subtitle>{{book.hours}} {{book.durationMinutes%60}} минут</mat-card-subtitle>
+          <mat-card-subtitle>{{book.hours}} {{book.durationMinutes%60}} минут {{book.seriesName}} {{book.seasoName}}</mat-card-subtitle>
         </mat-card-header>
         <mat-card-actions>
           
@@ -84,6 +85,7 @@
 
           <button class="btn btn-outline-danger btn-sm ml-2" (click)="deleteFilm(content, book)">Удалить фильм</button>
           <button class="btn btn-outline-primary btn-sm ml-2" (click)="sendToTG(book)">Отправить в ТГ</button>
+          <button class="btn btn-outline-success btn-sm ml-2" (click)="openVideo( book, true)">В новой вкладке</button>
 
           <mat-form-field class="mt-3" style="width: 50%;" >        
             <mat-icon *ngIf="book.haveBookmarks" mat-card-avatar>chrome_reader_mode</mat-icon>
@@ -131,7 +133,7 @@
         <mat-card-header >
           <mat-icon *ngIf="book.isSupportedWebPlayer" mat-card-avatar>video_library</mat-icon>
           <mat-card-title>{{ book.displayName }} </mat-card-title>
-          <mat-card-subtitle>{{book.hours}} {{book.durationMinutes%60}} минут</mat-card-subtitle>
+          <mat-card-subtitle>{{book.hours}} {{book.durationMinutes%60}} минут {{book.seriesName}} {{book.seasoName}}</mat-card-subtitle>
         </mat-card-header>        
         <mat-card-actions>
           <button *ngIf="!isAndroid" class="btn btn-outline-primary btn-sm mt-2 ml-2" (click)="copyLink(book)">Скопировать ссылку</button>
