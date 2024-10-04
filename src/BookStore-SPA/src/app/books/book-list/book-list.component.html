@@ -9,7 +9,7 @@
       <input matInput  [(ngModel)]="searchTitle" (ngModelChange)="searchBooks()">
     </mat-form-field>
 
-    <mat-form-field appearance="fill"  *ngIf="isSelectPlaylists" >
+    <mat-form-field appearance="fill"  *ngIf="isSelectPlaylists" [disabled]="serieId">
       <mat-label>Плейлист</mat-label>
       <mat-select [(ngModel)]="playlistId" (ngModelChange)="searchBooks()" >
         <mat-option *ngFor="let data of playlists" value="{{data.id}}">
