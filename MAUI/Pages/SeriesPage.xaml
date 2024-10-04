@@ -13,6 +13,13 @@
                        Color="Red"/>
             <HorizontalStackLayout>
                 <Picker 
+                    ItemsSource="{Binding Playlists}"
+                    SelectedItem="{Binding SelectedPlaylist}"
+                    ItemDisplayBinding="{Binding Name}"
+                    WidthRequest="200"
+                    Title="Плейлист"
+                    />
+                <Picker 
                     ItemsSource="{Binding Series}"
                     SelectedItem="{Binding SelectedSeries}"
                     ItemDisplayBinding="{Binding Name}"

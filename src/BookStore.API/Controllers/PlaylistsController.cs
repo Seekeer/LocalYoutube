@@ -42,13 +42,13 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
-        [Route("getFiles/{playlistId}")]
+        [Route("getFiles")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetFilesFromPlaylist(int playlistId)
+        public async Task<IActionResult> GetFilesFromPlaylist(int id, int count = 20)
         {
-            var playlist = await _playlistRepository.GetById(playlistId);
+            var playlist = await _playlistRepository.GetById(id);
 
-            var itemsFiles = playlist.Items.OrderBy(x => x.Index).Select(x => x.File);
+            var itemsFiles = playlist.Items.Take(count).OrderBy(x => x.Index).Select(x => x.File);
             return Ok(_mapper.GetFiles<DbFile, VideoFileResultDto>(itemsFiles, await GetUserId(_userManager)));
         }
 

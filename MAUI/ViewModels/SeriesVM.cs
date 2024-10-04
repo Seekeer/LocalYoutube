@@ -23,8 +23,12 @@ namespace MAUI.ViewModels
         {
             IsBusy = true;
             Series = (await _aPIService.GetSeries()).OrderBy(x => x.Name).ToList();
+            Playlists = (await _aPIService.GetPlaylistsAsync()).OrderBy(x => x.Name).ToList();
             IsBusy = false;
         }
+
+        [ObservableProperty]
+        private IEnumerable<Playlist> _playlists;
 
         [ObservableProperty]
         private IEnumerable<Series> _series;
@@ -49,6 +53,15 @@ namespace MAUI.ViewModels
             }
         }
 
+
+        public Playlist SelectedPlaylist
+        {
+            set
+            {
+                UpdateFiles(value);
+            }
+        }
+
         [ObservableProperty]
         private IEnumerable<Season> _seasons;
         private Series _selectedSeries;
@@ -59,6 +72,13 @@ namespace MAUI.ViewModels
             {
                 UpdateFiles(value);
             }
+        }
+
+        private async Task UpdateFiles(Playlist playlist)
+        {
+            IsBusy = true;
+            Files = new System.Collections.ObjectModel.ObservableCollection<VideoFileResultDtoDownloaded>(await _aPIService.GetFilesForPlaylist(playlist));
+            IsBusy = false;
         }
 
         private async Task UpdateFiles(Season season)
