@@ -54,7 +54,7 @@ namespace FileStore.API.Configuration
             services.AddQuartz(q =>
             {
                 q.ScheduleJob<CheckYoutubePlaylistJob>(trigger => trigger
-                    .WithIdentity("trigger5", "group5")
+                    .WithIdentity("trigger555", "group5")
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(1)).RepeatForever())
                 );

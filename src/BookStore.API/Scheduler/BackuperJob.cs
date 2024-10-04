@@ -48,7 +48,8 @@ namespace Infrastructure.Scheduler
 
             using (var fileRepo = GetFileRepo())
             {
-                var nonBackupedFiles = await fileRepo.SearchAsync(x => !x.IsBackedup && !x.NeedToDelete && !x.IsDownloading);
+                var nonBackupedFiles = await fileRepo.SearchAsync(x => 
+                    !x.IsBackedup && !x.NeedToDelete && !x.IsDownloading && x.Type != VideoType.ExternalVideo);
                 nonBackupedFiles.ToList().ForEach(x => stack.Add(new UploadFile { Id = x.Id, Path = x.Path }));
             }
 
@@ -87,9 +88,9 @@ namespace Infrastructure.Scheduler
             }
         }
 
-        private IDbFileRepository GetFileRepo()
+        private IVideoFileRepository GetFileRepo()
         {
-            return _service.CreateScope().ServiceProvider.GetService<IDbFileRepository>();
+            return _service.CreateScope().ServiceProvider.GetService<IVideoFileRepository>();
         }
     }
 

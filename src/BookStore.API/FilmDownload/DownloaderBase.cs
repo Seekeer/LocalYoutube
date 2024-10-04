@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using VkNet.Model;
 
 namespace API.FilmDownload
 {
@@ -111,6 +112,7 @@ namespace API.FilmDownload
         public DownloadType DownloadType { get; internal set; }
         public bool SubscribeToChannel { get; internal set; }
         public bool FullDownload { get; protected set; }
+        public bool IsAutoTask { get; internal set; }
     }
 
     public class DownloaderFabric
@@ -164,6 +166,12 @@ namespace API.FilmDownload
             {
                 try
                 {
+                    if (record.Value.Duration < TimeSpan.FromMinutes(1) && task.IsAutoTask)
+                    {
+                        NLog.LogManager.GetCurrentClassLogger().Info($"Got shorts {record.Key} in auto mode. Skipping it.");
+                        continue;
+                    }
+
                     var scope = serviceScopeFactory.CreateScope();
                     using (var fileService = scope.ServiceProvider.GetRequiredService<IExternalVideoMappingsService>())
                     {
