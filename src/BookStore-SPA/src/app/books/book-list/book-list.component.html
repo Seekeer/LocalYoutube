@@ -9,9 +9,9 @@
       <input matInput  [(ngModel)]="searchTitle" (ngModelChange)="searchBooks()">
     </mat-form-field>
 
-    <mat-form-field appearance="fill"  *ngIf="isSelectPlaylists" [disabled]="serieId">
+    <mat-form-field appearance="fill"  *ngIf="isSelectPlaylists">
       <mat-label>Плейлист</mat-label>
-      <mat-select [(ngModel)]="playlistId" (ngModelChange)="searchBooks()" >
+      <mat-select [(ngModel)]="playlistId" (ngModelChange)="searchBooks()" [disabled]="serieId">
         <mat-option *ngFor="let data of playlists" value="{{data.id}}">
           {{data.name}}
         </mat-option>
