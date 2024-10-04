@@ -28,6 +28,10 @@ export class SeriesService {
 
     constructor(private http: HttpClient) { }
 
+    public getPlaylists(): Observable<Serie[]> {
+        return this.http.get<Serie[]>(this.baseUrl + `playlists/getAll`);
+    }
+
     public getAll(type:VideoType|null, origin:VideoOrigin|null = null): Observable<Serie[]> {
         if(type == null)
             return this.http.get<Serie[]>(this.baseUrl + `series/getAllByOrigin?origin=${<number>origin}`);
