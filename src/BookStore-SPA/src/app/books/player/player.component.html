@@ -165,6 +165,12 @@
       
       <app-markslist *ngIf="!isAdditionalBookmarksVisible" #markslist [videoId]="videoId" ></app-markslist>
 
+      <mat-select [(ngModel)]="playlistId" (ngModelChange)="addToPlaylist()" >
+        <mat-option *ngFor="let data of playlists" value="{{data.id}}">
+          {{data.name}}
+        </mat-option>
+      </mat-select>
+
       <mat-card *ngIf="description">
           <button mat-button *ngIf="!descriptionCollapsed" (click)="descriptionCollapsed=true">Скрыть описание</button>
           <button mat-button *ngIf="descriptionCollapsed" (click)="descriptionCollapsed=false">Показать описание</button>
