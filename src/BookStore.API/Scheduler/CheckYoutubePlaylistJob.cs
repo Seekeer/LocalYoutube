@@ -61,12 +61,12 @@ namespace Infrastructure.Scheduler
             PlaylistItemListResponse playlistResponse = await GetLocalTubePlayListVideos(youtubeService);
             foreach (var item in playlistResponse.Items)
             {
-                if (await this.DownloadVideo(user, youtubeService, item.ContentDetails.VideoId))
+                if (await this.DownloadVideo(user, youtubeService, item.ContentDetails.VideoId, false))
                     await youtubeService.PlaylistItems.Delete(item.Id).ExecuteAsync();
             }
         }
 
-        private async Task<bool> DownloadVideo(ApplicationUser user, YouTubeService youtubeService, string videoId)
+        private async Task<bool> DownloadVideo(ApplicationUser user, YouTubeService youtubeService, string videoId, bool isAuto)
         {
             var videoLink = $"https://www.youtube.com/watch?v={videoId}";
             var coverUrl = $"https://i.ytimg.com/vi/{videoId}/maxresdefault.jpg";
@@ -74,7 +74,7 @@ namespace Infrastructure.Scheduler
             var youtubeDownloader = new YoutubeDownloader(_appConfig);
 
             var result = false;
-            await youtubeDownloader.DownloadAndProcess(new DownloadTask(videoLink, coverUrl), _scopeFactory,
+            await youtubeDownloader.DownloadAndProcess(new DownloadTask(videoLink, coverUrl) { IsAutoTask = isAuto }, _scopeFactory,
                 async ex =>
                 {
                     await _bot.NotifyDownloadProblem(user.TgId, videoLink);
@@ -109,6 +109,8 @@ namespace Infrastructure.Scheduler
                     x.CheckNewVideo
                 )).ToList();
 
+            NLog.LogManager.GetCurrentClassLogger().Info($"Start CheckChannelsUpdates");
+
             var user = await _userManager.FindByNameAsync("dim");
 
             foreach (var subscription in records)
@@ -128,11 +130,15 @@ namespace Infrastructure.Scheduler
                     videos.AddRange(response.Items);
                 }
 
+                NLog.LogManager.GetCurrentClassLogger().Info($"Channel {subscription.ChannelName} {videos.Count} videos");
+
                 videos.Reverse();
                 foreach (var video in videos)
                 {
                     if (video.Id.Kind == "youtube#video")
-                        await DownloadVideo(user, youtubeService, video.Id.VideoId);
+                        await DownloadVideo(user, youtubeService, video.Id.VideoId, true);
+                    else
+                        NLog.LogManager.GetCurrentClassLogger().Info($"Havent downloaded. Kind: {video.Id.Kind}");
                 }
 
                 subscription.LastCheckDate = DateTime.UtcNow;
