@@ -105,7 +105,7 @@ namespace Infrastructure.Scheduler
             var list = new List<string>();
             IEnumerable<ExternalVideoSourceMapping> records =
                 (await _externalVideoRepository.SearchAsync(x => x.Network == DownloadType.Youtube &&
-                    x.UpdatedDate < DateTime.UtcNow.AddHours(-6) &&
+                    x.LastCheckDate < DateTime.UtcNow.AddHours(-6) &&
                     x.CheckNewVideo
                 )).ToList();
 
@@ -117,7 +117,7 @@ namespace Infrastructure.Scheduler
                 videoRequest.ChannelId = subscription.ChannelId;
                 videoRequest.Order = SearchResource.ListRequest.OrderEnum.Date;
                 videoRequest.MaxResults = 50;
-                videoRequest.PublishedAfterDateTimeOffset = new DateTimeOffset(subscription.UpdatedDate);
+                videoRequest.PublishedAfterDateTimeOffset = new DateTimeOffset(subscription.LastCheckDate);
                 var response = (await videoRequest.ExecuteAsync());
                 var videos = response.Items.ToList();
                 //videos.Clear();
@@ -135,7 +135,7 @@ namespace Infrastructure.Scheduler
                         await DownloadVideo(user, youtubeService, video.Id.VideoId);
                 }
 
-                subscription.UpdatedDate = DateTime.UtcNow;
+                subscription.LastCheckDate = DateTime.UtcNow;
                 await _externalVideoRepository.UpdateAsync(subscription);
             }
         }

@@ -169,6 +169,9 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime>("LastCheckDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("Network")
                         .HasColumnType("int");
 
@@ -289,6 +292,60 @@ namespace Infrastructure.Migrations
                     b.HasIndex("VideoFileId");
 
                     b.ToTable("VideoFileUserInfos", (string)null);
+                });
+
+            modelBuilder.Entity("FileStore.Domain.Models.Playlist", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Playlists");
+                });
+
+            modelBuilder.Entity("FileStore.Domain.Models.PlaylistItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("FileId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Index")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PlaylistId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileId");
+
+                    b.HasIndex("PlaylistId");
+
+                    b.ToTable("PlaylistItems");
                 });
 
             modelBuilder.Entity("FileStore.Domain.Models.Season", b =>
@@ -525,6 +582,19 @@ namespace Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FileStore.Domain.Models.PlaylistItem", b =>
+                {
+                    b.HasOne("FileStore.Domain.Models.DbFile", "File")
+                        .WithMany("Playlists")
+                        .HasForeignKey("FileId");
+
+                    b.HasOne("FileStore.Domain.Models.Playlist", null)
+                        .WithMany("Items")
+                        .HasForeignKey("PlaylistId");
+
+                    b.Navigation("File");
+                });
+
             modelBuilder.Entity("FileStore.Domain.Models.Season", b =>
                 {
                     b.HasOne("FileStore.Domain.Models.Series", "Series")
@@ -587,9 +657,16 @@ namespace Infrastructure.Migrations
                 {
                     b.Navigation("Marks");
 
+                    b.Navigation("Playlists");
+
                     b.Navigation("VideoFileExtendedInfo");
 
                     b.Navigation("VideoFileUserInfos");
+                });
+
+            modelBuilder.Entity("FileStore.Domain.Models.Playlist", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("FileStore.Domain.Models.Season", b =>

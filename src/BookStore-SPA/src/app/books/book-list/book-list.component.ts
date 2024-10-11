@@ -79,6 +79,7 @@ export class BookListComponent implements OnInit {
   public books: VideoFile[];
   public listComplet: any;
   public isRandom: boolean = false;
+  public isRevers: boolean = false;
   public videoType: VideoType;
   public showWatched: boolean = true;
   public showSelected: boolean = false;
@@ -489,6 +490,9 @@ public sendToTG(film: Book){
       }
     });
 
+    if(this.isRevers)
+      this.books = this.books.reverse();
+    
     this.hideSpinner();
   }
 

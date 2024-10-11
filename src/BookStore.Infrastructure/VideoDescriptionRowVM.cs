@@ -49,12 +49,14 @@ namespace Infrastructure
                 var match = Regex.Match(firstWord, @"((\d{1,2}:)?[0-5]?\d:[0-5]?\d)");
                 if (match.Success)
                     return new VideoDescriptionRowVM(paragraph.Replace(firstWord, ""), match.Value);
-                else if (onlyTimestamps)
+                else if (!onlyTimestamps)
                     return new VideoDescriptionRowVM(paragraph, null);
                 else
                     return null;
             }).Where(x => x != null).ToList();
 
+            if (!paragraphs.Any())
+                paragraphs.Add(new VideoDescriptionRowVM ( description, null));
             return paragraphs;
         }
 

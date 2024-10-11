@@ -38,6 +38,7 @@ namespace FileStore.Infrastructure.Repositories
         public string ChannelId { get; set; }
         public string ChannelName { get; set; }
         public string SeriesName { get; set; }
+        public bool FullDownload { get; set; }
     }
 
     public interface IExternalVideoMappingsService : IDisposable
@@ -127,6 +128,10 @@ namespace FileStore.Infrastructure.Repositories
 
             if (createChannelMapping)
             {
+                if (channelInfo.FullDownload)
+                    channelMapping.LastCheckDate = new DateTime(2000, 1, 1);
+
+                channelMapping.CheckNewVideo = true;
                 await _externalVideoRepository.AddAsync(channelMapping);
             }
 
@@ -147,7 +152,7 @@ namespace FileStore.Infrastructure.Repositories
 
         public async Task<int> DownloadFinishedAsync(DbFile file, bool isVideoPropertiesFilled)
         {
-            if (!isVideoPropertiesFilled)
+            if (!isVideoPropertiesFilled || file.Duration == TimeSpan.Zero)
                 VideoHelper.FillVideoProperties(file as VideoFile);
 
             file.IsDownloading = false;

@@ -131,6 +131,7 @@ namespace FileStore.Domain.Models
 
         public IList<FileUserInfo> VideoFileUserInfos { get; set; } = new List<FileUserInfo>();
         public IList<FileMark> Marks { get; set; } = new List<FileMark>();
+        public IList<PlaylistItem> Playlists { get; set; } = new List<PlaylistItem>();
         public FileExtendedInfo VideoFileExtendedInfo { get; set; } = new FileExtendedInfo();
 
         [NotMapped]

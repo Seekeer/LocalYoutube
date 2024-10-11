@@ -9,16 +9,19 @@ namespace Dtos
         string Name { get; set; }
     }
 
-    public class VideoFileResultDto : IDtoId
+    public class DtoIdBase : IDtoId
     {
         public int Id { get; set; }
+        public string Name { get; set; }
+    }
+
+    public class VideoFileResultDto : DtoIdBase
+    {
 
         public int SeriesId { get; set; }
         public int SeasonId { get; set; }
 
         public string SeriesName { get; set; }
-
-        public string Name { get; set; }
 
         public string Author { get; set; }
 

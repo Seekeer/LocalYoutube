@@ -4,6 +4,7 @@ using FileStore.Domain.Models;
 using FileStore.Infrastructure.Repositories;
 using Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using OpenQA.Selenium.DevTools.V126.CSS;
 using Polly;
 using System;
 using System.Collections.Generic;
@@ -29,6 +30,7 @@ namespace API.FilmDownload
             OriginalMessageId = messageId;
             FromId = fromId;
             ParseMessageText(text);
+            OriginalLine = text;
         }
 
         private void ParseMessageText(string text)
@@ -46,14 +48,48 @@ namespace API.FilmDownload
                 CoverUrl = parts[1];
         }
 
+        internal static bool IsDownloadCommand(IEnumerable<string> lines)
+        {
+            return lines.First().StartsWith(DownloadTask.PARTS_SEPARATOR);
+        }
+
+        internal static List<TgDownloadTask> ParseTasks(Telegram.Bot.Types.Message message, IEnumerable<string> lines)
+        {
+            var commands = lines.First().Split(DownloadTask.PARTS_SEPARATOR, StringSplitOptions.RemoveEmptyEntries);
+
+            var errorLines = new List<string>();
+            var result = new List<TgDownloadTask>();
+            foreach (var line in lines.Skip(1).ToList())
+            {
+                var task = new TgDownloadTask(message.MessageId, message.From.Id, line);
+                if (!string.IsNullOrEmpty(commands[0])&& !commands[0].StartsWith(SUBSCRIBE_TO_CHANNEL))
+                    task.SeriesName = commands[0];
+
+                if (commands.Length > 1 && !string.IsNullOrEmpty(commands[1]) && !commands[1].StartsWith(SUBSCRIBE_TO_CHANNEL))
+                    task.SeasonName = commands[1];
+
+                if (commands.Last().StartsWith(SUBSCRIBE_TO_CHANNEL))
+                {
+                    task.SubscribeToChannel = true;
+                    task.FullDownload = commands.Last().EndsWith('!');
+                }
+
+                result.Add(task);
+            }
+
+            return result;
+        }
+
         public int OriginalMessageId { get; set; }
         public long FromId { get; }
         public int QuestionMessageId { get; set; }
+        public string OriginalLine { get; internal set; }
     }
 
     public class DownloadTask
     {
         public const string PARTS_SEPARATOR = "!!";
+        public const string SUBSCRIBE_TO_CHANNEL = "##";
 
         public DownloadTask(string url, string? coverUrl)
         {
@@ -73,6 +109,8 @@ namespace API.FilmDownload
         public string CoverUrl { get; protected set; }
         public Uri Uri { get; set; }
         public DownloadType DownloadType { get; internal set; }
+        public bool SubscribeToChannel { get; internal set; }
+        public bool FullDownload { get; protected set; }
     }
 
     public class DownloaderFabric
@@ -168,9 +206,15 @@ namespace API.FilmDownload
             if (string.IsNullOrEmpty(task.SeasonName) && task.SeriesName != null)
                 throw new ArgumentException();
 
-            if(task.SeasonName != null)
+            if(!task.SubscribeToChannel)
             {
                 info.ChannelId = null;
+            }
+            if (task.FullDownload)
+                info.FullDownload = true;
+
+            if (task.SeasonName != null)
+            {
                 info.ChannelName = task.SeasonName;
                 info.SeriesName = DownloadType.ToString();
             }

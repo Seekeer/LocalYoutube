@@ -1,4 +1,6 @@
-﻿namespace FileStore.Domain.Models
+﻿using System;
+
+namespace FileStore.Domain.Models
 {
     public enum DownloadType
     {
@@ -19,6 +21,7 @@
         public int SeriesId { get; set; }
         public int SeasonId { get; set; }
         public DownloadType Network { get; set; }
+        public DateTime LastCheckDate { get; set; } = DateTime.UtcNow;
 
         //public int UserId { get; set; }
 

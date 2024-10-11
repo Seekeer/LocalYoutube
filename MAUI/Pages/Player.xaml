@@ -7,7 +7,7 @@
              Title="{Binding File.Name}">
     <ContentPage.Resources>
         <converters:IdToImageUrlConverter x:Key="idToImageUrl" />
-        <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+        <toolkit:InvertedBoolConverter x:Key="invertedBoolConverter" />
     </ContentPage.Resources>
 
         <VerticalStackLayout >
@@ -70,6 +70,7 @@ Unloaded="MediaElement_Unloaded"
                             Command="{Binding Path=NextDescriptionTimestampCommand}"/>
 
                     <Button Text="💾"
+                            IsVisible="{Binding File.IsDownloaded, Converter={StaticResource invertedBoolConverter}}"
                             Background="Transparent"
                             Margin="20,0,0,0"
                             FontSize="45"
@@ -79,6 +80,7 @@ Unloaded="MediaElement_Unloaded"
 
                     <Button Text="⛶"
                             Background="Transparent"
+                            IsVisible="False"
                             Margin="20,0,0,0"
                             FontSize="55"
                             BorderWidth="0"

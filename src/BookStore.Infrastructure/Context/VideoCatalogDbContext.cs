@@ -46,6 +46,7 @@ namespace FileStore.Infrastructure.Context
     // dotnet ef migrations add ShowLatest
     // dotnet ef migrations add ExternalServiceMapping --context VideoCatalogDbContext
     // dotnet ef database update --context VideoCatalogDbContext
+    // dotnet ef migrations remove --force
     public class VideoCatalogDbContext : IdentityUserContext<ApplicationUser>
     {
         public VideoCatalogDbContext(DbContextOptions options) : base(options)
@@ -61,6 +62,8 @@ namespace FileStore.Infrastructure.Context
         public DbSet<FileExtendedInfo> FilesInfo { get; set; }
         public DbSet<FileUserInfo> FilesUserInfo { get; set; }
         public DbSet<FileMark> FileMarks { get; set; }
+        public DbSet<Playlist> Playlists { get; set; }
+        public DbSet<PlaylistItem> PlaylistItems { get; set; }
         public DbSet<ExternalVideoSourceMapping> ExternalVideoSource { get; set; }
 
         public DbSet<Series> Series { get; set; }
