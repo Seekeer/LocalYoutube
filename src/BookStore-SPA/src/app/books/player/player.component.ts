@@ -24,6 +24,7 @@ import {
   MenuVideoType,
   PlayerParameters,
 } from '../book-list/book-list.component';
+import { Serie } from 'src/app/_models/Category';
 
 @Component({
   selector: 'app-player',
@@ -79,9 +80,12 @@ export class PlayerComponent implements OnInit, OnDestroy {
   checkPauseDurationTimer: any;
   enableDownload: boolean = true;
   isDownloading: boolean;
+  playlists: Serie[];
+  playlistId: number;
 
   constructor(
     public service: FileService,
+    public seriesService: SeriesService,
     private categoryService: SeriesService,
     private router: Router,
     private location: Location,
@@ -107,6 +111,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.isRandom = String(this.parameters.isRandom) === 'true';
     this.videosList.push(this.videoId);
     this.setNextVideo(true);
+    this.getPlaylists();
 
     if (this.parameters.seasonId == 0) {
       this.service
@@ -215,6 +220,19 @@ export class PlayerComponent implements OnInit, OnDestroy {
       });
   }
 
+  addToPlaylist(){
+    this.seriesService.addToPlaylist(this.playlistId, this.videoId);
+  }
+
+  getPlaylists() {    
+      this.seriesService.getPlaylists().subscribe(playlist => {
+      this.playlists = playlist.sort((a, b) => {
+        return a.name >= b.name
+          ? 1
+          : -1
+      });
+    });
+  }
   public startPlay() {
     let that = this;
 
