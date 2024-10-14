@@ -36,17 +36,15 @@ namespace FileStore.API.Controllers
     public class AdminController : MainController
     {
         private  VideoCatalogDbContext _db;
-        private readonly ISchedulerFactory _factory;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly TgBot _tgBot;
         private readonly AppConfig _config;
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
         public AdminController(VideoCatalogDbContext dbContext, AppConfig config, 
-            IServiceScopeFactory serviceScopeFactory, ISchedulerFactory factory,
+            IServiceScopeFactory serviceScopeFactory, 
             TgBot tgBot, UserManager<ApplicationUser> userManager)
         {
-            _factory = factory;
             _userManager = userManager;
             _tgBot = tgBot;
             _db = dbContext;
@@ -404,11 +402,29 @@ namespace FileStore.API.Controllers
         [HttpGet]
         [Route("updateFileInfo")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> UpdateCoverByFile(int startId, int endId)
+        public async Task<IActionResult> UpdateInfosByFileIds(int startId, int endId)
         {
             var dbUpdater = new DbUpdateManager(_db);
 
             var filesToUpdate = _db.VideoFiles.Where(x => x.Id >= startId && x.Id <= endId).ToList();
+
+            foreach (var file in filesToUpdate)
+            {
+                VideoHelper.FillVideoProperties(file);
+                await _db.SaveChangesAsync();
+            }
+
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("updateFileBySeries")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateInfoBySeries(int seriesId)
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            var filesToUpdate = _db.VideoFiles.Where(x => x.SeriesId == seriesId).ToList();
 
             foreach (var file in filesToUpdate)
             {
@@ -433,7 +449,7 @@ namespace FileStore.API.Controllers
         [HttpGet]
         [Route("updateFileByYoutube")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> MoveSeason(int fileId, string youtubeLink)
+        public async Task<IActionResult> UpdateFileByYoutube(int fileId, string youtubeLink)
         {
             var file = _db.Files.FirstOrDefault(x => x.Id == fileId);
 
