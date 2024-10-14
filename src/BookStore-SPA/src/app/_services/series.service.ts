@@ -9,7 +9,7 @@ import {
   VideoOrigin,
   VideoType,
 } from '../_models/Book';
-import { Serie } from '../_models/Category';
+import { AddToPlaylistDTO, Serie } from '../_models/Category';
 
 @Injectable({
     providedIn: 'root'
@@ -27,6 +27,17 @@ export class SeriesService {
     private baseUrl: string = environment.baseUrl + 'api/';
 
     constructor(private http: HttpClient) { }
+
+    public getPlaylists(): Observable<Serie[]> {
+        return this.http.get<Serie[]>(this.baseUrl + `playlists/getAll`);
+    }
+    
+    addToPlaylist(playlistId: number, videoId: number) {
+        let dto = new AddToPlaylistDTO();
+        dto.fileId = videoId;
+        dto.playlistId = playlistId;
+        return this.http.post(this.baseUrl + 'playlists/addToPlaylist', dto);
+    }
 
     public getAll(type:VideoType|null, origin:VideoOrigin|null = null): Observable<Serie[]> {
         if(type == null)

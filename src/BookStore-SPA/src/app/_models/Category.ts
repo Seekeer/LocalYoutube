@@ -9,3 +9,8 @@ export class Serie {
 
     seasons: Seasons[]
 }
+
+export class AddToPlaylistDTO {
+    fileId: number;
+    playlistId: number;
+}

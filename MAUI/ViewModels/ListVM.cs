@@ -67,6 +67,13 @@ namespace MAUI.ViewModels
         }
 
         [RelayCommand]
+        public async Task DownloadTopVideo(string countStr)
+        {
+            var count = int.Parse(countStr);
+            await _downloadManager.StartDownloadAsync(Files.Where(x => !x.IsDownloaded).Take(count));
+        }
+
+        [RelayCommand]
         public async Task AddPlaylist()
         {
             string playlistName = await App.Current.MainPage.DisplayPromptAsync("Создать плейлист", "Введите название");

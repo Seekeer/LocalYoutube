@@ -628,12 +628,15 @@ namespace API.FilmDownload
             }
 
             var totalCount = tasks.Count();
-            var endMessage = $"Скачивание завершено. Скачано {totalCount - errorLines.Count}/{totalCount}";
-            if (errorLines.Any())
-                endMessage += Environment.NewLine + $"Ошибка, файл не скачан:{Environment.NewLine}{string.Join(Environment.NewLine, errorLines)}";
+            if(totalCount > 2)
+            {
+                var endMessage = $"Скачивание завершено. Скачано {totalCount - errorLines.Count}/{totalCount}";
+                if (errorLines.Any())
+                    endMessage += Environment.NewLine + $"Ошибка, файл не скачан:{Environment.NewLine}{string.Join(Environment.NewLine, errorLines)}";
 
-            await _botClient.SendTextMessageAsync(new ChatId(message.From.Id), endMessage, 
-                replyToMessageId: message.MessageId, disableWebPagePreview: true);
+                await _botClient.SendTextMessageAsync(new ChatId(message.From.Id), endMessage,
+                    replyToMessageId: message.MessageId, disableWebPagePreview: true);
+            }
             await _botClient.DeleteMessageAsync(message.From.Id, processMessage.MessageId);
         }
 

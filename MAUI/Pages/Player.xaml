@@ -96,6 +96,21 @@ Unloaded="MediaElement_Unloaded"
                             Command="{Binding Path=DeleteCommand}"
                                             />
                 </HorizontalStackLayout>
+                <HorizontalStackLayout>
+                    <Picker 
+                            ItemsSource="{Binding Playlists}"
+                            SelectedItem="{Binding SelectedPlaylist}"
+                            ItemDisplayBinding="{Binding Name}"
+                            WidthRequest="300"
+                            Title="Добавить в плейлист"/>
+
+                    <Button 
+                            Text="➕"
+                            TextColor="LightCyan"
+                            VerticalOptions="Center"
+                            Command="{Binding Path=AddPlaylistCommand}"
+                            FontAttributes="Bold" />
+                </HorizontalStackLayout>
                 <ScrollView>
                     <ListView ItemsSource="{Binding Bookmarks.Marks}"
                               MaximumHeightRequest="200"

@@ -12,7 +12,7 @@
     <ScrollView>
         
     <VerticalStackLayout>
-        <ListView ItemsSource="{Binding Monitor.Transfers}" 
+        <ListView ItemsSource="{Binding Transfers}" 
               HasUnevenRows="True">
             <ListView.ItemTemplate>
                 <DataTemplate>
@@ -35,7 +35,7 @@
                                 <Label 
                                     Padding="10"
                                     FontSize="Medium"
-                                    Text="{Binding BytesPerSecond, StringFormat='Скорость {0} кБайт\сек', Converter={StaticResource speed}}"
+                                    Text="{Binding BytesPerSecond, StringFormat='Скорость {0} кБайт/сек', Converter={StaticResource speed}}"
                                     MaxLines="8"
                                     FontAttributes="Italic"
                                     VerticalOptions="End" />
@@ -54,7 +54,15 @@
                                         FontAttributes="Italic"
                                         VerticalOptions="End" />
 
-                        </VerticalStackLayout>
+                                <Button 
+                                    BackgroundColor="Red"
+                                    Text="Отменить"
+                                    VerticalOptions="Center"
+                                    Command="{Binding Path=BindingContext.StopDownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                    CommandParameter="{Binding Identifier}"
+                                    FontAttributes="Bold"  />
+
+                            </VerticalStackLayout>
 
                     </ViewCell>
                 </DataTemplate>

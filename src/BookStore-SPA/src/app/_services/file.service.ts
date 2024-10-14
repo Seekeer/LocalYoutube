@@ -134,4 +134,8 @@ export class FileService {
     public searchFilesWithTitle(searchedValue: string): Observable<Book[]> {
         return this.http.get<Book[]>(`${this.baseUrl}files/search/${searchedValue}`);
     }
+    
+    public getPlaylistFiles(playlistId : number, count:number = 20): Observable<Book[]> {
+        return this.http.get<Book[]>(this.baseUrl + `playlists/getFiles?id=${playlistId}&count=${count}`);
+    }
 }

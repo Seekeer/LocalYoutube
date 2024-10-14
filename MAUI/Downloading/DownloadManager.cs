@@ -52,6 +52,12 @@ namespace MAUI.Downloading
             await _videoFileRepository.UpdateFilePathAsync(fileId, null);
         }
 
+        internal async Task StartDownloadAsync(IEnumerable<VideoFileResultDtoDownloaded> dtos)
+        {
+            foreach (var dto in dtos)
+                await StartDownloadAsync(dto);
+        }
+
         public async Task StartDownloadAsync(VideoFileResultDtoDownloaded fileDTO)
         {
             _videoFileRepository.AddFileIfNeeded(fileDTO);
@@ -119,5 +125,6 @@ namespace MAUI.Downloading
         {
             return FileSystem.AppDataDirectory;
         }
+
     }
 }

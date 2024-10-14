@@ -15,6 +15,7 @@ using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using System.Diagnostics;
 using Xabe.FFmpeg;
+using FileStore.Domain.Models;
 
 namespace MAUI.ViewModels
 {
@@ -65,6 +66,25 @@ namespace MAUI.ViewModels
             (App.Current as App).CurrentPlayerVM = this;
         }
 
+        [ObservableProperty]
+        private IEnumerable<Playlist> _playlists;
+
+        public Playlist SelectedPlaylist
+        {
+            set { if (value != null) _api.AddToPlaylists(File.Id, value.Id); }
+        }
+
+        [RelayCommand]
+        public async Task AddPlaylist()
+        {
+            string playlistName = await App.Current.MainPage.DisplayPromptAsync("Создать плейлист", "Введите название");
+            if (string.IsNullOrEmpty(playlistName))
+                return;
+
+            await _api.AddPlaylistAsync(playlistName);
+            Playlists = await _api.GetPlaylistsAsync();
+        }
+
         public void Dispose()
         {
             _positionTimer?.Dispose();
@@ -79,6 +99,8 @@ namespace MAUI.ViewModels
             Bookmarks = new BookmarksVM(_api, () => Page.GetMedia().Position, dto.Id);
 
             Description = VideoDescriptionRowVM.ParseDescription(dto.Description, true);
+
+            Playlists = dto.Playlists;
 
             ProcessFile();
         }

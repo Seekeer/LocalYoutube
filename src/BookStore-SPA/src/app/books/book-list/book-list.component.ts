@@ -89,11 +89,13 @@ export class BookListComponent implements OnInit {
   public showOnlyWebSupported: boolean;
   
   public showWatchedCheckbox: boolean = true;
+  public isSelectPlaylists: boolean = false;
   public isSelectSeries: boolean = false;
   public isSelectSeason: boolean = false;
   public showKPINfo: boolean = false;
   public serieId: number;
   public seasonId: number = 0;
+  public playlistId: number = 0;
   public searchTitle: string = '';
   public episodeCount: number = 1;
   public searchValueChanged: Subject<string> = new Subject<string>();
@@ -118,6 +120,7 @@ export class BookListComponent implements OnInit {
   private readonly defaultEpisodesCount: number = 10;
   allSeasons: Seasons[];
   allSeries: Serie[];
+  playlists: Serie[];
 
   constructor(private router: Router,
               private service: FileService,
@@ -242,6 +245,9 @@ export class BookListComponent implements OnInit {
   private search() {
 
       this.showSpinner();
+    if(this.playlistId != 0){
+      this.service.getPlaylistFiles(this.playlistId).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
+    }
     if(this.searchTitle !== ''){
 
       this.service.searchFilesWithTitle(this.searchTitle).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
@@ -284,6 +290,7 @@ displayListForType() {
         this.showWatchedCheckbox = true;
         this.showWatched = false;
         this.setSpecialSeries();
+        this.getPlaylists();
         this.getSeries(VideoType.Youtube);
         this.episodeCount = this.defaultEpisodesCount;
         this.service.getFilmsByType(VideoType.Youtube).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
@@ -380,6 +387,19 @@ displayListForType() {
       }
     }
 }
+  getPlaylists() {    
+      this.seriesService.getPlaylists().subscribe(playlist => {
+      this.playlists = playlist.sort((a, b) => {
+        return a.name >= b.name
+          ? 1
+          : -1
+      });
+
+      this.isSelectPlaylists = true;
+
+      this.hideSpinner();
+    });
+  }
 
   setSpecialSeries() {
     this.seriesService.getSpecialAndEot().subscribe((series) => {

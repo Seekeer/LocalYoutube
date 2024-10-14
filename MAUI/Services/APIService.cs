@@ -15,6 +15,7 @@ namespace MAUI.Services
         Task<IEnumerable<Series>> GetSeries();
         Task<IEnumerable<Season>> GetNewSeasons();
         Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFilesForSeason(Season selectedSeason, int count = 20);
+        Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFilesForPlaylist(Playlist playlist, int count = 20);
         Task DeleteVideoAsync(int id);
         Task<int> AddMarkAsync(MarkAddDto markAddDto);
         Task<bool> DeleteMarkAsync(int id);
@@ -123,6 +124,20 @@ namespace MAUI.Services
             catch (Exception ex)
             {
                 return new List<Season>();
+            }
+        }
+
+
+        public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFilesForPlaylist(Playlist playlist, int count = 20)
+        {
+            try
+            {
+                var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"playlists/getFiles?id={playlist.Id}&count={count}");
+                return list;
+            }
+            catch (Exception ex)
+            {
+                return new List<VideoFileResultDtoDownloaded>();
             }
         }
 
