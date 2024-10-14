@@ -74,7 +74,7 @@ namespace FileStore.API.Configuration
             services.AddQuartz(q =>
             {
                 q.ScheduleJob<CheckDownloadedJob>(trigger => trigger
-                    .WithIdentity("trigger4", "group4")
+                    .WithIdentity("CheckDownloadedJob", "group4")
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5)).RepeatForever())
                 );
@@ -82,7 +82,7 @@ namespace FileStore.API.Configuration
             services.AddQuartz(q =>
             {
                 q.ScheduleJob<RemoveJob>(trigger => trigger
-                    .WithIdentity("trigger2", "group2")
+                    .WithIdentity("RemoveJob", "group2")
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(30)).RepeatForever())
                 );
@@ -90,7 +90,7 @@ namespace FileStore.API.Configuration
             services.AddQuartz(q =>
             {
                 q.ScheduleJob<CheckYoutubePlaylistJob>(trigger => trigger
-                    .WithIdentity("trigger5", "group5")
+                    .WithIdentity("YoutubePlaylist", "group5")
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(30)).RepeatForever())
                 );
