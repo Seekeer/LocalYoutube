@@ -222,7 +222,7 @@ namespace API.FilmDownload
                 return;
 
             //await _botClient.SendTextMessageAsync(new ChatId(_config.TelegramSettings.ChatId), update.CallbackQuery.Data);
-            var record = _infos.FirstOrDefault(x => x.Topic.Id == id);
+            var record = _infos.FirstOrDefault(x => x.Topic?.Id == id);
             var searchInfo = record.Topic;
 
             NLog.LogManager.GetCurrentClassLogger().Info($"Got info for thread:{searchInfo.Id}|{searchInfo.Title}");
@@ -481,7 +481,7 @@ namespace API.FilmDownload
                     new InlineKeyboardButton("Неправильный фильм! Удалить.") { CallbackData = CommandParser.GetMessageFromData(CommandType.DeleteByRutracker, record.Topic.Id.ToString()) },
                 };
 
-            await _botClient.SendTextMessageAsync(tgFromId, $"{result}", replyMarkup: new InlineKeyboardMarkup(keyboard));
+            await _botClient.SendTextMessageAsync(tgFromId, $"{result}", replyMarkup: new InlineKeyboardMarkup(keyboard), parseMode: Tg.ParseMode.Markdown);
 
             foreach (var item in _infos.Where(x => x.SearchSctring == record?.SearchSctring).ToList())
             {
@@ -617,7 +617,6 @@ namespace API.FilmDownload
                     else
                     {
                         await TryRutrackerDownload(task.OriginalLine, message.From.Id);
-                        await _botClient.DeleteMessageAsync(message.From.Id, processMessage.MessageId);
                     }
                 }
                 catch (Exception ex)
@@ -707,6 +706,7 @@ namespace API.FilmDownload
                             new InlineKeyboardButton("Показать без фильтрации"){CallbackData = CommandParser.GetMessageFromData(CommandType.ShowAllSearchResult, text)},
                             new InlineKeyboardButton("Искать аудиокниги") {CallbackData = CommandParser.GetMessageFromData(CommandType.SearchAudioBook, text)},
                         }));
+                _infos.Add(new SearchRecord { MessageId = tgMessage.MessageId, SearchSctring = text });
             }
             catch (Exception ex)
             {
