@@ -14,6 +14,12 @@
     "postbuildExt": "xcopy /s \"./dist\\BookStore-SPA\" \"C:\\inetpub\\LocalYoutube External\" /Y",
     "test": "ng test",
     "lint": "ng lint",
+    "build-image": "docker build -t nginx-example-app-docker-image .",
+    "remove-image": "docker rmi nginx-example-app-docker-image",
+    "run-container": "docker run --name nginx-example-app-docker-container -d -p 7878:80 nginx-example-app-docker-image",
+    "remove-container": "docker rm -f nginx-example-app-docker-container",
+    "containerize": "npm run build-image && npm run run-container",
+    "recontainerize": "npm run remove-container && npm run build-image && npm run run-container",
     "e2e": "ng e2e"
   },
   "private": true,
