@@ -257,10 +257,10 @@ namespace FileStore.Domain.Models
 
         public override string GetUrl(AppConfig config)
         {
-            if(IsOnlineFormat())
+            //if(IsOnlineFormat())
                 return $"{config.UIUrl}/#/player?videoId={Id}&videosCount=1&isRandom=false&showDeleteButton=true"; 
-            else
-                return $"vlc://{config.APIUrl}/api/Files/getFileById?fileId={Id}"; 
+            //else
+            //    return $"vlc://{config.APIUrl}/api/Files/getFileById?fileId={Id}"; 
         }
     }
 
