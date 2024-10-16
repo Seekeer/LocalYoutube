@@ -52,7 +52,7 @@ namespace FileStore.API
                                 "C:\\Dev\\Certificate\\certificate_cert_out.pfx", "cert_mycertpass");
                         });
                     });
-                    webBuilder.UseUrls($"http://192.168.1.55:2022", $"https://192.168.1.55:20222");
+                    webBuilder.UseUrls($"http://192.168.1.55:55", $"https://192.168.1.55:555");
 #endif
                 })
                 .ConfigureLogging(logging =>
