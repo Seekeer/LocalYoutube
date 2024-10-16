@@ -10,6 +10,7 @@ using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -21,8 +22,10 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using NLog.Web;
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using System.Timers;
 
 namespace FileStore.API
@@ -48,16 +51,6 @@ namespace FileStore.API
 
             services.AddAutoMapper(typeof(Startup));
 
-            //https://stackoverflow.com/questions/66534759/cors-error-on-request-to-localhost-dev-server-from-remote-site
-            services.AddCors(opt =>
-            {
-                opt.AddPolicy(name: _policyName, builder =>
-                {
-                    builder.AllowAnyOrigin()
-                        .AllowAnyHeader()
-                        .AllowAnyMethod();
-                });
-            });
             services.AddControllers();
 
             var jwtTokenConfig = Configuration.GetSection("jwtTokenConfig").Get<JwtTokenConfig>();
@@ -151,6 +144,35 @@ namespace FileStore.API
             // TODO HttpLogging
             //app.UseHttpLogging();
             app.UseRouting();
+
+            app.Use(async (context, next) =>
+            {
+                context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                context.Response.Headers.Add("Access-Control-Allow-Headers", "Accept, X-Requested-With, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization");
+
+                if (context.Request.Method ==  "OPTIONS" && context.Request.Headers.Any(x => x.Key == "Access-Control-Request-Method"))
+                {
+                    await context.Response.CompleteAsync();
+                }
+                else
+                    // Call the next delegate/middleware in the pipeline.
+                    await next(context);
+            });
+
+            app.Use(async (HttpContext context, RequestDelegate next) =>
+            {
+                try
+                {
+                    await next(context);
+                }
+                catch (Exception ex)
+                {
+                    NLog.LogManager.GetCurrentClassLogger().Error(ex);
+
+                    throw;
+                }
+            });
+
             app.UseCors(_policyName);
             //app.UseCors("AllowAll");
             app.UseAuthentication();
