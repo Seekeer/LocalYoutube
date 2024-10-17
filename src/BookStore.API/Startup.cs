@@ -148,6 +148,7 @@ namespace FileStore.API
             app.Use(async (context, next) =>
             {
                 context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                context.Response.Headers.Add("Access-Control-Allow-Methods", "PUT, GET, POST, DELETE, PATCH");
                 context.Response.Headers.Add("Access-Control-Allow-Headers", "Accept, X-Requested-With, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization");
 
                 if (context.Request.Method ==  "OPTIONS" && context.Request.Headers.Any(x => x.Key == "Access-Control-Request-Method"))
