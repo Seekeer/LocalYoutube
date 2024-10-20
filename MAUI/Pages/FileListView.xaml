@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:converters="clr-namespace:MAUI.Converter"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-             x:Class="MAUI.Pages.FileListView">
+             x:Class="MAUI.Pages.FileListView"
+            xmlns:android="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.AndroidSpecific;assembly=Microsoft.Maui.Controls">
     <ContentView.Resources>
         <converters:IdToImageUrlConverter x:Key="idToImageUrl" />
         <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
@@ -19,6 +20,7 @@
             CommandParameter="5"
             />
             <ListView ItemsSource="{Binding Files}"
+                      android:ListView.IsFastScrollEnabled="true"
                   HasUnevenRows="True">
                 <ListView.ItemTemplate>
                     <DataTemplate>
