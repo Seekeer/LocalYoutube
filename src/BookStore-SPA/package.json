@@ -16,7 +16,7 @@
     "lint": "ng lint",
     "build-image": "docker build -t seekeer/localtube .",
     "remove-image": "docker rmi seekeer/localtube",
-    "run-container": "docker run --name localtube -d -p 8080:80 seekeer/localtube",
+    "run-container": "docker run --restart unless-stopped --name localtube -d -p 8080:80 seekeer/localtube",
     "remove-container": "docker rm -f localtube",
     "containerize": "npm run build-image && npm run run-container",
     "recontainerize": "npm run remove-container && npm run build-image && npm run run-container",
