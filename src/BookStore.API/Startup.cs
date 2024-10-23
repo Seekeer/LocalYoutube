@@ -47,6 +47,10 @@ namespace FileStore.API
             services.AddDbContext<VideoCatalogDbContext>(options =>
             {
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
+#if !DEBUG
+// Sometimes we need to update records from admin mode.
+                options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+#endif
             });
 
             services.AddAutoMapper(typeof(Startup));
