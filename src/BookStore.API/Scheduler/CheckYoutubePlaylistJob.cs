@@ -105,12 +105,14 @@ namespace Infrastructure.Scheduler
             var list = new List<string>();
             IEnumerable<ExternalVideoSourceMapping> records =
                 (await _externalVideoRepository.SearchAsync(x => x.Network == DownloadType.Youtube &&
+                // Check only once in 6 hours to not over YT limits.
                     x.LastCheckDate < DateTime.UtcNow.AddHours(-6) &&
                     x.CheckNewVideo
                 )).ToList();
 
             NLog.LogManager.GetCurrentClassLogger().Info($"Start CheckChannelsUpdates");
 
+            //records = records.Where(x => x.Id == 8);
             var user = await _userManager.FindByNameAsync("dim");
 
             foreach (var subscription in records)
@@ -119,7 +121,7 @@ namespace Infrastructure.Scheduler
                 videoRequest.ChannelId = subscription.ChannelId;
                 videoRequest.Order = SearchResource.ListRequest.OrderEnum.Date;
                 videoRequest.MaxResults = 50;
-                videoRequest.PublishedAfterDateTimeOffset = new DateTimeOffset(subscription.LastCheckDate);
+                videoRequest.PublishedAfterDateTimeOffset = new DateTimeOffset(subscription.LastCheckDate.AddDays(-0.5));
                 var response = (await videoRequest.ExecuteAsync());
                 var videos = response.Items.ToList();
                 //videos.Clear();
@@ -135,7 +137,7 @@ namespace Infrastructure.Scheduler
                 videos.Reverse();
                 foreach (var video in videos)
                 {
-                    if (video.Id.Kind == "youtube#video")
+                    if (video.Id.Kind == "youtube#video" && !string.IsNullOrEmpty(video.Snippet.Description))
                         await DownloadVideo(user, youtubeService, video.Id.VideoId, true);
                     else
                         NLog.LogManager.GetCurrentClassLogger().Info($"Havent downloaded. Kind: {video.Id.Kind}");

@@ -50,7 +50,6 @@ namespace FileStore.API.Configuration
             services.AddHostedService<StartupService>();
 
 #if DEBUG
-
             services.AddQuartz(q =>
             {
                 q.ScheduleJob<CheckYoutubePlaylistJob>(trigger => trigger
@@ -96,15 +95,14 @@ namespace FileStore.API.Configuration
                 );
             });
 
+#endif
             // Quartz.Extensions.Hosting allows you to fire background service that handles scheduler lifecycle
             services.AddQuartzHostedService(options =>
             {
                 // when shutting down we want jobs to complete gracefully
                 options.WaitForJobsToComplete = true;
             });
-
             services.AddTransient<BackuperJob>();
-#endif
 
             var rutracker = new RuTrackerUpdater(config);
             services.AddSingleton<IRuTrackerUpdater>(rutracker);
