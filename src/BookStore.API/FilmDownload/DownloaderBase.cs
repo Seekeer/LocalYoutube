@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using TwoCaptcha.Exceptions;
 using VkNet.Model;
 
 namespace API.FilmDownload
@@ -181,15 +182,15 @@ namespace API.FilmDownload
 
                         var policy = Policy
                             .Handle<Exception>()
-                            .WaitAndRetry(20, retryAttempt => TimeSpan.FromSeconds(10));
+                            .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(60));
 
-                        await policy.Execute(async () =>
+                        await policy.ExecuteAsync(async () =>
                         {
                             record.Value.Path = await Download(record.Key, record.Value.Path);
 
                             if (!System.IO.File.Exists(record.Value.Path))
                             {
-                                throw new ArgumentException();
+                                throw new NetworkException("Can't donwload file");
                             }
 
                             UpdateFileByTask(record.Value, task);
@@ -258,7 +259,7 @@ namespace API.FilmDownload
             var proxyStr = !_useProxy ? "" : $"--proxy {ProxyManager.GetProxyString()}";
             var downloadVideoScript = @$"
             $ytdlp = 'yt-dlp.exe'
-            $cmd = '-f ""bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"" {proxyStr} --write-info-json --merge-output-format mp4 {url} -o """"{fileName}""""' 
+            $cmd = '-f ""bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"" {proxyStr} --fragment-retries 30 --write-info-json --merge-output-format mp4 {url} -o """"{fileName}""""' 
             Start-Process -FilePath $ytdlp -ArgumentList $cmd -Wait -WindowStyle Minimized
 ";
             //$cmd = '-f ""bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"" {proxyStr} --merge-output-format mp4 {url} --sponsorblock-remove sponsor --ffmpeg-location ./ffmpegytdlp -o """"{fileName}""""' 

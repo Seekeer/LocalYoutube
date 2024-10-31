@@ -606,7 +606,6 @@ namespace API.FilmDownload
                         await downloader.DownloadAndProcess(task, _serviceScopeFactory,
                             async ex =>
                             {
-                                NLog.LogManager.GetCurrentClassLogger().Error(ex);
                                 errorLines.Add(task.OriginalLine);
                             },
                             async videoFile =>
