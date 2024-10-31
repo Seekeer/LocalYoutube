@@ -536,11 +536,13 @@ namespace Infrastructure.Migrations
                     b.HasOne("FileStore.Domain.Models.Season", "Season")
                         .WithMany("Files")
                         .HasForeignKey("SeasonId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("FileStore.Domain.Models.Series", "Series")
                         .WithMany("Files")
                         .HasForeignKey("SeriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Season");
@@ -553,6 +555,7 @@ namespace Infrastructure.Migrations
                     b.HasOne("FileStore.Domain.Models.DbFile", "DbFile")
                         .WithOne("VideoFileExtendedInfo")
                         .HasForeignKey("FileStore.Domain.Models.FileExtendedInfo", "VideoFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("DbFile");
@@ -563,6 +566,7 @@ namespace Infrastructure.Migrations
                     b.HasOne("FileStore.Domain.Models.DbFile", null)
                         .WithMany("Marks")
                         .HasForeignKey("DbFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -570,11 +574,13 @@ namespace Infrastructure.Migrations
                 {
                     b.HasOne("FileStore.Domain.Models.ApplicationUser", "User")
                         .WithMany("VideoFileUserInfos")
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("FileStore.Domain.Models.DbFile", "DbFile")
                         .WithMany("VideoFileUserInfos")
                         .HasForeignKey("VideoFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("DbFile");
@@ -586,11 +592,13 @@ namespace Infrastructure.Migrations
                 {
                     b.HasOne("FileStore.Domain.Models.DbFile", "File")
                         .WithMany("Playlists")
-                        .HasForeignKey("FileId");
+                        .HasForeignKey("FileId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("FileStore.Domain.Models.Playlist", null)
                         .WithMany("Items")
-                        .HasForeignKey("PlaylistId");
+                        .HasForeignKey("PlaylistId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("File");
                 });
@@ -600,6 +608,7 @@ namespace Infrastructure.Migrations
                     b.HasOne("FileStore.Domain.Models.Series", "Series")
                         .WithMany("Seasons")
                         .HasForeignKey("SeriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Series");
@@ -637,6 +646,7 @@ namespace Infrastructure.Migrations
                     b.HasOne("FileStore.Domain.Models.DbFile", null)
                         .WithOne()
                         .HasForeignKey("FileStore.Domain.Models.AudioFile", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -645,6 +655,7 @@ namespace Infrastructure.Migrations
                     b.HasOne("FileStore.Domain.Models.DbFile", null)
                         .WithOne()
                         .HasForeignKey("FileStore.Domain.Models.VideoFile", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

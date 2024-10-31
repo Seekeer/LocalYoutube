@@ -155,18 +155,7 @@ namespace FileStore.Infrastructure.Repositories
         public void RemoveFileCompletely(int fileId)
         {
             var fileToDelete = Db.Files.FirstOrDefault(x => x.Id == fileId);
-
-            var userInfos = Db.FilesUserInfo.Where(x => x.VideoFileId == fileId);
-            Db.FilesUserInfo.RemoveRange(userInfos);
-
-            var marks = Db.FileMarks.Where(x => x.DbFileId == fileId);
-            Db.FileMarks.RemoveRange(marks);
-
-            var extendedInfos = Db.FilesInfo.Where(x => x.VideoFileId == fileId);
-            Db.FilesInfo.RemoveRange(extendedInfos);
-
             Db.Files.Remove(fileToDelete);
-
             Db.SaveChanges();
         }
 

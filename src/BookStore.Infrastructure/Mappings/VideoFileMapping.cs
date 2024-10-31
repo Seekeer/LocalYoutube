@@ -22,7 +22,7 @@ namespace FileStore.Infrastructure.Context
             builder.HasOne("FileStore.Domain.Models.DbFile", null)
                 .WithOne()
                 .HasForeignKey("FileStore.Domain.Models.VideoFile", "Id")
-                .OnDelete(DeleteBehavior.ClientCascade)
+                
                 .IsRequired();
 
             builder.ToTable("VideoFile");
@@ -46,7 +46,7 @@ namespace FileStore.Infrastructure.Context
 
             //builder.HasMany(video => video.VideoFileUserInfos)
             //    .WithOne(info => info.DbFile)
-            //    .OnDelete(DeleteBehavior.ClientCascade);
+            //    ;
 
             builder.ToTable("DbFile");
         }
@@ -68,7 +68,7 @@ namespace FileStore.Infrastructure.Context
             builder.HasOne("FileStore.Domain.Models.DbFile", null)
                 .WithOne()
                 .HasForeignKey("FileStore.Domain.Models.AudioFile", "Id")
-                .OnDelete(DeleteBehavior.ClientCascade)
+                
                 .IsRequired();
 
             builder.ToTable("AudioFile");
