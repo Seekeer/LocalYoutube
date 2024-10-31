@@ -15,6 +15,7 @@ import * as moment from 'moment';
 import { Moment } from 'moment';
 import { ToastrService } from 'ngx-toastr';
 import { Book } from 'src/app/_models/Book';
+import { Serie } from 'src/app/_models/Category';
 import { SeekPositionCollection } from 'src/app/_models/SeekPosition';
 import { FileService } from 'src/app/_services/file.service';
 import { SeriesService } from 'src/app/_services/series.service';
@@ -24,14 +25,14 @@ import {
   MenuVideoType,
   PlayerParameters,
 } from '../book-list/book-list.component';
-import { Serie } from 'src/app/_models/Category';
+import { VideoManagerBase } from '../videoManagerBase';
 
 @Component({
   selector: 'app-player',
   templateUrl: './player.component.html',
   styleUrls: ['./player.component.css'],
 })
-export class PlayerComponent implements OnInit, OnDestroy {
+export class PlayerComponent extends VideoManagerBase implements OnInit, OnDestroy {
   @ViewChild('videoElement') video: ElementRef;
   @ViewChild('markslist') child: MarkslistComponent;
 
@@ -91,7 +92,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
     private location: Location,
     private route: ActivatedRoute,
     private toastr: ToastrService
-  ) {}
+  ) {
+    super();
+  }
 
   ngOnDestroy(): void {
     clearInterval(this.intervalId);

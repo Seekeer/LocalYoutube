@@ -293,7 +293,7 @@ displayListForType() {
         this.getPlaylists();
         this.getSeries(VideoType.Youtube);
         this.episodeCount = this.defaultEpisodesCount;
-        this.service.getFilmsByType(VideoType.Youtube).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
+        //this.service.getFilmsByType(VideoType.Youtube).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));;
 
         break;
       }
@@ -372,6 +372,7 @@ displayListForType() {
       case MenuVideoType.new:{
         this.showSpinner();
         this.selectSeries(false);
+        this.getPlaylists();
         this.showWatched  = true;
         this.setSpecialSeries();
         this.showOnlineButtons = true;
@@ -552,6 +553,10 @@ public changeSeason(film: Book){
 public changeSeries(film: Book){
   let that = this;
   that.seriesService.moveSeasonToSeries(film.id, film.seriesId).subscribe();
+}
+
+addToPlaylist(film: Book){
+  this.seriesService.addToPlaylist(this.playlistId, film.id).subscribe();
 }
 
 counter : number =0 ;
