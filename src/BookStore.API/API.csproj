@@ -90,6 +90,27 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="MediaBrowser.Common">
+      <HintPath>..\..\lib\Jellyfin\MediaBrowser.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="MediaBrowser.Controller">
+      <HintPath>..\..\lib\Jellyfin\MediaBrowser.Controller.dll</HintPath>
+    </Reference>
+    <Reference Include="MediaBrowser.LocalMetadata">
+      <HintPath>..\..\lib\Jellyfin\MediaBrowser.LocalMetadata.dll</HintPath>
+    </Reference>
+    <Reference Include="MediaBrowser.MediaEncoding">
+      <HintPath>..\..\lib\Jellyfin\MediaBrowser.MediaEncoding.dll</HintPath>
+    </Reference>
+    <Reference Include="MediaBrowser.Model">
+      <HintPath>..\..\lib\Jellyfin\MediaBrowser.Model.dll</HintPath>
+    </Reference>
+    <Reference Include="MediaBrowser.Providers">
+      <HintPath>..\..\lib\Jellyfin\MediaBrowser.Providers.dll</HintPath>
+    </Reference>
+    <Reference Include="MediaBrowser.XbmcMetadata">
+      <HintPath>..\..\lib\Jellyfin\MediaBrowser.XbmcMetadata.dll</HintPath>
+    </Reference>
     <Reference Include="YoutubeExplode">
       <HintPath>..\..\lib\Youtube-dl\YoutubeExplode.dll</HintPath>
     </Reference>

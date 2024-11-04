@@ -4,7 +4,9 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Claims;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using Dtos;
@@ -119,14 +121,15 @@ namespace FileStore.API.Controllers
 
             try
             {
-
                 var file = await _fileService.GetById(fileId);
                 var path = file.Path;
                 var finfo = new FileInfo(path);
 
                 //return wait TryToDownload(file);
-
-                return PhysicalFile($"{path}", "application/octet-stream", finfo.Name, enableRangeProcessing: true);
+                if (file.IsSupportedWebPlayer)
+                    return PhysicalFile($"{path}", "application/octet-stream", finfo.Name, enableRangeProcessing: true);
+                else
+                    return await ConvertOnTheFly(file);
             }
             catch (Exception ex)
             {
@@ -140,6 +143,43 @@ namespace FileStore.API.Controllers
                 stopwatch.Stop();
                 logger.Debug($"getFileById {stopwatch.ElapsedMilliseconds}");
             }
+        }
+
+
+        private async Task<FileResult> ConvertOnTheFly(F file)
+        {
+            throw new NotImplementedException();
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        [Route("convertFileById")]
+        public async Task<ActionResult> ConvertVideoById(int fileId)
+        {
+            throw new NotImplementedException();
+            //var ffmpegCommandLineArguments = _encodingHelper.GetProgressiveVideoFullCommandLine(state, encodingOptions, EncoderPreset.superfast);
+            //using (await transcodeManager.LockAsync(outputPath, cancellationTokenSource.Token).ConfigureAwait(false))
+            //{
+            //    TranscodingJob? job;
+            //    if (!File.Exists(outputPath))
+            //    {
+            //        job = await transcodeManager.StartFfMpeg(
+            //            state,
+            //            outputPath,
+            //            ffmpegCommandLineArguments,
+            //            HttpContext.User.GetUserId(),
+            //            transcodingJobType,
+            //            cancellationTokenSource).ConfigureAwait(false);
+            //    }
+            //    //else
+            //    //{
+            //    //    job = transcodeManager.OnTranscodeBeginRequest(outputPath, TranscodingJobType.Progressive);
+            //    //    state.Dispose();
+            //    //}
+
+            //    var stream = new ProgressiveFileStream(outputPath, job, transcodeManager);
+            //    return new FileStreamResult(stream, "application/octet-stream");
+            //}
         }
 
         [HttpDelete("{id:int}")]
