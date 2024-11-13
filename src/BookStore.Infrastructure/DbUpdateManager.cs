@@ -740,6 +740,7 @@ namespace Infrastructure
                 }
                 catch (System.Exception ex)
                 {
+                    NLog.LogManager.GetCurrentClassLogger().Error(ex);
                 }
             }
 

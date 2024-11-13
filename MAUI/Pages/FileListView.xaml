@@ -58,10 +58,10 @@
                                 <VerticalStackLayout>
 
                                     <VerticalStackLayout  IsVisible="{Binding BindingContext.IsVerticalOrientation, Source={RelativeSource AncestorType={x:Type ListView}}}" >
-                                        <Image
+                                        <!--<Image
                                     Source="{Binding Id, Converter={StaticResource idToImageUrl}}"
                                     Aspect="AspectFit"
-                                    SemanticProperties.Description="dot net bot in a race car number eight" />
+                                    SemanticProperties.Description="dot net bot in a race car number eight" />-->
 
                                         <Label 
                                         Padding="10"

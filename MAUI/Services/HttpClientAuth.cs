@@ -92,7 +92,7 @@ namespace MAUI.Services
         }
 
         //public const string BASE_API_URL = @"http://192.168.1.55:51951/api/";
-        public const string BASE_API_URL = @"http://80.68.9.86:55/api/";
+        public const string BASE_API_URL = @"http://localtube-api.dimtim.keenetic.link/";
 
         private readonly INavigationService _navigationService;
 

@@ -35,7 +35,6 @@ namespace API.FilmDownload
         public static string GetProxyString()
         {
             return $"http://timonin:BzNwuL4hrLgs@serv.bitterman.ru:3128";
-            return "https://webhook.site/770a622a-8c1e-4397-9d48-4bfa5948aded";
         }
     }
 }
