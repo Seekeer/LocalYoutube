@@ -52,7 +52,7 @@ namespace API.FilmDownload
 
         internal static bool IsDownloadCommand(IEnumerable<string> lines)
         {
-            return lines.First().StartsWith(DownloadTask.PARTS_SEPARATOR);
+            return lines.First().StartsWith(DownloadTask.PARTS_SEPARATOR) || lines.First().StartsWith(DownloadTask.SUBSCRIBE_TO_CHANNEL);
         }
 
         internal static List<TgDownloadTask> ParseTasks(Telegram.Bot.Types.Message message, IEnumerable<string> lines)

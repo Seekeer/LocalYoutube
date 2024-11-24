@@ -112,7 +112,7 @@ namespace Infrastructure.Scheduler
 
             NLog.LogManager.GetCurrentClassLogger().Info($"Start CheckChannelsUpdates");
 
-            //records = records.Where(x => x.Id == 8);
+            //records = records.Where(x => x.Id == 3);
             var user = await _userManager.FindByNameAsync("dim");
 
             foreach (var subscription in records)
@@ -137,10 +137,11 @@ namespace Infrastructure.Scheduler
                 videos.Reverse();
                 foreach (var video in videos)
                 {
-                    if (video.Id.Kind == "youtube#video" && !string.IsNullOrEmpty(video.Snippet.Description))
+                    if (video.Id.Kind == "youtube#video"
+                        && video.Snippet.Title?.Contains("#") == false && video.Snippet.Title?.Contains("@") == false)
                         await DownloadVideo(user, youtubeService, video.Id.VideoId, true);
                     else
-                        NLog.LogManager.GetCurrentClassLogger().Info($"Havent downloaded. Kind: {video.Id.Kind}");
+                        NLog.LogManager.GetCurrentClassLogger().Info($"Havent downloaded. Kind: {video.Id.Kind}, title: {video.Snippet.Title}, id: {video.Id.VideoId}");
                 }
 
                 subscription.LastCheckDate = DateTime.UtcNow;
