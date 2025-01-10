@@ -1,4 +1,5 @@
 using API.FilmDownload;
+using API.SignalR;
 using API.TG;
 using AutoMapper;
 using FileStore.API.Configuration;
@@ -27,6 +28,8 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
+using TL;
+using VkNet.Enums.StringEnums;
 
 namespace FileStore.API
 {
@@ -100,6 +103,8 @@ namespace FileStore.API
                 });
             });
 
+            var builder = services.AddSignalR();
+
             services.AddCors(options =>
             {
                 options.AddPolicy("AllowAll",
@@ -110,7 +115,6 @@ namespace FileStore.API
             services.AddSingleton<AppConfig>(cfg);
 
             services.ResolveDependencies(cfg);
-
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -123,7 +127,6 @@ namespace FileStore.API
                 var uri = new Uri(url);
                 var builder = new UriBuilder(uri);
                 builder.Path = "api/update/stub";
-
 
                 return next.Invoke();
             });
@@ -184,6 +187,7 @@ namespace FileStore.API
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapHub<PlayHub>("/player");
             });
         }
     }

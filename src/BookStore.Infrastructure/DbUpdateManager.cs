@@ -721,7 +721,7 @@ namespace Infrastructure
                         if (processResult.Count() > 1)
                         {
                             processResult.ToList().ForEach(x => x.VideoFileExtendedInfo.RutrackerId = info.VideoFileExtendedInfo.RutrackerId);
-                            var fileRepo = new DbFileRepository(_db);
+                            var fileRepo = new DbFileRepository(_db, null);
                             fileRepo.RemoveFileCompletely(info.Id);
                             _db.SaveChanges();
                             continue;
@@ -811,7 +811,7 @@ namespace Infrastructure
             List<DbFile> files = new List<DbFile>();
             files.AddRange(_db.VideoFiles.Where(x => x.SeriesId == seriesId).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileExtendedInfo));
             files.AddRange(_db.AudioFiles.Where(x => x.SeriesId == seriesId).Include(x => x.VideoFileExtendedInfo).Include(x => x.VideoFileExtendedInfo));
-            using var fileRepo = new DbFileRepository(_db);
+            using var fileRepo = new DbFileRepository(_db, null);
             foreach (var file in files)
                 fileRepo.RemoveFileCompletely(file.Id);
 
@@ -826,7 +826,7 @@ namespace Infrastructure
 
         public void RemoveFileCompletely(DbFile file)
         {
-            var fileRepo = new DbFileRepository(_db) ;
+            var fileRepo = new DbFileRepository(_db, null) ;
             fileRepo.RemoveFileCompletely(file.Id);
         }
 

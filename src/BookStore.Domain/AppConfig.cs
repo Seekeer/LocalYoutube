@@ -9,7 +9,9 @@ namespace FileStore.Domain
         public TelegramSettings TelegramSettings { get; set; }
         public TorrentSettings TorrentSettings { get; set; }
         public Credentials VkontakteSettings { get; set; }
+        public bool UseProxy { get; set; }
 
+        public int MaxSameSeasonInNewResponse { get; set; }
         public int YD_Upload_Threads_Count { get; set; }
         public string APIUrl { get; set; }
         public string UIUrl { get; set; }

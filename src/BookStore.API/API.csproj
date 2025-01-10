@@ -48,6 +48,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.10.8" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="5.3.11" />
+    <PackageReference Include="PhotoSauce.MagicScaler" Version="0.15.0" />
     <PackageReference Include="Polly" Version="7.2.3" />
     <PackageReference Include="QBittorrent.Client" Version="1.9.23349.1" />
     <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.7.0" />
@@ -64,6 +65,7 @@
     <PackageReference Include="System.Runtime.Extensions" Version="4.3.1" />
     <PackageReference Include="System.Runtime.Handles" Version="4.3.0" />
     <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
+    <PackageReference Include="System.ServiceModel.Syndication" Version="9.0.0" />
     <PackageReference Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageReference Include="System.Threading" Version="4.3.0" />
     <PackageReference Include="Telegram.Bot" Version="19.0.0" />

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using FileStore.Domain;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
@@ -16,7 +17,7 @@ namespace FileStore.Infrastructure.Repositories
 {
     public class DbFileRepository : FileRepositoryBase<DbFile, VideoType>, IDbFileRepository
     {
-        public DbFileRepository(VideoCatalogDbContext context) : base(context) { }
+        public DbFileRepository(VideoCatalogDbContext context, AppConfig config) : base(context, config) { }
 
         public override Task<IEnumerable<DbFile>> SearchFileByType(VideoType type)
         {
@@ -31,7 +32,9 @@ namespace FileStore.Infrastructure.Repositories
 
     public class VideoFileRepository : FileRepositoryBase<VideoFile, VideoType>, IVideoFileRepository
     {
-        public VideoFileRepository(VideoCatalogDbContext context) : base(context) { }
+        private readonly AppConfig _config;
+
+        public VideoFileRepository(VideoCatalogDbContext context, AppConfig config) : base(context, config) { }
 
         public override async Task<IEnumerable<VideoFile>> SearchFileByType(VideoType type)
         {
@@ -50,7 +53,7 @@ namespace FileStore.Infrastructure.Repositories
 
     public class AudioFileRepository : FileRepositoryBase<AudioFile, AudioType>, IAudioFileRepository
     {
-        public AudioFileRepository(VideoCatalogDbContext context) : base(context) { }
+        public AudioFileRepository(VideoCatalogDbContext context, AppConfig config) : base(context, config) { }
 
         public override async Task<IEnumerable<AudioFile>> SearchFileByType(AudioType type)
         {
@@ -66,7 +69,11 @@ namespace FileStore.Infrastructure.Repositories
     public abstract class FileRepositoryBase<T, V> : Repository<T>, IFileRepository<T, V>
         where T : DbFile
     {
-        public FileRepositoryBase(VideoCatalogDbContext context) : base(context) { }
+        private readonly AppConfig _config;
+
+        public FileRepositoryBase(VideoCatalogDbContext context, AppConfig config) : base(context) {
+            _config = config;
+        }
 
         public override async Task<List<T>> GetAll()
         {
@@ -140,9 +147,9 @@ namespace FileStore.Infrastructure.Repositories
             return files;
         }
 
-        public async Task<IEnumerable<T>> GetLatest(string userId)
+        public async Task<IEnumerable<T>> GetLatest(string userId, int count)
         {
-            var filesInfo = Db.FilesUserInfo.Where(x => x.UserId == userId).OrderByDescending(x => x.UpdatedDate).Take(10);
+            var filesInfo = Db.FilesUserInfo.Where(x => x.UserId == userId).OrderByDescending(x => x.UpdatedDate).Take(count);
 
             var filesIds = filesInfo.Select(x => x.VideoFileId).ToList();
             var files = GetFilesSet().Where(x => filesIds.Contains(x.Id)).ToList();
@@ -214,7 +221,33 @@ namespace FileStore.Infrastructure.Repositories
 
         public async Task<IEnumerable<T>> GetNew(int count)
         {
-            var files = DbSet.Include(x => x.Series).Where(x => x.Series.Type != VideoType.ChildEpisode).OrderByDescending(x => x.Id).Take(20);
+            var files = new List<T>();
+
+            var taken = 0;
+            do
+            {
+                var newFiles = DbSet
+                    .Include(x => x.Series).Include(x => x.VideoFileExtendedInfo)
+                    .Where(x => x.Series.Type != VideoType.ChildEpisode && !x.NeedToDelete).OrderByDescending(x => x.Id)
+                    .Skip(taken)
+                    .Take(count);
+                taken += count;
+
+                foreach (var file in newFiles)
+                {
+                    NLog.LogManager.GetCurrentClassLogger().Info($"File {file.Id}");
+
+                    var filesWithSeasonCount = files.Count(x => x.SeasonId == file.SeasonId);
+                    NLog.LogManager.GetCurrentClassLogger().Info($"filesWithSeasonCount {filesWithSeasonCount} finished: {file.IsFinished}");
+                    if (filesWithSeasonCount < _config.MaxSameSeasonInNewResponse && !file.IsFinished)
+                        files.Add(file);
+
+                    if (files.Count == count)
+                        break;
+                }
+            }
+            while (files.Count < count);
+
 
             return files;
         }

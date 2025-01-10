@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TL;
 using VkNet;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace FileStore.API.Controllers
 {
@@ -72,7 +73,7 @@ namespace FileStore.API.Controllers
         private readonly static Dictionary<string, int> _randomFileDict = new Dictionary<string, int>();
 
         public FilesController(UserManager<ApplicationUser> userManager, IMapper mapper, IVideoFileService FileService, 
-            ISeriesService seriesService, IRuTrackerUpdater ruTrackerUpdater, TgBot tgBot, ITgAPIClient tgAPi) : base(userManager, mapper, FileService)
+            ISeriesService seriesService, IRuTrackerUpdater ruTrackerUpdater, TgBot tgBot, ITgAPIClient tgAPi, IMemoryCache memoryCache) : base(userManager, mapper, FileService, memoryCache)
         {
             _ruTrackerUpdater = ruTrackerUpdater;
             _seriesService = seriesService;

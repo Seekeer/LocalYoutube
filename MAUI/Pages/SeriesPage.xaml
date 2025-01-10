@@ -11,7 +11,6 @@
                        IsVisible="{Binding IsBusy}"
                        IsRunning="{Binding IsBusy}"
                        Color="Red"/>
-            <HorizontalStackLayout>
                 <Picker 
                     ItemsSource="{Binding Playlists}"
                     SelectedItem="{Binding SelectedPlaylist}"
@@ -33,7 +32,6 @@
                     WidthRequest="200"
                     Title="Сезон"
                     />
-        </HorizontalStackLayout>
 
             <pages:FileListView BindingContext="{Binding}"/>
     </VerticalStackLayout>

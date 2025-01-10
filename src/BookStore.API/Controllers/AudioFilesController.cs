@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -18,6 +19,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
+using PhotoSauce.MagicScaler;
 
 namespace FileStore.API.Controllers
 {
@@ -29,7 +32,7 @@ namespace FileStore.API.Controllers
     {
         private readonly FileManager _fileManager;
 
-        public AudioFilesController(UserManager<ApplicationUser> userManager, IMapper mapper, IAudioFileService FileService, FileManager fileManager) : base(userManager, mapper, FileService)
+        public AudioFilesController(UserManager<ApplicationUser> userManager, IMapper mapper, IAudioFileService FileService, FileManager fileManager, IMemoryCache memoryCache) : base(userManager, mapper, FileService, memoryCache)
         {
             _fileManager = fileManager;
         }
@@ -61,13 +64,15 @@ namespace FileStore.API.Controllers
         protected readonly UserManager<ApplicationUser> _userManager;
         protected readonly IMapper _mapper;
         protected readonly IFileService<F, V> _fileService;
+        private readonly IMemoryCache _memoryCache;
 
         public FilesControllerBase(UserManager<ApplicationUser> userManager, IMapper mapper, 
-            IFileService<F, V> FileService)
+            IFileService<F, V> FileService, IMemoryCache memoryCache)
         {
             _userManager = userManager;
             _mapper = mapper;
             _fileService = FileService;
+            _memoryCache = memoryCache;
         }
 
         [AllowAnonymous]
@@ -75,15 +80,43 @@ namespace FileStore.API.Controllers
         [Route("getImage")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetImage(int fileId)
+        public async Task<IActionResult> GetImage(int fileId, bool isMobile)
         {
-            var file = await _fileService.GetById(fileId);
+            var key = GetImageKey(fileId, isMobile);
+            if (!_memoryCache.TryGetValue(key, out byte[] image))
+            {
+                var file = await _fileService.GetById(fileId);
 
-            if (file?.Cover == null)
-                return NotFound();
+                if (file?.Cover == null)
+                    return NotFound();
 
-            // Replace the octet-stream with whatever type you desire, we decided on the basic, generic form because... well, it all is, isn't it?
-            return File(file.VideoFileExtendedInfo.Cover, "application/octet-stream", "cover.jpeg");
+                image = file.VideoFileExtendedInfo.Cover;
+                if (isMobile)
+                    image = ResizeCover(image);
+
+                _memoryCache.Set(key, image);
+            }
+            return File(image, "application/octet-stream", "cover.jpeg");
+        }
+
+        private object GetImageKey(int fileId, bool isMobile)
+        {
+            return $"{fileId}_{isMobile}";
+        }
+
+        private byte[] ResizeCover(byte[] uncompressedBitmapBytes)
+        {
+            using (var inputStream = new MemoryStream(uncompressedBitmapBytes))
+            using (var outputStream = new MemoryStream())
+            {
+                var result = MagicImageProcessor.ProcessImage(inputStream, 
+                    outputStream, new ProcessImageSettings() 
+                    { 
+                        Width = 1080,
+                    });
+
+                return outputStream.ToArray();
+            }
         }
 
         [HttpPost]
@@ -257,17 +290,17 @@ namespace FileStore.API.Controllers
 
         [HttpGet]
         [Route("getLatest")]
-        public async Task<ActionResult<List<DTO>>> GetLatest()
+        public async Task<ActionResult<List<DTO>>> GetLatest(int count = 10)
         {
             string userId = await GetUserId(_userManager);
-            var files = _mapper.Map<List<F>>(await _fileService.GetLatest(userId));
+            var files = _mapper.Map<List<F>>(await _fileService.GetLatest(userId, count));
 
             return Ok(_mapper.GetFiles<F, DTO>(files, await GetUserId(_userManager)));
         }
 
         [HttpGet]
         [Route("getNew")]
-        public async Task<ActionResult<List<DTO>>> GetNew(int count = 50)
+        public async Task<ActionResult<List<DTO>>> GetNew(int count = 20)
         {
             var files = _mapper.Map<List<F>>(await _fileService.GetNew(count));
 

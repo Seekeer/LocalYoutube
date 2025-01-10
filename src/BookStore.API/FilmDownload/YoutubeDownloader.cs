@@ -22,12 +22,24 @@ namespace API.FilmDownload
 {
     public class YoutubeDownloader : DownloaderBase
     {
+        private readonly bool _ignoreShortVideos;
+
         public override DownloadType DownloadType { get => DownloadType.Youtube; }
         public override bool IsVideoPropertiesFilled => true;
 
-        public YoutubeDownloader(AppConfig config) : base(config)
+        public YoutubeDownloader(AppConfig config, bool ignoreShortVideos) : base(config)
         {
-            _useProxy = true;
+            _ignoreShortVideos = ignoreShortVideos;
+        }
+
+        public static string GetCoverUrl(string videoId)
+        {
+            return $"https://i.ytimg.com/vi/{videoId}/maxresdefault.jpg";
+        }
+
+        public static string GetVideoUrl(string videoId)
+        {
+            return $"https://www.youtube.com/watch?v={videoId}";
         }
 
         protected override async Task<DownloadInfo> GetVideoInfo(string url, string rootDownloadFolder)
@@ -40,10 +52,14 @@ namespace API.FilmDownload
 
                 // You can specify both video ID or URL
                 var video = await youtube.Videos.GetAsync(url);
-                result.ChannelName = video.Author.ChannelTitle;
+
+                if (_ignoreShortVideos && video.Duration != null && video.Duration < TimeSpan.FromMinutes(1.2))
+                    return result;
+
+                result.SeasonName = video.Author.ChannelTitle;
                 result.ChannelId = video.Author.ChannelId;
 
-                var file = await GetFileFromVideo(video, rootDownloadFolder, result.ChannelName, youtube);
+                var file = await GetFileFromVideo(video, rootDownloadFolder, result.SeasonName, youtube);
                 result.Records.Add(video.Url, file);
                 return result;
             }
@@ -59,12 +75,29 @@ namespace API.FilmDownload
             file.VideoFileExtendedInfo.Description = (video as Video)?.Description;
             file.VideoFileExtendedInfo.ExternalLink = video.Url;
 
-            byte[] imageAsByteArray;
-            using (var webClient = new WebClient())
+            try
             {
-                imageAsByteArray = webClient.DownloadData(video.Thumbnails.Last().Url);
+                byte[] imageAsByteArray;
+                using (var webClient = new WebClient())
+                {
+                    try
+                    {
+                        imageAsByteArray = webClient.DownloadData(video.Thumbnails.LastOrDefault()?.Url);
+                    }
+                    catch (Exception ex)
+                    {
+                        NLog.LogManager.GetCurrentClassLogger().Error($"GetFileFromVideo Thumbnail Url:{video.Thumbnails.LastOrDefault()?.Url}");
+                        string coverUrl = YoutubeDownloader.GetCoverUrl(video.Id);
+                        imageAsByteArray = webClient.DownloadData(video.Thumbnails.LastOrDefault()?.Url);
+                    }
+                }
+
+                file.VideoFileExtendedInfo.SetCover(imageAsByteArray);
             }
-            file.VideoFileExtendedInfo.SetCover(imageAsByteArray);
+            catch (Exception ex)
+            {
+                NLog.LogManager.GetCurrentClassLogger().Error($"GetFileFromVideo Thumbnail Url:{video.Thumbnails.LastOrDefault()?.Url}");
+            }
 
             //var streamManifest = await youtube.Videos.Streams.GetManifestAsync(video.Url);
             //// Get highest quality muxed stream
@@ -92,7 +125,7 @@ namespace API.FilmDownload
 
                 var playlist = await youtube.Playlists.GetAsync(url);
 
-                result.ChannelName = playlist.Title;
+                result.SeasonName = playlist.Title;
 
                 // Get all playlist videos
                 var videos = await youtube.Playlists.GetVideosAsync(url);

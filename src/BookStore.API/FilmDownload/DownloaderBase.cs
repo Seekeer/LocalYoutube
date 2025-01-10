@@ -1,6 +1,8 @@
 ﻿using API.Resources;
 using FileStore.Domain;
+using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
+using FileStore.Domain.Services;
 using FileStore.Infrastructure.Repositories;
 using Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,6 +57,11 @@ namespace API.FilmDownload
             return lines.First().StartsWith(DownloadTask.PARTS_SEPARATOR) || lines.First().StartsWith(DownloadTask.SUBSCRIBE_TO_CHANNEL);
         }
 
+        // Subscribe
+        // ##!
+        // https://www.youtube.com/watch?v=x2CRZaN2xgM
+        // !!СЕ!!Выступления
+        // Кургинян: либо Россия будет определять судьбу человечества, либо ее не будет!!https://rossaprimavera.ru/static/files/b7b43b3d3b12.jpg!!https://rossaprimavera.ru/video/7e53f655
         internal static List<TgDownloadTask> ParseTasks(Telegram.Bot.Types.Message message, IEnumerable<string> lines)
         {
             var commands = lines.First().Split(DownloadTask.PARTS_SEPARATOR, StringSplitOptions.RemoveEmptyEntries);
@@ -128,8 +135,8 @@ namespace API.FilmDownload
                 return null;
 
             if (url.Contains("youtube") || url.Contains("youtu.be"))
-                return new YoutubeDownloader(config);
-            else if (url.Contains("vk.com"))
+                return new YoutubeDownloader(config, false);
+            else if (url.Contains("vk.com") || url.Contains("vkvideo.ru"))
                 return new VKDownloader(config);
             else if (url.Contains("rossaprimavera"))
                 return new RossaDownloader(config);
@@ -139,9 +146,9 @@ namespace API.FilmDownload
                 return new CommonDownloader(config);
         }
 
-        internal static bool CanDownload(DownloadTask task)
+        internal static bool CanDownload(DownloadTask task, AppConfig _config)
         {
-            var downloader = CreateDownloader(task, null);
+            var downloader = CreateDownloader(task, _config);
 
             return downloader != null;
         }
@@ -154,7 +161,6 @@ namespace API.FilmDownload
         }
 
         protected AppConfig _config;
-        protected bool _useProxy;
         public abstract DownloadType DownloadType { get; }
         public abstract bool IsVideoPropertiesFilled { get;}
 
@@ -174,10 +180,11 @@ namespace API.FilmDownload
                     }
 
                     var scope = serviceScopeFactory.CreateScope();
+                    using (var dbFileService = scope.ServiceProvider.GetRequiredService<IDbFileService>())
                     using (var fileService = scope.ServiceProvider.GetRequiredService<IExternalVideoMappingsService>())
                     {
                         UpdateInfoByTask(task, info);
-                        if (!await fileService.FillFileFromSiteDownloadTask(record.Value, info, DownloadType, task.NumberInSeries))
+                        if (!await fileService.FillFileFromSiteDownloadTask(record.Key, record.Value, info, DownloadType, task.NumberInSeries))
                             continue;
 
                         var policy = Policy
@@ -224,7 +231,7 @@ namespace API.FilmDownload
 
             if (task.SeasonName != null)
             {
-                info.ChannelName = task.SeasonName;
+                info.SeasonName = task.SeasonName;
                 info.SeriesName = DownloadType.ToString();
             }
 
@@ -256,7 +263,7 @@ namespace API.FilmDownload
 
             var downloadUtilitiesScript = File.ReadAllText(@"Assets\downloadScript.txt");
             //var proxyStr = "";
-            var proxyStr = !_useProxy ? "" : $"--proxy {ProxyManager.GetProxyString()}";
+            var proxyStr = !_config.UseProxy ? "" : $"--proxy {ProxyManager.GetProxyString()}";
             var downloadVideoScript = @$"
             $ytdlp = 'yt-dlp.exe'
             $cmd = '-f ""bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"" {proxyStr} --fragment-retries 30 --write-info-json --merge-output-format mp4 {url} -o """"{fileName}""""' 

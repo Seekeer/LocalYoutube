@@ -1075,7 +1075,7 @@ namespace FileStore.API.Controllers
             }
 
             var manager = new DbUpdateManager(_db);
-            var fileRepo = new DbFileRepository(_db);
+            var fileRepo = new DbFileRepository(_db, null);
             var seriesRepo = new SeriesRepository(_db, fileRepo);
 
             foreach (var season in removeSeason)

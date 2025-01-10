@@ -24,6 +24,21 @@ namespace Infrastructure.Scheduler
     [DisallowConcurrentExecution]
     public class CheckYoutubePlaylistJob : JobBase
     {
+        private CheckYoutubeService _checkYoutubeService;
+
+        public CheckYoutubePlaylistJob(CheckYoutubeService checkYoutubeService)
+        {
+            _checkYoutubeService = checkYoutubeService;
+        }
+
+        protected override async Task Execute()
+        {
+            await _checkYoutubeService.Execute(false);
+        }
+    }
+
+    public class CheckYoutubeService : IDisposable
+    {
         private const string PLAYLIST_NAME = "LocalTube";
         private const string ApplicationName = "Youtube API .NET Quickstart";
         static string[] Scopes = { YouTubeService.Scope.Youtube };
@@ -35,7 +50,14 @@ namespace Infrastructure.Scheduler
         private readonly IExternalVideoMappingsRepository _externalVideoRepository;
         private readonly IExternalVideoMappingsService _externalVideoService;
 
-        public CheckYoutubePlaylistJob(UserManager<ApplicationUser> userManager, TgBot bot,
+        public void Dispose()
+        {
+            _userManager.Dispose();
+            _externalVideoRepository.Dispose();
+            _externalVideoService.Dispose();
+        }
+
+        public CheckYoutubeService(UserManager<ApplicationUser> userManager, TgBot bot,
             IServiceScopeFactory serviceScopeFactory, AppConfig appConfig,
             IExternalVideoMappingsRepository externalVideoRepository, IExternalVideoMappingsService externalVideoService) 
         {
@@ -47,7 +69,7 @@ namespace Infrastructure.Scheduler
             _externalVideoService = externalVideoService;
         }
 
-        protected override async Task Execute()
+        public async Task Execute(bool forced)
         {
             var user = await _userManager.FindByNameAsync("dim");
 
@@ -56,7 +78,7 @@ namespace Infrastructure.Scheduler
             // Track New channels
             //await FillChanelsMapping(youtubeService);
 
-            await CheckChannelsUpdates(youtubeService);
+            await CheckChannelsUpdates(youtubeService, forced);
 
             PlaylistItemListResponse playlistResponse = await GetLocalTubePlayListVideos(youtubeService);
             foreach (var item in playlistResponse.Items)
@@ -68,10 +90,10 @@ namespace Infrastructure.Scheduler
 
         private async Task<bool> DownloadVideo(ApplicationUser user, YouTubeService youtubeService, string videoId, bool isAuto)
         {
-            var videoLink = $"https://www.youtube.com/watch?v={videoId}";
-            var coverUrl = $"https://i.ytimg.com/vi/{videoId}/maxresdefault.jpg";
+            string videoLink = YoutubeDownloader.GetVideoUrl(videoId);
+            string coverUrl = YoutubeDownloader.GetCoverUrl(videoId);
 
-            var youtubeDownloader = new YoutubeDownloader(_appConfig);
+            var youtubeDownloader = new YoutubeDownloader(_appConfig, true);
 
             var result = false;
             await youtubeDownloader.DownloadAndProcess(new DownloadTask(videoLink, coverUrl) { IsAutoTask = isAuto }, _scopeFactory,
@@ -96,23 +118,23 @@ namespace Infrastructure.Scheduler
             var subscriptions = await req.ExecuteAsync();
 
             var channelInfos = subscriptions.Items.Select(subscription =>
-                new ChannelInfo { ChannelId = subscription.Snippet.ResourceId.ChannelId, ChannelName = subscription.Snippet.Title });
+                new ChannelInfo { ChannelId = subscription.Snippet.ResourceId.ChannelId, SeasonName = subscription.Snippet.Title });
             await _externalVideoService.AddExternalSourceMapping(channelInfos, DownloadType.Youtube);
         }
 
-        private async Task CheckChannelsUpdates(YouTubeService youtubeService)
+        private async Task CheckChannelsUpdates(YouTubeService youtubeService, bool forced)
         {
             var list = new List<string>();
             IEnumerable<ExternalVideoSourceMapping> records =
                 (await _externalVideoRepository.SearchAsync(x => x.Network == DownloadType.Youtube &&
-                // Check only once in 6 hours to not over YT limits.
-                    x.LastCheckDate < DateTime.UtcNow.AddHours(-6) &&
+                    // Check only once in 6 hours to not over YT limits.
+                    (forced || x.LastCheckDate < DateTime.UtcNow.AddHours(-6)) &&
                     x.CheckNewVideo
                 )).ToList();
 
             NLog.LogManager.GetCurrentClassLogger().Info($"Start CheckChannelsUpdates");
 
-            //records = records.Where(x => x.Id == 3);
+            //records = records.Where(x => x.Id == 8);
             var user = await _userManager.FindByNameAsync("dim");
 
             foreach (var subscription in records)
@@ -121,7 +143,7 @@ namespace Infrastructure.Scheduler
                 videoRequest.ChannelId = subscription.ChannelId;
                 videoRequest.Order = SearchResource.ListRequest.OrderEnum.Date;
                 videoRequest.MaxResults = 50;
-                videoRequest.PublishedAfterDateTimeOffset = new DateTimeOffset(subscription.LastCheckDate.AddDays(-0.5));
+                videoRequest.PublishedAfterDateTimeOffset = new DateTimeOffset(subscription.LastCheckDate.AddDays(-3.5));
                 var response = (await videoRequest.ExecuteAsync());
                 var videos = response.Items.ToList();
                 //videos.Clear();
@@ -138,7 +160,7 @@ namespace Infrastructure.Scheduler
                 foreach (var video in videos)
                 {
                     if (video.Id.Kind == "youtube#video"
-                        && video.Snippet.Title?.Contains("#") == false && video.Snippet.Title?.Contains("@") == false)
+                        && video.Snippet.Title?.Contains("#") == false && video.Snippet.Title?.Contains("@") == false && !string.IsNullOrEmpty(video.Snippet.Description))
                         await DownloadVideo(user, youtubeService, video.Id.VideoId, true);
                     else
                         NLog.LogManager.GetCurrentClassLogger().Info($"Havent downloaded. Kind: {video.Id.Kind}, title: {video.Snippet.Title}, id: {video.Id.VideoId}");
@@ -177,7 +199,7 @@ namespace Infrastructure.Scheduler
             {
                 // The file token.json stores the user's access and refresh tokens, and is created
                 // automatically when the authorization flow completes for the first time.
-                string credPath = "token.json";
+                string credPath = Path.Combine("youtubeToken",user.UserName);
                 credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
                     GoogleClientSecrets.Load(stream).Secrets,
                     Scopes,
@@ -193,5 +215,6 @@ namespace Infrastructure.Scheduler
             });
             return youtubeService;
         }
+
     }
 }

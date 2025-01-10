@@ -50,6 +50,8 @@ namespace API.TG
         AudioBook,
         [CommandName("Аудиокнига")]
         SearchAudioBook,
+        [CommandName("Проверить подписки на Youtube")]
+        CheckYoutube,
         Unknown,
         DownloadCossacks,
         DownloadPremier,
@@ -108,6 +110,7 @@ namespace API.TG
         {
             try
             {
+                message  = message.Trim('/');
                 if (string.IsNullOrEmpty(message))
                     return CommandType.Unknown;
 
@@ -116,6 +119,9 @@ namespace API.TG
 
                 foreach (var command in (CommandType[])Enum.GetValues(typeof(CommandType)))
                 {
+                    if (string.Compare(message, command.ToString(), true) == 0)
+                        return command;
+
                     if (message == ((int)command).ToString())
                         return command;
 

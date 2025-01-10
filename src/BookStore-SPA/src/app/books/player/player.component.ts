@@ -15,7 +15,6 @@ import * as moment from 'moment';
 import { Moment } from 'moment';
 import { ToastrService } from 'ngx-toastr';
 import { Book } from 'src/app/_models/Book';
-import { Serie } from 'src/app/_models/Category';
 import { SeekPositionCollection } from 'src/app/_models/SeekPosition';
 import { FileService } from 'src/app/_services/file.service';
 import { SeriesService } from 'src/app/_services/series.service';
@@ -81,8 +80,6 @@ export class PlayerComponent extends VideoManagerBase implements OnInit, OnDestr
   checkPauseDurationTimer: any;
   enableDownload: boolean = true;
   isDownloading: boolean;
-  playlists: Serie[];
-  playlistId: number;
 
   constructor(
     public service: FileService,
@@ -114,7 +111,6 @@ export class PlayerComponent extends VideoManagerBase implements OnInit, OnDestr
     this.isRandom = String(this.parameters.isRandom) === 'true';
     this.videosList.push(this.videoId);
     this.setNextVideo(true);
-    this.getPlaylists();
 
     if (this.parameters.seasonId == 0) {
       this.service
@@ -223,19 +219,6 @@ export class PlayerComponent extends VideoManagerBase implements OnInit, OnDestr
       });
   }
 
-  addToPlaylist(){
-    this.seriesService.addToPlaylist(this.playlistId, this.videoId);
-  }
-
-  getPlaylists() {    
-      this.seriesService.getPlaylists().subscribe(playlist => {
-      this.playlists = playlist.sort((a, b) => {
-        return a.name >= b.name
-          ? 1
-          : -1
-      });
-    });
-  }
   public startPlay() {
     let that = this;
 

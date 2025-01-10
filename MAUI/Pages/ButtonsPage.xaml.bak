@@ -41,11 +41,6 @@
             Command="{Binding ShowFreshCommand}"
             />
         <Button
-            Text="Последнее видео"
-            Background="Green"
-            Command="{Binding ShowLatestVideoCommand}"
-            />
-        <Button
             Text="История"
             Background="CadetBlue"
             Command="{Binding ShowHistoryCommand}"

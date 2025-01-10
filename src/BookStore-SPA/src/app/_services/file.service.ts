@@ -48,7 +48,7 @@ export class FileService {
     }
 
     public getLatest() {
-        return this.http.get<Book[]>(`${this.baseUrl}files/getLatest`);
+        return this.http.get<Book[]>(`${this.baseUrl}files/getLatest?count=20`);
     }
 
     getNew() {

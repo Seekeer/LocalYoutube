@@ -65,6 +65,7 @@ import { NavComponent } from './nav/nav.component';
 import {
   PositionslistComponent,
 } from './positionslist/positionslist.component';
+import { AddToPlaylistComponent } from './add-to-playlist/add-to-playlist.component';
 
 @NgModule({
   declarations: [
@@ -82,7 +83,8 @@ import {
     AudioComponent,
     MarkslistComponent,
     PositionslistComponent,
-    DurationDisplayPipe
+    DurationDisplayPipe,
+    AddToPlaylistComponent
   ],
   imports: [
     BrowserModule,

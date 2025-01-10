@@ -36,7 +36,7 @@ namespace FileStore.Infrastructure.Repositories
     public class ChannelInfo
     {
         public string ChannelId { get; set; }
-        public string ChannelName { get; set; }
+        public string SeasonName { get; set; }
         public string SeriesName { get; set; }
         public bool FullDownload { get; set; }
     }
@@ -46,7 +46,7 @@ namespace FileStore.Infrastructure.Repositories
         Task CreateChannelMapping(DownloadType type, ChannelInfo info);
         Task<int> DownloadFinishedAsync(DbFile file, bool isVideoPropertiesFilled);
         Task AddExternalSourceMapping(IEnumerable<ChannelInfo> enumerable, DownloadType youtube);
-        Task<bool> FillFileFromSiteDownloadTask(DbFile file, ChannelInfo channelInfo, DownloadType downloadType, int numberInSeries);
+        public Task<bool> FillFileFromSiteDownloadTask(string url, DbFile file, ChannelInfo channelInfo, DownloadType downloadType, int numberInSeries);
     }
 
     public class ExternalVideoMappingsService : IExternalVideoMappingsService
@@ -80,20 +80,23 @@ namespace FileStore.Infrastructure.Repositories
         public async Task CreateChannelMapping(DownloadType type, ChannelInfo info)
         {
             var series = _seriesRepository.AddOrUpdateSeries(type.ToString(), VideoType.ExternalVideo, null);
-            var season = _seriesRepository.AddOrUpdateSeason(series, info.ChannelName);
+            var season = _seriesRepository.AddOrUpdateSeason(series, info.SeasonName);
 
             await _externalVideoRepository.AddAsync(new ExternalVideoSourceMapping
             {
                 SeriesId = series.Id,
                 SeasonId = season.Id,
-                ChannelName = info.ChannelName,
+                ChannelName = info.SeasonName,
                 ChannelId = info.ChannelId,
                 Network = type,
             });
         }
 
-        public async Task<bool> FillFileFromSiteDownloadTask(DbFile file, ChannelInfo channelInfo, DownloadType downloadType, int numberInSeries)
+        public async Task<bool> FillFileFromSiteDownloadTask(string url, DbFile file, ChannelInfo channelInfo, DownloadType downloadType, int numberInSeries)
         {
+            if (await _dbFileService.IsExternalDuplicate(url))
+                return false;
+
             ExternalVideoSourceMapping channelMapping = null;
             bool createChannelMapping = false;
             if (channelInfo.ChannelId != null)
@@ -113,11 +116,11 @@ namespace FileStore.Infrastructure.Repositories
                 {
                     series = _seriesRepository.AddOrUpdateSeries(channelInfo.SeriesName, (file as VideoFile)?.Type, (file as AudioFile).Type);
                 }
-                var season = _seriesRepository.AddOrUpdateSeason(series, channelInfo.ChannelName);
+                var season = _seriesRepository.AddOrUpdateSeason(series, channelInfo.SeasonName);
                 channelMapping = new ExternalVideoSourceMapping
                 {
                     SeriesId = series.Id,
-                    ChannelName = channelInfo.ChannelName,
+                    ChannelName = channelInfo.SeasonName,
                     ChannelId = channelInfo.ChannelId,
                     SeasonId = season.Id,
                     Network = downloadType,
@@ -137,8 +140,7 @@ namespace FileStore.Infrastructure.Repositories
 
             FillFileFromSiteDownloadTask(file, numberInSeries, channelMapping);
 
-            var existingFiles = await _dbFileService.Search(file.Name);
-            return !existingFiles.Any();
+            return true;
         }
 
         private static void FillFileFromSiteDownloadTask(DbFile file, int numberInSeries, ExternalVideoSourceMapping channelInfo)

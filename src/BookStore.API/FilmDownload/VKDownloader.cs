@@ -72,13 +72,12 @@ namespace API.FilmDownload
         protected override async Task<DownloadInfo> GetVideoInfo(string url, string rootDownloadFolder)
         {
             //https://vk.com/video-220754053_456239513
+            //  https://vkvideo.ru/playlist/-114816593_22/video-114816593_456246230
 
-            //url = @"https://vk.com/video-136292562_456239672";
-
-            var idString = url.Replace("https://vk.com/video", "");
-            idString = idString.Replace("https://vk.com/video?z=video", "");
+            var initialParts = url.Split("/video");
+            var idString = initialParts.Last();
             var parts = idString.Split('_', '%', '?');
-            var groupId = long.Parse(parts.First());
+            var groupId =long.Parse(parts.First());
             var videoId = long.Parse(parts.ElementAt(1));
             var videos = _GetApi().Video.Get(new VideoGetParams
             {
@@ -90,7 +89,7 @@ namespace API.FilmDownload
             var group = _GetApi().Groups.GetById(null, (-groupId).ToString(),  GroupsFields.All);
             var info = new DownloadInfo
             {
-                ChannelName = $"VK|{group.FirstOrDefault().Name}",
+                SeasonName = $"VK|{group.FirstOrDefault().Name}",
                 ChannelId = Math.Abs(groupId).ToString(),
                 IsList = false,
             };

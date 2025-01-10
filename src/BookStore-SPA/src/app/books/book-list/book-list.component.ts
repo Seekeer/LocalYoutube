@@ -555,10 +555,6 @@ public changeSeries(film: Book){
   that.seriesService.moveSeasonToSeries(film.id, film.seriesId).subscribe();
 }
 
-addToPlaylist(film: Book){
-  this.seriesService.addToPlaylist(this.playlistId, film.id).subscribe();
-}
-
 counter : number =0 ;
 
   public showSpinner(){

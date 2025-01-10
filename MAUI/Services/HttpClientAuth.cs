@@ -91,8 +91,13 @@ namespace MAUI.Services
             SecureStorage.Remove("password");
         }
 
-        //public const string BASE_API_URL = @"http://192.168.1.55:51951/api/";
-        public const string BASE_API_URL = @"http://80.68.9.86:55/api/";
+#if DEBUG
+        //public const string BASE_SERVER_URL = @"http://192.168.1.55:51951";
+        public const string BASE_SERVER_URL = @"https://localtube-api.dimtim.keenetic.link";
+#else
+        public const string BASE_SERVER_URL = @"https://localtube-api.dimtim.keenetic.link";
+#endif
+        public const string BASE_API_URL = BASE_SERVER_URL + "/api/";
 
         private readonly INavigationService _navigationService;
 
@@ -261,6 +266,11 @@ namespace MAUI.Services
             //return true;
             var token = await SecureStorage.GetAsync("accessToken");
             return !string.IsNullOrEmpty(token);
+        }
+
+        internal static async Task<string?> GetAccessToken()
+        {
+           return await SecureStorage.GetAsync("accessToken");
         }
     }
 }

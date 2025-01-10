@@ -24,6 +24,7 @@ namespace FileStore.API.Configuration
         public static IServiceCollection ResolveDependencies(this IServiceCollection services, Domain.AppConfig config)
         {
             services.AddScoped<VideoCatalogDbContext>();
+            services.AddMemoryCache();
 
             services.AddScoped<IVideoFileRepository, VideoFileRepository>();
             services.AddScoped<IAudioFileRepository, AudioFileRepository>();
@@ -46,13 +47,14 @@ namespace FileStore.API.Configuration
             services.AddSingleton<TgBot, TgBot>();
             //services.AddSingleton<IStartupInitService, StartupInitService>();
             services.AddScoped<ITgAPIClient, TgAPIClient>();
+            services.AddScoped<CheckYoutubeService, CheckYoutubeService>();
 
             services.AddHostedService<StartupService>();
 
 #if DEBUG
             services.AddQuartz(q =>
             {
-                q.ScheduleJob<CheckDownloadedJob>(trigger => trigger
+                q.ScheduleJob<CheckYoutubePlaylistJob>(trigger => trigger
                     .WithIdentity("trigger555", "group5")
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(1)).RepeatForever())

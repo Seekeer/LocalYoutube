@@ -4,6 +4,7 @@ using FileStore.Domain.Models;
 using HtmlAgilityPack;
 using HtmlAgilityPack.CssSelectors.NetCore;
 using Infrastructure;
+using Polly.Caching;
 using System;
 using System.IO;
 using System.Linq;
@@ -49,8 +50,16 @@ namespace API.FilmDownload
             var html = GetHTML(url);
 
             var result = new DownloadInfo();
-            result.ChannelName = html.DocumentNode.QuerySelector(".page-title")?.InnerText ?? html.DocumentNode.QuerySelector(".entry-title-post")?.InnerText;
-            var folderPath = rootDownloadFolder.AddFolder(result.ChannelName);
+            result.SeasonName = html.DocumentNode.QuerySelector(".page-title")?.InnerText
+                ?? html.DocumentNode.QuerySelector(".entry-title-post")?.InnerText;
+            result.SeriesName = html.DocumentNode.QuerySelector(".post-author")?.InnerText;
+            if (string.IsNullOrWhiteSpace(result.SeriesName))
+            {
+                var author = result.SeasonName.Split('—').Last().Replace("&nbsp;","").Trim();
+                result.SeriesName = author;
+                result.SeasonName = result.SeasonName.Replace(result.SeriesName, "").TrimEnd("&nbsp;").Trim('—').TrimEnd("&nbsp;");
+            }
+            var folderPath = rootDownloadFolder.AddFolder(result.SeasonName);
 
             var musicCard = html.DocumentNode.QuerySelectorAll(".article-inf-song");
             foreach (var card in musicCard)

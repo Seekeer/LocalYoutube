@@ -7,6 +7,7 @@ namespace FileStore.Domain.Interfaces
 {
     public interface IDbFileService : IFileService<DbFile, VideoType>
     {
+        Task<bool> IsExternalDuplicate(string key);
     }
     public interface IVideoFileService : IFileService<VideoFile, VideoType> {
         Task MoveToAnotherSeriesByNameAsync(int fileId, string seriesName, bool moveWholeSeason);
@@ -38,7 +39,7 @@ namespace FileStore.Domain.Interfaces
         Task<T> GetRandomFileBySeriesId(int seriesId);
         Task SetRating(int videoId, double value);
         Task<bool> SetPosition(int videoId, string userId, double? value, DateTime? updateTime);
-        Task<IEnumerable<T>> GetLatest(string userId);
+        Task<IEnumerable<T>> GetLatest(string userId, int count);
         Task<bool> MoveToSerie(int fileId, int serieId);
         Task<bool> MoveToSeason(int fileId, int seasonId);
         Task<FileUserInfo> GetPosition(int fileId, string userId);

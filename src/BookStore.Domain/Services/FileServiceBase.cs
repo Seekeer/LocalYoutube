@@ -12,6 +12,12 @@ namespace FileStore.Domain.Services
         public DbFileService(IDbFileRepository FileRepository) : base(FileRepository)
         {
         }
+
+        public async Task<bool> IsExternalDuplicate(string externalLink)
+        {
+            var file = await _FileRepository.SearchRandom(x => x.VideoFileExtendedInfo.ExternalLink == externalLink);
+            return file?.Any() == true;
+        }
     }
 
     public class VideoFileService : FileServiceBase<VideoFile, VideoType>, IVideoFileService
@@ -213,9 +219,9 @@ namespace FileStore.Domain.Services
             return await _FileRepository.SearchFileByType(type);
         }
 
-        public async Task<IEnumerable<T>> GetLatest(string userId)
+        public async Task<IEnumerable<T>> GetLatest(string userId, int count)
         {
-            return await _FileRepository.GetLatest(userId);
+            return await _FileRepository.GetLatest(userId, count);
         }
 
         public async Task<bool> MoveToSerie(int fileId, int serieId)

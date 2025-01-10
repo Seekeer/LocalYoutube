@@ -34,6 +34,7 @@ using NLog.Web.LayoutRenderers;
 using System.Xml.Linq;
 using Telegram.Bot.Polling;
 using OpenQA.Selenium.DevTools.V126.CSS;
+using Infrastructure.Scheduler;
 //using Polly;
 
 namespace API.FilmDownload
@@ -87,10 +88,18 @@ namespace API.FilmDownload
 
         private async Task InitCommands()
         {
-            var commands = new List<BotCommand>();
-            commands.Add(new BotCommand { Command = "newcover", Description = "Обновить обложку для файла" });
+            var commands = new List<BotCommand>
+            {
+                GetBotCommandFromType(CommandType.CheckYoutube),
+                GetBotCommandFromType(CommandType.FixCover),
+            };
 
             await _botClient.SetMyCommandsAsync(commands);
+        }
+
+        private static BotCommand GetBotCommandFromType(CommandType commandType)
+        {
+            return new BotCommand { Command = commandType.ToString().ToLower(), Description = CommandParser.GetCommandName(commandType).FirstOrDefault() };
         }
 
         internal IEnumerable<TgLink> GetDict()
@@ -167,7 +176,7 @@ namespace API.FilmDownload
             };
 
             _botClient.StartReceiving(
-                this.HandleUpdateAsync,
+                HandleUpdateAsync,
                 HandleErrorAsync,
                 receiverOptions,
                 cancellationToken: cts.Token);
@@ -252,6 +261,11 @@ namespace API.FilmDownload
 
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
+            Task.Run(() => HandleUpdateAsync(botClient, update));
+        }
+
+        public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update)
+        {
             try
             {
                 switch (update.Type)
@@ -262,10 +276,18 @@ namespace API.FilmDownload
                         if (!IsAuthorValid(update.Message.From.Id))
                             return;
 
-                        if(update.Message.ReplyToMessage != null)
+                        NLog.LogManager.GetCurrentClassLogger().Info($"Tg received from {update.Message.From.Id} message {update.Message.Text}");
+
+                        var command2 = CommandParser.GetDataFromMessage(update.Message.Text);
+
+                        if (update.Message.ReplyToMessage != null)
                             await ProcessReply(update.Message);
-                        else if (_tgSeasonDict.Any(x => x.TgId == update.Message.From.Id))
-                            await this.ProcessMessage(botClient, update.Message);
+                        else
+                        {
+                            var commandFromMessage = CommandParser.GetDataFromMessage(update.Message.Text);
+                            if(!await this.ProcessMessage(botClient, update.Message, commandFromMessage))
+                                await ProcessBotCommand(command2, update);
+                        }
                         break;
                     case Tg.UpdateType.ChosenInlineResult:
                         break;
@@ -275,74 +297,7 @@ namespace API.FilmDownload
 
                         var command = CommandParser.GetDataFromMessage(update.CallbackQuery.Data);
 
-                        switch (command.Type)
-                        {
-                            case CommandType.FixCover:
-                                await UpdateFile(_images[command.Data]);
-                                break;
-                            case CommandType.Series:
-                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.AdultEpisode);
-                                break;
-                            case CommandType.Film:
-                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Film);
-                                break;
-                            case CommandType.ChildSeries:
-                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.ChildEpisode);
-                                break;
-                            case CommandType.Animation:
-                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Animation);
-                                break;
-                            case CommandType.FairyTale:
-                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.FairyTale);
-                                break;
-                            case CommandType.Art:
-                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Art);
-                                break;
-                            case CommandType.AudioBook:
-                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, null,  AudioType.AudioBook);
-                                break;
-                            case CommandType.AudioFairyTale:
-                                await AddTorrent(command.Data, update.CallbackQuery.From.Id, null, AudioType.AudioBook);
-                                break;
-                            case CommandType.ShowAllSearchResult:
-                            case CommandType.SearchAudioBook:
-                                await TryRutrackerDownload(command.Data, update.CallbackQuery.From.Id, command.Type);
-                                break;
-                            case CommandType.DownloadAsDesigned:
-                                // Do nothign
-                                break;
-                            case CommandType.DownloadIndia:
-                                await MoveToSeries(command.Data, SeasonNames.India);
-                                break;
-                            case CommandType.DownloadCossacks:
-                                await MoveToSeries(command.Data, SeasonNames.Cossacks);
-                                break;
-                            case CommandType.DownloadEot:
-                                await MoveToSeries(command.Data, SeasonNames.Eot);
-                                break;
-                            case CommandType.DownloadIt:
-                                await MoveToSeries(command.Data, SeasonNames.It);
-                                break;
-                            case CommandType.DownloadKurginyan:
-                                await MoveToSeries(command.Data, SeasonNames.Kurginyan);
-                                break;
-                            case CommandType.DownloadPremier:
-                                await DownloadedForPremier(command.Data);
-                                break;
-                            case CommandType.DownloadOneTime:
-                                await MoveToSeries(command.Data, SeasonNames.OneTime);
-                                break;
-                            case CommandType.DeleteByRutracker:
-                                await DeleteFileByRutrackerId(update.CallbackQuery.Id, command.Data);
-                                break;
-                            case CommandType.DeleteById:
-                                await DeleteFileById(update.CallbackQuery.Id, command.Data);
-                                break;
-                            case CommandType.Unknown:
-                                break;
-                            default:
-                                break;
-                        }
+                        await ProcessBotCommand(command, update);
                         break;
                     case Tg.UpdateType.EditedMessage:
                         break;
@@ -377,13 +332,94 @@ namespace API.FilmDownload
 
                 try
                 {
-                    await _botClient.SendTextMessageAsync(new ChatId(userId), $"Ошибка при обработке торрента",
+                    await _botClient.SendTextMessageAsync(new ChatId(userId), $"Ошибка при обработке команды",
                         replyToMessageId: messageId);
                 }
                 catch (Exception)
                 {
                 }
             }
+        }
+
+        private async Task ProcessBotCommand(TgCommand command, Update update)
+        {
+            switch (command.Type)
+            {
+                case CommandType.FixCover:
+                    await UpdateFile(_images[command.Data]);
+                    break;
+                case CommandType.CheckYoutube:
+                    await CheckYoutube();
+                    break;
+                case CommandType.Series:
+                    await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.AdultEpisode);
+                    break;
+                case CommandType.Film:
+                    await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Film);
+                    break;
+                case CommandType.ChildSeries:
+                    await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.ChildEpisode);
+                    break;
+                case CommandType.Animation:
+                    await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Animation);
+                    break;
+                case CommandType.FairyTale:
+                    await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.FairyTale);
+                    break;
+                case CommandType.Art:
+                    await AddTorrent(command.Data, update.CallbackQuery.From.Id, VideoType.Art);
+                    break;
+                case CommandType.AudioBook:
+                    await AddTorrent(command.Data, update.CallbackQuery.From.Id, null, AudioType.AudioBook);
+                    break;
+                case CommandType.AudioFairyTale:
+                    await AddTorrent(command.Data, update.CallbackQuery.From.Id, null, AudioType.AudioBook);
+                    break;
+                case CommandType.ShowAllSearchResult:
+                case CommandType.SearchAudioBook:
+                    await TryRutrackerDownload(command.Data, update.CallbackQuery.From.Id, command.Type);
+                    break;
+                case CommandType.DownloadAsDesigned:
+                    // Do nothign
+                    break;
+                case CommandType.DownloadIndia:
+                    await MoveToSeries(command.Data, SeasonNames.India);
+                    break;
+                case CommandType.DownloadCossacks:
+                    await MoveToSeries(command.Data, SeasonNames.Cossacks);
+                    break;
+                case CommandType.DownloadEot:
+                    await MoveToSeries(command.Data, SeasonNames.Eot);
+                    break;
+                case CommandType.DownloadIt:
+                    await MoveToSeries(command.Data, SeasonNames.It);
+                    break;
+                case CommandType.DownloadKurginyan:
+                    await MoveToSeries(command.Data, SeasonNames.Kurginyan);
+                    break;
+                case CommandType.DownloadPremier:
+                    await DownloadedForPremier(command.Data);
+                    break;
+                case CommandType.DownloadOneTime:
+                    await MoveToSeries(command.Data, SeasonNames.OneTime);
+                    break;
+                case CommandType.DeleteByRutracker:
+                    await DeleteFileByRutrackerId(update.CallbackQuery.Id, command.Data);
+                    break;
+                case CommandType.DeleteById:
+                    await DeleteFileById(update.CallbackQuery.Id, command.Data);
+                    break;
+                case CommandType.Unknown:
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private async Task CheckYoutube()
+        {
+            using var youtubeService = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<CheckYoutubeService>();
+            await youtubeService.Execute(forced: true);
         }
 
         private bool IsAuthorValid(long id)
@@ -520,12 +556,8 @@ namespace API.FilmDownload
             }
         }
 
-        private async Task ProcessMessage(ITelegramBotClient botClient, Message message)
+        private async Task<bool> ProcessMessage(ITelegramBotClient botClient, Message message, TgCommand command)
         {
-            NLog.LogManager.GetCurrentClassLogger().Info($"Tg received from {message.From.Id} message {message.Text}");
-
-            var command = CommandParser.GetDataFromMessage(message.Text);
-
             switch (command.Type)
             {
                 case CommandType.SetupVLC:
@@ -558,10 +590,11 @@ namespace API.FilmDownload
                     if (await Rename(command))
                         await _botClient.SendTextMessageAsync(message.From.Id, "Файл переименован", replyToMessageId: message.MessageId);
                     break;
-                    break;
                 default:
-                    break;
+                    return false;
             }
+
+            return true;
         }
 
         private async Task StartAnydesk(long id)
@@ -598,7 +631,7 @@ namespace API.FilmDownload
                 {
                     _downloadTasks.Add(task.Id, task);
 
-                    if (DownloaderFabric.CanDownload(task))
+                    if (DownloaderFabric.CanDownload(task, _config))
                     {
                         var downloader = DownloaderFabric.CreateDownloader(task, _config);
                         task.DownloadType = downloader.DownloadType;

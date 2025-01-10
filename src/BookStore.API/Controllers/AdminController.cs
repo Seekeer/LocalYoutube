@@ -26,6 +26,10 @@ using FileStore.Domain.Interfaces;
 using System.Collections.Concurrent;
 using static System.Net.Mime.MediaTypeNames;
 using Quartz;
+using Microsoft.AspNetCore.SignalR;
+using System.Net;
+using System.Text;
+using System.Web;
 
 namespace FileStore.API.Controllers
 {
@@ -50,6 +54,47 @@ namespace FileStore.API.Controllers
             _db = dbContext;
             _config = config;
             _serviceScopeFactory = serviceScopeFactory;
+        }
+        [HttpGet]
+        [Route("subscribe")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public void Subscribe(string channelId)
+        {
+            try
+            {
+                var callBackUrl = "http://localtube-test.dimtim.keenetic.link/api/webhook/youtubeupdate";
+                var topicUrl = $"https://www.youtube.com/feeds/videos.xml?channel_id={channelId}";
+                var subscribeUrl = "https://pubsubhubbub.appspot.com/subscribe";
+                string postDataStr = $"hub.mode=subscribe&hub.verify_token={Guid.NewGuid().ToString()}&hub.verify=async&hub.callback={ HttpUtility.UrlEncode(callBackUrl)}&hub.topic={HttpUtility.UrlEncode(topicUrl)}";
+                byte[] postData = Encoding.UTF8.GetBytes(postDataStr);
+
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(subscribeUrl);
+                request.Method = "POST";
+                request.ContentType = "application/x-www-form-urlencoded";
+                request.ContentLength = postData.Length;
+
+                Stream requestStream = request.GetRequestStream();
+                requestStream.Write(postData, 0, postData.Length);
+                requestStream.Flush();
+                requestStream.Close();
+
+                HttpWebResponse webResponse = (HttpWebResponse)request.GetResponse();
+                if (request.HaveResponse)
+                {
+                    Stream responseStream = webResponse.GetResponseStream();
+                    StreamReader responseReader = new StreamReader(responseStream, Encoding.UTF8);
+                    var str = responseReader.ReadToEnd();
+                }
+                else
+                {
+                    throw new Exception("Didn't receive any response from the hub");
+                }
+
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error publishing Channel ID : {channelId}", ex);
+            }
         }
 
         [HttpGet]
@@ -142,10 +187,10 @@ namespace FileStore.API.Controllers
         {
             var factory = _serviceScopeFactory;
 
-            var job = new CheckYoutubePlaylistJob(_serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(), _tgBot, _serviceScopeFactory, _config,
+            var job = new CheckYoutubeService(_serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(), _tgBot, _serviceScopeFactory, _config,
                 _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalVideoMappingsRepository>(),
                 _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalVideoMappingsService>());
-            await job.Execute(null);
+            await job.Execute(true);
 
             return Ok();
         }
@@ -214,7 +259,7 @@ namespace FileStore.API.Controllers
 
         private async Task DeleteFiles(bool deleteFile, List<DbFile> files)
         {
-            using (var fileRepo = new DbFileRepository(_db))
+            using (var fileRepo = new DbFileRepository(_db, null))
                 foreach (var file in files)
                 {
                     if (deleteFile)

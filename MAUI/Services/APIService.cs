@@ -7,14 +7,14 @@ namespace MAUI.Services
 {
     public interface IAPIService
     {
-        Task<IEnumerable<VideoFileResultDtoDownloaded>> GetHistoryAsync();
+        Task<IEnumerable<VideoFileResultDtoDownloaded>> GetLatestAsync(int count);
         Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFreshAsync();
         Task<PositionDTO> GetPositionAsync(int id);
         Task SetPositionAsync(int id, PositionDTO positionDTO);
         Task LogoutAsync();
         Task<IEnumerable<Series>> GetSeries();
         Task<IEnumerable<Season>> GetNewSeasons();
-        Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFilesForSeason(Season selectedSeason, int count = 20);
+        Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFilesForSeason(int selectedSeasonId, int count = 20);
         Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFilesForPlaylist(Playlist playlist, int count = 20);
         Task DeleteVideoAsync(int id);
         Task<int> AddMarkAsync(MarkAddDto markAddDto);
@@ -23,6 +23,7 @@ namespace MAUI.Services
         Task<IEnumerable<Playlist>> GetPlaylistsAsync();
         Task AddToPlaylists(int fileId, int playlistId);
         Task AddPlaylistAsync(string playlistName);
+        Task<string?> GetAccessToken();
     }
 
     public class APIService : IAPIService
@@ -35,7 +36,7 @@ namespace MAUI.Services
 
         public static string GetCoverUrlForFile(string fileid)
         {
-            return $"{HttpClientAuth.BASE_API_URL}Files/getImage?fileId={fileid}";
+            return $"{HttpClientAuth.BASE_API_URL}Files/getImage?fileId={fileid}&isMobile=true";
         }
 
         public async Task<PositionDTO> GetPositionAsync(int id)
@@ -74,11 +75,11 @@ namespace MAUI.Services
             HttpClientAuth.ClearTokens();
         }
 
-        public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetHistoryAsync()
+        public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetLatestAsync(int count)
         {
             try
             { 
-                var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getLatest");
+                var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getLatest?count={count}");
                 return list;
             }
             catch (Exception ex)
@@ -141,11 +142,11 @@ namespace MAUI.Services
             }
         }
 
-        public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFilesForSeason(Season selectedSeason, int count = 20)
+        public async Task<IEnumerable<VideoFileResultDtoDownloaded>> GetFilesForSeason(int selectedSeasonId, int count = 20)
         {
             try
             {
-                var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getFilesBySeason?id={selectedSeason.Id}&count={count}&isRandom=true");
+                var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getFilesBySeason?id={selectedSeasonId}&count={count}&isRandom=true");
                 return list;
             }
             catch (Exception ex)
@@ -237,6 +238,11 @@ namespace MAUI.Services
             catch (Exception ex)
             {
             }
+        }
+
+        public async Task<string?> GetAccessToken()
+        {
+            return await HttpClientAuth.GetAccessToken();
         }
     }
 }

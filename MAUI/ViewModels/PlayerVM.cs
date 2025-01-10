@@ -16,6 +16,8 @@ using CommunityToolkit.Maui.Core;
 using System.Diagnostics;
 using Xabe.FFmpeg;
 using FileStore.Domain.Models;
+using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Maui.Dispatching;
 
 namespace MAUI.ViewModels
 {
@@ -25,6 +27,7 @@ namespace MAUI.ViewModels
         private readonly IMAUIService _mauiDBService;
         private readonly DownloadManager _downloadManager;
         private readonly INavigationService _navigationService;
+        private readonly IDispatcher _dispatcher;
         [ObservableProperty]
         private VideoFileResultDtoDownloaded _file;
 
@@ -52,18 +55,87 @@ namespace MAUI.ViewModels
         private bool _pausedCalled;
         private System.Timers.Timer _positionTimer;
 
+        private HubConnection _hubConnection;
+
         public Player Page { get; internal set; }
 
-        public PlayerVM(IAPIService api, IMAUIService positionRepository, DownloadManager downloadManager, INavigationService navigationService)
+        public PlayerVM(IAPIService api, IMAUIService positionRepository, DownloadManager downloadManager, IDispatcher dispatcher,
+            INavigationService navigationService)
         {
             _api = api;
             _mauiDBService = positionRepository;
             _downloadManager = downloadManager;
             _navigationService = navigationService;
-
             _dtoAssign = AssignDTO;
+            _dispatcher = dispatcher;
 
+            InitSignalR();
             (App.Current as App).CurrentPlayerVM = this;
+        }
+
+        private void InitSignalR()
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl($@"{HttpClientAuth.BASE_SERVER_URL}/player", options =>
+                {
+                    options.AccessTokenProvider = () => _api.GetAccessToken();
+                })
+                .Build();
+            _hubConnection.StartAsync();
+            _hubConnection.On<string, string>("Connected", (connectionId, userId) =>
+            {
+                Console.Write($"User: {userId} connected as {connectionId}");
+                _clientsDict.Add(new(connectionId, userId));
+                UpdateClients();
+            });
+            _hubConnection.On<string, string>("Disconnected", (connectionId, userId) =>
+            {
+                Console.Write($"User: {userId} connected as {connectionId}");
+                if(_clientsDict.Any(x => x.Key == connectionId))
+                {
+                    var item = _clientsDict.First(x => x.Key == connectionId);
+                    _clientsDict.Remove(item);
+                    UpdateClients();
+                }
+            });
+            _hubConnection.On<int, TimeSpan>("PlayOnClient", async (videoId, position) =>
+            {
+                var dto = new VideoFileResultDtoDownloaded
+                {
+                    IsServerRequest = true,
+                    Id = videoId
+                };
+                AssignDTO(dto);
+                await Page.SetPositionAsync(position);
+                //_dispatcher.Dispatch(() => 
+
+                ////MainThread.BeginInvokeOnMainThread(() =>
+                //{
+                //    Task.Run(async () =>
+                //    {
+                //        await _navigationService.NavigateToPlayer();
+                //    }).Wait();
+                //    // Code to run on the main thread
+                //});
+            });
+        }
+        [ObservableProperty]
+        private bool _haveClients;
+        [ObservableProperty]
+        private List<KeyValuePair<string, string>> _clientsDict = new();
+        public KeyValuePair<string, string> SelectedClient
+        {
+            set
+            {
+                _hubConnection.SendAsync("Play", value.Key, this.File.Id, Page.GetMedia().Position);
+            }
+        }
+
+        // Need cause have problems with ObservCollection
+        private void UpdateClients()
+        {
+            ClientsDict = new (_clientsDict);
+            HaveClients = ClientsDict.Count > 0;
         }
 
         [ObservableProperty]
@@ -88,6 +160,7 @@ namespace MAUI.ViewModels
         public void Dispose()
         {
             _positionTimer?.Dispose();
+            _hubConnection.StopAsync();
         }
 
         private void AssignDTO(VideoFileResultDtoDownloaded dto)
@@ -102,13 +175,13 @@ namespace MAUI.ViewModels
 
             Playlists = dto.Playlists;
 
-            ProcessFile();
+            if(!dto.IsServerRequest)
+                ProcessFile();
         }
-
 
         private async Task ProcessFile()
         {
-            var fileService = GetFileService();
+            //var fileService = GetFileService();
             _mauiDBService.AddFileIfNeeded(File);
 
             //DownloadAndReplace();
@@ -175,7 +248,7 @@ namespace MAUI.ViewModels
             }
 
             if (position != null)
-                await Page.SetPosition(TimeSpan.FromSeconds(position.Value));
+                await Page.SetPositionAsync(TimeSpan.FromSeconds(position.Value));
         }
 
         private IMAUIService GetFileService()
@@ -243,7 +316,7 @@ namespace MAUI.ViewModels
 
             string text = $"Вы переместились";
             string actionButtonText = $"Вернуться обратно на {SeekPositionCollection.Positions.First().OriginalPositionStr}";
-            Action action = async () => await Page.SetPosition(SeekPositionCollection.Positions.First().OriginalPosition);
+            Action action = async () => await Page.SetPositionAsync(SeekPositionCollection.Positions.First().OriginalPosition);
             TimeSpan duration = TimeSpan.FromSeconds(3);
 
             if(DeviceInfo.Current.Platform == DevicePlatform.Android)
@@ -274,7 +347,7 @@ namespace MAUI.ViewModels
         {
             var closestTime = VideoDescriptionRowVM.CalculateClosest(Page.GetMedia().Position, Description);
 
-            Page.SetPosition(closestTime);
+            Page.SetPositionAsync(closestTime);
         }
 
         [RelayCommand]
@@ -303,12 +376,19 @@ namespace MAUI.ViewModels
                     await _navigationService.GoBack();
                     break;
                 case replayMessage:
-                    await Page.SetPosition(TimeSpan.FromMilliseconds(1));
+                    await Page.SetPositionAsync(TimeSpan.FromMilliseconds(1));
                     Page.GetMedia().Play();
                     break;
                 default:
                     break;
             }
+        }
+
+        internal async Task NavigateToSeason()
+        {
+            var dtos = await _api.GetFilesForSeason(File.SeasonId);
+            if(dtos.Any())
+                await _navigationService.NavigateAsync(nameof(ListPage), dtos);
         }
     }
 

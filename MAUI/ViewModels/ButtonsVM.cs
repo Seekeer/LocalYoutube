@@ -16,7 +16,9 @@ namespace MAUI.ViewModels
     public class VideoFileResultDtoDownloaded : VideoFileResultDto
     {
         public bool IsDownloaded { get; set; }
+        public bool IsServerRequest { get; set; }
         public string Path { get; set; }
+        public int SeasonId { get;  set; }
         public IEnumerable<Playlist> Playlists { get; internal set; }
 
         public Playlist SelectedPlaylist
@@ -70,10 +72,9 @@ namespace MAUI.ViewModels
         public async Task ShowHistory()
         {
             IsBusy = true;
-            var dtos = await _api.GetHistoryAsync();
+            var dtos = await _api.GetLatestAsync(count: 10);
 
             await _navigationService.NavigateAsync(nameof(ListPage), dtos);
-            IsBusy = false;
         }
 
         [RelayCommand]
@@ -81,6 +82,17 @@ namespace MAUI.ViewModels
         {
             var dtos = await _videoFileRepository.GetFiles();
             await _navigationService.NavigateAsync(nameof(ListPage), dtos);
+        }
+
+
+        [RelayCommand]
+        public async Task ShowLatestVideo()
+        {
+            IsBusy = true;
+
+            var dtos = await _api.GetLatestAsync(count: 1);
+            if(dtos.Any())
+                await _navigationService.NavigateAsync(nameof(Player), dtos.First());
         }
 
         [RelayCommand(CanExecute = nameof(InternetEnabled))]
@@ -95,7 +107,6 @@ namespace MAUI.ViewModels
             IsBusy = true;
             var dto = await _api.GetFreshAsync();
             await _navigationService.NavigateAsync(nameof(FreshPage), dto);
-            IsBusy = false;
         }
 
         //[RelayCommand(CanExecute = nameof(InternetEnabled))]

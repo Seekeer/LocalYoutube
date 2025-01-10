@@ -34,7 +34,7 @@ public partial class Player : ContentPage
         Toast.Make($"Player_NavigatedFrom", ToastDuration.Long, 20).Show();
     }
 
-    internal async Task SetPosition(TimeSpan time)
+    internal async Task SetPositionAsync(TimeSpan time)
     {
         if (time == TimeSpan.Zero)
             return;
@@ -111,7 +111,7 @@ public partial class Player : ContentPage
             tsString = $"00:{tsString}";
         var ts = TimeSpan.Parse(tsString);
 
-        SetPosition(ts);
+        SetPositionAsync(ts);
     }
 
     private void MediaElement_MediaFailed(object sender, CommunityToolkit.Maui.Core.Primitives.MediaFailedEventArgs e)
@@ -139,6 +139,11 @@ public partial class Player : ContentPage
         var label = sender as Label;
         var descriptionRow = (VideoDescriptionRowVM)label.BindingContext;
 
-        SetPosition(descriptionRow.GetPosition());
+        SetPositionAsync(descriptionRow.GetPosition());
+    }
+
+    private void OnSeasonUrlClicked(object sender, TappedEventArgs e)
+    {
+        viewModel.NavigateToSeason();
     }
 }

@@ -40,7 +40,7 @@ namespace API.FilmDownload
 
             var info = new DownloadInfo
             {
-                ChannelName = uriResult.Host
+                SeasonName = uriResult.Host
             };
 
             info.Records.Add(url, GetFileInfo(uriResult, rootDownloadFolder));

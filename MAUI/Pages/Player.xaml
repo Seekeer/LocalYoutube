@@ -111,6 +111,30 @@ Unloaded="MediaElement_Unloaded"
                             Command="{Binding Path=AddPlaylistCommand}"
                             FontAttributes="Bold" />
                 </HorizontalStackLayout>
+
+                <HorizontalStackLayout>
+                    <Picker 
+                            IsVisible="{Binding HaveClients}"
+                            ItemsSource="{Binding ClientsDict}"
+                            SelectedItem="{Binding SelectedClient}"
+                            ItemDisplayBinding="{Binding Value}"
+                            WidthRequest="300"
+                            Title="Открыть на другом клиенте"/>
+                </HorizontalStackLayout>
+
+                        <!--Text="{Binding File.SeasonName}"-->
+                <Label
+                    Text="Показать файлы сезона"
+		                TextDecorations="Underline"
+		                TextColor="Blue"
+		                SemanticProperties.HeadingLevel="Level1"
+		                FontSize="Default"
+		                HorizontalOptions="Center" >
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnSeasonUrlClicked"/>
+                    </Label.GestureRecognizers>
+                </Label>
+                
                 <ScrollView>
                     <ListView ItemsSource="{Binding Bookmarks.Marks}"
                               MaximumHeightRequest="200"

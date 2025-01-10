@@ -27,7 +27,7 @@ namespace MAUI.Services
         private readonly IMapper _mapper;
         private readonly IVideoFileRepository _videoFileRepository;
 
-        public LocalFilesRepo( IVideoFileRepository videoFileRepository)
+        public LocalFilesRepo(IVideoFileRepository videoFileRepository)
         {
             _videoFileRepository = videoFileRepository;
         }
@@ -48,7 +48,8 @@ namespace MAUI.Services
                     Name = x.Name,
                     IsDownloaded = true,
                     Path = x.Path,
-                    Duration = x.Duration
+                    Duration = x.Duration,
+                    SeasonId = x.SeasonId,
                 });
             //var resultDTO = _mapper.Map<IEnumerable<VideoFileResultDto>>(localFiles.Where(x => !string.IsNullOrEmpty(x.Path)));
             return resultDTO;

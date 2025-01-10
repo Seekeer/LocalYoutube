@@ -415,3 +415,5 @@ MigrationBackup/
 /docs/CNAME
 /docs/CNAME
 /src/BookStore.API/token.json
+/src/BookStore.API/appsettings.Release.json
+/src/BookStore.API/appsettings.Production.json

@@ -18,6 +18,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Data;
+using FileStore.Domain;
 
 namespace MAUI
 {
@@ -144,6 +145,7 @@ namespace MAUI
             builder.Services.AddSingleton<DownloadManager, DownloadManager>();
             builder.Services.AddTransient<HttpClientAuth, HttpClientAuth>();
             builder.Services.AddSingleton<IFileSystem>(FileSystem.Current);
+            builder.Services.AddSingleton<AppConfig>(new AppConfig());
             builder.Services.AddTransient<LocalFilesRepo, LocalFilesRepo>();
 
             builder.Services.AddTransient<IFilePathProvider, DbPathProvider>();
