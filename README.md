@@ -3,16 +3,24 @@ Selfhosted media stream service that allow to download video from Internet and w
 
 ## Technologies
 - .NET Core 
-- Entity Framework 3.1
+- MS SQL Server
+- EF Core
+- Quartz
+- Telegram
+- Torrent-tracker
+- Yt-DLP
+- PhantomJS
+- SignalR
 - Fluent API
 - AutoMapper
 - Swagger
-- SQL Server
+
 
 ### SPA
-- Angular 9
+- Angular 
 - Ng-Bootstrap
 - Ngx-Toastr
 
 ### Mobile-desktop app
 - MAUI 
+- SignalR
