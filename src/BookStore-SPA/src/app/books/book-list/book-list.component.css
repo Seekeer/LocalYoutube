@@ -21,5 +21,6 @@ img{
 }
 
 .infoCover{
+    object-fit: scale-down;
     max-width: 60% !important;
 }

@@ -6,6 +6,7 @@ import {
   OnInit,
   ViewChild,
 } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import {
   ActivatedRoute,
   Router,
@@ -88,6 +89,7 @@ export class PlayerComponent extends VideoManagerBase implements OnInit, OnDestr
     private router: Router,
     private location: Location,
     private route: ActivatedRoute,
+    private titleService:Title,
     private toastr: ToastrService
   ) {
     super();
@@ -422,6 +424,7 @@ export class PlayerComponent extends VideoManagerBase implements OnInit, OnDestr
     this.service.getBookById(currentId).subscribe(
       (videoInfo) => {
         this.name = videoInfo.displayName;
+        this.titleService.setTitle(this.name);
         this.videoInfo = videoInfo;
         this.description = this.parseDescription(videoInfo.description);
       },

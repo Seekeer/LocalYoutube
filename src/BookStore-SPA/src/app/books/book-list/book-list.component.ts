@@ -258,12 +258,13 @@ export class BookListComponent implements OnInit {
       this.service.searchFilesWithSeason(this.seasonId, this.isRandom).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     }
     else if (this.serieId ) {
+
       let serie = this.series.filter(x => x.id == this.serieId)[0];
       this.seasons = serie.seasons;
       this.isRandom = this.isRandom && !serie.isOrderMatter;
 
       let showAllVideos =  this.type == MenuVideoType.courses ||this.type == MenuVideoType.special || this.type == MenuVideoType.adultSeries ||this.type == MenuVideoType.youtube; 
-      this.service.getVideosBySeries(serie.id, showAllVideos ? 1000:this.defaultEpisodesCount, this.isRandom, 0).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
+      this.service.getVideosBySeries(serie.id, this.episodeCount, this.isRandom, 0).subscribe(this.showBooks.bind(this), this.getFilmsError.bind(this));
     }
     else {
       this.hideSpinner();
