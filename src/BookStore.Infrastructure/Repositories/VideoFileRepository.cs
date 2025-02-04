@@ -113,7 +113,7 @@ namespace FileStore.Infrastructure.Repositories
             else
             {
                 var result = (await SearchFile(file => file.SeriesId == seriesId && file.Id > startId));
-                return OrderByNumber(result);
+                return OrderByNumber(result).Take(count);
             }
         }
 

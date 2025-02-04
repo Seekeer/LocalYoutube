@@ -109,23 +109,9 @@ namespace FileStore.Domain.Services
             if (file == null)
                 return true;
 
-            if (System.IO.File.Exists(file.Path))
-            {
-                try
-                {
-                    System.IO.File.Delete(file.Path);
-                }
-                catch (Exception ex)
-                {
-                    _FileRepository.MarkFileToDelete(file);
+            _FileRepository.MarkFileToDelete(file);
 
-                    return false;
-                }
-            }
-
-            _FileRepository.RemoveFileCompletely(file.Id);
-
-            return true;
+            return false;
         }
 
         public async Task<bool> Remove(int fileId)

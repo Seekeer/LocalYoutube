@@ -4,6 +4,7 @@ using FileStore.Domain.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,8 +46,7 @@ namespace Infrastructure.Scheduler
                         NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger().Debug($"Deleting {file.Id}:{file.Path}");
 
                         await rutracker.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
-
-                        await fileService.Remove(file);
+                        File.Delete(file.Path);
                     }
                     catch (Exception ex)
                     {
