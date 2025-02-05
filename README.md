@@ -24,6 +24,7 @@ The backend is asp.net core application, frontend is Angular for Web and MAUI ap
 - AngleSharp
 - Polly
 - SignalR
+- NUnit
 - Fluent API
 - AutoMapper
 - Swagger
