@@ -45,8 +45,11 @@ namespace Infrastructure.Scheduler
                     {
                         NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger().Debug($"Deleting {file.Id}:{file.Path}");
 
-                        await rutracker.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
-                        File.Delete(file.Path);
+                        if (File.Exists(file.Path))
+                        {
+                            await rutracker.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
+                            File.Delete(file.Path);
+                        }
                     }
                     catch (Exception ex)
                     {

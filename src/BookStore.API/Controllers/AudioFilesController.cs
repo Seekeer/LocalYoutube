@@ -152,18 +152,14 @@ namespace FileStore.API.Controllers
 
             try
             {
-
                 var file = await _fileService.GetById(fileId);
                 var path = file.Path;
                 var finfo = new FileInfo(path);
-
-                //return wait TryToDownload(file);
 
                 return PhysicalFile($"{path}", "application/octet-stream", finfo.Name, enableRangeProcessing: true);
             }
             catch (Exception ex)
             {
-                logger.Debug("getFileById 5");
                 logger.Error(ex);
 
                 throw;
