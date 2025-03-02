@@ -1,4 +1,5 @@
-﻿using MAUI.Services;
+﻿using MAUI.Downloading;
+using MAUI.Services;
 using System;
 using System.Collections.Generic;
 using System.Globalization;

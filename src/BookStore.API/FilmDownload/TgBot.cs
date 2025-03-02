@@ -80,10 +80,14 @@ namespace API.FilmDownload
 
             NLog.LogManager.GetCurrentClassLogger().Warn($"Telegram bot created");
 
-            SendAdminMessage($"Сервер стартанул");
+            // Init in background.
+            Task.Factory.StartNew(async () =>
+            {
+                await SendAdminMessage($"Сервер стартанул");
 
-            CreateTGDict();
-            InitCommands();
+                CreateTGDict();
+                await InitCommands();
+            });
         }
 
         private async Task InitCommands()

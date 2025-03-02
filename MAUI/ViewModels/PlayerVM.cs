@@ -54,6 +54,7 @@ namespace MAUI.ViewModels
         private double _lastPosition;
         private bool _pausedCalled;
         private System.Timers.Timer _positionTimer;
+        private System.Timers.Timer _marksTimer;
 
         private HubConnection _hubConnection;
 
@@ -191,6 +192,7 @@ namespace MAUI.ViewModels
         {
             await UpdatePosition();
             StartPositionUpdateTimer();
+            StartMarksTimer();
 
             this.Page.GetMedia().StateChanged += PlayerVM_StateChanged;
         }
@@ -258,13 +260,29 @@ namespace MAUI.ViewModels
 
         private void StartPositionUpdateTimer()
         {
-            _positionTimer = new System.Timers.Timer();
+            _positionTimer = new System.Timers.Timer
+            {
+                Interval = 500,
+                Enabled = true
+            };
             _positionTimer.Elapsed += new ElapsedEventHandler(async (_, __) =>
             {
                 await UpdatePositionByControl();
             });
-            _positionTimer.Interval = 500;
-            _positionTimer.Enabled = true;
+        }
+        private void StartMarksTimer()
+        {
+            _marksTimer = new System.Timers.Timer
+            {
+                Interval = 1000,
+                Enabled = true
+            };
+            _marksTimer.Elapsed += new ElapsedEventHandler(async (_, __) =>
+            {
+                _marksTimer.Enabled = false;
+                await Bookmarks.SendMissedMarksToServerAsync();
+                _marksTimer.Enabled = true;
+            });
         }
 
         public async Task UpdatePositionByControl()

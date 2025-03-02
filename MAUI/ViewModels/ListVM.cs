@@ -6,6 +6,7 @@ using MAUI.Downloading;
 using MAUI.Pages;
 using MAUI.Services;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace MAUI.ViewModels
 {
@@ -23,15 +24,30 @@ namespace MAUI.ViewModels
             _dtoAssign = async dto => 
             {
                 dto = dto ?? new List<VideoFileResultDtoDownloaded>();
+
+                GetPlaylistsAndCheckDownloadedInTheBackground(dto);
+
                 var playlists = await _apiService.GetPlaylistsAsync();
                 dto.ToList().ForEach(x =>
                     {
                         x.Playlists = playlists;
-                        x.APIService = apiService;
                     });
-                downloadManager.CheckDownloaded(dto);
                 this.Files = new ObservableCollection<VideoFileResultDtoDownloaded>(dto);
             };
+        }
+
+        private void GetPlaylistsAndCheckDownloadedInTheBackground(IEnumerable<VideoFileResultDtoDownloaded> dto)
+        {
+            Task.Run(async () => {
+                await _downloadManager.CheckDownloadedAsync(dto);
+
+                var playlists = await _apiService.GetPlaylistsAsync();
+                dto.ToList().ForEach(x =>
+                {
+                    x.Playlists = playlists;
+                });
+
+            });
         }
 
         private void Current_MainDisplayInfoChanged(object? sender, DisplayInfoChangedEventArgs e)
@@ -48,6 +64,13 @@ namespace MAUI.ViewModels
         [ObservableProperty]
         ObservableCollection<VideoFileResultDtoDownloaded> _files;
 
+        public bool DisplayImages
+        {
+            get
+            {
+                return Connectivity.NetworkAccess == NetworkAccess.Internet;
+            }
+        }
 
         [ObservableProperty]
         bool _isVerticalOrientation;

@@ -76,6 +76,8 @@ namespace FileStore.Infrastructure.Context
             //        .WithOne(info => info.VideoFile)
             //        .HasForeignKey<VideoFileExtendedInfo>(info => info.VideoFileId);
             //});
+            
+            modelBuilder.Entity<DbFile>().HasQueryFilter(u => !u.NeedToDelete);
 
             modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileExtendedInfo).AutoInclude();
             modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileUserInfos).AutoInclude();
