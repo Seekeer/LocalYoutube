@@ -42,7 +42,7 @@ namespace Infrastructure.Scheduler
             var movedFiles = 0;
             var torrentManager = _service.GetService<IRuTrackerUpdater>();
 
-            var files = db.Files.Where(x => x.Path.Contains(_appConfig.RootDownloadFolder) && !x.IsDownloading)
+            var files = db.Files.Where(x => x.Path.Contains(_appConfig.RootDownloadFolder) && !x.IsDownloading && !x.NeedToDelete)
                 .Include(x => x.VideoFileExtendedInfo).OrderBy(x => x.Duration).ToList();
             foreach (var file in files)
             {
@@ -52,10 +52,26 @@ namespace Infrastructure.Scheduler
 
                     var moveResult = await fileManager.MoveFile(file);
 
-                    if (moveResult.HasBeenConverted)
+                    if (moveResult.IsntExist)
+                    {
+                        db.Files.Remove(file);
+                        await db.SaveChangesAsync();
+                    }
+                    else if (!string.IsNullOrEmpty(moveResult.DuplicatePath))
+                    {
+                        var dbFile = db.Files.FirstOrDefault(x => x.Path ==  moveResult.DuplicatePath);
+                        if (dbFile != null)
+                        {
+                            db.Files.Remove(file);
+                            await db.SaveChangesAsync();
+                        }
+                        else
+                            File.Delete(moveResult.DuplicatePath);
+                    }
+                    else if (moveResult.HasBeenConverted)
                         await torrentManager.DeleteTorrent(file.VideoFileExtendedInfo.RutrackerId.ToString());
-                    else if(moveResult.HasBeenMoved)
-                        await MoveFileInRutracker( torrentManager, file);
+                    else if (moveResult.HasBeenMoved)
+                        await MoveFileInRutracker(torrentManager, file);
 
                     if(moveResult.HasBeenMoved)
                         movedFiles++;

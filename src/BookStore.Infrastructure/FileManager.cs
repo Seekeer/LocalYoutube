@@ -43,9 +43,12 @@ namespace Infrastructure
     {
         public string NewPath { get; set; }
         public bool HasBeenConverted { get; set; }
+        public bool IsntExist { get; set; }
         public bool HasBeenMoved { get
             { return !string.IsNullOrEmpty(NewPath); }
         }
+
+        public string DuplicatePath { get; internal set; }
     }
 
     public class FileManager
@@ -84,7 +87,7 @@ namespace Infrastructure
                 var moveResult = _MoveFilePhysically(file);
                 if (moveResult.HasBeenMoved)
                 {
-                    //NLog.LogManager.GetCurrentClassLogger().Info($"FileManager {file.Id} from {file.Path} to {moveResult.NewPath}");
+                    NLog.LogManager.GetCurrentClassLogger().Info($"FileManager {file.Id} from {file.Path} to {moveResult.NewPath}");
 
                     file.Path = moveResult.NewPath;
                     _db.Update(file);
@@ -95,7 +98,7 @@ namespace Infrastructure
             }
             catch (Exception ex)
             {
-                //NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                NLog.LogManager.GetCurrentClassLogger().Error(ex);
             }
 
             return new MoveResult { };
@@ -131,7 +134,10 @@ namespace Infrastructure
             var finfo = new FileInfo(file.Path);
 
             if (!finfo.Exists)
+            {
+                result.IsntExist = true;
                 return result;
+            }
 
             result.HasBeenConverted = ConvertIfNeeded(file);
 
@@ -140,7 +146,10 @@ namespace Infrastructure
             var newFInfo = new FileInfo(newPath);
 
             if (newFInfo.Exists)
+            {
+                result.DuplicatePath = newPath;
                 return result;
+            }
 
             WaitIfNeeded(finfo);
 
