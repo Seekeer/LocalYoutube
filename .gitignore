@@ -417,3 +417,6 @@ MigrationBackup/
 /src/BookStore.API/token.json
 /src/BookStore.API/appsettings.Release.json
 /src/BookStore.API/appsettings.Production.json
+/src/BookStore.API/youtubeToken/
+
+*.pubxml.user

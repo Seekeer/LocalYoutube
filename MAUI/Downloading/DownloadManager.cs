@@ -28,7 +28,7 @@ namespace MAUI.Downloading
 
         private readonly IMAUIService _videoFileRepository;
 
-        internal async Task CheckDownloaded(IEnumerable<VideoFileResultDtoDownloaded> dto)
+        internal async Task CheckDownloadedAsync(IEnumerable<VideoFileResultDtoDownloaded> dto)
         {
             foreach (var file in dto)
             {
@@ -66,12 +66,18 @@ namespace MAUI.Downloading
             if (FileDownloaded(file))
                 return;
 
-            var name =  fileDTO.Name.GetCorrectFileName(); 
+            var name = fileDTO.Name.GetCorrectFileName();
 
-            var path = PlataformFolder();
-            path = Path.Combine(path, Guid.NewGuid().ToString());
+            string path = GetFilePath(Guid.NewGuid().ToString());
 
             await DownloadFile(fileDTO, name, path);
+        }
+
+        public static string GetFilePath(string name)
+        {
+            var path = PlataformFolder();
+            path = Path.Combine(path, name);
+            return path;
         }
 
         private static bool FileDownloaded(VideoFile file)

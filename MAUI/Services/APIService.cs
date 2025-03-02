@@ -146,7 +146,7 @@ namespace MAUI.Services
         {
             try
             {
-                var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getFilesBySeason?id={selectedSeasonId}&count={count}&isRandom=true");
+                var list = await _httpClientAuth.GetAsync<IEnumerable<VideoFileResultDtoDownloaded>>($"files/getFilesBySeason?id={selectedSeasonId}&count={count}&isRandom=false");
                 return list;
             }
             catch (Exception ex)

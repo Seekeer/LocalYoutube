@@ -58,10 +58,6 @@
                                 <VerticalStackLayout>
 
                                     <VerticalStackLayout  IsVisible="{Binding BindingContext.IsVerticalOrientation, Source={RelativeSource AncestorType={x:Type ListView}}}" >
-                                        <Image
-                                    Source="{Binding Id, Converter={StaticResource idToImageUrl}}"
-                                    Aspect="AspectFit"
-                                    SemanticProperties.Description="dot net bot in a race car number eight" />
 
                                         <Label 
                                         Padding="10"
@@ -137,11 +133,6 @@
 
                                         <!--Command="{Binding Path=BindingContext.ItemTappedCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
                                     CommandParameter="{Binding Id}"-->
-                                        <ImageButton 
-                                    Grid.RowSpan="2"
-                                    Source="{Binding Id, Converter={StaticResource idToImageUrl}}"
-                                    HeightRequest="300"
-                                    Aspect="AspectFit" />
 
                                         <VerticalStackLayout  Grid.Column="1" Padding="10">
                                             <Label Grid.Column="1"
@@ -191,13 +182,25 @@
                                             FontAttributes="Bold" />-->
 
                                         <Button Grid.Column="2"
-                                            Grid.RowSpan="2"
+                                            BackgroundColor="Green"
                                             Padding="5"
                                             Text="Скачать"
                                             IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"
                                             Clicked="Button_Clicked"
                                             VerticalOptions="Center"
                                             Command="{Binding Path=BindingContext.DownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
+                                            CommandParameter="{Binding Id}"
+                                            FontAttributes="Bold" />
+                                        
+                                        <Button Grid.Column="2"
+                                            BackgroundColor="Red"
+                                            Grid.Row="1"
+                                            Padding="5"
+                                            Text="Удалить скачанное"
+                                            IsVisible="{Binding IsDownloaded}"
+                                            Clicked="Button_Clicked"
+                                            VerticalOptions="Center"
+                                            Command="{Binding Path=BindingContext.DeleteDownloadVideoCommand, Source={RelativeSource AncestorType={x:Type ListView}}}"
                                             CommandParameter="{Binding Id}"
                                             FontAttributes="Bold" />
 

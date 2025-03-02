@@ -121,12 +121,27 @@ namespace MAUI.ViewModels
                 return;
 
             markAddVM.Id = await _api.AddMarkAsync(markAddVM.GetDTO());
-            // TODO Notify
-            if(markAddVM.Id == 0)
-                return;
 
             Marks.Add(markAddVM);
             UpdateMarks();
+        }
+
+        public async Task<bool> SendMissedMarksToServerAsync()
+        {
+            try
+            {
+                var missedMarks = Marks.Where(x => x.Id == 0).ToList();
+                foreach (var mark in missedMarks)
+                {
+                    mark.Id = await _api.AddMarkAsync(mark.GetDTO());
+                }
+
+                return Marks.All(x => x.Id != 0);
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
 
     }

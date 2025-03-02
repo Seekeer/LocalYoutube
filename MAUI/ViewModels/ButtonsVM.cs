@@ -84,7 +84,6 @@ namespace MAUI.ViewModels
             await _navigationService.NavigateAsync(nameof(ListPage), dtos);
         }
 
-
         [RelayCommand]
         public async Task ShowLatestVideo()
         {
