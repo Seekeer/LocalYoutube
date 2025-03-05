@@ -9,7 +9,10 @@ import {
   VideoOrigin,
   VideoType,
 } from '../_models/Book';
-import { AddToPlaylistDTO, Serie } from '../_models/Category';
+import {
+  AddToPlaylistDTO,
+  Serie,
+} from '../_models/Category';
 
 @Injectable({
     providedIn: 'root'
@@ -29,6 +32,8 @@ export class SeriesService {
     constructor(private http: HttpClient) { }
 
     public getPlaylists(): Observable<Serie[]> {
+        return null;
+        // return Serie[];
         return this.http.get<Serie[]>(this.baseUrl + `playlists/getAll`);
     }
     

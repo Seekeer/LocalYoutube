@@ -90,6 +90,10 @@
     <ProjectReference Include="..\BookStore.Domain\FileStore.Domain.csproj" />
     <ProjectReference Include="..\BookStore.Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
+	
+	<PropertyGroup>
+		<ServerGarbageCollection>false</ServerGarbageCollection>
+	</PropertyGroup>
 
   <ItemGroup>
     <Reference Include="YoutubeExplode">

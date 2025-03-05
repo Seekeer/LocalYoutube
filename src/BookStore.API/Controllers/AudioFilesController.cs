@@ -21,8 +21,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Server.IISIntegration;
 using Microsoft.Extensions.Caching.Memory;
 using PhotoSauce.MagicScaler;
+using TL;
+using Xabe.FFmpeg;
 
 namespace FileStore.API.Controllers
 {
@@ -92,7 +95,7 @@ namespace FileStore.API.Controllers
                 if (file?.Cover == null)
                     return NotFound();
 
-                image = file.VideoFileExtendedInfo.Cover;
+                //image = file.VideoFileExtendedInfo.Cover;
                 if (isMobile)
                     image = ResizeCover(image);
 
@@ -158,20 +161,19 @@ namespace FileStore.API.Controllers
                 .FromFileInput(path)
                 .OutputToFile(resultPath, false, options => options
                     .WithVideoCodec(FFMpegCore.Enums.VideoCodec.LibX264)
+                    .WithSpeedPreset(FFMpegCore.Enums.Speed.SuperFast)
                     .WithConstantRateFactor(28)
                     .WithAudioCodec(FFMpegCore.Enums.AudioCodec.Aac)
                     .WithVariableBitrate(4)
                     .UsingMultithreading(true)
-                    .WithVideoFilters(filterOptions => filterOptions
-                    .Scale(FFMpegCore.Enums.VideoSize.Hd))
                     .WithFastStart())
-                    .Arguments;
+                .Arguments;
             var process = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    CreateNoWindow = true,
+                    //WindowStyle = ProcessWindowStyle.Hidden,
+                    //CreateNoWindow = true,
                     UseShellExecute = false,
 
                     // Must consume both stdout and stderr or deadlocks may occur
@@ -186,6 +188,7 @@ namespace FileStore.API.Controllers
                 EnableRaisingEvents = true
             };
             process.ErrorDataReceived += Process_ErrorDataReceived;
+            process.Start();
             return resultPath;
         }
         private static void Process_ErrorDataReceived(object sendingProcess,
@@ -211,10 +214,13 @@ namespace FileStore.API.Controllers
 
                 //return wait TryToDownload(file);
 
-                var tempFile = await ConvertForStreaming(path, "Converted");
+                var tempFile = await ConvertForStreaming(path, "Converted1");
 
-                var fs = new FileStream(tempFile, FileMode.Open); // convert it to a stream
-                return File(fs, "application/octet-stream", finfo.Name, enableRangeProcessing: true);
+                //var fs = new FileStream(tempFile, FileMode.Open); // convert it to a stream
+                //return File(fs, "application/octet-stream", finfo.Name, enableRangeProcessing: true);
+                var stream = new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                return new FileStreamResult(stream, "application/octet-stream");
+
             }
             catch (Exception ex)
             {
@@ -281,6 +287,10 @@ namespace FileStore.API.Controllers
         {
             var Files = await _fileService.GetFilesBySearies(id, count, isRandom, startId);
 
+            //foreach (var item in Files)
+            //{
+            //    item.VideoFileExtendedInfo.Cover = new byte[1]; 
+            //}
             if (!Files.Any())
                 return NotFound();
 
@@ -358,7 +368,7 @@ namespace FileStore.API.Controllers
         public async Task<ActionResult<List<DTO>>> GetNew(int count = 20)
         {
             string userId = await GetUserId(_userManager);
-            var files = _mapper.Map<List<F>>(await _fileService.GetNew(count, userId));
+            var files = _mapper.Map<List<F>>(await _fileService.GetNew(count));
 
             return Ok(_mapper.GetFiles<F, DTO>(files, await GetUserId(_userManager)));
         }

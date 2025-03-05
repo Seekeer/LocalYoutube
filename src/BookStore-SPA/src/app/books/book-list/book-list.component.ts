@@ -571,10 +571,10 @@ counter : number =0 ;
 
   openVideo(book: Book, inNewTab:boolean) {
 
-    if(!book.isSupportedWebPlayer){
-      window.open(`vlc://${this.service.getVideoURLById(book.id)}`, "_blank");
-      return;
-    }
+    // if(!book.isSupportedWebPlayer){
+    //   window.open(`vlc://${this.service.getVideoURLById(book.id)}`, "_blank");
+    //   return;
+    // }
 
     let showDelete = !isChild(this.type) && this.type != MenuVideoType.adultSeries;
     const queryParams: PlayerParameters = {

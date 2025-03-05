@@ -81,7 +81,7 @@ namespace FileStore.Domain.Models
         ChildBook,
     }
 
-    public class FileExtendedInfo : Entity
+    public class FileExtendedInfo : Entity, IDisposable
     {
         public DbFile DbFile { get; set; }
         public int VideoFileId { get; set; }
@@ -93,6 +93,11 @@ namespace FileStore.Domain.Models
         public string ExternalLink { get; set; }
         public int RutrackerId { get; set; }
         public string Director { get; set; }
+
+        public void Dispose()
+        {
+            Cover = null;
+        }
     }
 
     public class FileUserInfo : TrackUpdateCreateTimeEntity

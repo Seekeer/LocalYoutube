@@ -136,7 +136,10 @@ namespace FileStore.Infrastructure.Repositories
 
         private async Task<IEnumerable<T>> SearchFile(Expression<Func<T, bool>> predicate)
         {
-            return (await base.SearchAsync(predicate)).Where(x => !x.NeedToDelete);
+            var items =  (await base.SearchAsync(predicate)).Where(x => !x.NeedToDelete);
+
+            Db.ChangeTracker.Clear();
+            return items;
         }
 
         public async Task<IEnumerable<T>> SearchByName(string searchedValue)
