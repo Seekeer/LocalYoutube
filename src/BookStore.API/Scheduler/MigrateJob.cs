@@ -1,0 +1,47 @@
+﻿using FileStore.Domain.Models;
+using FileStore.Infrastructure.Context;
+using Quartz;
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using TL;
+
+namespace Infrastructure.Scheduler
+{
+    public class MigrateJob (VideoCatalogDbContext videoCatalogContext) : IJob
+    {
+        public static async Task<byte[]> GetCover(int id)
+        {
+            return await File.ReadAllBytesAsync(GetFilePath(id));
+        }
+        const string folder = "";
+
+        public async Task Execute(IJobExecutionContext context)
+        {
+            NLog.LogManager.GetCurrentClassLogger().Info($"Job started");
+
+            var infos = videoCatalogContext.FilesInfo.ToList();
+            foreach (var item in infos)
+            {
+                var cover = item.Cover;
+                if (cover != null)
+                {
+                    using (var ms = new MemoryStream(cover))
+                    {
+                        using (var fs = new FileStream(GetFilePath(item.DbFile.Id), FileMode.Create))
+                        {
+                            ms.WriteTo(fs);
+                        }
+                    }
+                }
+            }
+        }
+
+        private static string GetFilePath(int fileId)
+        {
+            return Path.Combine(folder, fileId.ToString());
+        }
+    }
+
+}
