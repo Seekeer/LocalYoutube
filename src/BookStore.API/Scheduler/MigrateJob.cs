@@ -1,5 +1,6 @@
 ﻿using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
+using Microsoft.EntityFrameworkCore;
 using Quartz;
 using System;
 using System.IO;
@@ -15,27 +16,28 @@ namespace Infrastructure.Scheduler
         {
             return await File.ReadAllBytesAsync(GetFilePath(id));
         }
-        const string folder = "";
+        const string folder = @"U:\MyFiles\Apps\VideoServer\Covers";
 
         public async Task Execute(IJobExecutionContext context)
         {
-            NLog.LogManager.GetCurrentClassLogger().Info($"Job started");
+            //NLog.LogManager.GetCurrentClassLogger().Info($"Job started");
 
-            var infos = videoCatalogContext.FilesInfo.ToList();
-            foreach (var item in infos)
-            {
-                var cover = item.Cover;
-                if (cover != null)
-                {
-                    using (var ms = new MemoryStream(cover))
-                    {
-                        using (var fs = new FileStream(GetFilePath(item.DbFile.Id), FileMode.Create))
-                        {
-                            ms.WriteTo(fs);
-                        }
-                    }
-                }
-            }
+            //var infos = videoCatalogContext.FilesInfo.AsTracking().Include(x =>x.DbFile)
+            //    .ToList();
+            //foreach (var item in infos)
+            //{
+            //    var cover = item.Cover;
+            //    if (cover != null)
+            //    {
+            //        using (var ms = new MemoryStream(cover))
+            //        {
+            //            using (var fs = new FileStream(GetFilePath(item.DbFile.Id), FileMode.Create))
+            //            {
+            //                ms.WriteTo(fs);
+            //            }
+            //        }
+            //    }
+            //}
         }
 
         private static string GetFilePath(int fileId)
