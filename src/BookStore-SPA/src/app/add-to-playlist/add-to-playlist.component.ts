@@ -15,6 +15,7 @@ import { SeriesService } from '../_services/series.service';
 export class AddToPlaylistComponent implements OnInit {
   AddToPlaylistComponent = AddToPlaylistComponent;
   static playlists: Serie[];
+  static playlistsRequested: boolean;
   playlistId: number;
   @Input() videoId: number
   constructor(
@@ -30,9 +31,10 @@ export class AddToPlaylistComponent implements OnInit {
   }
 
   getPlaylists() {    
-      if(AddToPlaylistComponent.playlists)
+      if(AddToPlaylistComponent.playlistsRequested)
         return;
 
+      AddToPlaylistComponent.playlistsRequested = true;
       this.seriesService.getPlaylists().subscribe(playlist => {
         AddToPlaylistComponent.playlists = playlist.sort((a, b) => {
         return a.name >= b.name

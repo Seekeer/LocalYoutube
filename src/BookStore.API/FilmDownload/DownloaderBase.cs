@@ -165,7 +165,7 @@ namespace API.FilmDownload
         public abstract bool IsVideoPropertiesFilled { get;}
 
         public async Task DownloadAndProcess(DownloadTask task, IServiceScopeFactory serviceScopeFactory,
-            Action<Exception> error, Action<DbFile> success)
+            Action<Exception> error, Action<bool, DbFile> success)
         {
             var info = await GetInfo(task.Uri.ToString());
 
@@ -185,7 +185,10 @@ namespace API.FilmDownload
                     {
                         UpdateInfoByTask(task, info);
                         if (!await fileService.FillFileFromSiteDownloadTask(record.Key, record.Value, info, DownloadType, task.NumberInSeries))
+                        {
+                            success(false, record.Value);
                             continue;
+                        }
 
                         var policy = Policy
                             .Handle<Exception>()
@@ -203,7 +206,7 @@ namespace API.FilmDownload
                             UpdateFileByTask(record.Value, task);
                             task.FileId = await fileService.DownloadFinishedAsync(record.Value, IsVideoPropertiesFilled);
 
-                            success(record.Value);
+                            success(true , record.Value);
                         });
                     }
                 }

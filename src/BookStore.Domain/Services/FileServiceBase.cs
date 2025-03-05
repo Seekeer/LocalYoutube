@@ -15,8 +15,8 @@ namespace FileStore.Domain.Services
 
         public async Task<bool> IsExternalDuplicate(string externalLink)
         {
-            var file = await _FileRepository.SearchRandom(x => x.VideoFileExtendedInfo.ExternalLink == externalLink);
-            return file?.Any() == true;
+            return await _FileRepository
+                .Any(x => x.VideoFileExtendedInfo.ExternalLink == externalLink);
         }
     }
 
@@ -220,9 +220,9 @@ namespace FileStore.Domain.Services
             return await _FileRepository.MoveToSeason(fileId, seasonId);
         }
 
-        public async Task<IEnumerable<T>> GetNew(int count)
+        public async Task<IEnumerable<T>> GetNew(int count, string userId)
         {
-            return await _FileRepository.GetNew(count);
+            return await _FileRepository.GetNew(count, userId);
         }
     }
 }

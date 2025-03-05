@@ -78,17 +78,17 @@ namespace API.FilmDownload
             try
             {
                 byte[] imageAsByteArray;
-                using (var webClient = new WebClient())
+                using (var httpClient = ProxyManager.GetHttpClientWithProxy())
                 {
                     try
                     {
-                        imageAsByteArray = webClient.DownloadData(video.Thumbnails.LastOrDefault()?.Url);
+                        imageAsByteArray = await httpClient.GetByteArrayAsync(video.Thumbnails.LastOrDefault()?.Url);
                     }
                     catch (Exception ex)
                     {
-                        NLog.LogManager.GetCurrentClassLogger().Error($"GetFileFromVideo Thumbnail Url:{video.Thumbnails.LastOrDefault()?.Url}");
-                        string coverUrl = YoutubeDownloader.GetCoverUrl(video.Id);
-                        imageAsByteArray = webClient.DownloadData(video.Thumbnails.LastOrDefault()?.Url);
+                        NLog.LogManager.GetCurrentClassLogger().Error(ex,$"GetFileFromVideo Thumbnail Url:{video.Thumbnails.LastOrDefault()?.Url}");
+                        string coverUrl = YoutubeDownloader. GetCoverUrl(video.Id);
+                        imageAsByteArray = await httpClient.GetByteArrayAsync(coverUrl);
                     }
                 }
 
@@ -96,7 +96,7 @@ namespace API.FilmDownload
             }
             catch (Exception ex)
             {
-                NLog.LogManager.GetCurrentClassLogger().Error($"GetFileFromVideo Thumbnail Url:{video.Thumbnails.LastOrDefault()?.Url}");
+                NLog.LogManager.GetCurrentClassLogger().Error(ex, $"GetFileFromVideo Thumbnail Url:{video.Thumbnails.LastOrDefault()?.Url}");
             }
 
             //var streamManifest = await youtube.Videos.Streams.GetManifestAsync(video.Url);

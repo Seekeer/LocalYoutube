@@ -219,7 +219,7 @@ namespace FileStore.Infrastructure.Repositories
             return true;
         }
 
-        public async Task<IEnumerable<T>> GetNew(int count)
+        public async Task<IEnumerable<T>> GetNew(int count, string userId)
         {
             var files = new List<T>();
 
@@ -227,7 +227,9 @@ namespace FileStore.Infrastructure.Repositories
             do
             {
                 var newFiles = DbSet
-                    .Include(x => x.Series).Include(x => x.VideoFileExtendedInfo)
+                        .Include(x => x.Series)
+                        .Include(x => x.VideoFileExtendedInfo)
+                        .Include(x => x.VideoFileUserInfos)
                     .Where(x => x.Series.Type != VideoType.ChildEpisode && !x.NeedToDelete).OrderByDescending(x => x.Id)
                     .Skip(taken)
                     .Take(count);
@@ -235,11 +237,13 @@ namespace FileStore.Infrastructure.Repositories
 
                 foreach (var file in newFiles)
                 {
+                    file.CurrentUserId = userId;
                     NLog.LogManager.GetCurrentClassLogger().Info($"File {file.Id}");
 
                     var filesWithSeasonCount = files.Count(x => x.SeasonId == file.SeasonId);
                     NLog.LogManager.GetCurrentClassLogger().Info($"filesWithSeasonCount {filesWithSeasonCount} finished: {file.IsFinished}");
-                    if (filesWithSeasonCount < _config.MaxSameSeasonInNewResponse && !file.IsFinished)
+                    if (!(files.Count(x => x.SeriesId == file.SeriesId) > 0 && file.Series.Type == VideoType.Courses) &&
+                        filesWithSeasonCount < _config.MaxSameSeasonInNewResponse && !file.IsFinished)
                         files.Add(file);
 
                     if (files.Count == count)
@@ -254,7 +258,9 @@ namespace FileStore.Infrastructure.Repositories
 
         public async Task<bool> Any(Expression<Func<T, bool>> predicate)
         {
-            return DbSet.Any(predicate);
+            return DbSet
+                .IgnoreQueryFilters()
+                .Any(predicate);
         }
 
     }

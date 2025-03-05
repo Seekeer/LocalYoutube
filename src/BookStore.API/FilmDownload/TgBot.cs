@@ -645,9 +645,10 @@ namespace API.FilmDownload
                             {
                                 errorLines.Add(task.OriginalLine);
                             },
-                            async videoFile =>
+                            async (downloaded, videoFile) =>
                             {
-                                await NotifyBotDownloadEnded(videoFile, task);
+                                if(downloaded)
+                                    await NotifyBotDownloadEnded(videoFile, task);
                             });
                     }
                     else

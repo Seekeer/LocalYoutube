@@ -101,10 +101,11 @@ namespace Infrastructure.Scheduler
                 {
                     await _bot.NotifyDownloadProblem(user.TgId, videoLink);
                 },
-                async file =>
+                async (downloaded, file) =>
                 {
                     result = true;
-                    await _bot.NotifyDownloadEnded(user.TgId, file);
+                    if(downloaded)
+                        await _bot.NotifyDownloadEnded(user.TgId, file);
                 });
 
             return result;

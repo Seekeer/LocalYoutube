@@ -155,8 +155,7 @@ namespace FileStore.API.Controllers
                 var file = await _fileService.GetById(fileId);
                 var path = file.Path;
                 var finfo = new FileInfo(path);
-                var fs = new FileStream(path, FileMode.Open); // convert it to a stream
-                //return wait TryToDownload(file);
+                var fs = new FileStream(path, FileMode.Open, FileAccess.Read); // convert it to a stream
 
                 return File(fs, "application/octet-stream", finfo.Name, enableRangeProcessing: true);
             }
@@ -300,9 +299,11 @@ namespace FileStore.API.Controllers
         [Route("getNew")]
         public async Task<ActionResult<List<DTO>>> GetNew(int count = 20)
         {
-            var files = _mapper.Map<List<F>>(await _fileService.GetNew(count));
+            string userId = await GetUserId(_userManager);
 
-            return Ok(_mapper.GetFiles<F, DTO>(files, await GetUserId(_userManager)));
+            var files = _mapper.Map<List<F>>(await _fileService.GetNew(count, userId));
+
+            return Ok(_mapper.GetFiles<F, DTO>(files, userId));
         }
     }
 }

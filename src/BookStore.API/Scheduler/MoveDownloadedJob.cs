@@ -42,7 +42,7 @@ namespace Infrastructure.Scheduler
             var movedFiles = 0;
             var torrentManager = _service.GetService<IRuTrackerUpdater>();
 
-            var files = db.Files.Where(x => x.Path.Contains(_appConfig.RootDownloadFolder) && !x.IsDownloading && !x.NeedToDelete)
+            var files = db.Files.Where(x => x.Path.Contains(_appConfig.RootDownloadFolder) && !x.IsDownloading)
                 .Include(x => x.VideoFileExtendedInfo).OrderBy(x => x.Duration).ToList();
             foreach (var file in files)
             {
