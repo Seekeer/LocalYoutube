@@ -6,9 +6,11 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Claims;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using Dtos;
+using FFMpegCore;
 using FileStore.API.Configuration;
 using FileStore.Domain.Dtos;
 using FileStore.Domain.Interfaces;
@@ -57,7 +59,7 @@ namespace FileStore.API.Controllers
     [Authorize]
     [Microsoft.AspNetCore.Cors.EnableCors("CorsPolicy")]
     [Route("api/[controller]")]
-    public abstract class FilesControllerBase<F,V, DTO> : MainController
+    public abstract class FilesControllerBase<F, V, DTO> : MainController
         where F : DbFile
         where DTO : IDtoId
     {
@@ -66,7 +68,7 @@ namespace FileStore.API.Controllers
         protected readonly IFileService<F, V> _fileService;
         private readonly IMemoryCache _memoryCache;
 
-        public FilesControllerBase(UserManager<ApplicationUser> userManager, IMapper mapper, 
+        public FilesControllerBase(UserManager<ApplicationUser> userManager, IMapper mapper,
             IFileService<F, V> FileService, IMemoryCache memoryCache)
         {
             _userManager = userManager;
@@ -109,9 +111,9 @@ namespace FileStore.API.Controllers
             using (var inputStream = new MemoryStream(uncompressedBitmapBytes))
             using (var outputStream = new MemoryStream())
             {
-                var result = MagicImageProcessor.ProcessImage(inputStream, 
-                    outputStream, new ProcessImageSettings() 
-                    { 
+                var result = MagicImageProcessor.ProcessImage(inputStream,
+                    outputStream, new ProcessImageSettings()
+                    {
                         Width = 1080,
                     });
 
@@ -141,6 +143,57 @@ namespace FileStore.API.Controllers
             return Ok(await _fileService.MoveToSeason(fileId, seasonId));
         }
 
+
+        public static async Task<string> ConvertForStreaming(string path, string resultFolder, CancellationTokenSource cancellationTokenSource = default)
+        {
+            Directory.CreateDirectory(resultFolder);
+            var fileInfo = new FileInfo(path);
+
+            var resultPath = Path.Combine(resultFolder, fileInfo.Name.Replace(fileInfo.Extension, ".mkv"));
+
+            var directory = new DirectoryInfo((@"Assets\downloadScript.txt"));
+            var encoderPath = Path.Combine(directory.Parent.FullName, "ffmpeg.exe");
+
+            var commandLineArguments = FFMpegArguments
+                .FromFileInput(path)
+                .OutputToFile(resultPath, false, options => options
+                    .WithVideoCodec(FFMpegCore.Enums.VideoCodec.LibX264)
+                    .WithConstantRateFactor(28)
+                    .WithAudioCodec(FFMpegCore.Enums.AudioCodec.Aac)
+                    .WithVariableBitrate(4)
+                    .UsingMultithreading(true)
+                    .WithVideoFilters(filterOptions => filterOptions
+                    .Scale(FFMpegCore.Enums.VideoSize.Hd))
+                    .WithFastStart())
+                    .Arguments;
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+
+                    // Must consume both stdout and stderr or deadlocks may occur
+                    // RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    RedirectStandardInput = true,
+                    FileName = encoderPath,
+                    Arguments = commandLineArguments,
+                    //WorkingDirectory = string.IsNullOrWhiteSpace(workingDirectory) ? string.Empty : workingDirectory,
+                    ErrorDialog = false
+                },
+                EnableRaisingEvents = true
+            };
+            process.ErrorDataReceived += Process_ErrorDataReceived;
+            return resultPath;
+        }
+        private static void Process_ErrorDataReceived(object sendingProcess,
+    DataReceivedEventArgs errLine)
+        {
+            Console.WriteLine(errLine?.Data);
+        }
+
         [HttpGet]
         [AllowAnonymous]
         [Route("getFileById")]
@@ -155,13 +208,17 @@ namespace FileStore.API.Controllers
                 var file = await _fileService.GetById(fileId);
                 var path = file.Path;
                 var finfo = new FileInfo(path);
-                var fs = new FileStream(path, FileMode.Open); // convert it to a stream
+
                 //return wait TryToDownload(file);
 
+                var tempFile = await ConvertForStreaming(path, "Converted");
+
+                var fs = new FileStream(tempFile, FileMode.Open); // convert it to a stream
                 return File(fs, "application/octet-stream", finfo.Name, enableRangeProcessing: true);
             }
             catch (Exception ex)
             {
+                logger.Debug("getFileById 5");
                 logger.Error(ex);
 
                 throw;
@@ -195,7 +252,7 @@ namespace FileStore.API.Controllers
 
         [HttpPatch]
         [Route("filmStarted")]
-        public async Task<ActionResult> FilmStarted([FromBody]int fileId)
+        public async Task<ActionResult> FilmStarted([FromBody] int fileId)
         {
             await _fileService.SetPosition(fileId, await GetUserId(_userManager), null, null);
 
@@ -300,7 +357,8 @@ namespace FileStore.API.Controllers
         [Route("getNew")]
         public async Task<ActionResult<List<DTO>>> GetNew(int count = 20)
         {
-            var files = _mapper.Map<List<F>>(await _fileService.GetNew(count));
+            string userId = await GetUserId(_userManager);
+            var files = _mapper.Map<List<F>>(await _fileService.GetNew(count, userId));
 
             return Ok(_mapper.GetFiles<F, DTO>(files, await GetUserId(_userManager)));
         }
