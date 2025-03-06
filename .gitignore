@@ -420,3 +420,4 @@ MigrationBackup/
 /src/BookStore.API/youtubeToken/
 
 *.pubxml.user
+/data/

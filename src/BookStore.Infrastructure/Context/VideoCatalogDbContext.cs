@@ -26,7 +26,7 @@ namespace FileStore.Infrastructure.Context
         public VideoCatalogDbContext CreateDbContext(string[] args)
         {
             var optionsBuilder = new DbContextOptionsBuilder<VideoCatalogDbContext>();
-            optionsBuilder.UseSqlServer("Server=localhost;Database=FileStore;Encrypt=False;Trusted_Connection=True;");
+            optionsBuilder.UseSqlServer("Server=127.0.0.1,1433;Database=FileStore;Encrypt=False;Trusted_Connection=False;User Id=sa;Password=p@ssword!1;MultipleActiveResultSets=true;Connection Timeout=3600;");
 
             return new VideoCatalogDbContext(optionsBuilder.Options);
         }

@@ -1,0 +1,5 @@
+docker compose up --detach
+
+ctrl + `
+cd .\BookStore.Infrastructure\
+dotnet ef database update --context VideoCatalogDbContext
