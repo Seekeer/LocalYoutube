@@ -83,6 +83,7 @@ namespace FileStore.API.Controllers
         public async Task<IActionResult> GetImage(int fileId, bool isMobile)
         {
             var key = GetImageKey(fileId, isMobile);
+
             if (!_memoryCache.TryGetValue(key, out byte[] image))
             {
                 var file = await _fileService.GetById(fileId);
@@ -101,7 +102,7 @@ namespace FileStore.API.Controllers
 
         private object GetImageKey(int fileId, bool isMobile)
         {
-            return $"{fileId}_{isMobile}";
+            return $"fileCover_{fileId}_{isMobile}";
         }
 
         private byte[] ResizeCover(byte[] uncompressedBitmapBytes)
@@ -152,8 +153,14 @@ namespace FileStore.API.Controllers
 
             try
             {
-                var file = await _fileService.GetById(fileId);
-                var path = file.Path;
+                var key = $"filePath_{fileId}";
+                var path = await _memoryCache.GetOrCreateAsync(key, async entry =>
+                {
+                    entry.SetSlidingExpiration(TimeSpan.FromMinutes(1));
+                    var file = await _fileService.GetById(fileId);
+                    return file.Path;
+                });
+
                 var finfo = new FileInfo(path);
                 var fs = new FileStream(path, FileMode.Open, FileAccess.Read); // convert it to a stream
 
