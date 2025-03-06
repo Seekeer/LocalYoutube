@@ -54,7 +54,7 @@ namespace FileStore.API.Configuration
 #if DEBUG
             services.AddQuartz(q =>
             {
-                q.ScheduleJob<MigrateJob>(trigger => trigger
+                q.ScheduleJob<ImagesHelper>(trigger => trigger
                     .WithIdentity("trigger555", "group5")
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(1)).RepeatForever())

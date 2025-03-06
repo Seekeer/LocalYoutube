@@ -85,7 +85,7 @@ namespace FileStore.API.Controllers
             var key = GetImageKey(fileId, isMobile);
             if (!_memoryCache.TryGetValue(key, out byte[] image))
             {
-                image = await MigrateJob.GetCover(fileId);
+                image = await ImagesHelper.GetCover(fileId);
 
                 if (isMobile)
                     image = ResizeCover(image);

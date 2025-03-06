@@ -10,13 +10,29 @@ using TL;
 
 namespace Infrastructure.Scheduler
 {
-    public class MigrateJob (VideoCatalogDbContext videoCatalogContext) : IJob
+    public class ImagesHelper ()
     {
         public static async Task<byte[]> GetCover(int id)
         {
             return await File.ReadAllBytesAsync(GetFilePath(id));
         }
         const string folder = @"U:\MyFiles\Apps\VideoServer\Covers";
+
+        
+        public static async Task SaveImage(int fileId, byte[] cover)
+        {
+            if (cover != null)
+            {
+                using (var ms = new MemoryStream(cover))
+                {
+                    using (var fs = new FileStream(GetFilePath(fileId), FileMode.Create))
+                    {
+                        ms.WriteTo(fs);
+                    }
+                }
+            }
+
+        }
 
         public async Task Execute(IJobExecutionContext context)
         {

@@ -86,7 +86,6 @@ namespace FileStore.Domain.Models
         public DbFile DbFile { get; set; }
         public int VideoFileId { get; set; }
 
-        public byte[] Cover { get; set; }
         public string Genres { get; set; }
         public int Year { get; set; }
         public string Description { get; set; }
