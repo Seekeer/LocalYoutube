@@ -17,53 +17,60 @@
 
     </ContentPage.Resources>
 
-    <VerticalStackLayout>
+    <ScrollView>
+        <VerticalStackLayout >
 
-        <ActivityIndicator 
-                       IsVisible="{Binding IsBusy}"
-                       IsRunning="{Binding IsBusy}"
-                       Color="Red"/>
-        <Label 
-            FontSize="Large"
-            IsVisible="{Binding InternetDisabled}" 
-            HorizontalOptions="Center"
-            Text="No internet"
-            TextColor="Red"
-            />
-        <Button
-            Text="Скачанное"
-            Background="Green"
-            Command="{Binding ShowDownloadedCommand}"
-            />
-        <Button
-            Text="Новинки"
-            Background="BlueViolet"
-            Command="{Binding ShowFreshCommand}"
-            />
-        <Button
-            Text="Последнее видео"
-            Background="Green"
-            Command="{Binding ShowLatestVideoCommand}"
-            />
-        <Button
-            Text="История"
-            Background="CadetBlue"
-            Command="{Binding ShowHistoryCommand}"
-            />
-        <Button
-            Text="Серии"
-            Background="Blue"
-            Command="{Binding ShowSeriesCommand}"
-            />
-        <Button
-            Text="Скачиваемое"
-            Background="Orange"
-            Command="{Binding ShowDownloadingCommand}"
-            />
-        <Button
-            Text="Разлогиниться"
-            Background="Red"
-            Command="{Binding LogoutCommand}"
-            />
-    </VerticalStackLayout>
+            <ActivityIndicator 
+                           IsVisible="{Binding IsBusy}"
+                           IsRunning="{Binding IsBusy}"
+                           Color="Red"/>
+            <Label 
+                FontSize="Large"
+                IsVisible="{Binding InternetDisabled}" 
+                HorizontalOptions="Center"
+                Text="No internet"
+                TextColor="Red"
+                />
+            <Button
+                Text="Скачанное"
+                Background="Green"
+                Command="{Binding ShowDownloadedCommand}"
+                />
+            <Button
+                Text="Новинки"
+                Background="BlueViolet"
+                Command="{Binding ShowFreshCommand}"
+                />
+            <Button
+                Text="Последнее видео"
+                Background="Green"
+                Command="{Binding ShowLatestVideoCommand}"
+                />
+            <Button
+                Text="История"
+                Background="CadetBlue"
+                Command="{Binding ShowHistoryCommand}"
+                />
+            <Button
+                Text="Серии"
+                Background="Blue"
+                Command="{Binding ShowSeriesCommand}"
+                />
+            <Button
+                Text="Скачиваемое"
+                Background="Orange"
+                Command="{Binding ShowDownloadingCommand}"
+                />
+            <Button
+                Text="Разлогиниться"
+                Background="Red"
+                Command="{Binding LogoutCommand}"
+                />
+            <Button
+                Text="Показать логи"
+                Background="Red"
+                Command="{Binding ShowLogsCommand}"
+                />
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

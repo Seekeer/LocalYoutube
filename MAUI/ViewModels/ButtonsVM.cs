@@ -7,6 +7,7 @@ using FileStore.Domain.Models;
 using MAUI.Downloading;
 using MAUI.Pages;
 using MAUI.Services;
+using MetroLog.Maui;
 using Shiny.NET;
 using System.Collections.ObjectModel;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -85,9 +86,16 @@ namespace MAUI.ViewModels
         }
 
         [RelayCommand]
+        public async Task ShowLogs()
+        {
+            var logController = new LogController();
+            logController.GoToLogsPageCommand.Execute(null);
+        }
+
+        [RelayCommand]
         public async Task ShowLatestVideo()
         {
-            IsBusy = true;
+                IsBusy = true;
 
             var dtos = await _api.GetLatestAsync(count: 1);
             if(dtos.Any())
