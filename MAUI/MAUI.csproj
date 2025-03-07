@@ -2,9 +2,9 @@
 
 	<PropertyGroup>
 		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
-		<!-- <TargetFrameworks>$(TargetFrameworks);net9.0-tizen</TargetFrameworks> -->
-		<TargetFrameworks>net9.0-android</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net9.0-windows10.0.19041.0</TargetFrameworks>
+		<!-- <TargetFrameworks>$(TargetFrameworks);net8.0-tizen</TargetFrameworks> -->
+		<TargetFrameworks>net8.0-android</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net8.0-windows10.0.19041.0</TargetFrameworks>
 
 		<!-- Note for MacCatalyst:
 		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
@@ -44,24 +44,24 @@
 		<HoursBetweenUpdateChecks>168</HoursBetweenUpdateChecks>
 	</PropertyGroup>
 	
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|AnyCPU'">
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-android|AnyCPU'">
 	  <AndroidPackageFormat>apk</AndroidPackageFormat>
 	  <ApplicationTitle>LocalTube</ApplicationTitle>
 	  <ApplicationId>com.companyname.localtube</ApplicationId>
 	  <ApplicationIdGuid>8d4fc863-91b5-4037-b3df-b037b8708fdb</ApplicationIdGuid>
 	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-windows10.0.19041.0|AnyCPU'">
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-windows10.0.19041.0|AnyCPU'">
 	  <ApplicationTitle>LocalTube</ApplicationTitle>
 	  <ApplicationId>com.companyname.localtube</ApplicationId>
 	  <ApplicationIdGuid>8d4fc863-91b5-4037-b3df-b037b8708fda</ApplicationIdGuid>
 	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|AnyCPU'">
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-android|AnyCPU'">
 	  <ApplicationTitle>DevTube</ApplicationTitle>
 	  <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
 	  <ApplicationId>com.companyname.localtubedev</ApplicationId>
 	  <ApplicationIdGuid>8d4fc863-91b5-4037-b3df-b037b8708fda</ApplicationIdGuid>
 	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-windows10.0.19041.0|AnyCPU'">
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-windows10.0.19041.0|AnyCPU'">
 	  <ApplicationTitle>LocalTube</ApplicationTitle>
 	  <ApplicationId>com.companyname.localtube</ApplicationId>
 	  <ApplicationIdGuid>8d4fc863-91b5-4037-b3df-b037b8708fda</ApplicationIdGuid>
@@ -114,15 +114,15 @@
 
 	<ItemGroup>
 		<PackageReference Include="AutoMapper" Version="12.0.0" />
-		<PackageReference Include="CommunityToolkit.Maui" Version="11.1.0" />
-		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="6.0.1" />
-		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="9.0.2" />
+		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="4.0.1" />
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="MetroLog.Maui" Version="2.1.0" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.2" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.2" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.40" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="9.0.40" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.2" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.7" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="8.0.71" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="8.0.71" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
 		<PackageReference Include="Shiny.Hosting.Maui" Version="3.3.3" />
 		<PackageReference Include="Shiny.Net.Http" Version="3.3.3" />
 	</ItemGroup>

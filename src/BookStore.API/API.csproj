@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <UserSecretsId>358c580e-a5e3-46e4-8cca-b3ca50826cc7</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>..\..</DockerfileContext>
@@ -40,9 +40,9 @@
     <PackageReference Include="HtmlAgilityPack" Version="1.11.54" />
     <PackageReference Include="HtmlAgilityPack.CssSelectors.NetCore" Version="1.2.1" />
     <PackageReference Include="MediaTypeMap" Version="2.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Certificate" Version="9.0.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.2">
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Certificate" Version="7.0.14" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.14" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.14">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
