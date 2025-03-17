@@ -107,7 +107,7 @@ namespace API.FilmDownload
             // TODO 
             path = path.Trim('.');
 
-            var validFilename = video.Title.GetCorrectFileName();
+            var validFilename = video.Id.Value.GetCorrectFileName();
 
             path = Path.Combine(path, validFilename);
             path = path.Trim('.');
