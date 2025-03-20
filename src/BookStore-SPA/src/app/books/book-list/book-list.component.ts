@@ -121,6 +121,7 @@ export class BookListComponent implements OnInit {
   allSeasons: Seasons[];
   allSeries: Serie[];
   playlists: Serie[];
+  isNew: boolean;
 
   constructor(private router: Router,
               private service: FileService,
@@ -371,6 +372,7 @@ displayListForType() {
         break;
       }
       case MenuVideoType.new:{
+        this.isNew = true;
         this.showSpinner();
         this.selectSeries(false);
         this.getPlaylists();
@@ -544,6 +546,10 @@ public sendToTG(film: Book){
             this.spinner.hide() 
       }, 5);
 
+}
+
+public skip(book: Book){
+  this.service.skipAtNew(book.id).subscribe();
 }
 
 public changeSeason(film: Book){

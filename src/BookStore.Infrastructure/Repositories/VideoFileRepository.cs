@@ -243,7 +243,7 @@ namespace FileStore.Infrastructure.Repositories
                     var filesWithSeasonCount = files.Count(x => x.SeasonId == file.SeasonId);
                     NLog.LogManager.GetCurrentClassLogger().Info($"filesWithSeasonCount {filesWithSeasonCount} finished: {file.IsFinished}");
                     if (!(files.Count(x => x.SeriesId == file.SeriesId) > 0 && file.Series.Type == VideoType.Courses) &&
-                        filesWithSeasonCount < _config.MaxSameSeasonInNewResponse && !file.IsFinished)
+                        filesWithSeasonCount < _config.MaxSameSeasonInNewResponse && !file.IsFinished && file.VideoFileUserInfo?.SkipFile != true)
                         files.Add(file);
 
                     if (files.Count == count)
@@ -263,5 +263,18 @@ namespace FileStore.Infrastructure.Repositories
                 .Any(predicate);
         }
 
+        public async Task SkipNewAsync(int id, string userId)
+        {
+            var info = Db.FilesUserInfo.FirstOrDefault(x => x.UserId == userId && x.VideoFileId == id);
+
+            if (info == null)
+            {
+                info = new FileUserInfo { VideoFileId = id, UserId = userId };
+                Db.Add(info);
+            }
+
+            info.SkipFile = true;
+            await Db.SaveChangesAsync();
+        }
     }
 }

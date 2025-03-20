@@ -57,7 +57,7 @@ namespace FileStore.API.Configuration
                 q.ScheduleJob<CheckYoutubePlaylistJob>(trigger => trigger
                     .WithIdentity("trigger555", "group5")
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(1000000)).RepeatForever())
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(1)).RepeatForever())
                 );
             });
 

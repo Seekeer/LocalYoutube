@@ -44,6 +44,6 @@ namespace FileStore.Domain.Interfaces
         Task<bool> MoveToSeason(int fileId, int seasonId);
         Task<FileUserInfo> GetPosition(int fileId, string userId);
         Task<IEnumerable<T>> GetNew(int count, string userId);
-
+        Task SkipNew(int id, string userId);
     }
 }

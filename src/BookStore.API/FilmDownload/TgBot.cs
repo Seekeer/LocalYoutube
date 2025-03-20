@@ -85,7 +85,7 @@ namespace API.FilmDownload
             {
                 await SendAdminMessage($"Сервер стартанул");
 
-                CreateTGDict();
+                await CreateTGDict();
                 await InitCommands();
             });
         }
@@ -111,11 +111,11 @@ namespace API.FilmDownload
             return _tgSeasonDict;
         }
 
-        private void CreateTGDict()
+        private async Task CreateTGDict()
         {
             var db = _GetDb();
             var manager = new DbUpdateManager(db);
-            var seriesDownload = db.Series.First(x => x.Id == 18);
+            var seriesDownload = await db.Series.FirstAsync(x => x.Id == 18);
 
             // TODO hardcodes
             // Helen
@@ -277,8 +277,8 @@ namespace API.FilmDownload
                     case Tg.UpdateType.Unknown:
                         break;
                     case Tg.UpdateType.Message:
-                        if (!IsAuthorValid(update.Message.From.Id))
-                            return;
+                        //if (!IsAuthorValid(update.Message.From.Id))
+                        //    return;
 
                         NLog.LogManager.GetCurrentClassLogger().Info($"Tg received from {update.Message.From.Id} message {update.Message.Text}");
 

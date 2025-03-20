@@ -95,6 +95,7 @@
           <button class="btn btn-outline-danger btn-sm ml-2" (click)="deleteFilm(content, book)">Удалить фильм</button>
           <button class="btn btn-outline-primary btn-sm ml-2" (click)="sendToTG(book)">Отправить в ТГ</button>
           <button class="btn btn-outline-success btn-sm ml-2" (click)="openVideo( book, true)">В новой вкладке</button>
+          <button *ngIf="isNew" class="btn btn-outline-danger btn-sm ml-2" (click)="skip( book)">Не показывать</button>
 
           <app-add-to-playlist  class="mt-3" style="width: 33%;"  [videoId]="book.id" ></app-add-to-playlist>
 

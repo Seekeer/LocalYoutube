@@ -99,6 +99,17 @@ namespace FileStore.API.Controllers
             return Ok(_mapper.GetFiles<VideoFile, VideoFileResultDto>(Files, await GetUserId(_userManager)));
         }
 
+        [HttpPut()]
+        [Route("skipAtNew/{videoId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> SkipAtNew(int videoId)
+        {
+            await _fileService.SkipNew(videoId, await GetUserId(_userManager));
+
+            return Ok();
+        }
+
+
         [HttpGet("{id:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -108,7 +119,7 @@ namespace FileStore.API.Controllers
 
             if (File == null) return NotFound();
 
-            return Ok(_mapper.GetFile<VideoFile, VideoFileResultDto>(File,await GetUserId(_userManager)));
+            return Ok(_mapper.GetFile<VideoFile, VideoFileResultDto>(File, await GetUserId(_userManager)));
         }
 
         [HttpGet]

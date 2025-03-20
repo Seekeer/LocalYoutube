@@ -5,7 +5,7 @@
 namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class CascadeDelete : Migration
+    public partial class SkipAtNew : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -53,6 +53,13 @@ namespace Infrastructure.Migrations
             migrationBuilder.DropForeignKey(
                 name: "FK_VideoFileUserInfos_DbFile_VideoFileId",
                 table: "VideoFileUserInfos");
+
+            migrationBuilder.AddColumn<bool>(
+                name: "SkipFile",
+                table: "VideoFileUserInfos",
+                type: "bit",
+                nullable: false,
+                defaultValue: false);
 
             migrationBuilder.AddForeignKey(
                 name: "FK_AudioFile_DbFile_Id",
@@ -108,7 +115,7 @@ namespace Infrastructure.Migrations
                 column: "SeriesId",
                 principalTable: "Series",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.NoAction);
 
             migrationBuilder.AddForeignKey(
                 name: "FK_VideoFile_DbFile_Id",
@@ -188,6 +195,10 @@ namespace Infrastructure.Migrations
 
             migrationBuilder.DropForeignKey(
                 name: "FK_VideoFileUserInfos_DbFile_VideoFileId",
+                table: "VideoFileUserInfos");
+
+            migrationBuilder.DropColumn(
+                name: "SkipFile",
                 table: "VideoFileUserInfos");
 
             migrationBuilder.AddForeignKey(

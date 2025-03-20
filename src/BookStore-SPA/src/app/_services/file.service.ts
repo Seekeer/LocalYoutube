@@ -58,6 +58,10 @@ export class FileService {
     public filmStarted(fileId: number) {
         return this.http.patch(`${this.baseUrl}files/filmStarted`, fileId);
     }
+
+    public skipAtNew(fileId: number) {
+        return this.http.put(`${this.baseUrl}files/skipAtNew/${fileId}`, null);
+    }
     
     public getFilmsByTypeUniqueSeason(type: VideoType) {
         return this.http.get<Book[]>(`${this.baseUrl}files/getFileByTypeUniqueSeason/${type}`);

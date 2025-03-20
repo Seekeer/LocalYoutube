@@ -276,6 +276,9 @@ namespace Infrastructure.Migrations
                     b.Property<double>("Rating")
                         .HasColumnType("float");
 
+                    b.Property<bool>("SkipFile")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("UpdatedDate")
                         .HasColumnType("datetime2");
 

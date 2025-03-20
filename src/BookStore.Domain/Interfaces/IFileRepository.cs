@@ -27,5 +27,6 @@ namespace FileStore.Domain.Interfaces
         Task<bool> MoveToSeason(int fileId, int serieId);
         Task<IEnumerable<T>> GetNew(int count, string userId);
         Task<bool> Any(Expression<Func<T, bool>> predicate);
+        Task SkipNewAsync(int id, string userId);
     }
 }

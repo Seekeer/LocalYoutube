@@ -105,7 +105,7 @@ namespace FileStore.Domain.Models
 
         public double Position { get; set; }
         public double Rating { get; set; }
-
+        public bool SkipFile { get; set; }
     }
 
     public abstract class DbFile : TrackUpdateCreateTimeEntity

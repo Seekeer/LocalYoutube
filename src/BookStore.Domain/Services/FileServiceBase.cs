@@ -224,5 +224,10 @@ namespace FileStore.Domain.Services
         {
             return await _FileRepository.GetNew(count, userId);
         }
+
+        public async Task SkipNew(int id, string userId)
+        {
+            await _FileRepository.SkipNewAsync(id, userId);
+        }
     }
 }
