@@ -307,9 +307,15 @@ namespace Infrastructure
 
         public static string ClearFileName(this string path)
         {
-            var fInfo = new FileInfo(path);
+            var name = path;
 
-            var name = fInfo.Name;
+            // If it's file path - get only filename
+            if (Path.IsPathRooted(path))// path.Substring(1, 3) == @":\")
+            {
+                var fInfo = new FileInfo(path);
+                name = fInfo.Name;
+            }
+
             name = name.RemoveMany(new string[] { "WEB-DL" , "ATV3", "1080p", "720p", ".mkv", ".mp4" });
 
             name = name.EndingBefore("[", 10);

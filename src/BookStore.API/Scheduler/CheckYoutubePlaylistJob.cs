@@ -10,6 +10,7 @@ using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Quartz;
 using System;
 using System.Collections.Generic;
@@ -37,36 +38,21 @@ namespace Infrastructure.Scheduler
         }
     }
 
-    public class CheckYoutubeService : IDisposable
+    public class CheckYoutubeService (UserManager<ApplicationUser> _userManager, TgBot _bot,
+            ILogger<CheckYoutubeService> _logger,
+            IServiceScopeFactory _serviceScopeFactory, AppConfig _appConfig,
+            IExternalVideoMappingsRepository _externalVideoRepository, IExternalVideoMappingsService _externalVideoService) : IDisposable
     {
         private const string PLAYLIST_NAME = "LocalTube";
         private const string ApplicationName = "Youtube API .NET Quickstart";
         static string[] Scopes = { YouTubeService.Scope.Youtube };
         private static string _playlistId;
-        private readonly IServiceScopeFactory _scopeFactory;
-        private readonly AppConfig _appConfig;
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly TgBot _bot;
-        private readonly IExternalVideoMappingsRepository _externalVideoRepository;
-        private readonly IExternalVideoMappingsService _externalVideoService;
 
         public void Dispose()
         {
             _userManager.Dispose();
             _externalVideoRepository.Dispose();
             _externalVideoService.Dispose();
-        }
-
-        public CheckYoutubeService(UserManager<ApplicationUser> userManager, TgBot bot,
-            IServiceScopeFactory serviceScopeFactory, AppConfig appConfig,
-            IExternalVideoMappingsRepository externalVideoRepository, IExternalVideoMappingsService externalVideoService) 
-        {
-            _scopeFactory = serviceScopeFactory;
-            _appConfig = appConfig;
-            _userManager = userManager;
-            _bot = bot;
-            _externalVideoRepository = externalVideoRepository;
-            _externalVideoService = externalVideoService;
         }
 
         public async Task Execute(bool forced)
@@ -78,7 +64,14 @@ namespace Infrastructure.Scheduler
             // Track New channels
             //await FillChanelsMapping(youtubeService);
 
-            await CheckChannelsUpdates(youtubeService, forced);
+            try
+            {
+                await CheckChannelsUpdates(youtubeService, forced);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Execute");
+            }
 
             PlaylistItemListResponse playlistResponse = await GetLocalTubePlayListVideos(youtubeService);
             foreach (var item in playlistResponse.Items)
@@ -96,7 +89,7 @@ namespace Infrastructure.Scheduler
             var youtubeDownloader = new YoutubeDownloader(_appConfig, true);
 
             var result = false;
-            await youtubeDownloader.DownloadAndProcess(new DownloadTask(videoLink, coverUrl) { IsAutoTask = isAuto }, _scopeFactory,
+            await youtubeDownloader.DownloadAndProcess(new DownloadTask(videoLink, coverUrl) { IsAutoTask = isAuto }, _serviceScopeFactory,
                 async ex =>
                 {
                     await _bot.NotifyDownloadProblem(user.TgId, videoLink);
@@ -135,7 +128,7 @@ namespace Infrastructure.Scheduler
 
             NLog.LogManager.GetCurrentClassLogger().Info($"Start CheckChannelsUpdates");
 
-            //records = records.Where(x => x.Id == 8);
+            //records = records.Where(x => x.Id == 4);
             var user = await _userManager.FindByNameAsync("dim");
 
             foreach (var subscription in records)
