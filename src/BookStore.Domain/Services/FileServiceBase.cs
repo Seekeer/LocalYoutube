@@ -229,5 +229,10 @@ namespace FileStore.Domain.Services
         {
             await _FileRepository.SkipNewAsync(id, userId);
         }
+
+        public async Task<CoverInfo> GetCoverById(int fileId)
+        {
+            return await _FileRepository.GetCoverById(fileId);
+        }
     }
 }

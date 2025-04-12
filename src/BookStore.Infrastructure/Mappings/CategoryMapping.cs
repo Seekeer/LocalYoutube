@@ -29,7 +29,7 @@ namespace FileStore.Infrastructure.Context
         {
             builder.HasKey(c => c.Id);
 
-            builder.Property(c => c.Cover);
+            //builder.Property(c => c.Cover);
 
             builder.HasOne(video => video.DbFile)
                 .WithOne(info => info.VideoFileExtendedInfo)
@@ -37,6 +37,22 @@ namespace FileStore.Infrastructure.Context
                 ;
 
             builder.ToTable("VideoFileExtendedInfos");
+        }
+    }
+    public class CoverInfoMapping : IEntityTypeConfiguration<CoverInfo>
+    {
+        public void Configure(EntityTypeBuilder<CoverInfo> builder)
+        {
+            builder.HasKey(c => c.Id);
+
+            builder.Property(c => c.Cover);
+
+            builder.HasOne(video => video.DbFile)
+                .WithOne(info => info.CoverInfo)
+                .HasForeignKey<CoverInfo>(info => info.VideoFileId)
+                ;
+
+            builder.ToTable("VideoFileCoverInfo");
         }
     }
     public class VideoFileUserInfoMapping : IEntityTypeConfiguration<FileUserInfo>

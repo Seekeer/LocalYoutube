@@ -84,7 +84,7 @@ namespace API.Controllers
                 file.Duration = DbUpdateManager.GetDuration(file.Path);
 
             if (updateCover)
-                file.VideoFileExtendedInfo.SetCover(info.Cover);
+                file.SetCover(info.Cover);
         }
 
         internal async Task<IEnumerable<TorrentInfo>> Get()
@@ -134,7 +134,7 @@ namespace API.Controllers
             file.VideoFileExtendedInfo.Description = info.Description;
 
             if (info.Cover != null && info.Cover.Length > 30 * 1024)
-                file.VideoFileExtendedInfo.SetCover(info.Cover);
+                file.SetCover(info.Cover);
             file.VideoFileExtendedInfo.Year = info.Year;
             file.Duration = info.Duration;
 

@@ -29,7 +29,7 @@ namespace Infrastructure
 
     public static class FileExtendedInfoExtension
     {
-        public static void SetCoverByUrl(this FileExtendedInfo info, string url)
+        public static void SetCoverByUrl(this DbFile info, string url)
         {
             try
             {
@@ -46,9 +46,10 @@ namespace Infrastructure
             }
         }
 
-        public static void SetCover(this FileExtendedInfo info, byte[] cover)
+        public static void SetCover(this DbFile info, byte[] cover)
         {
-            info.Cover = ResizeImage(cover);
+            info.CoverInfo = new CoverInfo();
+            info.CoverInfo.Cover = ResizeImage(cover);
         }
 
         private static byte[] ResizeImage(byte[] cover)
@@ -226,7 +227,7 @@ namespace Infrastructure
                 if (newFilePath == null)
                     return;
 
-                if (file.VideoFileExtendedInfo.Cover == null)
+                if (file.CoverInfo?.Cover == null)
                     VideoHelper.FillVideoProperties(file);
 
                 file.Path = newFilePath;
@@ -563,23 +564,6 @@ namespace Infrastructure
             }
         }
 
-        public void UpdateAllImages()
-        {
-            var files = _db.FilesInfo;
-            foreach (var file in files) 
-            {
-                try
-                {
-                    file.SetCover(file.Cover);
-                    _db.SaveChanges();
-                }
-                catch (Exception e)
-                {
-
-                }
-            }
-        }
-
         public static int GetSeriesNumberFromName(string name)
         {
             var numberStr = Regex.Match(name, @"\d+\.*\d*").Value;
@@ -757,7 +741,7 @@ namespace Infrastructure
             {
                 _type = info.Type;
                 var newFiles = AddSeason(info.SeriesId, dir, info.Name);
-                newFiles.ToList().ForEach(x => x.VideoFileExtendedInfo.SetCover(info.Cover));
+                newFiles.ToList().ForEach(x => x.SetCover(info.Cover));
                 result.AddRange(newFiles);
             }
             // Check that files ~ same size => they are series.
@@ -839,10 +823,10 @@ namespace Infrastructure
                 if (tag != null)
                 {
                     audioFile.Name = tag.Title ?? audioFile.Name;
-                    audioFile.VideoFileExtendedInfo.Cover = tag.Pictures.FirstOrDefault()?.PictureData;
+                    audioFile.CoverInfo = new CoverInfo();
+                    audioFile.CoverInfo.Cover = tag.Pictures.FirstOrDefault()?.PictureData;
                     audioFile.Artist = tag.Artists?.Value.FirstOrDefault();
                 }
-
             }
 
             try
@@ -939,7 +923,7 @@ namespace Infrastructure
             if (cover != null)
             {
                 var file = files.First();
-                file.VideoFileExtendedInfo.SetCover(cover);
+                file.SetCover(cover);
             }
 
             _db.AudioFiles.AddRange(files);
@@ -998,7 +982,7 @@ namespace Infrastructure
             {
                 var file = files.First();
 
-                file.VideoFileExtendedInfo.SetCover(File.ReadAllBytes(coverImage));
+                file.SetCover(File.ReadAllBytes(coverImage));
             }
 
             foreach (var file in files)

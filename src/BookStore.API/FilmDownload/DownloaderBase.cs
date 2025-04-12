@@ -5,11 +5,13 @@ using FileStore.Domain.Models;
 using FileStore.Domain.Services;
 using FileStore.Infrastructure.Repositories;
 using Infrastructure;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using OpenQA.Selenium.DevTools.V126.CSS;
 using Polly;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -154,6 +156,10 @@ namespace API.FilmDownload
         }
     }
 
+    public class TestEx : DbException
+    {
+
+    }
     public abstract class DownloaderBase : IDisposable
     {
         protected DownloaderBase(AppConfig config) { 
@@ -333,7 +339,7 @@ namespace API.FilmDownload
             value.VideoFileExtendedInfo.ExternalLink = task.Uri.ToString();
 
             if(!string.IsNullOrEmpty(task.CoverUrl))
-                value.VideoFileExtendedInfo.SetCoverByUrl(task.CoverUrl);
+                value.SetCoverByUrl(task.CoverUrl);
         }
 
         public virtual void Dispose()

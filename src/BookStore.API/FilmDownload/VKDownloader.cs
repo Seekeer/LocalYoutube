@@ -115,7 +115,7 @@ namespace API.FilmDownload
             {
                 imageAsByteArray = webClient.DownloadData(image.Url);
             }
-            file.VideoFileExtendedInfo.SetCover(imageAsByteArray);
+            file.SetCover(imageAsByteArray);
 
             var path = Path.Combine(rootDownloadFolder, new string(channelName.Where(ch => !Path.InvalidPathChars.Contains(ch)).ToArray()));
             Directory.CreateDirectory(path);

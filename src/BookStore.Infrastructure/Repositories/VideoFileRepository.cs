@@ -276,5 +276,10 @@ namespace FileStore.Infrastructure.Repositories
             info.SkipFile = true;
             await Db.SaveChangesAsync();
         }
+
+        public Task<CoverInfo> GetCoverById(int fileId)
+        {
+            return Db.CoversInfo.FirstOrDefaultAsync(x => x.VideoFileId == fileId);
+        }
     }
 }

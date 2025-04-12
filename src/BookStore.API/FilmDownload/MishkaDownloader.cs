@@ -126,7 +126,7 @@ namespace API.FilmDownload
             {
                 imageAsByteArray = webClient.DownloadData(img.GetAttributeValue("src", ""));
             }
-            file.VideoFileExtendedInfo.SetCover(imageAsByteArray);
+            file.SetCover(imageAsByteArray);
 
             var validFilename = file.Name.GetCorrectFileName();
 

@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using PhotoSauce.MagicScaler;
+using VkNet.Model;
 
 namespace FileStore.API.Controllers
 {
@@ -86,17 +87,21 @@ namespace FileStore.API.Controllers
 
             if (!_memoryCache.TryGetValue(key, out byte[] image))
             {
-                var file = await _fileService.GetById(fileId);
+                var cover = await _fileService.GetCoverById(fileId);
 
-                if (file?.Cover == null)
+                if (cover == null)
                     return NotFound();
 
-                image = file.VideoFileExtendedInfo.Cover;
+                image = cover.Cover;
                 if (isMobile)
                     image = ResizeCover(image);
 
                 _memoryCache.Set(key, image);
             }
+
+            if (image == null)
+                return NotFound();
+
             return File(image, "application/octet-stream", "cover.jpeg");
         }
 
@@ -158,7 +163,7 @@ namespace FileStore.API.Controllers
                 {
                     entry.SetSlidingExpiration(TimeSpan.FromMinutes(1));
                     var file = await _fileService.GetById(fileId);
-                    return file.Path;
+                    return file?.Path;
                 });
 
                 var finfo = new FileInfo(path);

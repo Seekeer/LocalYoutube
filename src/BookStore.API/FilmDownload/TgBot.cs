@@ -35,6 +35,8 @@ using System.Xml.Linq;
 using Telegram.Bot.Polling;
 using OpenQA.Selenium.DevTools.V126.CSS;
 using Infrastructure.Scheduler;
+using Microsoft.Data.SqlClient;
+using System.Data.Common;
 //using Polly;
 
 namespace API.FilmDownload
@@ -211,7 +213,7 @@ namespace API.FilmDownload
                 ImageConverter converter = new ImageConverter();
                 var bytes = (byte[])converter.ConvertTo(data.Bitmap, typeof(byte[]));
 
-                file.VideoFileExtendedInfo.SetCover(bytes);
+                file.SetCover(bytes);
                 await fileRepo.UpdateAsync(file);
 
                 var tgMessage = await _botClient.SendTextMessageAsync(new ChatId(data.TgId),
@@ -643,7 +645,8 @@ namespace API.FilmDownload
                         await downloader.DownloadAndProcess(task, _serviceScopeFactory,
                             async ex =>
                             {
-                                errorLines.Add(task.OriginalLine);
+                                if(ex is not SqlException)
+                                    errorLines.Add(task.OriginalLine);
                             },
                             async (downloaded, videoFile) =>
                             {
@@ -838,7 +841,7 @@ namespace API.FilmDownload
                 var fileId = int.Parse(command.GetDataParts().First());
                 var file =await fileService.GetById(fileId);
 
-                file.VideoFileExtendedInfo.SetCoverByUrl(command.GetDataParts().Last());
+                file.SetCoverByUrl(command.GetDataParts().Last());
             }
 
             return true;

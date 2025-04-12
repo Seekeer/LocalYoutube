@@ -92,7 +92,7 @@ namespace API.FilmDownload
                     }
                 }
 
-                file.VideoFileExtendedInfo.SetCover(imageAsByteArray);
+                file.SetCover(imageAsByteArray);
             }
             catch (Exception ex)
             {

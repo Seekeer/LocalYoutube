@@ -90,6 +90,28 @@ namespace Infrastructure.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("FileStore.Domain.Models.CoverInfo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<byte[]>("Cover")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int>("VideoFileId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VideoFileId")
+                        .IsUnique();
+
+                    b.ToTable("VideoFileCoverInfo", (string)null);
+                });
+
             modelBuilder.Entity("FileStore.Domain.Models.DbFile", b =>
                 {
                     b.Property<int>("Id")
@@ -199,9 +221,6 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<byte[]>("Cover")
-                        .HasColumnType("varbinary(max)");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
@@ -534,6 +553,17 @@ namespace Infrastructure.Migrations
                     b.ToTable("VideoFile", (string)null);
                 });
 
+            modelBuilder.Entity("FileStore.Domain.Models.CoverInfo", b =>
+                {
+                    b.HasOne("FileStore.Domain.Models.DbFile", "DbFile")
+                        .WithOne("CoverInfo")
+                        .HasForeignKey("FileStore.Domain.Models.CoverInfo", "VideoFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DbFile");
+                });
+
             modelBuilder.Entity("FileStore.Domain.Models.DbFile", b =>
                 {
                     b.HasOne("FileStore.Domain.Models.Season", "Season")
@@ -669,6 +699,8 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("FileStore.Domain.Models.DbFile", b =>
                 {
+                    b.Navigation("CoverInfo");
+
                     b.Navigation("Marks");
 
                     b.Navigation("Playlists");

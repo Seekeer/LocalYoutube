@@ -60,6 +60,7 @@ namespace FileStore.Infrastructure.Context
         public DbSet<VideoFile> VideoFiles { get; set; }
         public DbSet<DbFile> Files { get; set; }
         public DbSet<FileExtendedInfo> FilesInfo { get; set; }
+        public DbSet<CoverInfo> CoversInfo { get; set; }
         public DbSet<FileUserInfo> FilesUserInfo { get; set; }
         public DbSet<FileMark> FileMarks { get; set; }
         public DbSet<Playlist> Playlists { get; set; }

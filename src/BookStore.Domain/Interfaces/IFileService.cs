@@ -45,5 +45,6 @@ namespace FileStore.Domain.Interfaces
         Task<FileUserInfo> GetPosition(int fileId, string userId);
         Task<IEnumerable<T>> GetNew(int count, string userId);
         Task SkipNew(int id, string userId);
+        Task<CoverInfo> GetCoverById(int fileId);
     }
 }

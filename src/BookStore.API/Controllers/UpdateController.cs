@@ -300,16 +300,6 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
-        [HttpGet]
-        [Route("updateCovers")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> UpdateCovers()
-        {
-            var dbUpdater = new DbUpdateManager(_db);
-            dbUpdater.UpdateAllImages();
-            return Ok();
-        }
-
         private async Task<string> TryToFindFile(string folder, string fullName)
         {
             var dirInfo = new DirectoryInfo(folder);
@@ -1306,7 +1296,7 @@ namespace FileStore.API.Controllers
             coverUrl = System.Web.HttpUtility.UrlDecode(coverUrl);
             var files = _db.VideoFiles.Include(x => x.VideoFileUserInfos).Include(x => x.VideoFileExtendedInfo).FirstOrDefault(x => x.Id == fileId);
 
-            files.VideoFileExtendedInfo.SetCover(RutrackerInfoParser.GetCoverByUrl(coverUrl));
+            files.SetCover(RutrackerInfoParser.GetCoverByUrl(coverUrl));
             _db.SaveChanges();
 
             return Ok();

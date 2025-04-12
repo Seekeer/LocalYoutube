@@ -81,12 +81,19 @@ namespace FileStore.Domain.Models
         ChildBook,
     }
 
+    public class CoverInfo : Entity
+    {
+        public DbFile DbFile { get; set; }
+        public int VideoFileId { get; set; }
+        public byte[] Cover { get; set; }
+    }
+
     public class FileExtendedInfo : Entity
     {
         public DbFile DbFile { get; set; }
         public int VideoFileId { get; set; }
 
-        public byte[] Cover { get; set; }
+        //public byte[] Cover { get; set; }
         public string Genres { get; set; }
         public int Year { get; set; }
         public string Description { get; set; }
@@ -133,6 +140,7 @@ namespace FileStore.Domain.Models
         public IList<FileMark> Marks { get; set; } = new List<FileMark>();
         public IList<PlaylistItem> Playlists { get; set; } = new List<PlaylistItem>();
         public FileExtendedInfo VideoFileExtendedInfo { get; set; } = new FileExtendedInfo();
+        public CoverInfo CoverInfo { get; set; }
 
         [NotMapped]
         public string CurrentUserId { get; set; }
@@ -156,7 +164,7 @@ namespace FileStore.Domain.Models
         {
             get
             {
-                return VideoFileExtendedInfo?.Cover;
+                return CoverInfo?.Cover;
             }
         }
 
