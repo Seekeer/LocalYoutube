@@ -97,15 +97,6 @@ namespace FileStore.API.Controllers
             }
         }
 
-        [HttpGet]
-        [Route("doAction")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> DoAction()
-        {
-            await CheckYoutubePlaylistJob();
-
-            return Ok();
-        }
 
         [HttpGet]
         [Route("clearSeasonSeries")]
@@ -180,21 +171,7 @@ namespace FileStore.API.Controllers
             }
         }
 
-        [HttpGet]
-        [Route("checkYoutubePlaylistJob")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> CheckYoutubePlaylistJob()
-        {
-            var factory = _serviceScopeFactory;
-
-            var job = new CheckYoutubeService(_serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(), _tgBot, _serviceScopeFactory, _config,
-                _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalVideoMappingsRepository>(),
-                _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalVideoMappingsService>());
-            await job.Execute(true);
-
-            return Ok();
-        }
-
+        
         [HttpGet]
         [Route("moveDownloadedJob")]
         [ProducesResponseType(StatusCodes.Status200OK)]
