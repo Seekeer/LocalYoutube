@@ -50,10 +50,10 @@ namespace FileStore.API
                         options.ConfigureHttpsDefaults(listenOptions =>
                         {
                             listenOptions.ServerCertificate = new X509Certificate2(
-                                "C:\\Dev\\Certificate\\certificate_cert_out.pfx", "cert_mycertpass");
+                                "certificate_cert_out.pfx", "cert_mycertpass");
                         });
                     });
-                    webBuilder.UseUrls($"http://192.168.1.55:55", $"https://192.168.1.55:555");
+                    webBuilder.UseUrls($"http://192.168.1.104:55", $"https://192.168.1.104:555");
 #endif
                 })
                 .ConfigureLogging(logging =>

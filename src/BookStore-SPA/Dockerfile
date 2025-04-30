@@ -9,7 +9,7 @@ COPY . .
 # install dependencies, matching package-lock.json
 RUN npm ci --configuration production 
 # build the app
-RUN npm run build -- --configuration production 
+RUN npm run build -- --configuration=production 
 
 
 # Use the latest version of the official Nginx image as the base image
