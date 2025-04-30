@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Infrastructure.MigrationsSqlite
 {
-    [DbContext(typeof(MAUIDbContext))]
+    [DbContext(typeof(SQLiteContext))]
     [Migration("20240903203405_FileTime")]
     partial class FileTime
     {

@@ -69,11 +69,11 @@ namespace FileStore.API.Configuration
             });
 #endif
 #if !DEBUG
-            services.AddQuartz(q =>
-            {
-                q.ScheduleJob<BackuperJob>(trigger => trigger
-                    .WithSchedule(CronScheduleBuilder.DailyAtHourAndMinute(01, 20)));
-            });
+            //services.AddQuartz(q =>
+            //{
+            //    q.ScheduleJob<BackuperJob>(trigger => trigger
+            //        .WithSchedule(CronScheduleBuilder.DailyAtHourAndMinute(01, 20)));
+            //});
             services.AddQuartz(q =>
             {
                 q.ScheduleJob<MoveDownloadedJob>(trigger => trigger

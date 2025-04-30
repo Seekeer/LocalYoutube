@@ -45,7 +45,7 @@ namespace MAUI.Services
         {
             using var scope = mauiApp.Services.CreateScope();
 
-            var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MAUIDbContext>>();
+            var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<SQLiteContext>>();
 
             try
             {
@@ -68,7 +68,7 @@ namespace MAUI.Services
             }
         }
 
-        private static bool MigrationsPending(MAUIDbContext dbContext)
+        private static bool MigrationsPending(SQLiteContext dbContext)
         {
             // I'm not sure how this would work if the db didnt exist so for safety...
             try

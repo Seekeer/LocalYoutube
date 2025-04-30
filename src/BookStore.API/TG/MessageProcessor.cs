@@ -155,12 +155,12 @@ namespace API.TG
             var audio = message.Attaches.Where(x => x.Type == AttachType.Audio);
             var image = message.Attaches.FirstOrDefault(x => x.Type == AttachType.Photo);
 
+            // TODO!
             var optionsBuilder = new DbContextOptionsBuilder<VideoCatalogDbContext>();
             optionsBuilder.UseSqlServer("Server=localhost;Database=FileStore;Encrypt=False;Trusted_Connection=True;");
 
             var db1= new VideoCatalogDbContext(optionsBuilder.Options);
 
-            //var db = _provider.GetRequiredService<VideoCatalogDbContext>();
             using (var manager = new DbUpdateManager(db1))
             {
                 manager.AddAudioFilesFromTg(message.Text, audio.Select(x => x.FilePath),

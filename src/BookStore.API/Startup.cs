@@ -8,6 +8,7 @@ using FileStore.Domain;
 using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using Hangfire;
+using Infrastructure.Context;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -48,7 +49,8 @@ namespace FileStore.API
         {
             services.AddDbContext<VideoCatalogDbContext>(options =>
             {
-                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
+                options.UseSqlite(Configuration.GetConnectionString("SQLiteConnection"));
+                //options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
             });
 
             services.AddAutoMapper(typeof(Startup));

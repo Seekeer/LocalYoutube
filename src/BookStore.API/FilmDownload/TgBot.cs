@@ -37,6 +37,8 @@ using OpenQA.Selenium.DevTools.V126.CSS;
 using Infrastructure.Scheduler;
 using Microsoft.Data.SqlClient;
 using System.Data.Common;
+using FileStore.Infrastructure.Context;
+using Infrastructure.Context;
 //using Polly;
 
 namespace API.FilmDownload
@@ -198,7 +200,7 @@ namespace API.FilmDownload
 
         private FileStore.Infrastructure.Context.VideoCatalogDbContext _GetDb()
         {
-            return _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<FileStore.Infrastructure.Context.VideoCatalogDbContext>();
+            return _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<VideoCatalogDbContext>();
         }
 
         private async Task UpdateFile(SearchResult data)

@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Infrastructure.MigrationsSqlite
 {
-    [DbContext(typeof(MAUIDbContext))]
+    [DbContext(typeof(SQLiteContext))]
     partial class MAUIDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
@@ -84,6 +84,26 @@ namespace Infrastructure.MigrationsSqlite
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("FileStore.Domain.Models.CoverInfo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte[]>("Cover")
+                        .HasColumnType("BLOB");
+
+                    b.Property<int>("VideoFileId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VideoFileId")
+                        .IsUnique();
+
+                    b.ToTable("VideoFileCoverInfo", (string)null);
+                });
+
             modelBuilder.Entity("FileStore.Domain.Models.DbFile", b =>
                 {
                     b.Property<int>("Id")
@@ -141,14 +161,52 @@ namespace Infrastructure.MigrationsSqlite
                     b.UseTptMappingStrategy();
                 });
 
-            modelBuilder.Entity("FileStore.Domain.Models.FileExtendedInfo", b =>
+            modelBuilder.Entity("FileStore.Domain.Models.ExternalVideoSourceMapping", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<byte[]>("Cover")
-                        .HasColumnType("BLOB");
+                    b.Property<string>("ChannelId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ChannelName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("CheckNewVideo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastCheckDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Network")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PlaylistId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SeasonId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SeriesId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ExternalVideoSource");
+                });
+
+            modelBuilder.Entity("FileStore.Domain.Models.FileExtendedInfo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
@@ -219,6 +277,9 @@ namespace Infrastructure.MigrationsSqlite
                     b.Property<double>("Rating")
                         .HasColumnType("REAL");
 
+                    b.Property<bool>("SkipFile")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("UpdatedDate")
                         .HasColumnType("TEXT");
 
@@ -235,6 +296,56 @@ namespace Infrastructure.MigrationsSqlite
                     b.HasIndex("VideoFileId");
 
                     b.ToTable("VideoFileUserInfos", (string)null);
+                });
+
+            modelBuilder.Entity("FileStore.Domain.Models.Playlist", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Playlists");
+                });
+
+            modelBuilder.Entity("FileStore.Domain.Models.PlaylistItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("FileId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Index")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PlaylistId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileId");
+
+                    b.HasIndex("PlaylistId");
+
+                    b.ToTable("PlaylistItems");
                 });
 
             modelBuilder.Entity("FileStore.Domain.Models.Season", b =>
@@ -412,16 +523,29 @@ namespace Infrastructure.MigrationsSqlite
                     b.ToTable("VideoFile", (string)null);
                 });
 
+            modelBuilder.Entity("FileStore.Domain.Models.CoverInfo", b =>
+                {
+                    b.HasOne("FileStore.Domain.Models.DbFile", "DbFile")
+                        .WithOne("CoverInfo")
+                        .HasForeignKey("FileStore.Domain.Models.CoverInfo", "VideoFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DbFile");
+                });
+
             modelBuilder.Entity("FileStore.Domain.Models.DbFile", b =>
                 {
                     b.HasOne("FileStore.Domain.Models.Season", "Season")
                         .WithMany("Files")
                         .HasForeignKey("SeasonId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("FileStore.Domain.Models.Series", "Series")
                         .WithMany("Files")
                         .HasForeignKey("SeriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Season");
@@ -434,6 +558,7 @@ namespace Infrastructure.MigrationsSqlite
                     b.HasOne("FileStore.Domain.Models.DbFile", "DbFile")
                         .WithOne("VideoFileExtendedInfo")
                         .HasForeignKey("FileStore.Domain.Models.FileExtendedInfo", "VideoFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("DbFile");
@@ -444,6 +569,7 @@ namespace Infrastructure.MigrationsSqlite
                     b.HasOne("FileStore.Domain.Models.DbFile", null)
                         .WithMany("Marks")
                         .HasForeignKey("DbFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -451,11 +577,13 @@ namespace Infrastructure.MigrationsSqlite
                 {
                     b.HasOne("FileStore.Domain.Models.ApplicationUser", "User")
                         .WithMany("VideoFileUserInfos")
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("FileStore.Domain.Models.DbFile", "DbFile")
                         .WithMany("VideoFileUserInfos")
                         .HasForeignKey("VideoFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("DbFile");
@@ -463,11 +591,27 @@ namespace Infrastructure.MigrationsSqlite
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FileStore.Domain.Models.PlaylistItem", b =>
+                {
+                    b.HasOne("FileStore.Domain.Models.DbFile", "File")
+                        .WithMany("Playlists")
+                        .HasForeignKey("FileId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("FileStore.Domain.Models.Playlist", null)
+                        .WithMany("Items")
+                        .HasForeignKey("PlaylistId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("File");
+                });
+
             modelBuilder.Entity("FileStore.Domain.Models.Season", b =>
                 {
                     b.HasOne("FileStore.Domain.Models.Series", "Series")
                         .WithMany("Seasons")
                         .HasForeignKey("SeriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Series");
@@ -505,6 +649,7 @@ namespace Infrastructure.MigrationsSqlite
                     b.HasOne("FileStore.Domain.Models.DbFile", null)
                         .WithOne()
                         .HasForeignKey("FileStore.Domain.Models.AudioFile", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -513,6 +658,7 @@ namespace Infrastructure.MigrationsSqlite
                     b.HasOne("FileStore.Domain.Models.DbFile", null)
                         .WithOne()
                         .HasForeignKey("FileStore.Domain.Models.VideoFile", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -523,11 +669,20 @@ namespace Infrastructure.MigrationsSqlite
 
             modelBuilder.Entity("FileStore.Domain.Models.DbFile", b =>
                 {
+                    b.Navigation("CoverInfo");
+
                     b.Navigation("Marks");
+
+                    b.Navigation("Playlists");
 
                     b.Navigation("VideoFileExtendedInfo");
 
                     b.Navigation("VideoFileUserInfos");
+                });
+
+            modelBuilder.Entity("FileStore.Domain.Models.Playlist", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("FileStore.Domain.Models.Season", b =>

@@ -592,11 +592,6 @@ namespace FileStore.API.Controllers
             for (int i = startSerieId; i < endSerieId; i++)
             {
                 await DeleteSerie(i, physicallyDeleteFile, new DbUpdateManager(_db));
-
-                var optionsBuilder = new DbContextOptionsBuilder<VideoCatalogDbContext>();
-                optionsBuilder.UseSqlServer("Server=localhost;Database=FileStore;Encrypt=False;Trusted_Connection=True;");
-
-                _db = new VideoCatalogDbContext(optionsBuilder.Options);
             }
             return Ok();
         }

@@ -19,9 +19,9 @@ namespace MAUI.Services
 
     public class MAUIService : IMAUIService
     {
-        private readonly MAUIDbContext _db;
+        private readonly SQLiteContext _db;
 
-        public MAUIService(MAUIDbContext dbContext) {
+        public MAUIService(SQLiteContext dbContext) {
 
             _db = dbContext;
         }

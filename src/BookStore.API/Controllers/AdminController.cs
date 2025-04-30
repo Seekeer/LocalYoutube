@@ -30,6 +30,7 @@ using Microsoft.AspNetCore.SignalR;
 using System.Net;
 using System.Text;
 using System.Web;
+using Microsoft.Extensions.Logging;
 
 namespace FileStore.API.Controllers
 {
@@ -181,13 +182,35 @@ namespace FileStore.API.Controllers
         }
 
         [HttpGet]
+        [Route("updateCovers")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateCovers()
+        {
+            var info = _db.FilesInfo.ToList();
+
+            foreach (var item in info)
+            {
+                var coverInfo = new CoverInfo();
+                coverInfo.VideoFileId = item.VideoFileId;
+                //coverInfo.Cover = item.Cover;
+
+                _db.Add(coverInfo);
+            }
+
+            _db.SaveChanges();
+            return Ok();
+        }
+
+        [HttpGet]
         [Route("checkYoutubePlaylistJob")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> CheckYoutubePlaylistJob()
         {
             var factory = _serviceScopeFactory;
 
-            var job = new CheckYoutubeService(_serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(), _tgBot, _serviceScopeFactory, _config,
+            var job = new CheckYoutubeService(_serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(), _tgBot,
+                _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<ILogger<CheckYoutubeService>>(),
+                _serviceScopeFactory, _config,
                 _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalVideoMappingsRepository>(),
                 _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalVideoMappingsService>());
             await job.Execute(true);

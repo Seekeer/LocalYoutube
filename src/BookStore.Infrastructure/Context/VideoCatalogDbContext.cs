@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using Infrastructure.Context;
 
 namespace FileStore.Infrastructure.Context
 {
@@ -17,7 +18,7 @@ namespace FileStore.Infrastructure.Context
     {
         public static VideoCatalogDbContext CreateDb(this IServiceScopeFactory factory)
         {
-            return factory.CreateScope().ServiceProvider.GetRequiredService<FileStore.Infrastructure.Context.VideoCatalogDbContext>();
+            return factory.CreateScope().ServiceProvider.GetRequiredService<SQLiteContext>();
         }
     }
 
@@ -51,7 +52,7 @@ namespace FileStore.Infrastructure.Context
     {
         public VideoCatalogDbContext(DbContextOptions options) : base(options)
         {
-            this.ChangeTracker.LazyLoadingEnabled = false;
+            //this.ChangeTracker.LazyLoadingEnabled = false;
         }
 
         public DbSet<UserRefreshTokens> RefreshTokens { get; set; }
@@ -78,7 +79,7 @@ namespace FileStore.Infrastructure.Context
             //        .HasForeignKey<VideoFileExtendedInfo>(info => info.VideoFileId);
             //});
             
-            modelBuilder.Entity<DbFile>().HasQueryFilter(u => !u.NeedToDelete);
+            //modelBuilder.Entity<DbFile>().HasQueryFilter(u => !u.NeedToDelete);
 
             modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileExtendedInfo).AutoInclude();
             modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileUserInfos).AutoInclude();

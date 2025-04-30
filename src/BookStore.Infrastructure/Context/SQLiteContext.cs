@@ -28,7 +28,7 @@ namespace Infrastructure.Context
         }
     }
 
-    public class DbContextMigrationFactory : IDesignTimeDbContextFactory<MAUIDbContext>
+    public class DbContextMigrationFactory : IDesignTimeDbContextFactory<SQLiteContext>
     {
         private readonly IFilePathProvider dbPathProvider;
 
@@ -41,22 +41,22 @@ namespace Infrastructure.Context
             this.dbPathProvider = filePathProvider;
         }
 
-        public MAUIDbContext CreateDbContext(string[] args)
+        public SQLiteContext CreateDbContext(string[] args)
         {
-            var builder = new DbContextOptionsBuilder<MAUIDbContext>();
+            var builder = new DbContextOptionsBuilder<SQLiteContext>();
 
             var dbPath = dbPathProvider.GetFilePath();
             // This filename can be anything
             builder.UseSqlite($"FileName={dbPath}");
 
-            return new MAUIDbContext(builder.Options);
+            return new SQLiteContext(builder.Options);
         }
     }
 
     // PM> cd .\src\BookStore.Infrastructure\
     // PM> dotnet ef migrations add InitialCreate --context MAUIDbContext --output-dir MigrationsSqlite
-    public class MAUIDbContext : VideoCatalogDbContext
+    public class SQLiteContext : VideoCatalogDbContext
     {
-        public MAUIDbContext(DbContextOptions options) : base(options) { }
+        public SQLiteContext(DbContextOptions options) : base(options) { }
     }
 }

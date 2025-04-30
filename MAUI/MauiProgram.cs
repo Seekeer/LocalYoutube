@@ -154,9 +154,9 @@ namespace MAUI
             builder.Services.AddTransient<IVideoFileRepository, VideoFileRepository>();
             builder.Services.AddTransient<ISeriesRepository, SeriesRepository>();
             builder.Services.AddTransient<IDbFileRepository, DbFileRepository>();
-            builder.Services.AddTransient<VideoCatalogDbContext, MAUIDbContext>();
+            builder.Services.AddTransient<VideoCatalogDbContext, SQLiteContext>();
             //builder.Services.AddTransient<VideoCatalogDbContext, MAUIDbContext>();
-            builder.Services.AddDbContextFactory<MAUIDbContext>((services, options) =>
+            builder.Services.AddDbContextFactory<SQLiteContext>((services, options) =>
             {
                 var dbProvider = services.GetRequiredService<IFilePathProvider>();
                 var dbPath = dbProvider.GetFilePath();
