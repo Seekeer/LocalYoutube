@@ -55,9 +55,15 @@ namespace API.TG
         Unknown,
         DownloadCossacks,
         DownloadPremier,
-        DownloadEot,
         DownloadIt,
-        DownloadKurginyan,
+        [CommandName("СЕ-Мудрец")]
+        DownloadKurginyanMudrec,
+        [CommandName("СЕ-Другое")]
+        DownloadKurginyanOther,
+        [CommandName("СВ-Укр")]
+        DownloadEotUkr,
+        [CommandName("СВ-КП")]
+        DownloadEotKP,
     }
 
     public class TgCommand
