@@ -102,7 +102,6 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> DoAction()
         {
-            await CheckYoutubePlaylistJob();
 
             return Ok();
         }
@@ -180,20 +179,20 @@ namespace FileStore.API.Controllers
             }
         }
 
-        [HttpGet]
-        [Route("checkYoutubePlaylistJob")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> CheckYoutubePlaylistJob()
-        {
-            var factory = _serviceScopeFactory;
+        //[HttpGet]
+        //[Route("checkYoutubePlaylistJob")]
+        //[ProducesResponseType(StatusCodes.Status200OK)]
+        //public async Task<IActionResult> CheckYoutubePlaylistJob()
+        //{
+        //    var factory = _serviceScopeFactory;
 
-            var job = new CheckYoutubeService(_serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(), _tgBot, _serviceScopeFactory, _config,
-                _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalVideoMappingsRepository>(),
-                _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalVideoMappingsService>());
-            await job.Execute(true);
+        //    var job = new CheckYoutubeService(_serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(), _tgBot, _serviceScopeFactory, _config,
+        //        _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalVideoMappingsRepository>(),
+        //        _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalVideoMappingsService>());
+        //    await job.Execute(true);
 
-            return Ok();
-        }
+        //    return Ok();
+        //}
 
         [HttpGet]
         [Route("moveDownloadedJob")]
