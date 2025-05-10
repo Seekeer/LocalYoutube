@@ -7,17 +7,17 @@
       "sslPort": 0
     },
     "iisExpress": {
-      "applicationUrl": "http://192.168.1.55:51951",
+      "applicationUrl": "http://192.168.1.55:51953",
       "sslPort": 0
     }
   },
   "Kestrel": {
     "Endpoints": {
       "Http": {
-        "Url": "http://localhost:51951"
+        "Url": "http://localhost:51953"
       },
       "Https": {
-        "Url": "https://localhost:51950"
+        "Url": "https://localhost:52950"
       }
     }
   },
@@ -46,7 +46,7 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "http://192.168.1.55:51951"
+      "applicationUrl": "http://192.168.1.55:51953"
     },
     "Docker": {
       "commandName": "Docker",

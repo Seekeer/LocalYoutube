@@ -421,3 +421,9 @@ MigrationBackup/
 
 *.pubxml.user
 /data/
+/src/BookStore.API/API_DB.db
+/src/BookStore.API/API_DB.db-shm
+/src/BookStore.API/API_DB.db-wal
+/src/BookStore.API/YourTargetDatabase.db
+/src/BookStore.API/YourTargetDatabase.db-shm
+/src/BookStore.API/YourTargetDatabase.db-wal
