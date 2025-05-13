@@ -432,8 +432,10 @@ namespace API.FilmDownload
 
         private async Task MoveToSeason(string data, int mudrec)
         {
+            var task = _downloadTasks[data];
+
             using var fileService = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IVideoFileService>();
-            await fileService.MoveToSeason(int.Parse(data), mudrec);
+            await fileService.MoveToSeason(task.FileId, mudrec);
         }
 
         private async Task CheckYoutube()

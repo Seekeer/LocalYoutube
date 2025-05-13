@@ -57,6 +57,7 @@ namespace Infrastructure.Scheduler
 
         public async Task Execute(bool forced)
         {
+            var aa =_serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<VideoCatalogDbContext>();
             var user = await _userManager.FindByNameAsync("dim");
 
             YouTubeService youtubeService = GetYoutubeService(user);
