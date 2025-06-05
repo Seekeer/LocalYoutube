@@ -34,7 +34,6 @@ using NLog.Web.LayoutRenderers;
 using System.Xml.Linq;
 using Telegram.Bot.Polling;
 using OpenQA.Selenium.DevTools.V126.CSS;
-using Infrastructure.Scheduler;
 using Microsoft.Data.SqlClient;
 using System.Data.Common;
 using FileStore.Infrastructure.Context;
@@ -440,8 +439,8 @@ namespace API.FilmDownload
 
         private async Task CheckYoutube()
         {
-            using var youtubeService = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<CheckYoutubeService>();
-            await youtubeService.Execute(forced: true);
+            using var youtubeService = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<YoutubeCheckService>();
+            await youtubeService.CheckSubscriptionsUpdates();
         }
 
         private bool IsAuthorValid(long id)

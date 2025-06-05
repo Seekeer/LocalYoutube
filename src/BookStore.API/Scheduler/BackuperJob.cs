@@ -40,7 +40,7 @@ namespace Infrastructure.Scheduler
             _config = appConfig;
         }
 
-        protected override async Task Execute()
+        protected override async Task ExecuteAsync(IJobExecutionContext context)
         {
             NLog.LogManager.GetCurrentClassLogger().Debug($"BackuperJob");
 

@@ -13,20 +13,13 @@ using TL;
 namespace Infrastructure.Scheduler
 {
     [DisallowConcurrentExecution]
-    public class RemoveJob : JobBase
+    public class RemoveJob(IServiceProvider service) : JobBase
     {
-        private readonly IServiceProvider _service;
-
-        public RemoveJob(IServiceProvider service)
-        {
-            _service = service;
-        }
-
-        protected override async Task Execute()
+        protected override async Task ExecuteAsync(IJobExecutionContext context)
         {
             NLog.Web.NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger().Debug("Remove job started");
 
-            using (var scope = _service.CreateScope())
+            using (var scope = service.CreateScope())
             {
                 var provider = scope.ServiceProvider;
                 var fileRepo = provider.GetService<IDbFileRepository>();

@@ -8,19 +8,12 @@ using System.Threading.Tasks;
 namespace Infrastructure.Scheduler
 {
     [DisallowConcurrentExecution]
-    public class CheckDownloadedJob : JobBase
+    public class CheckDownloadedJob(IServiceProvider service) : JobBase
     {
-        private readonly IServiceProvider _service;
-
-        public CheckDownloadedJob(IServiceProvider service, AppConfig appConfig) 
+        protected override async Task ExecuteAsync(IJobExecutionContext context)
         {
-            _service = service;
-        }
-
-        protected override async Task Execute()
-        {
-            var manager = _service.GetService<DbUpdateManager>();
-            var tgBot = _service.GetService<TgBot>();
+            var manager = service.GetService<DbUpdateManager>();
+            var tgBot = service.GetService<TgBot>();
 
             var updated = manager.UpdateDownloading((info) => info.IsDownloading && !info.DoNotAutoFinish);
             await tgBot.NotifyDownloaded(updated);
