@@ -237,6 +237,7 @@ namespace API.TG
             file.Name = _rutracker.ClearFromForeignOption(info.Name);
             file.IsDownloading = true;
             file.Path = downloadPath;
+            file.VideoFileExtendedInfo = new FileExtendedInfo();
             file.VideoFileExtendedInfo.RutrackerId = id;
         }
 

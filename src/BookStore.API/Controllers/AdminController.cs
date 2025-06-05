@@ -187,7 +187,7 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> CheckDownloadedJob()
         {
-            var job = new CheckDownloadedJob(_serviceScopeFactory.CreateScope().ServiceProvider, _config);
+            var job = new CheckDownloadedJob(_serviceScopeFactory.CreateScope().ServiceProvider);
             await job.Execute(null);
 
             return Ok();
@@ -538,7 +538,7 @@ namespace FileStore.API.Controllers
             var series = dbUpdater.AddOrUpdateVideoSeries(seriesName, false, type);
             var season = dbUpdater.AddOrUpdateSeason(series.Id, seasonName);
 
-            if(series.Type != null)
+            if (series.Type != null)
             {
                 var file = _db.VideoFiles.FirstOrDefault(x => x.Id == fileId);
                 file.SeasonId = season.Id;
@@ -552,6 +552,21 @@ namespace FileStore.API.Controllers
                 file.SeriesId = season.SeriesId;
                 file.Type = series.AudioType.Value;
             }
+
+            _db.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("moveFileToSeason")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MoveFileToSeason(int fileId, int seasonId)
+        {
+            var season = await _db.Seasons.Include(x => x.Series).FirstOrDefaultAsync(x => x.Id == seasonId);
+            var file = _db.VideoFiles.FirstOrDefault(x => x.Id == fileId);
+            file.SeasonId = seasonId;
+            file.SeriesId = season.SeriesId;
 
             _db.SaveChanges();
 
