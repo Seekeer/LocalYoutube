@@ -167,6 +167,8 @@ namespace API.FilmDownload
         }
 
         protected AppConfig _config;
+        private static int _errorsCount;
+
         public abstract DownloadType DownloadType { get; }
         public abstract bool IsVideoPropertiesFilled { get;}
 
@@ -206,7 +208,12 @@ namespace API.FilmDownload
 
                             if (!System.IO.File.Exists(record.Value.Path))
                             {
-                                throw new NetworkException("Can't donwload file");
+                                if(_errorsCount++ > 5)
+                                {
+                                    _errorsCount = 0;
+                                    File.Delete(Path.Combine("Assets", "yt-dlp.exe"));
+                                }
+                                throw new NetworkException("Can't download file");
                             }
 
                             UpdateFileByTask(record.Value, task);

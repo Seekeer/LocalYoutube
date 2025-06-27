@@ -38,14 +38,14 @@ namespace API.FilmDownload
         
         public async Task CheckPlaylist()
         {
-            //await CheckSubscriptionsUpdates();
-            //YouTubeService youtubeService = await GetYoutubeService();
-            //PlaylistItemListResponse playlistResponse = await GetLocalTubePlayListVideos(youtubeService);
-            //foreach (var item in playlistResponse.Items)
-            //{
-            //    if (await DownloadVideo(await GetDefaultUser(), youtubeService, item.ContentDetails.VideoId, false))
-            //        await youtubeService.PlaylistItems.Delete(item.Id).ExecuteAsync();
-            //}
+            await CheckSubscriptionsUpdates();
+            YouTubeService youtubeService = await GetYoutubeService();
+            PlaylistItemListResponse playlistResponse = await GetLocalTubePlayListVideos(youtubeService);
+            foreach (var item in playlistResponse.Items)
+            {
+                if (await DownloadVideo(await GetDefaultUser(), youtubeService, item.ContentDetails.VideoId, false))
+                    await youtubeService.PlaylistItems.Delete(item.Id).ExecuteAsync();
+            }
         }
 
         private async Task<bool> DownloadVideo(ApplicationUser user, YouTubeService youtubeService, string videoId, bool isAuto)
