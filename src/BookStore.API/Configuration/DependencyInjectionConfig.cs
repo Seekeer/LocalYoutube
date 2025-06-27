@@ -52,21 +52,31 @@ namespace FileStore.API.Configuration
             services.AddHostedService<StartupService>();
 
 #if DEBUG
+            //services.AddQuartz(q =>
+            //{
+            //    q.ScheduleJob<BackuperJob>(trigger => trigger
+            //        .WithSchedule(CronScheduleBuilder.DailyAtHourAndMinute(01, 20)));
+            //});
             services.AddQuartz(q =>
             {
-                q.ScheduleJob<CheckYoutubePlaylistJob>(trigger => trigger
-                    .WithIdentity("trigger555", "group5")
-                    .StartNow()
-                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(1)).RepeatForever())
-                );
+                q.ScheduleJob<MoveDownloadedJob>(trigger => trigger
+                    .WithSchedule(CronScheduleBuilder.DailyAtHourAndMinute(02, 20)));
             });
-
+            /*services.AddQuartz(q =>
+            {
+                q.ScheduleJob<CheckDownloadedJob>(trigger => trigger
+                    .WithIdentity("CheckDownloadedJob", "group4")
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(30)).RepeatForever())
+                );
+            });*/
             // Quartz.Extensions.Hosting allows you to fire background service that handles scheduler lifecycle
             services.AddQuartzHostedService(options =>
             {
                 // when shutting down we want jobs to complete gracefully
                 options.WaitForJobsToComplete = true;
             });
+            services.AddTransient<BackuperJob>();
 #endif
 #if !DEBUG
             //services.AddQuartz(q =>

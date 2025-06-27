@@ -302,14 +302,14 @@ namespace Infrastructure
             return result.Where(x => x != null);
         }
 
-        private VideoFile AddFile(FileInfo file, Series series, Season season)
+        public VideoFile AddFile(FileInfo file, Series series, Season season)
         {
             try
             {
                 if (IsBadExtension(file, false))
                     return null;
 
-                var existingInfo = _db.VideoFiles.FirstOrDefault(x => x.Path == file.FullName && x.SeriesId == series.Id);
+                var existingInfo = _db.VideoFiles.Include(x => x.CoverInfo).FirstOrDefault(x => x.Path == file.FullName && x.SeriesId == series.Id);
                 VideoFile videoInfo = GetVideoInfo(series, season, file, existingInfo);
                 if (existingInfo == null)
                     _db.VideoFiles.Add(videoInfo);
@@ -487,6 +487,7 @@ namespace Infrastructure
             video.Series = series;
             video.Season = season;
             video.Number = _episodeNumber++;
+            video.VideoFileExtendedInfo = new FileExtendedInfo();
 
             if (_type == VideoType.ChildEpisode)
             {
@@ -704,7 +705,11 @@ namespace Infrastructure
 
                         if (processResult.Count() > 1)
                         {
-                            processResult.ToList().ForEach(x => x.VideoFileExtendedInfo.RutrackerId = info.VideoFileExtendedInfo.RutrackerId);
+                            foreach (var item in processResult)
+                            {
+                                item.VideoFileExtendedInfo = item.VideoFileExtendedInfo ?? new FileExtendedInfo() { VideoFileId = item.Id};
+                                item.VideoFileExtendedInfo.RutrackerId = info.VideoFileExtendedInfo.RutrackerId;
+                            }
                             var fileRepo = new DbFileRepository(_db, null);
                             fileRepo.RemoveFileCompletely(info.Id);
                             _db.SaveChanges();

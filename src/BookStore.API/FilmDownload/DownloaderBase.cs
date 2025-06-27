@@ -21,7 +21,7 @@ using VkNet.Model;
 
 namespace API.FilmDownload
 {
-    public class DownloadInfo : ChannelInfo
+    public record DownloadInfo : ChannelInfo
     {
         public string ListName { get; set; }
         public bool IsList { get; set; }

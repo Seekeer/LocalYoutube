@@ -33,7 +33,7 @@ namespace FileStore.Infrastructure.Repositories
         }
     }
 
-    public class ChannelInfo
+    public record ChannelInfo
     {
         public string ChannelId { get; set; }
         public string SeasonName { get; set; }

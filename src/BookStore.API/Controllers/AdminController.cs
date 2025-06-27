@@ -57,9 +57,42 @@ namespace FileStore.API.Controllers
             _serviceScopeFactory = serviceScopeFactory;
         }
         [HttpGet]
+        [Route("debug")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> Debug()
+        {
+            var dbUpdater = new DbUpdateManager(_db);
+
+            var series = _db.Series.FirstOrDefault(x => x.Id == 6091);
+            dbUpdater.AddSeason(6091, new DirectoryInfo("D:\\VideoServer\\Youtube\\Асафьев.Бусти"), "Асафьев.Бусти");
+            //var video = _db.VideoFiles.FirstOrDefault(x => x.Id == 64719);
+
+            ////VideoHelper.FillVideoProperties(video);
+            //video.VideoFileExtendedInfo = new FileExtendedInfo();
+            //_db.SaveChanges();
+
+            return Ok();
+        }
+
+
+        [HttpGet]
+        [Route("addFile")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> AddFile(string filename, int seasonId) 
+        {
+            var finfo = new FileInfo(filename);
+
+            var season = _db.Seasons.Include(x => x.Series).FirstOrDefault(x => x.Id == seasonId);
+            var dbUpdater = new DbUpdateManager(_db);
+            dbUpdater.AddFile(finfo, season.Series, season);
+
+            return Ok();
+        }
+/*
+        [HttpGet]
         [Route("subscribe")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public void Subscribe(string channelId)
+        public async Task<IActionResult> Subscribe(string channelId)
         {
             try
             {
@@ -96,8 +129,10 @@ namespace FileStore.API.Controllers
             {
                 throw new Exception($"Error publishing Channel ID : {channelId}", ex);
             }
-        }
 
+            return Ok();
+        }
+*/
 
         [HttpGet]
         [Route("clearSeasonSeries")]
