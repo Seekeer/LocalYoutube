@@ -53,7 +53,8 @@ namespace FileStore.API
                                 "certificate_cert_out.pfx", "cert_mycertpass");
                         });
                     });
-                    webBuilder.UseUrls($"http://192.168.1.104:55", $"https://192.168.1.104:555");
+
+                    webBuilder.UseUrls("http://0.0.0.0:55", "https://0.0.0.0:555");
 #endif
                 })
                 .ConfigureLogging(logging =>

@@ -34,7 +34,6 @@ using NLog.Web.LayoutRenderers;
 using System.Xml.Linq;
 using Telegram.Bot.Polling;
 using OpenQA.Selenium.DevTools.V126.CSS;
-using Infrastructure.Scheduler;
 using Microsoft.Data.SqlClient;
 using System.Data.Common;
 using FileStore.Infrastructure.Context;
@@ -391,25 +390,31 @@ namespace API.FilmDownload
                     // Do nothign
                     break;
                 case CommandType.DownloadIndia:
-                    await MoveToSeries(command.Data, SeasonNames.India);
+                    await MoveToSeries(command.Data, SeriesNames.India);
                     break;
                 case CommandType.DownloadCossacks:
-                    await MoveToSeries(command.Data, SeasonNames.Cossacks);
-                    break;
-                case CommandType.DownloadEot:
-                    await MoveToSeries(command.Data, SeasonNames.Eot);
+                    await MoveToSeries(command.Data, SeriesNames.Cossacks);
                     break;
                 case CommandType.DownloadIt:
-                    await MoveToSeries(command.Data, SeasonNames.It);
+                    await MoveToSeries(command.Data, SeriesNames.It);
                     break;
-                case CommandType.DownloadKurginyan:
-                    await MoveToSeries(command.Data, SeasonNames.Kurginyan);
+                case CommandType.DownloadKurginyanMudrec:
+                    await  MoveToSeason(command.Data, SeasonIds.Mudrec);
+                    break;
+                case CommandType.DownloadKurginyanOther:
+                    await MoveToSeason(command.Data, SeasonIds.Other);
+                    break;
+                case CommandType.DownloadEotKP:
+                    await MoveToSeason(command.Data, SeasonIds.KP);
+                    break;
+                case CommandType.DownloadEotUkr:
+                    await MoveToSeason(command.Data, SeasonIds.Ukr);
                     break;
                 case CommandType.DownloadPremier:
                     await DownloadedForPremier(command.Data);
                     break;
                 case CommandType.DownloadOneTime:
-                    await MoveToSeries(command.Data, SeasonNames.OneTime);
+                    await MoveToSeries(command.Data, SeriesNames.OneTime);
                     break;
                 case CommandType.DeleteByRutracker:
                     await DeleteFileByRutrackerId(update.CallbackQuery.Id, command.Data);
@@ -424,10 +429,18 @@ namespace API.FilmDownload
             }
         }
 
+        private async Task MoveToSeason(string data, int mudrec)
+        {
+            var task = _downloadTasks[data];
+
+            using var fileService = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IVideoFileService>();
+            await fileService.MoveToSeason(task.FileId, mudrec);
+        }
+
         private async Task CheckYoutube()
         {
-            using var youtubeService = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<CheckYoutubeService>();
-            await youtubeService.Execute(forced: true);
+            using var youtubeService = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<YoutubeCheckService>();
+            await youtubeService.CheckSubscriptionsUpdates();
         }
 
         private bool IsAuthorValid(long id)
@@ -799,17 +812,21 @@ namespace API.FilmDownload
             var keyboard = new List<List<InlineKeyboardButton>>
                 {
                  new List<InlineKeyboardButton>{
-                    new InlineKeyboardButton(SeasonNames.OneTime) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadOneTime, task.Id) },
-                    new InlineKeyboardButton(SeasonNames.AsDesigned) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadAsDesigned, task.Id) },
-                    new InlineKeyboardButton(SeasonNames.Premiere) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadPremier, task.Id) },
-                    new InlineKeyboardButton(SeasonNames.Delete) { CallbackData = CommandParser.GetMessageFromData(CommandType.DeleteById, item.Id.ToString()) },
+                    new InlineKeyboardButton(SeriesNames.OneTime) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadOneTime, task.Id) },
+                    new InlineKeyboardButton(SeriesNames.AsDesigned) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadAsDesigned, task.Id) },
+                    new InlineKeyboardButton(SeriesNames.Premiere) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadPremier, task.Id) },
+                    new InlineKeyboardButton(SeriesNames.Delete) { CallbackData = CommandParser.GetMessageFromData(CommandType.DeleteById, item.Id.ToString()) },
                  },
                  new List<InlineKeyboardButton>{
-                    new InlineKeyboardButton(SeasonNames.India) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadIndia, task.Id) },
-                    new InlineKeyboardButton(SeasonNames.Cossacks) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadCossacks, task.Id) },
-                    new InlineKeyboardButton(SeasonNames.Kurginyan) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadKurginyan, task.Id) },
-                    new InlineKeyboardButton(SeasonNames.Eot) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadEot, task.Id) },
-                    new InlineKeyboardButton(SeasonNames.It) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadIt, task.Id) },
+                    new InlineKeyboardButton(SeriesNames.India) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadIndia, task.Id) },
+                    new InlineKeyboardButton(SeriesNames.Cossacks) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadCossacks, task.Id) },
+                    new InlineKeyboardButton(SeriesNames.It) { CallbackData = CommandParser.GetMessageFromData(CommandType.DownloadIt, task.Id) },
+                    },
+                new List<InlineKeyboardButton>{
+                    CreateButton(CommandType.DownloadKurginyanMudrec, task.Id),
+                    CreateButton(CommandType.DownloadKurginyanOther, task.Id),
+                    CreateButton(CommandType.DownloadEotUkr, task.Id),
+                    CreateButton(CommandType.DownloadEotKP, task.Id),
                     }};
 
             var tgMessage =  await _botClient.SendTextMessageAsync(new ChatId(task.FromId), 
@@ -822,6 +839,13 @@ namespace API.FilmDownload
             task.QuestionMessageId = tgMessage.MessageId;
         }
 
+        private InlineKeyboardButton CreateButton(CommandType commandType, string id)
+        {
+            return new InlineKeyboardButton(CommandParser.GetCommandName(commandType).FirstOrDefault())
+            {
+                CallbackData = CommandParser.GetMessageFromData(commandType, id)
+            };
+        }
 
         private async Task<bool> Rename(TgCommand command)
         {

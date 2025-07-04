@@ -47,26 +47,39 @@ namespace FileStore.API.Configuration
             services.AddSingleton<TgBot, TgBot>();
             //services.AddSingleton<IStartupInitService, StartupInitService>();
             services.AddScoped<ITgAPIClient, TgAPIClient>();
-            services.AddScoped<CheckYoutubeService, CheckYoutubeService>();
+            services.AddScoped<YoutubeCheckService, YoutubeCheckService>();
 
             services.AddHostedService<StartupService>();
 
 #if DEBUG
+
             services.AddQuartz(q =>
             {
                 q.ScheduleJob<CheckYoutubePlaylistJob>(trigger => trigger
-                    .WithIdentity("trigger555", "group5")
+                    .WithIdentity("CheckDownloadedJob", "group4")
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(1)).RepeatForever())
-                );
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(30)).RepeatForever()));
             });
-
+            //services.AddQuartz(q =>
+            //{
+            //    q.ScheduleJob<MoveDownloadedJob>(trigger => trigger
+            //        .WithSchedule(CronScheduleBuilder.DailyAtHourAndMinute(02, 20)));
+            //});
+            /*services.AddQuartz(q =>
+            {
+                q.ScheduleJob<CheckDownloadedJob>(trigger => trigger
+                    .WithIdentity("CheckDownloadedJob", "group4")
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(30)).RepeatForever())
+                );
+            });*/
             // Quartz.Extensions.Hosting allows you to fire background service that handles scheduler lifecycle
             services.AddQuartzHostedService(options =>
             {
                 // when shutting down we want jobs to complete gracefully
                 options.WaitForJobsToComplete = true;
             });
+            services.AddTransient<BackuperJob>();
 #endif
 #if !DEBUG
             //services.AddQuartz(q =>
@@ -101,6 +114,14 @@ namespace FileStore.API.Configuration
                     .WithIdentity("YoutubePlaylist", "group5")
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(30)).RepeatForever())
+                );
+            });
+            services.AddQuartz(q =>
+            {
+                q.ScheduleJob<CheckYoutubeSubscriptionsJob>(trigger => trigger
+                    .WithIdentity("YoutubeSubscription", "group5")
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromHours(6)).RepeatForever())
                 );
             });
             

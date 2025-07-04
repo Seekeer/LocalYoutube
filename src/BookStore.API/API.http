@@ -1,0 +1,11 @@
+﻿@API_HostAddress = http://localhost:51254
+@token = eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoidHQiLCJleHAiOjE3NDcxNTI4MDgsImlzcyI6Imh0dHBzOi8vbXl3ZWJhcGkuY29tIiwiYXVkIjoiaHR0cHM6Ly9teXdlYmFwaS5jb20ifQ.HF3nOvTj2hKcs6NGf6ZrYvgi82CFkgYAaGsRLG_UeQ8
+
+GET {{API_HostAddress}}/api/files
+
+###
+
+@id=64473
+GET {{API_HostAddress}}/api/Files/{{id}}
+
+###

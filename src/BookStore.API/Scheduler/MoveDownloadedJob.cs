@@ -9,40 +9,28 @@ using System.Linq;
 using Polly;
 using Quartz;
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using API.Controllers;
-using AngleSharp.Media;
 
 namespace Infrastructure.Scheduler
 {
     [DisallowConcurrentExecution]
-    public class MoveDownloadedJob : JobBase
+    public class MoveDownloadedJob(IServiceProvider service, AppConfig appConfig) : JobBase
     {
-        private readonly IServiceProvider _service;
-        private readonly AppConfig _appConfig;
-
-        public MoveDownloadedJob(IServiceProvider service, AppConfig appConfig)
-        {
-            _service = service;
-            _appConfig = appConfig;
-        }
-
-        protected override async Task Execute()
+        protected override async Task ExecuteAsync(IJobExecutionContext context)
         {
             await this.MoveFiles();
         }
 
         public async Task MoveFiles()
         {
-            var db = _service.GetService<VideoCatalogDbContext>();
-            var fileManager = new FileManager(db, new FileManagerSettings(_appConfig.RootDownloadFolder, _appConfig.RootFolder,  true));
+            var db = service.GetService<VideoCatalogDbContext>();
+            var fileManager = new FileManager(db, new FileManagerSettings(appConfig.RootDownloadFolder, appConfig.RootFolder,  true));
             var movedFiles = 0;
-            var torrentManager = _service.GetService<IRuTrackerUpdater>();
+            var torrentManager = service.GetService<IRuTrackerUpdater>();
 
-            var files = db.Files.Where(x => x.Path.Contains(_appConfig.RootDownloadFolder) && !x.IsDownloading)
+            var files = db.Files.Where(x => x.Path.Contains(appConfig.RootDownloadFolder) && !x.IsDownloading)
                 .Include(x => x.VideoFileExtendedInfo).ToList().OrderBy(x => x.Duration);
             foreach (var file in files)
             {
@@ -75,6 +63,27 @@ namespace Infrastructure.Scheduler
 
                     if(moveResult.HasBeenMoved)
                         movedFiles++;
+                }
+                catch (Exception ex)
+                {
+                    NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                }
+            }
+
+            var diskFiles = Directory.EnumerateFiles(appConfig.RootDownloadFolder, "*.*", SearchOption.AllDirectories);
+            foreach (var item in diskFiles)
+            {
+                try
+                {
+                    if (!item.EndsWith("#.f616.mp4") && !item.EndsWith("#.temp.mp4"))
+                        continue;
+
+                    var dbFile = db.Files.FirstOrDefault(x => x.Path == item);
+                    if (dbFile != null)
+                        continue;
+
+                    File.Delete(item);
+
                 }
                 catch (Exception ex)
                 {

@@ -18,7 +18,7 @@ namespace FileStore.Infrastructure.Context
     {
         public static VideoCatalogDbContext CreateDb(this IServiceScopeFactory factory)
         {
-            return factory.CreateScope().ServiceProvider.GetRequiredService<SQLiteContext>();
+            return factory.CreateScope().ServiceProvider.GetRequiredService<VideoCatalogDbContext>();
         }
     }
 
@@ -79,7 +79,7 @@ namespace FileStore.Infrastructure.Context
             //        .HasForeignKey<VideoFileExtendedInfo>(info => info.VideoFileId);
             //});
             
-            //modelBuilder.Entity<DbFile>().HasQueryFilter(u => !u.NeedToDelete);
+            modelBuilder.Entity<DbFile>().HasQueryFilter(u => !u.NeedToDelete);
 
             modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileExtendedInfo).AutoInclude();
             modelBuilder.Entity<VideoFile>().Navigation(e => e.VideoFileUserInfos).AutoInclude();
