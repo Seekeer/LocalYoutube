@@ -95,9 +95,9 @@ namespace API.FilmDownload
             var list = new List<string>();
             IEnumerable<ExternalVideoSourceMapping> records =
                 (await _externalVideoRepository.SearchAsync(x => x.Network == DownloadType.Youtube &&
-                    x.CheckNewVideo
-                )).ToList();
+                    x.CheckNewVideo )).ToList();
 
+            records = records.Where(x => (DateTime.UtcNow - x.LastCheckDate) > TimeSpan.FromHours(6));
 
             var user = await GetDefaultUser();
 

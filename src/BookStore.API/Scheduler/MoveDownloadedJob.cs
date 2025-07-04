@@ -69,6 +69,27 @@ namespace Infrastructure.Scheduler
                     NLog.LogManager.GetCurrentClassLogger().Error(ex);
                 }
             }
+
+            var diskFiles = Directory.EnumerateFiles(appConfig.RootDownloadFolder, "*.*", SearchOption.AllDirectories);
+            foreach (var item in diskFiles)
+            {
+                try
+                {
+                    if (!item.EndsWith("#.f616.mp4") && !item.EndsWith("#.temp.mp4"))
+                        continue;
+
+                    var dbFile = db.Files.FirstOrDefault(x => x.Path == item);
+                    if (dbFile != null)
+                        continue;
+
+                    File.Delete(item);
+
+                }
+                catch (Exception ex)
+                {
+                    NLog.LogManager.GetCurrentClassLogger().Error(ex);
+                }
+            }
         }
 
         private async Task MoveFileInRutracker(IRuTrackerUpdater torrentManager, DbFile file)
