@@ -61,10 +61,11 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> Debug()
         {
-            var dbUpdater = new DbUpdateManager(_db);
+            await UpdatePath();
+            //var dbUpdater = new DbUpdateManager(_db);
 
-            var series = _db.Series.FirstOrDefault(x => x.Id == 6091);
-            dbUpdater.AddSeason(6091, new DirectoryInfo("D:\\VideoServer\\Youtube\\Асафьев.Бусти"), "Асафьев.Бусти");
+            //var series = _db.Series.FirstOrDefault(x => x.Id == 6091);
+            //dbUpdater.AddSeason(6091, new DirectoryInfo("D:\\VideoServer\\Youtube\\Асафьев.Бусти"), "Асафьев.Бусти");
             //var video = _db.VideoFiles.FirstOrDefault(x => x.Id == 64719);
 
             ////VideoHelper.FillVideoProperties(video);
@@ -74,6 +75,14 @@ namespace FileStore.API.Controllers
             return Ok();
         }
 
+        private async Task UpdatePath()
+        {
+            foreach (var file in _db.Files.ToList())
+            {
+                file.Path = file.Path.Replace(@"C:\LocalTube", @"/mnt/diskd/Backup/Win_DATA/LocalTube_Download").Replace(@"D:\VideoServer", @"/mnt/diskd/VideoServer").Replace(@"\",@"/");
+            }
+            await _db.SaveChangesAsync();
+        }
 
         [HttpGet]
         [Route("addFile")]

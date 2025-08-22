@@ -1,7 +1,5 @@
 ﻿using System.Net.Http;
-using System;
 using System.Net;
-using YandexDisk.Client.Http;
 
 namespace API.FilmDownload
 {
@@ -9,27 +7,15 @@ namespace API.FilmDownload
     {
         public static HttpClient GetHttpClientWithProxy()
         {
-            var _proxy = new WebProxy
+            return new HttpClient(new SocketsHttpHandler()
             {
-                Address = new Uri($"http://serv.bitterman.ru:3128"),
-                BypassProxyOnLocal = false,
-                UseDefaultCredentials = false,
-
-                // *** These creds are given to the proxy server, not the web server ***
-                Credentials = new NetworkCredential(
-                userName: "timonin",
-                password: "BzNwuL4hrLgs")
-            };
-
-            // Now create a client handler which uses that proxy
-            var httpClientHandler = new HttpClientHandler
-            {
-                Proxy = _proxy,
-                UseProxy = true,
-            };
-
-            // Finally, create the HTTP client object
-            return new HttpClient(handler: httpClientHandler, disposeHandler: true);
+                Proxy = new WebProxy($"socks5://194.28.224.70:1080")
+                {
+                    Credentials = new NetworkCredential(
+                        userName: "dim",
+                        password: "heheqwe")
+                }
+            });
         }
 
         public static string GetProxyString()
