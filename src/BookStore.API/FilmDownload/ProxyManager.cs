@@ -1,4 +1,5 @@
 ﻿using System.Net.Http;
+using System.Net;
 
 namespace API.FilmDownload
 {
@@ -13,9 +14,15 @@ namespace API.FilmDownload
         /// <returns>The proxy configuration string</returns>
         public static string GetProxyString()
         {
-            // TODO: Implement actual proxy configuration logic
-            // This is a placeholder implementation
-            return "http://proxy.example.com:8080";
+            return new HttpClient(new SocketsHttpHandler()
+            {
+                Proxy = new WebProxy($"socks5://194.28.224.70:1080")
+                {
+                    Credentials = new NetworkCredential(
+                        userName: "dim",
+                        password: "heheqwe")
+                }
+            });
         }
 
         /// <summary>

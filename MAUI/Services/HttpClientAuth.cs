@@ -96,7 +96,6 @@ namespace MAUI.Services
         public const string BASE_SERVER_URL = @"https://api.localtube.sekeerserveri3.duckdns.org:9999";
 #else
         public const string BASE_SERVER_URL = @"https://api.localtube.sekeerserveri3.duckdns.org:9999";
-
 #endif
         public const string BASE_API_URL = BASE_SERVER_URL + "/api/";
 
