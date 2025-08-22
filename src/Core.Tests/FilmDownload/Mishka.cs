@@ -1,5 +1,7 @@
 ﻿using API.FilmDownload;
+using BookStore.Domain.Interfaces;
 using FileStore.Domain;
+using Moq;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -14,14 +16,16 @@ namespace Core.Tests.FilmDownload
         [Test()]
         public async Task CheckDownloadMusic()
         {
-            var downloader = new MishkaDownloader(new AppConfig { });
+            var mockDownloadService = new Mock<IDownloadService>();
+            var downloader = new MishkaDownloader(new AppConfig { }, mockDownloadService.Object);
             await downloader.GetPlaylistInfo1("https://mishka-knizhka.ru/pesni-pro-shkolu-i-detskij-sad/", "");
         }
 
         [Test()]
         public async Task CheckDownloadAbook()
         {
-            var downloader = new MishkaDownloader(new AppConfig { });
+            var mockDownloadService = new Mock<IDownloadService>();
+            var downloader = new MishkaDownloader(new AppConfig { }, mockDownloadService.Object);
             await downloader.GetPlaylistInfo1("https://mishka-knizhka.ru/audio-rasskazy-nosova/", "");
         }
     }

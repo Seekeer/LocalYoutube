@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using API.Controllers;
+using BookStore.Domain.Interfaces;
 using FileStore.API;
 using FileStore.Domain.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,6 +60,7 @@ namespace API.FilmDownload
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly AppConfig _config;
+        private readonly IDownloadServiceFactory _downloadServiceFactory;
         private readonly TelegramBotClient _botClient;
         private readonly RuTrackerUpdater _rutracker;
         private readonly List<SearchRecord> _infos = new List<SearchRecord>();
@@ -73,10 +75,11 @@ namespace API.FilmDownload
         private Timer _timer;
 
 
-        public TgBot(AppConfig config, IServiceScopeFactory serviceScopeFactory)
+        public TgBot(AppConfig config, IServiceScopeFactory serviceScopeFactory, IDownloadServiceFactory downloadServiceFactory)
         {
             _serviceScopeFactory = serviceScopeFactory;
             _config = config;
+            _downloadServiceFactory = downloadServiceFactory;
             _botClient = new TelegramBotClient(config.TelegramSettings.ApiKey);
 
             _rutracker = new RuTrackerUpdater(config);
@@ -652,9 +655,9 @@ namespace API.FilmDownload
                 {
                     _downloadTasks.Add(task.Id, task);
 
-                    if (DownloaderFabric.CanDownload(task, _config))
+                    if (DownloaderFabric.CanDownload(task, _config, _downloadServiceFactory))
                     {
-                        var downloader = DownloaderFabric.CreateDownloader(task, _config);
+                        var downloader = DownloaderFabric.CreateDownloader(task, _config, _downloadServiceFactory);
                         task.DownloadType = downloader.DownloadType;
 
                         await downloader.DownloadAndProcess(task, _serviceScopeFactory,

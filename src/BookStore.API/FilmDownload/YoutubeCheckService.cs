@@ -1,4 +1,5 @@
-﻿using FileStore.Domain;
+﻿using BookStore.Domain.Interfaces;
+using FileStore.Domain;
 using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using FileStore.Infrastructure.Repositories;
@@ -22,7 +23,7 @@ namespace API.FilmDownload
     public class YoutubeCheckService (UserManager<ApplicationUser> _userManager, TgBot _bot,
             ILogger<YoutubeCheckService> _logger,
             IServiceScopeFactory _serviceScopeFactory, AppConfig _appConfig,
-            IExternalVideoMappingsRepository _externalVideoRepository, IExternalVideoMappingsService _externalVideoService) : IDisposable
+            IExternalVideoMappingsRepository _externalVideoRepository, IExternalVideoMappingsService _externalVideoService, IDownloadService _downloadService) : IDisposable
     {
         private const string PLAYLIST_NAME = "LocalTube";
         private const string ApplicationName = "Youtube API .NET Quickstart";
@@ -53,7 +54,7 @@ namespace API.FilmDownload
             string videoLink = YoutubeDownloader.GetVideoUrl(videoId);
             string coverUrl = YoutubeDownloader.GetCoverUrl(videoId);
 
-            var youtubeDownloader = new YoutubeDownloader(_appConfig, true);
+            var youtubeDownloader = new YoutubeDownloader(_appConfig, true, _downloadService);
 
             NLog.LogManager.GetCurrentClassLogger().Info($"Downloading video {videoId}, isAuto: {isAuto}");
 

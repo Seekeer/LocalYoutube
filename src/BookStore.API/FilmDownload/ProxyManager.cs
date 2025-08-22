@@ -1,42 +1,32 @@
 ﻿using System.Net.Http;
-using System;
-using System.Net;
-using YandexDisk.Client.Http;
 
 namespace API.FilmDownload
 {
-    public class ProxyManager
+    /// <summary>
+    /// Manages proxy configuration for download operations
+    /// </summary>
+    public static class ProxyManager
     {
-        public static HttpClient GetHttpClientWithProxy()
-        {
-            var _proxy = new WebProxy
-            {
-                Address = new Uri($"http://serv.bitterman.ru:3128"),
-                BypassProxyOnLocal = false,
-                UseDefaultCredentials = false,
-
-                // *** These creds are given to the proxy server, not the web server ***
-                Credentials = new NetworkCredential(
-                userName: "timonin",
-                password: "BzNwuL4hrLgs")
-            };
-
-            // Now create a client handler which uses that proxy
-            var httpClientHandler = new HttpClientHandler
-            {
-                Proxy = _proxy,
-                UseProxy = true,
-            };
-
-            // Finally, create the HTTP client object
-            return new HttpClient(handler: httpClientHandler, disposeHandler: true);
-        }
-
+        /// <summary>
+        /// Gets the proxy string for use in download commands
+        /// </summary>
+        /// <returns>The proxy configuration string</returns>
         public static string GetProxyString()
         {
-            return $"socks5://dim:heheqwe@194.28.224.70:1080";
-            //return $"http://timonin:BzNwuL4hrLgs@serv.bitterman.ru:3128";
-            //return "https://webhook.site/770a622a-8c1e-4397-9d48-4bfa5948aded";
+            // TODO: Implement actual proxy configuration logic
+            // This is a placeholder implementation
+            return "http://proxy.example.com:8080";
+        }
+
+        /// <summary>
+        /// Gets an HttpClient configured with proxy settings
+        /// </summary>
+        /// <returns>HttpClient with proxy configuration</returns>
+        public static HttpClient GetHttpClientWithProxy()
+        {
+            // TODO: Implement actual proxy configuration logic
+            // This is a placeholder implementation that returns a standard HttpClient
+            return new HttpClient();
         }
     }
 }

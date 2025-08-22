@@ -1,4 +1,5 @@
-﻿using FileStore.Domain;
+﻿using BookStore.Domain.Interfaces;
+using FileStore.Domain;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -24,7 +25,7 @@ namespace API.FilmDownload
 
         private VkApi _api;
 
-        public VKDownloader(AppConfig config) : base(config)
+        public VKDownloader(AppConfig config, IDownloadService downloadService) : base(config, downloadService)
         {
         }
 
@@ -173,7 +174,7 @@ namespace API.FilmDownload
                 foreach (var file in audios)
                 {
 
-                    await this.Download("https://vk.com/audio-17232727_456241607_a5fe727c6bbecdb220", @"Z:\VideoServer\VK\asb.mp3");
+                    await _downloadService.Download("https://vk.com/audio-17232727_456241607_a5fe727c6bbecdb220", @"Z:\VideoServer\VK\asb.mp3");
                 }
             }
 

@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using API.FilmDownload;
+using BookStore.Domain.Interfaces;
 using FileStore.Domain.Models;
 using FileStore.Infrastructure.Context;
 using Infrastructure;
@@ -45,16 +46,18 @@ namespace FileStore.API.Controllers
         private readonly TgBot _tgBot;
         private readonly AppConfig _config;
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly IDownloadServiceFactory _downloadServiceFactory;
 
         public AdminController(VideoCatalogDbContext dbContext, AppConfig config, 
             IServiceScopeFactory serviceScopeFactory, 
-            TgBot tgBot, UserManager<ApplicationUser> userManager)
+            TgBot tgBot, UserManager<ApplicationUser> userManager, IDownloadServiceFactory downloadServiceFactory)
         {
             _userManager = userManager;
             _tgBot = tgBot;
             _db = dbContext;
             _config = config;
             _serviceScopeFactory = serviceScopeFactory;
+            _downloadServiceFactory = downloadServiceFactory;
         }
         [HttpGet]
         [Route("debug")]
@@ -199,11 +202,14 @@ namespace FileStore.API.Controllers
                 if (System.IO.File.Exists(file.Path))
                     continue;
 
-                var downloader = DownloaderFabric.CreateDownloader(file.VideoFileExtendedInfo.ExternalLink, _config);
+                var downloader = DownloaderFabric.CreateDownloader(file.VideoFileExtendedInfo.ExternalLink, _config, _downloadServiceFactory);
                 if(downloader == null)
                     manager.RemoveFileCompletely(file);
                 else
-                    await downloader.Download(file.VideoFileExtendedInfo.ExternalLink, file.Path);
+                {
+                    var downloadService = _downloadServiceFactory.CreateDownloadService(_config);
+                    await downloadService.Download(file.VideoFileExtendedInfo.ExternalLink, file.Path);
+                }
             }
         }
 
@@ -251,7 +257,7 @@ namespace FileStore.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> AddAudioFromVKGroup(string url)
         {
-            var donwloader = DownloaderFabric.CreateDownloader(url, _config);
+            var donwloader = DownloaderFabric.CreateDownloader(url, _config, _downloadServiceFactory);
             await (donwloader as VKDownloader).AddAudioFromVKGroup(url, AudioType.FairyTale);
 
             return Ok();
@@ -513,8 +519,9 @@ namespace FileStore.API.Controllers
             var fInfo = new FileInfo(file.Path);
             var newfInfo = new FileInfo(fInfo.FullName.Replace(fInfo.Name, $"youtube_{fInfo.Name}"));
 
-            var downloader = DownloaderFabric.CreateDownloader(youtubeLink, _config);
-            var filePath = await downloader.Download(youtubeLink, newfInfo.FullName);
+            var downloader = DownloaderFabric.CreateDownloader(youtubeLink, _config, _downloadServiceFactory);
+            var downloadService = _downloadServiceFactory.CreateDownloadService(_config);
+            var filePath = await downloadService.Download(youtubeLink, newfInfo.FullName);
 
             var newFileName = $"{filePath}#.mp4";
             if (!System.IO.File.Exists(newFileName))

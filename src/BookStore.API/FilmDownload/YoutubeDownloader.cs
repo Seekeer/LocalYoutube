@@ -1,4 +1,5 @@
-﻿using FileStore.API;
+﻿using BookStore.Domain.Interfaces;
+using FileStore.API;
 using FileStore.Domain;
 using FileStore.Domain.Models;
 using Google.Apis.CustomSearchAPI.v1.Data;
@@ -27,7 +28,7 @@ namespace API.FilmDownload
         public override DownloadType DownloadType { get => DownloadType.Youtube; }
         public override bool IsVideoPropertiesFilled => true;
 
-        public YoutubeDownloader(AppConfig config, bool ignoreShortVideos) : base(config)
+        public YoutubeDownloader(AppConfig config, bool ignoreShortVideos, IDownloadService downloadService) : base(config, downloadService)
         {
             _ignoreShortVideos = ignoreShortVideos;
         }

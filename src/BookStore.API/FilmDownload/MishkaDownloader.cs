@@ -1,4 +1,5 @@
 ﻿using AngleSharp.Text;
+using BookStore.Domain.Interfaces;
 using FileStore.Domain;
 using FileStore.Domain.Models;
 using HtmlAgilityPack;
@@ -19,22 +20,8 @@ namespace API.FilmDownload
     public class MishkaDownloader : PageDownloaderBase
     {
 
-        public MishkaDownloader(AppConfig config) : base(config, new WebDriverPageLoader(TimeSpan.FromSeconds(3), false)) { }
-
-        public override async Task<string> Download(string url, string path)
-        {
-            var httpClient = new HttpClient();
-            Thread.Sleep(1000);
-            var response = await httpClient.GetAsync(url);
-            var finfo = new FileInfo(path);
-            Directory.CreateDirectory(finfo.DirectoryName);
-            using (var fs = new FileStream(path, FileMode.CreateNew))
-            {
-                await response.Content.CopyToAsync(fs);
-            }
-
-            return path;
-        }
+        public MishkaDownloader(AppConfig config, IDownloadService downloadService) : 
+            base(config, new MishkaDownloadService(), new WebDriverPageLoader(TimeSpan.FromSeconds(3), false)) { }
 
         protected override bool IsPlaylist(string url)
         {
