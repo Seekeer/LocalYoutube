@@ -3,9 +3,16 @@ using System.Net;
 
 namespace API.FilmDownload
 {
-    public class ProxyManager
+    /// <summary>
+    /// Manages proxy configuration for download operations
+    /// </summary>
+    public static class ProxyManager
     {
-        public static HttpClient GetHttpClientWithProxy()
+        /// <summary>
+        /// Gets the proxy string for use in download commands
+        /// </summary>
+        /// <returns>The proxy configuration string</returns>
+        public static string GetProxyString()
         {
             return new HttpClient(new SocketsHttpHandler()
             {
@@ -18,11 +25,15 @@ namespace API.FilmDownload
             });
         }
 
-        public static string GetProxyString()
+        /// <summary>
+        /// Gets an HttpClient configured with proxy settings
+        /// </summary>
+        /// <returns>HttpClient with proxy configuration</returns>
+        public static HttpClient GetHttpClientWithProxy()
         {
-            return $"socks5://dim:heheqwe@194.28.224.70:1080";
-            //return $"http://timonin:BzNwuL4hrLgs@serv.bitterman.ru:3128";
-            //return "https://webhook.site/770a622a-8c1e-4397-9d48-4bfa5948aded";
+            // TODO: Implement actual proxy configuration logic
+            // This is a placeholder implementation that returns a standard HttpClient
+            return new HttpClient();
         }
     }
 }

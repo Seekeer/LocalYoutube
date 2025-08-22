@@ -1,4 +1,5 @@
-﻿using FileStore.Domain;
+﻿using BookStore.Domain.Interfaces;
+using FileStore.Domain;
 using FileStore.Domain.Models;
 using HtmlAgilityPack;
 using Infrastructure;
@@ -9,24 +10,17 @@ using System.Threading.Tasks;
 
 namespace API.FilmDownload
 {
-    internal class RossaDownloader : CommonDownloader
+    public class RossaDownloader : CommonDownloader
     {
 
-        public RossaDownloader(AppConfig config) : base(config) { }
-
-        public override Task<string> Download(string url, string path)
-        {
-            // https://rossaprimavera.ru/video/da867d54 -> https://rossaprimavera.ru/static/video/da867d54/720.mp4
-            url = url.Replace(@"https://rossaprimavera.ru/video", @"https://rossaprimavera.ru/static/video") + @"/720.mp4";
-            return base.Download(url, path);
-        }
+        public RossaDownloader(AppConfig config, IDownloadService downloadService) : base(config, new RossaDownloadService(downloadService)) { }
 
         public override DownloadType DownloadType => DownloadType.Rossaprimavera;
     }
 
-    internal class CommonDownloader : DownloaderBase
+    public class CommonDownloader : DownloaderBase
     {
-        public CommonDownloader(AppConfig config) :base(config)
+        public CommonDownloader(AppConfig config, IDownloadService downloadService) :base(config, downloadService)
         {
         }
 

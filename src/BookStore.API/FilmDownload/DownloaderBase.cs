@@ -1,4 +1,5 @@
 ﻿using API.Resources;
+using BookStore.Domain.Interfaces;
 using FileStore.Domain;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Models;
@@ -127,31 +128,66 @@ namespace API.FilmDownload
 
     public class DownloaderFabric
     {
-        public static DownloaderBase CreateDownloader(DownloadTask task, AppConfig config)
+        public static DownloaderBase CreateDownloader(DownloadTask task, AppConfig config, IDownloadServiceFactory downloadServiceFactory)
         {
-            return CreateDownloader(task.Uri?.ToString(), config);
+            return CreateDownloader(task.Uri?.ToString(), config, downloadServiceFactory);
         }
-        public static DownloaderBase CreateDownloader(string url, AppConfig config)
+        
+        public static DownloaderBase CreateDownloader(string url, AppConfig config, IDownloadServiceFactory downloadServiceFactory)
+        {
+            if (url == null || url.Contains("rutracker.org"))
+                return null;
+
+            var downloadService = downloadServiceFactory.CreateDownloadService(config);
+
+            if (url.Contains("youtube") || url.Contains("youtu.be"))
+                return new YoutubeDownloader(config, false, downloadService);
+            else if (url.Contains("vk.com") || url.Contains("vkvideo.ru"))
+                return new VKDownloader(config, downloadService);
+            else if (url.Contains("rossaprimavera"))
+                return new RossaDownloader(config, downloadService);
+            else if (url.Contains("mishka-knizhka.ru"))
+                return new MishkaDownloader(config, downloadService);
+            else
+                return new CommonDownloader(config, downloadService);
+        }
+
+        // Backward compatibility method - deprecated but maintained for existing code
+        [System.Obsolete("Use CreateDownloader with IDownloadServiceFactory instead")]
+        public static DownloaderBase CreateDownloader(DownloadTask task, AppConfig config, IDownloadService downloadService)
+        {
+            return CreateDownloader(task.Uri?.ToString(), config, downloadService);
+        }
+        
+        [System.Obsolete("Use CreateDownloader with IDownloadServiceFactory instead")]
+        public static DownloaderBase CreateDownloader(string url, AppConfig config, IDownloadService downloadService)
         {
             if (url == null || url.Contains("rutracker.org"))
                 return null;
 
             if (url.Contains("youtube") || url.Contains("youtu.be"))
-                return new YoutubeDownloader(config, false);
+                return new YoutubeDownloader(config, false, downloadService);
             else if (url.Contains("vk.com") || url.Contains("vkvideo.ru"))
-                return new VKDownloader(config);
+                return new VKDownloader(config, downloadService);
             else if (url.Contains("rossaprimavera"))
-                return new RossaDownloader(config);
+                return new RossaDownloader(config, downloadService);
             else if (url.Contains("mishka-knizhka.ru"))
-                return new MishkaDownloader(config);
+                return new MishkaDownloader(config, downloadService);
             else
-                return new CommonDownloader(config);
+                return new CommonDownloader(config, downloadService);
         }
 
-        internal static bool CanDownload(DownloadTask task, AppConfig _config)
+        public static bool CanDownload(DownloadTask task, AppConfig _config, IDownloadServiceFactory downloadServiceFactory)
         {
-            var downloader = CreateDownloader(task, _config);
+            var downloader = CreateDownloader(task, _config, downloadServiceFactory);
+            return downloader != null;
+        }
 
+        // Backward compatibility method - deprecated but maintained for existing code
+        [System.Obsolete("Use CanDownload with IDownloadServiceFactory instead")]
+        public static bool CanDownload(DownloadTask task, AppConfig _config, IDownloadService downloadService)
+        {
+            var downloader = CreateDownloader(task, _config, downloadService);
             return downloader != null;
         }
     }
@@ -162,11 +198,13 @@ namespace API.FilmDownload
     }
     public abstract class DownloaderBase : IDisposable
     {
-        protected DownloaderBase(AppConfig config) { 
+        protected DownloaderBase(AppConfig config, IDownloadService downloadService) { 
             this._config = config;
+            this._downloadService = downloadService;
         }
 
         protected AppConfig _config;
+        protected IDownloadService _downloadService;
         private static int _errorsCount;
 
         public abstract DownloadType DownloadType { get; }
@@ -204,7 +242,7 @@ namespace API.FilmDownload
 
                         await policy.ExecuteAsync(async () =>
                         {
-                            record.Value.Path = await Download(record.Key, record.Value.Path);
+                            record.Value.Path = await _downloadService.Download(record.Key, record.Value.Path);
 
                             if (!System.IO.File.Exists(record.Value.Path))
                             {
@@ -268,75 +306,11 @@ namespace API.FilmDownload
                 return await GetVideoInfo(url, rootDownloadFolder);
         }
 
-        public virtual async Task<string> Download(string url, string path)
-        {
-            path = PrepareFilePath(path);
 
-            //$path = '{path.Replace(" ", "")}'
-            url = url.ClearEnd("&list=");
-            var fInfo = new FileInfo(path);
-            var fileName = fInfo.FullName.Replace(fInfo.Extension, "");
-
-            var downloadUtilitiesScript = File.ReadAllText(@"Assets\downloadScript.txt");
-            //var proxyStr = "";
-            var proxyStr = !_config.UseProxy ? "" : $"--proxy {ProxyManager.GetProxyString()}";
-            var downloadVideoScript = @$"
-            $ytdlp = 'yt-dlp.exe'
-            $cmd = '-f ""bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"" {proxyStr} --fragment-retries 30 --write-info-json --merge-output-format mp4 {url} -o """"{fileName}""""' 
-            Start-Process -FilePath $ytdlp -ArgumentList $cmd -Wait -WindowStyle Minimized
-";
-            //$cmd = '-f ""bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"" {proxyStr} --merge-output-format mp4 {url} --sponsorblock-remove sponsor --ffmpeg-location ./ffmpegytdlp -o """"{fileName}""""' 
-            // add --verbose and run in cmd for debug.
-
-            var finalScript = downloadUtilitiesScript + downloadVideoScript;
-
-            var processStartInfo = new ProcessStartInfo();
-            processStartInfo.FileName = "powershell.exe";
-            processStartInfo.Arguments = $"-Command \"{finalScript}\"";
-            processStartInfo.UseShellExecute = false;
-            processStartInfo.RedirectStandardOutput = true;
-            processStartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Assets");
-            processStartInfo.UseShellExecute = false; // causes consoles to share window 
-
-            using var process = new Process();
-            process.StartInfo = processStartInfo;
-            process.Start();
-            await process.WaitForExitAsync();
-            string output = process.StandardOutput.ReadToEnd();
-
-            if (File.Exists(fileName))
-                File.Move(fileName, path);
-            else
-            {
-                fileName = fileName + "#";
-                if (File.Exists(fileName))
-                {
-                    if (File.Exists(path))
-                        File.Delete(path);
-                    
-                    File.Move(fileName, path);
-                }
-                else if (File.Exists(fileName + ".mp4"))
-                {
-                    if (File.Exists(path))
-                        File.Delete(fileName + ".mp4");
-                    else 
-                        File.Move(fileName + ".mp4", path);
-                }
-            }
-            return path;
-        }
 
         protected abstract bool IsPlaylist(string url);
         protected abstract Task<DownloadInfo> GetPlaylistInfo(string url, string rootDownloadFolder);
         protected abstract Task<DownloadInfo> GetVideoInfo(string url, string rootDownloadFolder);
-
-        private string PrepareFilePath(string path)
-        {
-            return path.Replace(" ", "")
-                // ' is breaking powershell script
-                .Replace("'", "");
-        }
 
         internal void UpdateFileByTask(DbFile value, DownloadTask task)
         {

@@ -1,4 +1,5 @@
-﻿using FileStore.Domain;
+﻿using BookStore.Domain.Interfaces;
+using FileStore.Domain;
 using HtmlAgilityPack;
 using System.Collections.Generic;
 
@@ -6,7 +7,7 @@ namespace API.FilmDownload
 {
     public abstract class PageDownloaderBase : DownloaderBase
     {
-        protected PageDownloaderBase(AppConfig config, IWebPageLoader loader) : base(config)
+        protected PageDownloaderBase(AppConfig config, IDownloadService downloadService, IWebPageLoader loader) : base(config, downloadService)
         {
             _pageLoader = loader;
         }

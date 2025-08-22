@@ -1,6 +1,8 @@
 ﻿using API.Controllers;
 using API.FilmDownload;
 using API.TG;
+using BookStore.Domain.Interfaces;
+using BookStore.Infrastructure.Services;
 using FileStore.Domain.Interfaces;
 using FileStore.Domain.Services;
 using FileStore.Infrastructure.Context;
@@ -41,6 +43,27 @@ namespace FileStore.API.Configuration
             services.AddScoped<IDbFileService, DbFileService>();
             services.AddScoped<IExternalVideoMappingsRepository, ExternalVideoMappingsRepository>();
             services.AddScoped<IExternalVideoMappingsService, ExternalVideoMappingsService>();
+            
+            // Register platform detection and script management services
+            services.AddSingleton<IPlatformDetectionService, PlatformDetectionService>();
+            services.AddSingleton<IScriptManager, ScriptManager>();
+            services.AddSingleton<ILinuxDependencyManager, LinuxDependencyManager>();
+            
+            // Register error handling and logging services
+            services.AddScoped<IDownloadLogger, DownloadLogger>();
+            services.AddScoped<IErrorRecoveryService, ErrorRecoveryService>();
+            
+            // Register download service factory as singleton for performance
+            services.AddSingleton<IDownloadServiceFactory, DownloadServiceFactory>();
+            
+            // Register download service using factory pattern with scoped lifetime
+            // Scoped is appropriate for download operations that should be isolated per request
+            services.AddScoped<IDownloadService>(provider =>
+            {
+                var factory = provider.GetRequiredService<IDownloadServiceFactory>();
+                var config = provider.GetRequiredService<Domain.AppConfig>();
+                return factory.CreateDownloadService(config);
+            });
 
             services.AddScoped<DbUpdateManager, DbUpdateManager>();
             services.AddScoped<IMessageProcessor, MessageProcessor>();
