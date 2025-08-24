@@ -1,0 +1,1 @@
+for /d /r . %%d in (packages) do @if exist "%%d" rd /s/q "%%d"

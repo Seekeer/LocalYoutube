@@ -1,0 +1,55 @@
+# Linux Dependencies Dockerfile
+# This Dockerfile can be used as a base or reference for adding Linux download support to BookStore
+
+# Use Ubuntu as base image (can be changed to other distributions)
+FROM ubuntu:22.04
+
+# Avoid interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update package list and install dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    ffmpeg \
+    wget \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install yt-dlp via pip
+RUN pip3 install --user yt-dlp
+
+# Ensure PATH includes user local bin
+ENV PATH="/root/.local/bin:${PATH}"
+
+# Create assets directory
+RUN mkdir -p /app/Assets
+
+# Copy Linux assets
+COPY Assets/downloadScript.sh /app/Assets/
+COPY Assets/detect-packages.sh /app/Assets/
+COPY Assets/LINUX_DEPLOYMENT.md /app/Assets/
+
+# Make scripts executable
+RUN chmod +x /app/Assets/*.sh
+
+# Verify installations
+RUN python3 --version && \
+    pip3 --version && \
+    yt-dlp --version && \
+    ffmpeg -version
+
+# Set working directory
+WORKDIR /app
+
+# Health check to verify dependencies
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python3 -c "import sys; sys.exit(0)" && \
+        yt-dlp --version > /dev/null && \
+        ffmpeg -version > /dev/null
+
+# Example usage:
+# COPY your-app /app/
+# EXPOSE 80
+# CMD ["dotnet", "your-app.dll"]
