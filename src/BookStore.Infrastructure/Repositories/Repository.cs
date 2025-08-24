@@ -81,9 +81,9 @@ namespace FileStore.Infrastructure.Repositories
         protected IQueryable<T> Random<T>(IQueryable<T> query, int resultCount) 
         {
             if (resultCount > 0)
-                return query.OrderBy(o => Guid.NewGuid()).Take(resultCount);
+                return query.OrderBy(o => EF.Functions.Random()).Take(resultCount);
             else
-                return query.OrderBy(o => Guid.NewGuid());
+                return query.OrderBy(o => EF.Functions.Random());
         }
 
         public async Task<TEntity> FindByQueryAsync(Expression<Func<TEntity, bool>> predicate)

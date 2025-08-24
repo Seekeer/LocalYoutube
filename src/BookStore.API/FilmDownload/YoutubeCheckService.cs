@@ -39,9 +39,9 @@ namespace API.FilmDownload
         
         public async Task CheckPlaylist()
         {
-            await CheckSubscriptionsUpdates();
             YouTubeService youtubeService = await GetYoutubeService();
             PlaylistItemListResponse playlistResponse = await GetLocalTubePlayListVideos(youtubeService);
+            NLog.LogManager.GetCurrentClassLogger().Info($"Got {playlistResponse.Items.Count} videos in LocalTube playlist");
             foreach (var item in playlistResponse.Items)
             {
                 if (await DownloadVideo(await GetDefaultUser(), youtubeService, item.ContentDetails.VideoId, false))
