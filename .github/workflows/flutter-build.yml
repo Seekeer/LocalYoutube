@@ -102,7 +102,7 @@ jobs:
           STORE_PASSWORD: ${{ secrets[format('{0}_UPLOAD_STORE_PASSWORD', env.UPDATE_CHANNEL == 'stable' && 'STABLE' || 'PREVIEW')] }}
         run: |
           python3 - <<'PY'
-          import base64, os
+          import base64, hashlib, os, subprocess
           from pathlib import Path
           names = ('KEYSTORE', 'KEY_ALIAS', 'KEY_PASSWORD', 'STORE_PASSWORD')
           if not all(os.environ.get(name) for name in names):
@@ -116,6 +116,9 @@ jobs:
           store = Path(os.environ['RUNNER_TEMP']) / 'channel-upload.jks'
           store.write_bytes(base64.b64decode(os.environ['KEYSTORE'], validate=True))
           store.chmod(0o600)
+          certificate = subprocess.check_output(['keytool', '-exportcert', '-keystore', str(store),
+              '-alias', os.environ['KEY_ALIAS'], '-storepass:env', 'STORE_PASSWORD'])
+          assert hashlib.sha256(certificate).hexdigest() == os.environ['EXPECTED_CERTIFICATE'], 'Configured keystore certificate differs from channel pin'
           properties = {'storeFile': str(store), 'keyAlias': os.environ['KEY_ALIAS'],
                         'keyPassword': os.environ['KEY_PASSWORD'], 'storePassword': os.environ['STORE_PASSWORD']}
           target = Path('android/key.properties')
@@ -157,7 +160,7 @@ jobs:
           apk = Path('../delivery/update.apk')
           signing = subprocess.check_output([str(tools/'apksigner'), 'verify', '--print-certs', str(apk)], text=True)
           certificates = re.findall(r'^Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]{64})$', signing, re.M)
-          assert [value.lower() for value in certificates] == [os.environ['EXPECTED_CERTIFICATE']]
+          assert [value.lower() for value in certificates] == [os.environ['EXPECTED_CERTIFICATE']], 'APK certificate mismatch: actual=' + str(certificates) + ', expected=' + os.environ['EXPECTED_CERTIFICATE']
           badging = subprocess.check_output([str(tools/'aapt'), 'dump', 'badging', str(apk)], text=True)
           identity = re.search(r"^package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging, re.M)
           assert identity and identity[1] == os.environ['EXPECTED_APPLICATION_ID']
