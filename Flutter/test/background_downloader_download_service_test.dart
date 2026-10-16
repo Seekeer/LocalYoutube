@@ -105,6 +105,22 @@ void main() {
     addTearDown(() => service.dispose());
   });
 
+  test('keeps foreground downloads without completion or error notifications',
+      () async {
+    await service.initialize();
+
+    final configuration = verify(() => downloader.configure(
+          globalConfig: captureAny<Object?>(named: 'globalConfig'),
+        )).captured.single as List<(String, dynamic)>;
+    expect(configuration, contains((Config.runInForeground, true)));
+    verify(() => downloader.configureNotificationForGroup(
+          any(),
+          running: any(named: 'running'),
+          progressBar: true,
+          tapOpensFile: false,
+        )).called(1);
+  });
+
   test('requests notification permission before starting an Android download',
       () async {
     await service.enqueue(

@@ -102,10 +102,6 @@ class BackgroundApkDownloadService implements ApkDownloadService {
     _downloader.configureNotificationForGroup(group,
         running: const TaskNotification(
             'Обновление LocalTube', 'Скачивание {progress}'),
-        complete: const TaskNotification('Обновление LocalTube',
-            'Загрузка завершена. Откройте меню приложения для проверки.'),
-        error: const TaskNotification('Обновление LocalTube',
-            'Ошибка загрузки. Повторите в меню приложения.'),
         progressBar: true,
         tapOpensFile: false);
     await _downloader.trackTasksInGroup(group);

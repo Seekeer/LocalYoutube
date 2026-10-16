@@ -1,5 +1,8 @@
 package org.localtube.app
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Bundle
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -15,6 +18,32 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : AudioServiceActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        configureDownloadNotifications()
+    }
+
+    private fun configureDownloadNotifications() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val notifications = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        // Keep a valid channel for foreground transfers, but hide its notifications.
+        // The media playback channel is separate and retains its system controls.
+        val channelId = "background_downloader"
+        notifications.createNotificationChannel(
+            NotificationChannel(channelId, "LocalTube downloads", NotificationManager.IMPORTANCE_NONE).apply {
+                setSound(null, null)
+                enableVibration(false)
+                setShowBadge(false)
+            },
+        )
+        // Remove stale download notifications left by previous versions only.
+        for (entry in notifications.activeNotifications) {
+            if (entry.notification.channelId == channelId) {
+                notifications.cancel(entry.tag, entry.id)
+            }
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(

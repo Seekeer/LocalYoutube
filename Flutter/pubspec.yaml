@@ -24,7 +24,8 @@ dependencies:
   logger: ^2.6.1
   connectivity_plus: ^6.1.5
   signalr_netcore: ^1.4.4
-  background_downloader: ^9.5.2
+  # 9.5.3 fixes a foreground notification race after a worker finishes.
+  background_downloader: 9.5.3
   just_audio: ^0.10.5
   just_audio_background: ^0.0.1-beta.17
   audio_service: ^0.18.18

@@ -115,14 +115,7 @@ class BackgroundDownloaderDownloadService implements DownloadService {
         'LocalTube download',
         'Downloading {filename}',
       ),
-      complete: const TaskNotification(
-        'LocalTube download',
-        '{filename} completed',
-      ),
-      error: const TaskNotification(
-        'LocalTube download',
-        '{filename} failed',
-      ),
+      // Only the foreground service notification is needed. No finished/error alerts.
       progressBar: true,
       tapOpensFile: false,
     );
