@@ -1,3 +1,4 @@
+import '../../core/logging/remote_log_forwarder.dart';
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -127,6 +128,11 @@ class AppBootstrap {
 
     final TokenRepository tokenRepository =
         SecureTokenRepository(secureStorage);
+    final remoteLogs = RemoteLogForwarder(
+      logService: logService,
+      tokens: tokenRepository,
+      apiBaseUrl: config.apiBaseUrl,
+    );
     final AuthNotifier authNotifier = AuthNotifier(
       initialMode: AppAccessMode.checkingSession,
       logService: logService,
@@ -363,6 +369,7 @@ class AppBootstrap {
             item.status.isActive || item.status == DownloadStatus.paused);
       },
       shutdown: () async {
+        await remoteLogs.dispose();
         await castRegistrationService.dispose();
         await syncHubService.dispose();
         if (downloadService is BackgroundDownloaderDownloadService) {

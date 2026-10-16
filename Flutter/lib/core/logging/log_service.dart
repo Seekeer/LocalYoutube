@@ -122,6 +122,12 @@ class LogService {
   final StreamController<List<LogEntry>> _entriesController =
       StreamController<List<LogEntry>>.broadcast();
 
+  final StreamController<LogEntry> _entryController =
+      StreamController<LogEntry>.broadcast();
+
+  /// New sanitized events only; restored local history is not uploaded.
+  Stream<LogEntry> get entryStream => _entryController.stream;
+
   final int maxInMemoryEntries;
   final int maxFileSizeBytes;
   final String fileName;
@@ -252,6 +258,7 @@ class LogService {
       _entries.removeFirst();
     }
     _entries.addLast(entry);
+    _entryController.add(entry);
     _emitSnapshot();
     _printToConsole(entry);
     _persistEntry(entry);

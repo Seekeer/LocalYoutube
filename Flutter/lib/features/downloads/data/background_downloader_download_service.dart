@@ -58,7 +58,7 @@ class BackgroundDownloaderDownloadService implements DownloadService {
 
   Future<void>? _initializeFuture;
   Future<void>? _notificationPermissionFuture;
-  StreamSubscription<TaskUpdate>? _updateSubscription;
+  StreamSubscription<void>? _updateSubscription;
 
   @override
   Future<void> initialize() {
@@ -79,7 +79,9 @@ class BackgroundDownloaderDownloadService implements DownloadService {
     _downloader.trackTasks();
     _downloader.resumeFromBackground();
 
-    _updateSubscription = _downloader.updates.listen(
+    // Stream.listen does not await async callbacks. Process each update fully
+    // before the next one can read or overwrite the same download record.
+    _updateSubscription = _downloader.updates.asyncMap<void>(
       (TaskUpdate update) async {
         if (update.task.group != _taskGroup) return;
         try {
@@ -93,6 +95,8 @@ class BackgroundDownloaderDownloadService implements DownloadService {
               'Download update handling failed', error, stackTrace);
         }
       },
+    ).listen(
+      null,
       onError: (Object error, StackTrace stackTrace) {
         _logService.error('Download updates stream failed', error, stackTrace);
       },

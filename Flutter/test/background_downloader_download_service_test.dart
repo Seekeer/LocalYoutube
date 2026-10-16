@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
 // The plugin exposes permissions through FileDownloader but does not export its interface.
@@ -50,6 +51,7 @@ void main() {
   }
 
   setUpAll(() {
+    registerFallbackValue(StackTrace.empty);
     registerFallbackValue(DownloadTask(url: 'https://example.com/video.mp4'));
     registerFallbackValue(TaskNotification('Download', '{filename}'));
     registerFallbackValue(DownloadItem(
@@ -103,6 +105,74 @@ void main() {
     when(() => tokens.read()).thenAnswer((_) async => null);
     service = createService(DownloadPlatformKind.android);
     addTearDown(() => service.dispose());
+  });
+
+  test('completion is not overwritten by an in-flight 100% progress save',
+      () async {
+    final Directory directory =
+        await Directory.systemTemp.createTemp('download_completion_');
+    addTearDown(() => directory.delete(recursive: true));
+    final File file = await File('${directory.path}/video.webm')
+        .writeAsBytes(<int>[1, 2, 3]);
+    final DownloadTask task = DownloadTask(
+      taskId: 'completion-race',
+      url: 'https://example.com/video.webm',
+      filename: 'video.webm',
+      directory: directory.path,
+      baseDirectory: BaseDirectory.root,
+      metaData: '1',
+      updates: Updates.statusAndProgress,
+    );
+    DownloadItem stored = DownloadItem(
+      videoId: 1,
+      status: DownloadStatus.downloading,
+      progress: 0.9,
+      remoteUrl: task.url,
+      taskId: task.taskId,
+      queuedAt: DateTime.utc(2026),
+      updatedAt: DateTime.utc(2026),
+    );
+    final StreamController<TaskUpdate> updates = StreamController<TaskUpdate>();
+    addTearDown(updates.close);
+    when(() => downloader.updates).thenAnswer((_) => updates.stream);
+    when(() => repository.listAll())
+        .thenAnswer((_) async => <DownloadItem>[stored]);
+    when(() => repository.findByVideoId(1)).thenAnswer((_) async => stored);
+    final Completer<void> progressSaveStarted = Completer<void>();
+    final Completer<void> releaseProgressSave = Completer<void>();
+    when(() => repository.save(any())).thenAnswer((Invocation invocation) async {
+      final DownloadItem item =
+          invocation.positionalArguments.single as DownloadItem;
+      if (item.status == DownloadStatus.downloading && item.progress == 1) {
+        progressSaveStarted.complete();
+        await releaseProgressSave.future;
+      }
+      stored = item;
+    });
+    await service.initialize();
+    final List<List<DownloadItem>> snapshots = <List<DownloadItem>>[];
+    final StreamSubscription<List<DownloadItem>> subscription =
+        service.watchDownloads().listen(snapshots.add);
+    addTearDown(subscription.cancel);
+
+    updates.add(TaskProgressUpdate(task, 1));
+    await progressSaveStarted.future;
+    updates.add(TaskStatusUpdate(task, TaskStatus.complete));
+    // Let completion run while the preceding repository write is still pending.
+    for (int i = 0; i < 20; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    releaseProgressSave.complete();
+    for (int i = 0; i < 20; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    expect(stored.status, DownloadStatus.completed);
+    expect(stored.progress, 1);
+    expect(stored.localPath, file.path);
+    expect(stored.taskId, isNull);
+    expect(snapshots.last.single.status, DownloadStatus.completed);
+    verifyNever(() => logs.error(any(), any(), any()));
   });
 
   test('keeps foreground downloads without completion or error notifications',
