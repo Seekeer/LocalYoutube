@@ -153,14 +153,16 @@ jobs:
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         run: |
           python3 - <<'PY'
-          import hashlib, json, os, re, subprocess
+          import hashlib, json, os, re, subprocess, sys
+          sys.path.insert(0, 'tool/ci')
+          from apk_signing import certificate_sha256
           from pathlib import Path
           tools = sorted((Path(os.environ['ANDROID_HOME']) / 'build-tools').glob('*/apksigner'),
                          key=lambda path: tuple(int(p) for p in re.findall(r'\d+', path.parent.name)))[-1].parent
           apk = Path('../delivery/update.apk')
           signing = subprocess.check_output([str(tools/'apksigner'), 'verify', '--print-certs', str(apk)], text=True)
-          certificates = re.findall(r'^Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]{64})$', signing, re.M)
-          assert [value.lower() for value in certificates] == [os.environ['EXPECTED_CERTIFICATE']], 'APK certificate mismatch: actual=' + str(certificates) + ', expected=' + os.environ['EXPECTED_CERTIFICATE']
+          certificate = certificate_sha256(signing)
+          assert certificate == os.environ['EXPECTED_CERTIFICATE'], 'APK certificate mismatch: actual=' + certificate + ', expected=' + os.environ['EXPECTED_CERTIFICATE']
           badging = subprocess.check_output([str(tools/'aapt'), 'dump', 'badging', str(apk)], text=True)
           identity = re.search(r"^package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging, re.M)
           assert identity and identity[1] == os.environ['EXPECTED_APPLICATION_ID']
