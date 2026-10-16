@@ -85,6 +85,9 @@ class _StartPageState extends ConsumerState<StartPage> {
     final bool internetEnabled = networkStatus != NetworkStatus.offline;
     final bool useOfflineActions = ref.watch(effectiveAutonomousModeProvider);
     final bool canUseOnlineActions = !useOfflineActions;
+    final AppUpdateState updateState = ref.watch(appUpdateControllerProvider);
+    final bool promoteUpdateMenu = updateState.status == UpdateStatus.available &&
+        updateState.available != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -137,7 +140,7 @@ class _StartPageState extends ConsumerState<StartPage> {
                             tone: StateFeedbackTone.warning,
                           ),
                         ),
-                      const AppUpdatesMenu(),
+                      if (promoteUpdateMenu) const AppUpdatesMenu(),
                       _buildMenuButton(
                         label: _labelDownloaded,
                         width: width,
@@ -205,6 +208,7 @@ class _StartPageState extends ConsumerState<StartPage> {
                         backgroundColor: _buttonPalette[7],
                         onPressed: _isBusy ? null : _logout,
                       ),
+                      if (!promoteUpdateMenu) const AppUpdatesMenu(),
                     ],
                   ),
                 ),
