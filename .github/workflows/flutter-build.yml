@@ -34,6 +34,7 @@ jobs:
     timeout-minutes: 60
     env:
       LOCALTUBE_PREVIEW_APPLICATION_ID: ${{ vars.PREVIEW_APPLICATION_ID }}
+      LOCALTUBE_STABLE_APPLICATION_ID: ${{ vars.STABLE_APPLICATION_ID }}
       UPDATE_CHANNEL: ${{ github.event_name == 'workflow_dispatch' && inputs.channel || 'preview' }}
     defaults:
       run:
@@ -167,7 +168,8 @@ jobs:
           assert certificate == os.environ['EXPECTED_CERTIFICATE'], 'APK certificate mismatch: actual=' + certificate + ', expected=' + os.environ['EXPECTED_CERTIFICATE']
           badging = subprocess.check_output([str(tools/'aapt'), 'dump', 'badging', str(apk)], text=True)
           identity = re.search(r"^package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging, re.M)
-          assert identity and identity[1] == os.environ['EXPECTED_APPLICATION_ID']
+          assert identity, 'Cannot parse APK package identity from aapt output: ' + badging
+          assert identity[1] == os.environ['EXPECTED_APPLICATION_ID'], 'APK package mismatch: actual=' + identity[1] + ', expected=' + os.environ['EXPECTED_APPLICATION_ID']
           code = int(identity[2])
           assert code == int(os.environ['BUILD_NUMBER'])
           # Audit the actual packaged permissions, including plugin manifests.

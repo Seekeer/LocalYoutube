@@ -107,7 +107,8 @@ android {
         }
         create("stage") {
             dimension = "env"
-            applicationId = "org.localtube.app.stable"
+            applicationId = System.getenv("LOCALTUBE_STABLE_APPLICATION_ID")
+                ?: "org.localtube.app.stable"
             manifestPlaceholders["appLabel"] = "localtube"
             manifestPlaceholders["appIcon"] = "ic_launcher"
         }
