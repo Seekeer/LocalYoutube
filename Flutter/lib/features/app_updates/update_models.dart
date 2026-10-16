@@ -6,7 +6,8 @@ class InstalledApp {
   final String versionName;
 
   String? get channel => switch (applicationId) {
-        'org.localtube.app.debug' => 'preview',
+        const String.fromEnvironment('LOCALTUBE_PREVIEW_APPLICATION_ID',
+            defaultValue: 'org.localtube.app.debug') => 'preview',
         'org.localtube.app.stable' => 'stable',
         _ => null,
       };

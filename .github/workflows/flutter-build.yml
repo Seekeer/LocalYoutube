@@ -33,6 +33,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
+      LOCALTUBE_PREVIEW_APPLICATION_ID: ${{ vars.PREVIEW_APPLICATION_ID }}
       UPDATE_CHANNEL: ${{ github.event_name == 'workflow_dispatch' && inputs.channel || 'preview' }}
     defaults:
       run:
@@ -138,6 +139,7 @@ jobs:
               --dart-define-from-file=config/env/prod.json \
               --dart-define=LOCALTUBE_REQUIRE_SERVER_CONFIG=true \
               --dart-define=LOCALTUBE_APK_UPDATES_ENABLED=true \
+              --dart-define=LOCALTUBE_PREVIEW_APPLICATION_ID="$EXPECTED_APPLICATION_ID" \
               --build-name="$VERSION_NAME" --build-number="$BUILD_NUMBER"
             apk=build/app/outputs/flutter-apk/app-prod-debug.apk
           fi

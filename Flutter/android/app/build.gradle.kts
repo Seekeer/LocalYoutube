@@ -113,7 +113,8 @@ android {
         }
         create("prod") {
             dimension = "env"
-            applicationId = "org.localtube.app"
+            applicationId = System.getenv("LOCALTUBE_PREVIEW_APPLICATION_ID")
+                ?.removeSuffix(".debug") ?: "org.localtube.app"
             manifestPlaceholders["appLabel"] = "localtube_prod"
         }
     }
