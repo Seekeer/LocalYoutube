@@ -1,0 +1,68 @@
+name: VK Android transport probe
+on:
+  push:
+    branches: ['probe/vk-android-*']
+    paths:
+      - 'scripts/vk-transport-probe/android/**'
+      - '.github/workflows/vk-android-probe.yml'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Verify external runner
+        env:
+          EXECUTION_ENVIRONMENT: ${{ runner.environment }}
+        run: |
+          test "$EXECUTION_ENVIRONMENT" = github-hosted
+          test "$(hostname)" != i3Ubuntu
+          echo "Building only on verified GitHub-hosted runner"
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: '3.47.7'
+      - name: Create isolated disposable application
+        run: |
+          flutter create --platforms=android --org=dimtimdev.localtube --project-name=vk_transport_probe probe_app
+          rm -rf probe_app/lib probe_app/test
+          rm -f probe_app/analysis_options.yaml
+          cp -R scripts/vk-transport-probe/android/lib probe_app/lib
+          cp -R scripts/vk-transport-probe/android/test probe_app/test
+          cp scripts/vk-transport-probe/android/pubspec.yaml probe_app/pubspec.yaml
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('probe_app/android/app/src/main/AndroidManifest.xml')
+          text = path.read_text().replace('<application', '<uses-permission android:name="android.permission.INTERNET"/><application', 1)
+          text = text.replace('android:label="vk_transport_probe"', 'android:label="LocalTube VK Probe" android:allowBackup="false"')
+          path.write_text(text)
+          PY
+      - name: Analyze, test and build on external runner
+        working-directory: probe_app
+        run: |
+          flutter pub get
+          dart format lib test
+          flutter analyze
+          flutter test
+          flutter build apk --release --target-platform android-arm64
+      - name: Verify identity and checksum
+        run: |
+          mkdir delivery
+          cp probe_app/build/app/outputs/flutter-apk/app-release.apk delivery/localtube-vk-probe.apk
+          tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          "$tools/aapt" dump badging delivery/localtube-vk-probe.apk | head -1
+          "$tools/apksigner" verify --print-certs delivery/localtube-vk-probe.apk
+          sha256sum delivery/localtube-vk-probe.apk > delivery/SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vk-android-probe
+          path: delivery/
+          retention-days: 7
