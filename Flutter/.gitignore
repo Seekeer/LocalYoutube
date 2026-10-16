@@ -34,12 +34,3 @@ app.*.symbols
 
 # Obfuscation related
 app.*.map.json
-
-
-# Private environment overrides and local artifacts
-config/env/*.local.json
-android/build_log.txt
-*.jks
-*.keystore
-*.apk
-*.aab

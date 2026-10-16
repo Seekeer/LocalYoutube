@@ -152,7 +152,8 @@ final Provider<LocalSyncOutboxRepository> localSyncOutboxRepositoryProvider =
 final Provider<SyncHubService> syncHubServiceProvider =
     Provider<SyncHubService>((Ref ref) => throw UnimplementedError());
 
-final Provider<CastDeviceIdentityRepository> castDeviceIdentityRepositoryProvider =
+final Provider<CastDeviceIdentityRepository>
+    castDeviceIdentityRepositoryProvider =
     Provider<CastDeviceIdentityRepository>(
         (Ref ref) => throw UnimplementedError());
 
@@ -230,3 +231,7 @@ final Provider<JumpToNearestTimestampUseCase>
     Provider<JumpToNearestTimestampUseCase>(
   (Ref ref) => throw UnimplementedError(),
 );
+
+// Configuration changes rebuild all clients in the application host.
+final serverConnectionActionProvider =
+    Provider<Future<void> Function()?>((ref) => null);

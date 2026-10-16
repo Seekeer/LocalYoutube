@@ -5,7 +5,7 @@ import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 
 class AppDatabase {
-  AppDatabase({QueryExecutor? executor})
+  AppDatabase({QueryExecutor? executor, String fileName = 'localtube_app.db'})
       : _database = _RawDatabaseConnection(
           executor ??
               LazyDatabase(
@@ -13,7 +13,7 @@ class AppDatabase {
                   final Directory directory =
                       await getApplicationDocumentsDirectory();
                   final File file = File(
-                    '${directory.path}${Platform.pathSeparator}localtube_app.db',
+                    '${directory.path}${Platform.pathSeparator}$fileName',
                   );
                   return NativeDatabase.createInBackground(file);
                 },

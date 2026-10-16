@@ -98,6 +98,7 @@ class AppConfig {
     required this.receiveTimeoutMs,
     required this.sendTimeoutMs,
     this.crashReportUrl = '',
+    this.serverStorageNamespace = '',
     this.environment = AppEnvironment.prod,
     this.logLevel = AppLogLevel.info,
     this.enableNetworkLogs = false,
@@ -109,6 +110,7 @@ class AppConfig {
     this.localApiCacheTtlMs = 30000,
   });
 
+  final String serverStorageNamespace;
   final String apiBaseUrl;
   final int connectTimeoutMs;
   final int receiveTimeoutMs;
@@ -191,7 +193,7 @@ class AppConfig {
           'LOCALTUBE_FEATURE_LOCAL_API_ROUTE',
           defaultValue: '',
         ),
-        fallback: false,
+        fallback: environment != AppEnvironment.dev,
       ),
       localApiHost: const String.fromEnvironment(
         'LOCALTUBE_LOCAL_API_HOST',

@@ -24,12 +24,21 @@ class _AppSyncLifecycleListenerState
     with WidgetsBindingObserver {
   ProviderSubscription<AsyncValue<NetworkStatus>>? _networkStatusSubscription;
   bool? _isOnline;
+  Future<bool>? _sessionRecovery;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _startAfterFirstFrame());
+  }
+
+  void _startAfterFirstFrame() {
+    if (!mounted) {
+      return;
+    }
     final appSyncCoordinator = ref.read(appSyncCoordinatorProvider);
     unawaited(appSyncCoordinator.initialize());
     _networkStatusSubscription = ref.listenManual<AsyncValue<NetworkStatus>>(
@@ -85,7 +94,8 @@ class _AppSyncLifecycleListenerState
       return;
     }
 
-    final String reason = wasOnline == true ? 'network-change' : 'network-online';
+    final String reason =
+        wasOnline == true ? 'network-change' : 'network-online';
     await _recoverAndSync(reason: reason);
   }
 
@@ -97,7 +107,8 @@ class _AppSyncLifecycleListenerState
 
     final bool enteredOfflineFallback =
         await ref.read(authRepositoryProvider).enterOfflineFallbackIfAvailable(
-              notice: 'Internet unavailable. Switched to offline mode using local data.',
+              notice:
+                  'Internet unavailable. Switched to offline mode using local data.',
             );
     if (enteredOfflineFallback) {
       return;
@@ -112,12 +123,20 @@ class _AppSyncLifecycleListenerState
   Future<void> _recoverAndSync({required String reason}) async {
     final authNotifier = ref.read(authNotifierProvider);
     if (authNotifier.isOfflineFallback) {
-      authNotifier.enterOnlineAuthenticated();
-      final bool recovered =
-          await ref.read(authRepositoryProvider).recoverOnlineSession();
-      if (!recovered) {
-        authNotifier.enterOfflineFallback();
+      // Connectivity is only a hint. Keep local access until the API confirms
+      // the session, and share an in-flight refresh with resume/network events.
+      final Future<bool> recovery = _sessionRecovery ??=
+          ref.read(authRepositoryProvider).recoverOnlineSession();
+      try {
+        await recovery;
+      } finally {
+        if (identical(_sessionRecovery, recovery)) {
+          _sessionRecovery = null;
+        }
       }
+    }
+    if (!mounted) {
+      return;
     }
     await ref.read(appSyncCoordinatorProvider).triggerSync(reason: reason);
   }

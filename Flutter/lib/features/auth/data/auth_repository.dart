@@ -30,6 +30,16 @@ class AuthRepository {
   final AuthNotifier _authNotifier;
   final LogService _logService;
 
+  Future<void> restoreLocalSession() async {
+    final session = await _tokenRepository.read();
+    if (session != null && session.isValid) {
+      // Existing tokens permit local playback while the API is being checked.
+      _authNotifier.enterOfflineFallback();
+    } else {
+      _authNotifier.enterSignedOut();
+    }
+  }
+
   Future<AuthAttemptResult> login({
     required String userName,
     required String password,

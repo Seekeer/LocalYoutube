@@ -9,9 +9,6 @@ import '../logging/log_service.dart';
 
 /// Routes the public HTTPS API to its HTTP listener when the LAN is available.
 class ApiRoute {
-  static const String supportedApiHost =
-      'api.example.invalid';
-  static const int supportedApiPort = 9999;
   ApiRoute({
     required this.config,
     required this.logService,
@@ -39,11 +36,9 @@ class ApiRoute {
     final Uri base = apiUri;
     return config.enableLocalApiRoute &&
         base.scheme == 'https' &&
-        base.host == supportedApiHost &&
-        (base.hasPort ? base.port : 443) == supportedApiPort &&
         uri.scheme == base.scheme &&
         uri.host == base.host &&
-        uri.port == supportedApiPort &&
+        uri.port == base.port &&
         config.localApiHost.trim().isNotEmpty &&
         config.localApiPort > 0;
   }
@@ -185,7 +180,8 @@ class _RoutedSignalRHttpClient extends SignalRHttpClient {
       BaseOptions(
         responseType: ResponseType.plain,
         connectTimeout: Duration(milliseconds: _route.config.connectTimeoutMs),
-        receiveTimeout: Duration(milliseconds: request.timeout ?? _route.config.receiveTimeoutMs),
+        receiveTimeout: Duration(
+            milliseconds: request.timeout ?? _route.config.receiveTimeoutMs),
         sendTimeout: Duration(milliseconds: _route.config.sendTimeoutMs),
       ),
     )..interceptors.add(_route.createDioInterceptor());

@@ -12,10 +12,13 @@ class LocalThumbnailService {
     required Dio dio,
     required LocalVideoMetadataRepository localVideoMetadataRepository,
     required LogService logService,
+    String storageNamespace = '',
   })  : _dio = dio,
         _localVideoMetadataRepository = localVideoMetadataRepository,
-        _logService = logService;
+        _logService = logService,
+        _storageNamespace = storageNamespace;
 
+  final String _storageNamespace;
   final Dio _dio;
   final LocalVideoMetadataRepository _localVideoMetadataRepository;
   final LogService _logService;
@@ -34,7 +37,7 @@ class LocalThumbnailService {
     try {
       final Directory root = await getApplicationDocumentsDirectory();
       final Directory thumbnailsDir = Directory(
-        '${root.path}${Platform.pathSeparator}thumbnails',
+        '${root.path}${Platform.pathSeparator}thumbnails/$_storageNamespace',
       );
       if (!await thumbnailsDir.exists()) {
         await thumbnailsDir.create(recursive: true);

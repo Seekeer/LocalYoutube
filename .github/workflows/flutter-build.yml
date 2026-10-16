@@ -53,6 +53,7 @@ jobs:
         run: >-
           flutter build apk --debug --flavor prod --target lib/main_prod.dart
           --dart-define-from-file=config/env/prod.json
+          --dart-define=LOCALTUBE_REQUIRE_SERVER_CONFIG=true
 
       - name: Upload APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

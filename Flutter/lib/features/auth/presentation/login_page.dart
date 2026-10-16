@@ -47,7 +47,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final bool isOffline = _isOfflineNow();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: AppBar(title: const Text('Login'), actions: [
+        if (ref.watch(serverConnectionActionProvider) != null)
+          IconButton(
+              tooltip: 'Настроить сервер',
+              icon: const Icon(Icons.dns),
+              onPressed:
+                  _isBusy ? null : ref.read(serverConnectionActionProvider)),
+      ]),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),

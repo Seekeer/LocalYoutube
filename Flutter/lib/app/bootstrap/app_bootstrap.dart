@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/auth/token_repository.dart';
 import '../../core/config/app_config.dart';
+import '../../features/downloads/data/background_downloader_download_service.dart';
+import '../../features/downloads/domain/download_models.dart';
 import '../../core/crash/crash_reporter.dart';
 import '../../core/db/app_database.dart';
 import '../../core/db/daos/bookmarks_dao.dart';
@@ -75,8 +77,12 @@ class BootstrapResult {
     required this.router,
     required this.overrides,
     required this.crashReporter,
+    this.shutdown,
+    this.canChangeServer,
   });
 
+  final Future<void> Function()? shutdown;
+  final Future<bool> Function()? canChangeServer;
   final AppConfig config;
   final GoRouter router;
   final List<Override> overrides;
@@ -86,13 +92,23 @@ class BootstrapResult {
 class AppBootstrap {
   static Future<BootstrapResult> initialize({
     AppEnvironment? environmentOverride,
+    AppConfig? configOverride,
+    String? databaseFileName,
+    LogService? logServiceOverride,
+    SecureStorageService? secureStorageOverride,
+    AppDatabase? appDatabaseOverride,
+    AuthApi? authApiOverride,
+    DownloadService? downloadServiceOverride,
+    Dio? dioOverride,
   }) async {
-    final AppConfig config = AppConfig.fromEnvironment(
-      environmentOverride: environmentOverride,
-    );
-    final LogService logService = LogService(
-      minimumLevel: _mapLogLevel(config.logLevel),
-    );
+    final AppConfig config = configOverride ??
+        AppConfig.fromEnvironment(
+          environmentOverride: environmentOverride,
+        );
+    final LogService logService = logServiceOverride ??
+        LogService(
+          minimumLevel: _mapLogLevel(config.logLevel),
+        );
     await logService.initialize();
     final ApiRoute apiRoute = ApiRoute(
       config: config,
@@ -103,8 +119,10 @@ class AppBootstrap {
       logService: logService,
     );
     await crashReporter.initialize();
-    final SecureStorageService secureStorage = SecureStorageService();
-    final AppDatabase appDatabase = AppDatabase();
+    final SecureStorageService secureStorage =
+        secureStorageOverride ?? SecureStorageService();
+    final AppDatabase appDatabase = appDatabaseOverride ??
+        AppDatabase(fileName: databaseFileName ?? 'localtube_app.db');
     await appDatabase.initialize();
 
     final TokenRepository tokenRepository =
@@ -114,11 +132,12 @@ class AppBootstrap {
       logService: logService,
     );
 
-    final AuthApi authApi = AuthApi(
-      config: config,
-      logService: logService,
-      apiRoute: apiRoute,
-    );
+    final AuthApi authApi = authApiOverride ??
+        AuthApi(
+          config: config,
+          logService: logService,
+          apiRoute: apiRoute,
+        );
     final AuthRemoteDataSource authRemoteDataSource =
         AuthRemoteDataSource(authApi);
 
@@ -159,21 +178,22 @@ class AppBootstrap {
       bookmarksDao: bookmarksDao,
     );
 
-    final Dio dio = DioClient.build(
-      config: config,
-      retryPolicy: const RetryPolicy(),
-      authInterceptorFactory: (Dio client) {
-        return AuthInterceptor(
-          dio: client,
-          authApi: authApi,
-          tokenRepository: tokenRepository,
-          authNotifier: authNotifier,
+    final Dio dio = dioOverride ??
+        DioClient.build(
+          config: config,
+          retryPolicy: const RetryPolicy(),
+          authInterceptorFactory: (Dio client) {
+            return AuthInterceptor(
+              dio: client,
+              authApi: authApi,
+              tokenRepository: tokenRepository,
+              authNotifier: authNotifier,
+              logService: logService,
+            );
+          },
           logService: logService,
+          apiRoute: apiRoute,
         );
-      },
-      logService: logService,
-      apiRoute: apiRoute,
-    );
 
     final CatalogRemoteDataSource catalogRemoteDataSource =
         CatalogRemoteDataSource(dio);
@@ -208,15 +228,17 @@ class AppBootstrap {
       logService: logService,
     );
 
-    final DownloadService downloadService = createDownloadService(
-      localDownloadsRepository: localDownloadsRepository,
-      appConfig: config,
-      tokenRepository: tokenRepository,
-      logService: logService,
-      apiRoute: apiRoute,
-    );
+    final DownloadService downloadService = downloadServiceOverride ??
+        createDownloadService(
+          localDownloadsRepository: localDownloadsRepository,
+          appConfig: config,
+          tokenRepository: tokenRepository,
+          logService: logService,
+          apiRoute: apiRoute,
+        );
     await downloadService.initialize();
     final LocalThumbnailService localThumbnailService = LocalThumbnailService(
+      storageNamespace: config.serverStorageNamespace,
       dio: dio,
       localVideoMetadataRepository: localVideoMetadataRepository,
       logService: logService,
@@ -258,12 +280,12 @@ class AppBootstrap {
       logService: logService,
     );
 
+    // Resolve access from local storage only. Network recovery starts after the
+    // first frame in AppSyncLifecycleListener, so it cannot hold the splash.
+    await authRepository.restoreLocalSession();
+
     final GoRouter router = buildAppRouter(
       authNotifier: authNotifier,
-    );
-
-    startStartupBootstrapWork(
-      tryAutoLoginUseCase: tryAutoLoginUseCase,
     );
 
     final SyncHubService syncHubService = SyncHubService(
@@ -326,7 +348,6 @@ class AppBootstrap {
       playbackSyncRepository: playbackSyncRepository,
       logService: logService,
     );
-    await appSyncCoordinator.initialize();
 
     logService.info(
       'Bootstrap initialized (${config.environment.key}, log=${config.logLevel.key}, networkLogs=${config.enableNetworkLogs})',
@@ -336,6 +357,21 @@ class AppBootstrap {
       config: config,
       router: router,
       crashReporter: crashReporter,
+      canChangeServer: () async {
+        final items = await downloadService.watchDownloads().first;
+        return !items.any((item) =>
+            item.status.isActive || item.status == DownloadStatus.paused);
+      },
+      shutdown: () async {
+        await castRegistrationService.dispose();
+        await syncHubService.dispose();
+        if (downloadService is BackgroundDownloaderDownloadService) {
+          await downloadService.dispose();
+        }
+        dio.close(force: true);
+        router.dispose();
+        await appDatabase.close();
+      },
       overrides: <Override>[
         appConfigProvider.overrideWithValue(config),
         apiRouteProvider.overrideWithValue(apiRoute),
@@ -418,20 +454,6 @@ class AppBootstrap {
         catalogRepositoryProvider.overrideWithValue(catalogRepository),
       ],
     );
-  }
-
-  static void startStartupBootstrapWork({
-    required TryAutoLoginUseCase tryAutoLoginUseCase,
-  }) {
-    startInitialSessionResolution(
-      tryAutoLoginUseCase: tryAutoLoginUseCase,
-    );
-  }
-
-  static void startInitialSessionResolution({
-    required TryAutoLoginUseCase tryAutoLoginUseCase,
-  }) {
-    unawaited(tryAutoLoginUseCase.call());
   }
 
   static LogLevel _mapLogLevel(AppLogLevel level) {

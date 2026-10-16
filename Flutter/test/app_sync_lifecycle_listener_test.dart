@@ -134,6 +134,86 @@ void main() {
     expect(authNotifier.isOnlineAuthenticated, isTrue);
     expect(appSyncCoordinator.syncReasons, contains('network-online'));
   });
+
+  testWidgets('local content renders before stalled startup recovery and sync',
+      (WidgetTester tester) async {
+    final authNotifier =
+        AuthNotifier(initialMode: AppAccessMode.offlineFallback);
+    final recovery = Completer<bool>();
+    final sync = Completer<void>();
+    final authRepository = _FakeAuthRepository(
+      authNotifier: authNotifier,
+      recoveryFuture: recovery.future,
+    );
+    final coordinator = _FakeAppSyncCoordinator()
+      ..initializeFuture = sync.future;
+    final network = StreamController<NetworkStatus>();
+    addTearDown(network.close);
+    bool renderedBeforeSync = false;
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: <Override>[
+        authNotifierProvider.overrideWith((Ref ref) => authNotifier),
+        authRepositoryProvider.overrideWithValue(authRepository),
+        appSyncCoordinatorProvider.overrideWithValue(coordinator),
+        networkStatusProvider.overrideWith((Ref ref) => network.stream),
+      ],
+      child: MaterialApp(
+        home: AppSyncLifecycleListener(
+          child: Builder(builder: (_) {
+            renderedBeforeSync = coordinator.initializeCalls == 0;
+            return const Text('Local content');
+          }),
+        ),
+      ),
+    ));
+    network.add(NetworkStatus.online);
+    await tester.pump();
+
+    expect(renderedBeforeSync, isTrue);
+    expect(find.text('Local content'), findsOneWidget);
+    expect(coordinator.initializeCalls, 1);
+    expect(authRepository.recoverOnlineSessionCalls, 1);
+    expect(authNotifier.isOfflineFallback, isTrue);
+
+    // A resume during slow authentication must share the same refresh.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(authRepository.recoverOnlineSessionCalls, 1);
+
+    recovery.complete(false);
+    sync.complete();
+    await tester.pump();
+    expect(authNotifier.isOfflineFallback, isTrue);
+    expect(coordinator.syncReasons, contains('network-online'));
+  });
+
+  testWidgets('rejected startup session stays signed out',
+      (WidgetTester tester) async {
+    final authNotifier =
+        AuthNotifier(initialMode: AppAccessMode.offlineFallback);
+    final authRepository = _FakeAuthRepository(
+      authNotifier: authNotifier,
+      onRecoverOnlineSession: authNotifier.enterSignedOut,
+    );
+    final coordinator = _FakeAppSyncCoordinator();
+    await tester.pumpWidget(ProviderScope(
+      overrides: <Override>[
+        authNotifierProvider.overrideWith((Ref ref) => authNotifier),
+        authRepositoryProvider.overrideWithValue(authRepository),
+        appSyncCoordinatorProvider.overrideWithValue(coordinator),
+        networkStatusProvider.overrideWith(
+          (Ref ref) => Stream<NetworkStatus>.value(NetworkStatus.online),
+        ),
+      ],
+      child: const MaterialApp(
+        home: AppSyncLifecycleListener(child: Text('Local content')),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(authRepository.recoverOnlineSessionCalls, 1);
+    expect(authNotifier.accessMode, AppAccessMode.signedOut);
+  });
 }
 
 class _FakeAuthRepository extends AuthRepository {
@@ -142,6 +222,7 @@ class _FakeAuthRepository extends AuthRepository {
     this.enterOfflineFallbackResult = false,
     this.recoverOnlineSessionResult = false,
     this.onRecoverOnlineSession,
+    this.recoveryFuture,
   }) : super(
           remoteDataSource: _FakeAuthRemoteDataSource(),
           localSessionRepository: _FakeAuthLocalSessionRepository(),
@@ -155,6 +236,7 @@ class _FakeAuthRepository extends AuthRepository {
   final bool enterOfflineFallbackResult;
   final bool recoverOnlineSessionResult;
   final VoidCallback? onRecoverOnlineSession;
+  final Future<bool>? recoveryFuture;
 
   int enterOfflineFallbackCalls = 0;
   int recoverOnlineSessionCalls = 0;
@@ -172,6 +254,9 @@ class _FakeAuthRepository extends AuthRepository {
   Future<bool> recoverOnlineSession() async {
     recoverOnlineSessionCalls += 1;
     onRecoverOnlineSession?.call();
+    if (recoveryFuture != null) {
+      return recoveryFuture!;
+    }
     return recoverOnlineSessionResult;
   }
 }
@@ -186,10 +271,12 @@ class _FakeAppSyncCoordinator extends AppSyncCoordinator {
 
   final List<String> syncReasons = <String>[];
   int initializeCalls = 0;
+  Future<void>? initializeFuture;
 
   @override
   Future<void> initialize() async {
     initializeCalls += 1;
+    await initializeFuture;
   }
 
   @override

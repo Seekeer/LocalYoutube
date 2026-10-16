@@ -1,41 +1,28 @@
 # LocalTube Flutter
 
-Flutter client for the LocalTube media server, with Android and Windows targets.
+Universal Android client. On first launch, enter your API address, open a
+`localtube-server.json` file, or scan a server QR code. Obtain the file or QR from
+**Мобильное приложение** in the signed-in web interface of your LocalTube server.
+Review the imported address before saving, then sign in separately in the app.
+Configuration carries no account passwords or access tokens.
 
-## Configuration
+To change the server, sign out and choose **Настроить сервер** on the login page.
+Finish or cancel pending downloads first. Each server has a separate local catalog;
+changing servers clears authentication. Configuration is saved on the device.
 
-Published source uses reserved example addresses. The GitHub Actions APK requires
-your own API configuration to connect to a server.
-
-Copy `config/env/prod.json` to `config/env/prod.local.json` (ignored by Git), then
-set `LOCALTUBE_API_BASE_URL` to your compatible LocalTube API. Local network
-routing is disabled by default. If needed, configure the LAN host and port and
-the Android network security allowlist for your deployment.
+## Development and Android build
 
 ```bash
 flutter pub get
-flutter run --flavor prod --target lib/main_prod.dart --dart-define-from-file=config/env/prod.local.json
-```
-
-## Android build
-
-```bash
-flutter analyze --no-fatal-infos --no-fatal-warnings
+flutter analyze
 flutter test
-flutter build apk --debug --flavor prod --target lib/main_prod.dart --dart-define-from-file=config/env/prod.local.json
+flutter build apk --debug --flavor prod --target lib/main_prod.dart --dart-define-from-file=config/env/prod.json
 ```
 
-Use a complete Git checkout: Android version codes are derived from commit count.
-The neutral Android package is `org.localtube.app` (`.debug` for debug builds),
-with matching native method channels. This build installs separately from the
-original application and does not share its data or signing identity.
+Android version numbering requires a full Git checkout. GitHub Actions runs on
+mobile changes or manual dispatch. Download `localtube-debug-apk` from Artifacts;
+artifacts are retained for seven days. Debug signing is intended for testing.
 
-## GitHub Actions
-
-`../.github/workflows/flutter-build.yml` runs analysis, tests, and an Android debug
-APK build on Flutter changes or manual dispatch. Download `localtube-debug-apk`
-from the completed run's Artifacts section. Artifacts are retained for seven days.
-No signing secrets or deployment credentials are required for this debug build.
-
-For release distribution, configure your own signing keystore through CI secrets.
-Never commit `key.properties`, keystores, private environment overrides, or logs.
+This directory is synchronized from the primary repository. Make source changes
+there; later synchronization replaces mobile source in this repository. Other
+projects in this repository are preserved.

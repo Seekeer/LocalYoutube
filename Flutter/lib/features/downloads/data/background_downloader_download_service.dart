@@ -52,6 +52,10 @@ class BackgroundDownloaderDownloadService implements DownloadService {
       <int, _ProgressWriteState>{};
 
   bool _initialized = false;
+  String get _taskGroup => _appConfig.serverStorageNamespace.isEmpty
+      ? FileDownloader.defaultGroup
+      : 'localtube-${_appConfig.serverStorageNamespace}';
+
   Future<void>? _initializeFuture;
   Future<void>? _notificationPermissionFuture;
   StreamSubscription<TaskUpdate>? _updateSubscription;
@@ -77,7 +81,7 @@ class BackgroundDownloaderDownloadService implements DownloadService {
 
     _updateSubscription = _downloader.updates.listen(
       (TaskUpdate update) async {
-        if (update.task.group != FileDownloader.defaultGroup) return;
+        if (update.task.group != _taskGroup) return;
         try {
           if (update is TaskStatusUpdate) {
             await _handleStatusUpdate(update);
@@ -106,7 +110,7 @@ class BackgroundDownloaderDownloadService implements DownloadService {
       globalConfig: <(String, dynamic)>[(Config.runInForeground, true)],
     );
     _downloader.configureNotificationForGroup(
-      FileDownloader.defaultGroup,
+      _taskGroup,
       running: const TaskNotification(
         'LocalTube download',
         'Downloading {filename}',
@@ -384,7 +388,10 @@ class BackgroundDownloaderDownloadService implements DownloadService {
       taskId: taskId,
       url: requestUri.toString(),
       filename: _buildDownloadFilename(videoId: videoId, title: title),
-      directory: 'downloads',
+      directory: _appConfig.serverStorageNamespace.isEmpty
+          ? 'downloads'
+          : 'downloads/${_appConfig.serverStorageNamespace}',
+      group: _taskGroup,
       baseDirectory: BaseDirectory.applicationDocuments,
       headers: headers,
       updates: Updates.statusAndProgress,
