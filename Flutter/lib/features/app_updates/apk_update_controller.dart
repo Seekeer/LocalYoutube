@@ -11,9 +11,7 @@ import 'apk_download_service.dart';
 import 'update_sources.dart';
 import 'update_models.dart';
 
-// Use consecutive CI-signed Preview builds to verify in-place APK upgrades.
-// Roll out through the Preview build only. Stable keeps discovery until its
-// workflow explicitly opts in and receives the Android variant configuration.
+// Distribution workflows opt in for both Preview and Stable.
 final apkUpdatesEnabledProvider = Provider<bool>(
     (ref) => const bool.fromEnvironment('LOCALTUBE_APK_UPDATES_ENABLED'));
 

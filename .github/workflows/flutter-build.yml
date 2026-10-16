@@ -67,7 +67,11 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Test
-        run: flutter test
+        run: |
+          flutter test
+          flutter test test/features/app_updates/update_channel_identity_test.dart \
+            --dart-define=LOCALTUBE_PREVIEW_APPLICATION_ID=org.example.preview.debug \
+            --dart-define=LOCALTUBE_STABLE_APPLICATION_ID=org.example.stable
 
       - name: Validate canonical source contract
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -135,6 +139,8 @@ jobs:
             flutter build apk --release --flavor stage --target lib/main_stage.dart \
               --dart-define-from-file=config/env/stage.json \
               --dart-define=LOCALTUBE_REQUIRE_SERVER_CONFIG=true \
+              --dart-define=LOCALTUBE_APK_UPDATES_ENABLED=true \
+              --dart-define=LOCALTUBE_STABLE_APPLICATION_ID="$EXPECTED_APPLICATION_ID" \
               --build-name="$VERSION_NAME" --build-number="$BUILD_NUMBER" \
               --obfuscate --split-debug-info=build/symbols/stage/android
             apk=build/app/outputs/flutter-apk/app-stage-release.apk
@@ -168,8 +174,7 @@ jobs:
           assert certificate == os.environ['EXPECTED_CERTIFICATE'], 'APK certificate mismatch: actual=' + certificate + ', expected=' + os.environ['EXPECTED_CERTIFICATE']
           badging = subprocess.check_output([str(tools/'aapt'), 'dump', 'badging', str(apk)], text=True)
           identity = re.search(r"^package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging, re.M)
-          assert identity, 'Cannot parse APK package identity from aapt output: ' + badging
-          assert identity[1] == os.environ['EXPECTED_APPLICATION_ID'], 'APK package mismatch: actual=' + identity[1] + ', expected=' + os.environ['EXPECTED_APPLICATION_ID']
+          assert identity and identity[1] == os.environ['EXPECTED_APPLICATION_ID']
           code = int(identity[2])
           assert code == int(os.environ['BUILD_NUMBER'])
           # Audit the actual packaged permissions, including plugin manifests.
@@ -179,9 +184,8 @@ jobs:
                      'android.permission.FOREGROUND_SERVICE', 'android.permission.FOREGROUND_SERVICE_DATA_SYNC',
                      'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK', 'android.permission.WAKE_LOCK',
                      'android.permission.POST_NOTIFICATIONS', 'android.permission.RECEIVE_BOOT_COMPLETED',
+                     'android.permission.REQUEST_INSTALL_PACKAGES',
                      os.environ['EXPECTED_APPLICATION_ID'] + '.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'}
-          if os.environ['UPDATE_CHANNEL'] == 'preview':
-              allowed.add('android.permission.REQUEST_INSTALL_PACKAGES')
           assert permissions <= allowed, 'Unexpected packaged Android permissions: ' + str(permissions - allowed)
           with apk.open('rb') as stream:
               digest = hashlib.file_digest(stream, 'sha256').hexdigest()
