@@ -1,0 +1,63 @@
+name: Flutter Android build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Flutter/**'
+      - '.github/workflows/flutter-build.yml'
+  pull_request:
+    paths:
+      - 'Flutter/**'
+      - '.github/workflows/flutter-build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: Flutter
+    steps:
+      - name: Checkout complete source history
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: '3.47.7'
+
+      - name: Restore dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Test
+        run: flutter test
+
+      - name: Build Android debug APK
+        run: >-
+          flutter build apk --debug --flavor prod --target lib/main_prod.dart
+          --dart-define-from-file=config/env/prod.json
+
+      - name: Upload APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: localtube-debug-apk
+          path: Flutter/build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: error
+          retention-days: 7
