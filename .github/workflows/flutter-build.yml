@@ -161,6 +161,8 @@ jobs:
                          key=lambda path: tuple(int(p) for p in re.findall(r'\d+', path.parent.name)))[-1].parent
           apk = Path('../delivery/update.apk')
           signing = subprocess.check_output([str(tools/'apksigner'), 'verify', '--print-certs', str(apk)], text=True)
+          print('APK signing report (' + str(tools) + '):', flush=True)
+          print(signing, flush=True)
           certificate = certificate_sha256(signing)
           assert certificate == os.environ['EXPECTED_CERTIFICATE'], 'APK certificate mismatch: actual=' + certificate + ', expected=' + os.environ['EXPECTED_CERTIFICATE']
           badging = subprocess.check_output([str(tools/'aapt'), 'dump', 'badging', str(apk)], text=True)
@@ -210,6 +212,15 @@ jobs:
           path: Flutter/build/symbols/stage/android
           if-no-files-found: error
           retention-days: 30
+
+      - name: Retain Preview APK if verification failed
+        if: failure() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && env.UPDATE_CHANNEL == 'preview'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: localtube-preview-diagnostic-${{ github.run_id }}
+          path: delivery/update.apk
+          if-no-files-found: ignore
+          retention-days: 1
 
       - name: Remove signing material
         if: always()
