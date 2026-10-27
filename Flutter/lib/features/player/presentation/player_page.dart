@@ -575,52 +575,60 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
             ),
             if (state.navigationEntries.isNotEmpty) ...<Widget>[
               const SizedBox(height: 20),
-              Text(
-                'Navigation',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 6),
-              SizedBox(
-                height: math.min(state.navigationEntries.length, 3) * 72.0,
-                child: ListView.builder(
-                  primary: false,
-                  padding: EdgeInsets.zero,
-                  itemCount: state.navigationEntries.length,
-                  physics: state.navigationEntries.length > 3
-                      ? const ClampingScrollPhysics()
-                      : const NeverScrollableScrollPhysics(),
-                  itemBuilder: (BuildContext context, int index) {
-                    final PlayerNavigationEntry entry =
-                        state.navigationEntries[index];
-                    return ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: SizedBox(
-                        width: 56,
-                        child: Text(
-                          _formatDuration(entry.fromPosition),
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
-                      ),
-                      title: Text(
-                        'Back to ${_formatDuration(entry.fromPosition)}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        'Jumped to ${_formatDuration(entry.toPosition)}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: const Icon(Icons.undo),
-                      onTap: state.errorMessage != null
-                          ? null
-                          : () => unawaited(
-                                controller.seekToNavigationOrigin(entry.id),
-                              ),
-                    );
-                  },
+              ExpansionTile(
+                key: const PageStorageKey<String>('player-navigation'),
+                initiallyExpanded: true,
+                tilePadding: EdgeInsets.zero,
+                shape: const Border(),
+                collapsedShape: const Border(),
+                title: Text(
+                  'Navigation',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
+                children: <Widget>[
+                  SizedBox(
+                    height: math.min(state.navigationEntries.length, 3) * 72.0,
+                    child: ListView.builder(
+                      primary: false,
+                      padding: EdgeInsets.zero,
+                      itemCount: state.navigationEntries.length,
+                      physics: state.navigationEntries.length > 3
+                          ? const ClampingScrollPhysics()
+                          : const NeverScrollableScrollPhysics(),
+                      itemBuilder: (BuildContext context, int index) {
+                        final PlayerNavigationEntry entry =
+                            state.navigationEntries[index];
+                        return ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          leading: SizedBox(
+                            width: 56,
+                            child: Text(
+                              _formatDuration(entry.fromPosition),
+                              style: Theme.of(context).textTheme.labelLarge,
+                            ),
+                          ),
+                          title: Text(
+                            'Back to ${_formatDuration(entry.fromPosition)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            'Jumped to ${_formatDuration(entry.toPosition)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: const Icon(Icons.undo),
+                          onTap: state.errorMessage != null
+                              ? null
+                              : () => unawaited(
+                                  controller.seekToNavigationOrigin(entry.id),
+                                ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ],
             if (state.bookmarks.isNotEmpty) ...<Widget>[
@@ -669,17 +677,23 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
             ],
             if (timestamps.isNotEmpty) ...<Widget>[
               const SizedBox(height: 20),
-              Row(
-                children: <Widget>[
-                  Text(
-                    'Timestamps',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const Spacer(),
-                  TextButton.icon(
-                    onPressed: state.errorMessage != null
-                        ? null
-                        : () => unawaited(
+              ExpansionTile(
+                key: const PageStorageKey<String>('player-timestamps'),
+                initiallyExpanded: true,
+                tilePadding: EdgeInsets.zero,
+                shape: const Border(),
+                collapsedShape: const Border(),
+                title: Row(
+                  children: <Widget>[
+                    Text(
+                      'Timestamps',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: state.errorMessage != null
+                          ? null
+                          : () => unawaited(
                               _jumpToNearestTimestamp(
                                 context: context,
                                 controller: controller,
@@ -689,37 +703,42 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
                                     jumpToNearestTimestampUseCase,
                               ),
                             ),
-                    icon: const Icon(Icons.skip_next),
-                    label: const Text('Next'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              ...timestamps.map(
-                (VideoTimestamp timestamp) => ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: SizedBox(
-                    width: 56,
-                    child: Text(
-                      _formatDuration(timestamp.position),
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            fontWeight: state.position >= timestamp.position
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                          ),
+                      icon: const Icon(Icons.skip_next),
+                      label: const Text('Next'),
+                    ),
+                  ],
+                ),
+                children: <Widget>[
+                  const SizedBox(height: 6),
+                  ...timestamps.map(
+                    (VideoTimestamp timestamp) => ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: SizedBox(
+                        width: 56,
+                        child: Text(
+                          _formatDuration(timestamp.position),
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                fontWeight: state.position >= timestamp.position
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                              ),
+                        ),
+                      ),
+                      title: Text(
+                        timestamp.label,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: state.errorMessage != null
+                          ? null
+                          : () =>
+                                unawaited(controller.seek(timestamp.position)),
                     ),
                   ),
-                  title: Text(
-                    timestamp.label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: state.errorMessage != null
-                      ? null
-                      : () => unawaited(controller.seek(timestamp.position)),
-                ),
+                ],
               ),
             ],
             const SizedBox(height: 20),
