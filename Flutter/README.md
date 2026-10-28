@@ -28,14 +28,6 @@ through the separate **Flutter Android Release** workflow on manual dispatch.
 dispatch (pull requests run checks without publishing). Each channel requires its configured
 application ID, certificate pin, and signing secrets.
 
-## Windows build
-
-Run **Flutter Windows Release** manually in GitHub Actions. It analyzes, tests,
-and builds the x64 Release on a GitHub-hosted Windows runner. Download
-`localtube-windows-x64.zip` from the run's `localtube-windows-<run>-<attempt>`
-GitHub Release. Extract the entire archive and run `localtube.exe`, keeping its
-DLLs and `data` directory alongside it. Configure your server on first launch.
-
 This directory is synchronized from the primary repository. Make source changes
 there; later synchronization replaces mobile source in this repository. Other
 projects in this repository are preserved.
