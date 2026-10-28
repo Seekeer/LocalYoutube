@@ -28,7 +28,8 @@ class LockScreenPlaybackCallbacks {
 class LockScreenPlaybackService {
   LockScreenPlaybackService._();
 
-  static final LockScreenPlaybackService instance = LockScreenPlaybackService._();
+  static final LockScreenPlaybackService instance =
+      LockScreenPlaybackService._();
 
   _LocalTubeAudioHandler? _handler;
   int? _activeVideoId;
@@ -64,13 +65,15 @@ class LockScreenPlaybackService {
     required String title,
     required Duration duration,
     required LockScreenPlaybackCallbacks callbacks,
+    required bool Function() isCurrent,
   }) async {
     if (!_supportsPlatform) {
       return;
     }
     await initialize();
     final _LocalTubeAudioHandler? handler = _handler;
-    if (handler == null) {
+    // AudioService initialization can outlive the screen that requested playback.
+    if (handler == null || !isCurrent()) {
       return;
     }
 

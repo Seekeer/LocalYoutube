@@ -278,7 +278,8 @@ class PlayerController extends StateNotifier<PlayerUiState> {
 
   Future<void> play() async {
     final VideoPlayerController? controller = _videoPlayer;
-    if (state.isLoading ||
+    if (_isDisposed ||
+        state.isLoading ||
         state.errorMessage != null ||
         controller == null ||
         !controller.value.isInitialized) {
@@ -309,7 +310,8 @@ class PlayerController extends StateNotifier<PlayerUiState> {
 
   Future<void> pause() async {
     final VideoPlayerController? controller = _videoPlayer;
-    if (state.isLoading ||
+    if (_isDisposed ||
+        state.isLoading ||
         state.errorMessage != null ||
         controller == null ||
         !controller.value.isInitialized) {
@@ -330,7 +332,8 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     bool trackNavigation = true,
   }) async {
     final VideoPlayerController? controller = _videoPlayer;
-    if (state.isLoading ||
+    if (_isDisposed ||
+        state.isLoading ||
         state.errorMessage != null ||
         controller == null ||
         !controller.value.isInitialized) {
@@ -437,6 +440,9 @@ class PlayerController extends StateNotifier<PlayerUiState> {
   }
 
   Future<void> onLifecycleStateChanged(AppLifecycleState lifecycleState) async {
+    if (_isDisposed) {
+      return;
+    }
     _logService.debug(
       'Player lifecycle: ${lifecycleState.name}; ${_stateSnapshot()}',
     );
@@ -498,10 +504,17 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         videoId: _videoId,
         localOnly: _localOnly,
       );
+      if (_isDisposed) {
+        return;
+      }
       _playable = playable;
       await _setRemotePlaybackNetworkLock(
         playable.sourceKind == PlayableSourceKind.remoteUrl,
       );
+
+      if (_isDisposed) {
+        return;
+      }
 
       // Where this video begins, and whether it begins playing. Without an intent both are what
       // they have always been: the resolved resume position, and playing.
@@ -529,9 +542,18 @@ class PlayerController extends StateNotifier<PlayerUiState> {
             playable.sourceKind == PlayableSourceKind.remoteUrl,
         refreshReason: 'initialize',
       );
+      // Source resolution and authorization can finish after the page has closed.
+      // A controller created in that window was never owned by dispose().
+      if (_isDisposed) {
+        await videoPlayer.dispose();
+        return;
+      }
       _videoPlayer = videoPlayer;
       videoPlayer.addListener(_onVideoPlayerUpdated);
       await videoPlayer.initialize();
+      if (_isDisposed) {
+        return;
+      }
       _logService.info(
         'Video controller initialized: ${_controllerSnapshot(videoPlayer.value)}',
       );
@@ -541,6 +563,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         videoPlayer.value.duration,
       );
       await LockScreenPlaybackService.instance.activate(
+        isCurrent: () => !_isDisposed,
         videoId: playable.videoId,
         title: _resolvedPlaybackTitle(),
         duration: videoPlayer.value.duration,
@@ -553,10 +576,19 @@ class PlayerController extends StateNotifier<PlayerUiState> {
           onStop: pause,
         ),
       );
+      if (_isDisposed) {
+        return;
+      }
       if (boundedStart > Duration.zero) {
         await videoPlayer.seekTo(boundedStart);
       }
+      if (_isDisposed) {
+        return;
+      }
       await _applyPlayerVolume(videoPlayer);
+      if (_isDisposed) {
+        return;
+      }
       if (shouldAutoPlay) {
         await videoPlayer.play();
         _logService.info(
@@ -568,6 +600,9 @@ class PlayerController extends StateNotifier<PlayerUiState> {
           'Autoplay suppressed after initialization by a start intent: '
           '${_controllerSnapshot(videoPlayer.value)}',
         );
+      }
+      if (_isDisposed) {
+        return;
       }
       _startPlaybackHealthWatchdog();
 
@@ -585,13 +620,22 @@ class PlayerController extends StateNotifier<PlayerUiState> {
       );
       await _seekToExternalStartIfNeeded();
       await _refreshBookmarks(syncRemote: true);
+      if (_isDisposed) {
+        return;
+      }
       _bookmarksOutboxTimer?.cancel();
       _bookmarksOutboxTimer = Timer.periodic(
         _bookmarkOutboxRetryPeriod,
         (_) => unawaited(_syncOutboxAndRefreshBookmarks()),
       );
     } on InvalidDownloadException catch (error) {
+      if (_isDisposed) {
+        return;
+      }
       await _setRemotePlaybackNetworkLock(false);
+      if (_isDisposed) {
+        return;
+      }
       _logService.warn('Downloaded video check failed: ${error.reason}');
       state = state.copyWith(
         isLoading: false,
@@ -599,7 +643,13 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         errorMessage: error.message,
       );
     } on OfflinePlaybackUnavailableException catch (error) {
+      if (_isDisposed) {
+        return;
+      }
       await _setRemotePlaybackNetworkLock(false);
+      if (_isDisposed) {
+        return;
+      }
       _logService.warn('Offline playback unavailable: $error');
       state = state.copyWith(
         isLoading: false,
@@ -607,7 +657,13 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         errorMessage: error.message,
       );
     } catch (error, stackTrace) {
+      if (_isDisposed) {
+        return;
+      }
       await _setRemotePlaybackNetworkLock(false);
+      if (_isDisposed) {
+        return;
+      }
       _logService.error('Player initialization failed', error, stackTrace);
       state = state.copyWith(
         isLoading: false,
@@ -1095,6 +1151,10 @@ class PlayerController extends StateNotifier<PlayerUiState> {
       refreshRemoteSession: playable.sourceKind == PlayableSourceKind.remoteUrl,
       refreshReason: refreshReason,
     );
+    if (_isDisposed) {
+      await next.dispose();
+      return;
+    }
     next.addListener(_onVideoPlayerUpdated);
     bool nextActivated = false;
     Duration boundedPosition = Duration.zero;
@@ -1130,6 +1190,11 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         } catch (_) {}
       }
 
+      if (_isDisposed) {
+        next.removeListener(_onVideoPlayerUpdated);
+        await next.dispose();
+        return;
+      }
       _videoPlayer = next;
       nextActivated = true;
       if (autoPlay) {
@@ -1152,7 +1217,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         'video=${playable.videoId}, durationMs=${next.value.duration.inMilliseconds}.',
       );
     } catch (_) {
-      if (nextActivated) {
+      if (nextActivated && !_isDisposed) {
         _videoPlayer = previous;
         if (previous != null) {
           previous.addListener(_onVideoPlayerUpdated);

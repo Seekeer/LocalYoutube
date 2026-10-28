@@ -40,6 +40,109 @@ void main() {
     VideoPlayerPlatform.instance = originalPlatform;
   });
 
+  for (final String boundary in <String>['source', 'authorization', 'volume']) {
+    test('closing player during $boundary never leaves playback alive',
+        () async {
+      final Completer<void> gate = Completer<void>();
+      final PlayableVideo playable = PlayableVideo(
+        videoId: 87,
+        sourceUri: Uri.parse('https://example.invalid/video.mp4'),
+        sourceKind: PlayableSourceKind.remoteUrl,
+        startPosition: Duration.zero,
+        title: 'Closing player',
+      );
+      if (boundary == 'volume') {
+        fakePlatform.volumeGate = gate.future;
+      }
+      final PlayerController controller = PlayerController(
+        videoId: 87,
+        localOnly: false,
+        playVideoUseCase: _FakePlayVideoUseCase(
+          playable,
+          gate: boundary == 'source' ? gate.future : null,
+        ),
+        playbackSyncRepository: playbackSyncRepository,
+        bookmarksRepository: bookmarksRepository,
+        streamAuthorizationHeaderProvider: _DeferredAuthorizationProvider(
+          boundary == 'authorization' ? gate.future : Future<void>.value(),
+        ),
+        logService: logService,
+      );
+      await _flushPlaybackTasks();
+      expect(fakePlatform.createCallCount, boundary == 'volume' ? 1 : 0);
+      controller.dispose();
+      gate.complete();
+      await _flushPlaybackTasks();
+      await _flushPlaybackTasks();
+
+      await _flushPlaybackTasks();
+      expect(fakePlatform.playedPlayerIds, isEmpty,
+          reason: 'A closed screen must never start playback');
+      expect(
+          fakePlatform.disposedPlayerIds.length, fakePlatform.createCallCount,
+          reason: 'Every native player must be released');
+      expect(logService.errors, isEmpty);
+    });
+  }
+
+  test('closing player during source failure ignores the late result',
+      () async {
+    final Completer<void> gate = Completer<void>();
+    final PlayerController controller = PlayerController(
+      videoId: 87,
+      localOnly: false,
+      playVideoUseCase: _FakePlayVideoUseCase(
+        null,
+        gate: gate.future,
+        error: StateError('late failure'),
+      ),
+      playbackSyncRepository: playbackSyncRepository,
+      bookmarksRepository: bookmarksRepository,
+      streamAuthorizationHeaderProvider:
+          _DeferredAuthorizationProvider(Future<void>.value()),
+      logService: logService,
+    );
+    controller.dispose();
+    gate.complete();
+    await _flushPlaybackTasks();
+    expect(fakePlatform.createCallCount, 0);
+    expect(logService.errors, isEmpty);
+  });
+
+  test('closing player during recovery authorization never restarts playback',
+      () async {
+    final Completer<void> gate = Completer<void>();
+    final PlayerController controller = PlayerController(
+      videoId: 87,
+      localOnly: false,
+      playVideoUseCase: _FakePlayVideoUseCase(PlayableVideo(
+        videoId: 87,
+        sourceUri: Uri.parse('https://example.invalid/video.mp4'),
+        sourceKind: PlayableSourceKind.remoteUrl,
+        startPosition: Duration.zero,
+        title: 'Recovery',
+      )),
+      playbackSyncRepository: playbackSyncRepository,
+      bookmarksRepository: bookmarksRepository,
+      streamAuthorizationHeaderProvider:
+          _DeferredAuthorizationProvider(gate.future, skipFirst: true),
+      logService: logService,
+    );
+    await _flushPlaybackTasks();
+    expect(controller.state.isPlaying, isTrue);
+    final int originalPlayerId = controller.videoController!.playerId;
+    fakePlatform.pushError(
+        playerId: originalPlayerId, message: 'decoder error');
+    await _flushPlaybackTasks();
+    expect(fakePlatform.createCallCount, 1);
+    controller.dispose();
+    gate.complete();
+    await _flushPlaybackTasks();
+    await _flushPlaybackTasks();
+    expect(fakePlatform.playedPlayerIds, <int>[originalPlayerId]);
+    expect(fakePlatform.disposedPlayerIds.toSet().length, 1);
+  });
+
   testWidgets(
     'screen wake lock follows playback and is released on dispose',
     (WidgetTester tester) async {
@@ -82,10 +185,16 @@ void main() {
 
       expect(controller.state.isPlaying, isTrue);
       expect(screenWakeLock.isPlayingByVideo[73], isTrue);
+      await controller.onLifecycleStateChanged(AppLifecycleState.paused);
+      await controller.onLifecycleStateChanged(AppLifecycleState.resumed);
+      expect(controller.state.isPlaying, isTrue);
 
       await controller.pause();
       await tester.pump();
       expect(screenWakeLock.isPlayingByVideo[73], isFalse);
+      await controller.onLifecycleStateChanged(AppLifecycleState.paused);
+      await controller.onLifecycleStateChanged(AppLifecycleState.resumed);
+      expect(controller.state.isPlaying, isFalse);
 
       await controller.play();
       await tester.pump();
@@ -459,7 +568,9 @@ void main() {
 }
 
 class _FakePlayVideoUseCase implements PlayVideoUseCase {
-  _FakePlayVideoUseCase(this._playable, {this.error});
+  _FakePlayVideoUseCase(this._playable, {this.error, this.gate});
+
+  final Future<void>? gate;
 
   final PlayableVideo? _playable;
   final Object? error;
@@ -467,6 +578,7 @@ class _FakePlayVideoUseCase implements PlayVideoUseCase {
   @override
   Future<PlayableVideo> call(
       {required int videoId, bool localOnly = false}) async {
+    await gate;
     final Object? error = this.error;
     if (error != null) {
       throw error;
@@ -562,6 +674,8 @@ class _ScriptedStreamAuthorizationHeaderProvider
 }
 
 class _FakeVideoPlayerPlatform extends VideoPlayerPlatform {
+  Future<void>? volumeGate;
+  final List<int> playedPlayerIds = <int>[];
   int createCallCount = 0;
   int _nextPlayerId = 1;
   final List<int> disposedPlayerIds = <int>[];
@@ -625,6 +739,7 @@ class _FakeVideoPlayerPlatform extends VideoPlayerPlatform {
 
   @override
   Future<void> play(int playerId) async {
+    playedPlayerIds.add(playerId);
     _events[playerId]?.add(
       VideoEvent(
         eventType: VideoEventType.isPlayingStateUpdate,
@@ -651,7 +766,9 @@ class _FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   Future<void> setPlaybackSpeed(int playerId, double speed) async {}
 
   @override
-  Future<void> setVolume(int playerId, double volume) async {}
+  Future<void> setVolume(int playerId, double volume) async {
+    await volumeGate;
+  }
 
   @override
   Stream<VideoEvent> videoEventsFor(int playerId) {
@@ -697,5 +814,33 @@ class _RecordingLogService extends _NoopLogService {
   @override
   void error(String message, Object error, StackTrace stackTrace) {
     errors.add('$message :: $error');
+  }
+}
+
+class _DeferredAuthorizationProvider
+    implements StreamAuthorizationHeaderProvider {
+  _DeferredAuthorizationProvider(this.gate, {this.skipFirst = false});
+  final Future<void> gate;
+  final bool skipFirst;
+  int calls = 0;
+
+  @override
+  Future<StreamAuthorizationHeaderResult> buildHeaders({
+    required bool refreshSession,
+    required String reason,
+  }) async {
+    if (!skipFirst || calls++ > 0) {
+      await gate;
+    }
+    return StreamAuthorizationHeaderResult.success(
+      const <String, String>{HttpHeaders.authorizationHeader: 'Bearer test'},
+    );
+  }
+}
+
+// Native controller disposal completes through stream cancellation outside a frame.
+Future<void> _flushPlaybackTasks() async {
+  for (int i = 0; i < 20; i += 1) {
+    await Future<void>.delayed(Duration.zero);
   }
 }
