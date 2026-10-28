@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../../core/errors/failure.dart';
 import '../../../core/errors/failure_mapper.dart';
 import '../../../core/logging/log_service.dart';
@@ -33,6 +35,8 @@ class CatalogRepository {
   final OfflineHistoryRepository _offlineHistoryRepository;
   final DownloadService _downloadService;
   final LogService _logService;
+  final Map<int, CatalogItem> _pendingThumbnails = <int, CatalogItem>{};
+  bool _isSyncingThumbnails = false;
 
   Future<List<CatalogItem>> readCachedSection(CatalogSection section) async {
     if (section == CatalogSection.history) {
@@ -60,7 +64,7 @@ class CatalogRepository {
           .where((CatalogItem item) => item.id > 0)
           .toList(growable: false);
       await _localVideoMetadataRepository.upsertCatalogItems(items);
-      await _localThumbnailService.syncForItems(items);
+      _scheduleThumbnailSync(items);
       return (items, null);
     } catch (error, stackTrace) {
       _logService.error(
@@ -69,6 +73,35 @@ class CatalogRepository {
         stackTrace,
       );
       return (<CatalogItem>[], mapToFailure(error));
+    }
+  }
+
+  // Offline artwork must not hold up the visible catalog. Keep one worker so
+  // repeated refreshes cannot start overlapping batches of image downloads.
+  void _scheduleThumbnailSync(List<CatalogItem> items) {
+    for (final CatalogItem item in items) {
+      _pendingThumbnails[item.id] = item;
+    }
+    if (_isSyncingThumbnails || _pendingThumbnails.isEmpty) {
+      return;
+    }
+    _isSyncingThumbnails = true;
+    unawaited(_syncPendingThumbnails());
+  }
+
+  Future<void> _syncPendingThumbnails() async {
+    try {
+      while (_pendingThumbnails.isNotEmpty) {
+        final List<CatalogItem> batch = _pendingThumbnails.values.toList();
+        _pendingThumbnails.clear();
+        try {
+          await _localThumbnailService.syncForItems(batch);
+        } catch (error, stackTrace) {
+          _logService.error('Offline thumbnail sync failed', error, stackTrace);
+        }
+      }
+    } finally {
+      _isSyncingThumbnails = false;
     }
   }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -25,6 +26,7 @@ void main() {
   late LocalVideoMetadataRepository metadataRepository;
   late PlaybackPositionsDao playbackPositionsDao;
   late DownloadsDao downloadsDao;
+  late _ControlledThumbnailService thumbnails;
 
   setUp(() async {
     database = AppDatabase(executor: NativeDatabase.memory());
@@ -34,13 +36,13 @@ void main() {
     playbackPositionsDao = PlaybackPositionsDao(database);
     downloadsDao = DownloadsDao(database);
 
+    addTearDown(database.close);
+    thumbnails = _ControlledThumbnailService(metadataRepository);
     repository = CatalogRepository(
-      remoteDataSource: CatalogRemoteDataSource(Dio()),
+      remoteDataSource: _FreshRemoteDataSource(),
       localCatalogRepository: LocalCatalogRepository(VideosCacheDao(database)),
       localVideoMetadataRepository: metadataRepository,
-      localThumbnailService: _DummyLocalThumbnailService(
-        metadataRepository: metadataRepository,
-      ),
+      localThumbnailService: thumbnails,
       offlineHistoryRepository: OfflineHistoryRepository(
         database: database,
         localVideoMetadataRepository: metadataRepository,
@@ -48,6 +50,66 @@ void main() {
       downloadService: _NoopDownloadService(),
       logService: _NoopLogService(),
     );
+  });
+
+  test('fresh list completes while offline thumbnails are still pending',
+      () async {
+    final refresh = repository.refreshSection(CatalogSection.fresh);
+    await thumbnails.started.future;
+    try {
+      final result = await refresh.timeout(const Duration(milliseconds: 200));
+      expect(result.$2, isNull);
+      expect(result.$1.single.id, 86);
+      expect(
+          (await repository.readCachedSection(CatalogSection.fresh)).single.id,
+          86);
+      expect((await metadataRepository.findByVideoId(86))?.title, 'New video');
+    } finally {
+      thumbnails.release.complete();
+      await refresh;
+      await thumbnails.finished.future;
+    }
+  });
+
+  test('measure fresh list with a 500ms offline thumbnail stage', () async {
+    thumbnails.release.complete();
+    thumbnails.delay = const Duration(milliseconds: 500);
+    final Stopwatch timer = Stopwatch()..start();
+    final result = await repository.refreshSection(CatalogSection.fresh);
+    timer.stop();
+    stdout.writeln('fresh refresh: ${timer.elapsedMicroseconds / 1000} ms '
+        '(simulated thumbnail stage: 500 ms)');
+    expect(result.$2, isNull);
+    await thumbnails.finished.future;
+  });
+
+  test('repeated refreshes coalesce pending artwork into one next batch',
+      () async {
+    await repository.refreshSection(CatalogSection.fresh);
+    await thumbnails.started.future;
+    await repository.refreshSection(CatalogSection.fresh);
+    await repository.refreshSection(CatalogSection.fresh);
+    expect(thumbnails.batches, hasLength(1));
+    thumbnails.release.complete();
+    await thumbnails.secondFinished.future;
+    expect(thumbnails.batches, hasLength(2));
+    expect(
+        thumbnails.batches.last.map((CatalogItem item) => item.id), <int>[86]);
+  });
+
+  test('artwork failure does not fail refresh or stop pending artwork',
+      () async {
+    thumbnails.failFirst = true;
+    final first = await repository.refreshSection(CatalogSection.fresh);
+    await thumbnails.started.future;
+    final second = await repository.refreshSection(CatalogSection.fresh);
+    thumbnails.release.complete();
+    await thumbnails.secondFinished.future;
+    expect(first.$2, isNull);
+    expect(second.$2, isNull);
+    expect(thumbnails.batches, hasLength(2));
+    expect((await repository.readCachedSection(CatalogSection.fresh)).single.id,
+        86);
   });
 
   test('history cache is sourced from offline playback history', () async {
@@ -104,17 +166,44 @@ void main() {
   });
 }
 
-class _DummyLocalThumbnailService extends LocalThumbnailService {
-  _DummyLocalThumbnailService({
-    required LocalVideoMetadataRepository metadataRepository,
-  }) : super(
-          dio: Dio(),
-          localVideoMetadataRepository: metadataRepository,
-          logService: _NoopLogService(),
-        );
+class _FreshRemoteDataSource extends CatalogRemoteDataSource {
+  _FreshRemoteDataSource() : super(Dio());
 
   @override
-  Future<void> syncForItems(List<CatalogItem> items) async {}
+  Future<List<Map<String, dynamic>>> loadSection(
+          CatalogSection section) async =>
+      <Map<String, dynamic>>[
+        <String, dynamic>{'id': 86, 'title': 'New video'}
+      ];
+}
+
+class _ControlledThumbnailService extends LocalThumbnailService {
+  _ControlledThumbnailService(LocalVideoMetadataRepository metadata)
+      : super(
+            dio: Dio(),
+            localVideoMetadataRepository: metadata,
+            logService: _NoopLogService());
+
+  final Completer<void> started = Completer<void>();
+  final Completer<void> release = Completer<void>();
+  final Completer<void> finished = Completer<void>();
+  Duration delay = Duration.zero;
+  bool failFirst = false;
+  final List<List<CatalogItem>> batches = <List<CatalogItem>>[];
+  final Completer<void> secondFinished = Completer<void>();
+
+  @override
+  Future<void> syncForItems(List<CatalogItem> items) async {
+    batches.add(items);
+    if (!started.isCompleted) started.complete();
+    await release.future;
+    await Future<void>.delayed(delay);
+    if (!finished.isCompleted) finished.complete();
+    if (batches.length == 2) secondFinished.complete();
+    if (failFirst && batches.length == 1) {
+      throw StateError('Artwork unavailable');
+    }
+  }
 }
 
 class _NoopDownloadService implements DownloadService {
