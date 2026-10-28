@@ -1,0 +1,104 @@
+name: Flutter Windows Release
+run-name: Windows release · ${{ github.sha }}
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-2022
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    env:
+      LOCALTUBE_BINARY_NAME: localtube
+      LOCALTUBE_PRODUCT_NAME: localtube
+    defaults:
+      run:
+        working-directory: Flutter
+        shell: pwsh
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: '3.47.7'
+          cache: false
+
+      - name: Enable Windows desktop
+        run: |
+          flutter config --enable-windows-desktop
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to enable Windows desktop' }
+
+      - name: Restore dependencies
+        run: |
+          flutter pub get --enforce-lockfile
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency restore failed' }
+
+      - name: Analyze
+        run: |
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+          if ($LASTEXITCODE -ne 0) { throw 'Flutter analyze failed' }
+
+      - name: Test
+        run: |
+          flutter test --concurrency=2
+          if ($LASTEXITCODE -ne 0) { throw 'Flutter tests failed' }
+
+      - name: Resolve canonical version
+        run: |
+          $source = Get-Content ../.localtube/source.json -Raw | ConvertFrom-Json
+          if ($source.schemaVersion -ne 1 -or $source.sourceCommit -notmatch '^[0-9a-f]{40}$' -or
+              $source.versionCode -le 1000000000 -or $source.versionCode -gt 2100000000) {
+            throw 'Invalid canonical source contract'
+          }
+          "BUILD_NUMBER=$($source.versionCode)" >> $env:GITHUB_ENV
+          "VERSION_NAME=1.1.$($source.versionCode - 1000000000)" >> $env:GITHUB_ENV
+
+      - name: Build Windows Release
+        run: |
+          flutter build windows --release --target lib/main_stage.dart `
+            --dart-define-from-file=config/env/stage.json `
+            --dart-define=LOCALTUBE_REQUIRE_SERVER_CONFIG=true `
+            --build-name="$env:VERSION_NAME" --build-number="$env:BUILD_NUMBER"
+          if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
+
+      - name: Package portable Windows application
+        run: |
+          $releasePath = Join-Path $PWD 'build/windows/x64/runner/Release'
+          if (-not (Test-Path "$releasePath/localtube.exe") -or
+              -not (Test-Path "$releasePath/data") -or
+              -not (Test-Path "$releasePath/flutter_windows.dll")) {
+            throw 'Windows application bundle is incomplete'
+          }
+          $archive = Join-Path $env:RUNNER_TEMP 'localtube-windows-x64.zip'
+          Compress-Archive -Path "$releasePath/*" -DestinationPath $archive -Force
+          "WINDOWS_ARCHIVE=$archive" >> $env:GITHUB_ENV
+
+      - name: Publish Windows GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "localtube-windows-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          $notes = "CI run: https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          gh release create $tag --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA `
+            --draft --latest=false --title "LocalTube Windows $env:VERSION_NAME" --notes $notes
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to create draft release' }
+          gh release upload $tag $env:WINDOWS_ARCHIVE --repo $env:GITHUB_REPOSITORY
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to upload Windows archive' }
+          gh release edit $tag --draft=false --latest=false --repo $env:GITHUB_REPOSITORY
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to publish Windows release' }
