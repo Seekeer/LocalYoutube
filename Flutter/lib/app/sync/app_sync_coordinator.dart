@@ -9,16 +9,19 @@ class AppSyncCoordinator {
     required BookmarksRepository bookmarksRepository,
     required PlaybackSyncRepository playbackSyncRepository,
     required LogService logService,
+    Future<void> Function()? cacheTranscripts,
     Duration syncPeriod = const Duration(seconds: 6),
   })  : _bookmarksRepository = bookmarksRepository,
         _playbackSyncRepository = playbackSyncRepository,
         _logService = logService,
-        _syncPeriod = syncPeriod;
+        _syncPeriod = syncPeriod,
+        _cacheTranscripts = cacheTranscripts;
 
   final BookmarksRepository _bookmarksRepository;
   final PlaybackSyncRepository _playbackSyncRepository;
   final LogService _logService;
   final Duration _syncPeriod;
+  final Future<void> Function()? _cacheTranscripts;
 
   Timer? _timer;
   bool _isInitialized = false;
@@ -45,6 +48,7 @@ class AppSyncCoordinator {
     try {
       await _playbackSyncRepository.processOutbox();
       await _bookmarksRepository.processOutbox();
+      await _cacheTranscripts?.call();
       if (reason == 'network-online' || reason == 'app-resumed') {
         await _playbackSyncRepository.reconcileRecent(limit: 20);
       }

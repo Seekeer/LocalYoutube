@@ -21,6 +21,7 @@ import '../../downloads/domain/download_models.dart';
 import '../domain/player_models.dart';
 import '../domain/player_volume.dart';
 import '../domain/usecases/jump_to_nearest_timestamp_use_case.dart';
+import '../../transcript/presentation/transcript_panel.dart';
 import 'player_controller.dart';
 import 'player_navigation_result.dart';
 
@@ -357,6 +358,10 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
                             child: const SizedBox.expand(),
                           ),
                         ),
+                        Positioned.fill(
+                            child: TranscriptCaptions(
+                                videoId: int.parse(widget.videoId),
+                                controller: videoController)),
                         if (state.isBuffering)
                           const Positioned.fill(
                             child: IgnorePointer(
@@ -675,6 +680,11 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
                 ),
               ),
             ],
+            TranscriptPanel(
+              videoId: int.parse(widget.videoId),
+              onSeek: (position) => controller.seek(position),
+              onBookmark: controller.addTextBookmark,
+            ),
             if (timestamps.isNotEmpty) ...<Widget>[
               const SizedBox(height: 20),
               ExpansionTile(
@@ -1210,6 +1220,11 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
                 )
               else
                 const Center(child: CircularProgressIndicator()),
+              if (videoController != null &&
+                  videoController.value.isInitialized)
+                Positioned.fill(
+                    child: TranscriptCaptions(
+                        videoId: widget.videoId, controller: videoController)),
               if (state.isBuffering)
                 const Positioned.fill(
                   child: IgnorePointer(

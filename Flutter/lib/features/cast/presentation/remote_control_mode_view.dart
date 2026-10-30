@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/bootstrap/bootstrap_providers.dart';
+import '../../transcript/presentation/transcript_panel.dart';
 import '../../player/domain/player_models.dart';
 import '../../sync/domain/sync_models.dart';
 import '../domain/cast_session_models.dart';
@@ -26,11 +28,9 @@ import 'cast_controller.dart';
 /// the last confirmed state stays on screen, and the way back to watching here stays offered, so a
 /// viewer who would rather not wait the minute out simply takes playback back.
 ///
-/// The local-only affordances are not here, and their absence is the feature. Bookmarks, downloads,
-/// deletion and the local navigation history all belong to a player this device no longer has; a
-/// bookmark of a position on somebody else's screen, or a delete of the video a Receiver is in the
-/// middle of, would mean nothing the viewer asked for. They come back with the ordinary player
-/// surface the moment the Cast Session ends.
+/// Downloads, deletion and local navigation remain on the ordinary player surface. Transcript
+/// selections can explicitly create bookmarks for the confirmed Receiver video; transcript seeks
+/// are sent to the Receiver like the other playback controls.
 class RemoteControlModeView extends ConsumerStatefulWidget {
   const RemoteControlModeView({
     super.key,
@@ -329,6 +329,18 @@ class _RemoteControlModeViewState extends ConsumerState<RemoteControlModeView> {
             label: const Text(RemoteControlModeView.returnHandoffLabel),
           ),
         ),
+        if (confirmed != null)
+          TranscriptPanel(
+            videoId: confirmed.videoId,
+            showCaptionsControl: false,
+            onSeek: controller.seekReceiver,
+            onBookmark: (position, caption) =>
+                ref.read(bookmarksRepositoryProvider).addBookmark(
+                      videoId: confirmed.videoId,
+                      positionSeconds: position,
+                      caption: caption,
+                    ),
+          ),
         if (widget.timestamps.isNotEmpty) ...<Widget>[
           const SizedBox(height: 20),
           Text(

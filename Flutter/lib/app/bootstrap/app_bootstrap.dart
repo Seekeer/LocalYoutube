@@ -1,5 +1,7 @@
 import '../../core/logging/remote_log_forwarder.dart';
 import 'dart:async';
+import '../../features/transcript/data/transcript_repository.dart';
+import '../../features/transcript/data/downloaded_transcript_cache.dart';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -349,10 +351,15 @@ class AppBootstrap {
       logService: logService,
     );
 
+    final downloadedTranscripts = DownloadedTranscriptCache(
+      downloadService,
+      TranscriptRepository(dio, config.serverStorageNamespace),
+    );
     final AppSyncCoordinator appSyncCoordinator = AppSyncCoordinator(
       bookmarksRepository: bookmarksRepository,
       playbackSyncRepository: playbackSyncRepository,
       logService: logService,
+      cacheTranscripts: downloadedTranscripts.sync,
     );
 
     logService.info(

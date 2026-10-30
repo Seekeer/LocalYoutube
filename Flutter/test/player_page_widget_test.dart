@@ -74,6 +74,10 @@ class MockPlayerController extends StateNotifier<PlayerUiState>
   Future<void> addManualBookmark() async {}
 
   @override
+  Future<bool> addTextBookmark(double positionSeconds, String caption) async =>
+      true;
+
+  @override
   Future<void> setPreferredTitle(String? title) async {}
 
   @override
