@@ -381,6 +381,16 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     }
   }
 
+  Future<bool> addTextBookmark(double positionSeconds, String caption) async {
+    final bool added = await _bookmarksRepository.addBookmark(
+      videoId: _videoId,
+      positionSeconds: positionSeconds,
+      caption: caption,
+    );
+    await _refreshBookmarks(syncRemote: false);
+    return added;
+  }
+
   Future<void> addManualBookmark() async {
     await _addBookmarkAtCurrentPosition(caption: _manualBookmarkCaption);
   }
