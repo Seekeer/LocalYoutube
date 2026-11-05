@@ -53,8 +53,9 @@ class RemoteLogForwarder {
       const channel = MethodChannel('org.localtube.app/app_updates');
       final info =
           await channel.invokeMapMethod<String, dynamic>('installedApp');
-      if (info != null)
+      if (info != null) {
         _version = '${info['versionName']}+${info['versionCode']}';
+      }
     } catch (_) {
       // Package identity is optional on platforms without the native channel.
     }

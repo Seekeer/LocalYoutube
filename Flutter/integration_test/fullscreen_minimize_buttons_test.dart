@@ -30,6 +30,10 @@ class _TestPlayerController extends StateNotifier<PlayerUiState>
   Future<void> addManualBookmark() async {}
 
   @override
+  Future<bool> addTextBookmark(double positionSeconds, String caption) async =>
+      true;
+
+  @override
   Future<void> applyExternalStartPosition(Duration position) async {}
 
   @override
