@@ -1564,12 +1564,16 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         position < Duration.zero ? Duration.zero : position;
     final String? runtimeError = _runtimeErrorMessage(value.errorDescription);
     final String? effectiveError = runtimeError ?? _stickyPlaybackErrorMessage;
+    // A controller that failed to open is not loading any more, unless a
+    // recovery is replacing it right now.
+    final bool isOpening =
+        !value.isInitialized && (runtimeError == null || _isRecovering);
     _corruptedSegmentRecoveryTracker.clearIfRecovered(normalizedPosition);
 
     state = state.copyWith(
-      isLoading: !value.isInitialized,
+      isLoading: isOpening,
       isPlaying: value.isPlaying,
-      isBuffering: !value.isInitialized || value.isBuffering,
+      isBuffering: isOpening || value.isBuffering,
       isRecovering: _isRecovering,
       position: normalizedPosition,
       duration: normalizedDuration,
@@ -1584,8 +1588,8 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         LockScreenPlaybackService.instance.updatePlaybackState(
           videoId: playable.videoId,
           isPlaying: value.isPlaying,
-          isLoading: !value.isInitialized,
-          isBuffering: !value.isInitialized || value.isBuffering,
+          isLoading: isOpening,
+          isBuffering: isOpening || value.isBuffering,
           position: normalizedPosition,
           duration: normalizedDuration,
         ),

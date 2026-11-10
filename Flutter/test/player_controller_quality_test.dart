@@ -591,19 +591,30 @@ void main() {
             ),
           ],
         );
-    Future<void> pumpUntilLoaded(
+    // Disposing a VideoPlayerController awaits StreamSubscription.cancel(),
+    // whose future completes in the root zone, outside the fake clock. So each
+    // step also lets real async work run, or the switch stalls on dispose.
+    Future<void> pumpPlaybackUntil(
       WidgetTester tester,
-      PlayerController controller,
+      bool Function() isDone,
     ) async {
       await tester.pump();
-      for (int attempt = 0;
-          attempt < 20 &&
-              (controller.state.isLoading ||
-                  !(controller.videoController?.value.isInitialized ?? false));
-          attempt += 1) {
+      for (int attempt = 0; attempt < 20 && !isDone(); attempt += 1) {
+        await tester.runAsync(() => Future<void>.delayed(Duration.zero));
         await tester.pump(const Duration(milliseconds: 50));
       }
     }
+
+    Future<void> pumpUntilLoaded(
+      WidgetTester tester,
+      PlayerController controller,
+    ) =>
+        pumpPlaybackUntil(
+          tester,
+          () =>
+              !controller.state.isLoading &&
+              (controller.videoController?.value.isInitialized ?? false),
+        );
 
     testWidgets('online, failing to open switches to remote and marks damaged',
         (WidgetTester tester) async {
@@ -693,13 +704,12 @@ void main() {
         playerId: localController.playerId,
         message: 'decoder failed on local file',
       );
-      await tester.pump();
-      for (int attempt = 0;
-          attempt < 20 &&
-              identical(controller.videoController, localController);
-          attempt += 1) {
-        await tester.pump(const Duration(milliseconds: 50));
-      }
+      // The remote controller becomes current before the local one is
+      // disposed, and the source kind changes only after that.
+      await pumpPlaybackUntil(
+        tester,
+        () => controller.state.sourceKind == PlayableSourceKind.remoteUrl,
+      );
 
       expect(controller.videoController, isNot(same(localController)));
       expect(fakePlatform.createdSourceTypes.last, DataSourceType.network);
