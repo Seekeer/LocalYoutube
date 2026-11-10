@@ -137,6 +137,86 @@ void main() {
     expect(remoteDataSource.getCallCount, 0);
   });
 
+  test('prefers downloaded copy over remote source when online', () async {
+    final Directory directory =
+        await Directory.systemTemp.createTemp('online_local_video_');
+    addTearDown(() => directory.delete(recursive: true));
+    final File file = File('${directory.path}/video.bin');
+    await file.writeAsBytes(const <int>[1, 2, 3, 4]);
+    await localDownloadsRepository.save(
+      DownloadItem(
+        videoId: 101,
+        status: DownloadStatus.completed,
+        progress: 1,
+        remoteUrl: '/api/files/getFileById?fileId=101',
+        queuedAt: DateTime.now().toUtc(),
+        updatedAt: DateTime.now().toUtc(),
+        localPath: file.path,
+      ),
+    );
+
+    final PlayableVideo playable = await playVideoUseCase.call(videoId: 101);
+
+    expect(playable.sourceKind, PlayableSourceKind.localFile);
+    expect(playable.sourceUri, file.uri);
+  });
+
+  test('falls back to remote source when downloaded copy is damaged online',
+      () async {
+    final Directory directory =
+        await Directory.systemTemp.createTemp('online_damaged_video_');
+    addTearDown(() => directory.delete(recursive: true));
+    final File file = File('${directory.path}/video.mp4');
+    const List<int> damagedBytes = <int>[0, 0, 1, 0, 109, 100, 97, 116];
+    await file.writeAsBytes(damagedBytes);
+    await localDownloadsRepository.save(
+      DownloadItem(
+        videoId: 102,
+        status: DownloadStatus.completed,
+        progress: 1,
+        remoteUrl: '/api/files/getFileById?fileId=102',
+        queuedAt: DateTime.now().toUtc(),
+        updatedAt: DateTime.now().toUtc(),
+        localPath: file.path,
+      ),
+    );
+
+    for (int attempt = 0; attempt < 2; attempt++) {
+      final PlayableVideo playable = await playVideoUseCase.call(videoId: 102);
+      expect(playable.sourceKind, PlayableSourceKind.remoteUrl);
+      expect(
+        playable.sourceUri.toString(),
+        'https://example.localtube/api/files/getFileById?fileId=102',
+      );
+    }
+    expect((await localDownloadsRepository.findByVideoId(102))!.status,
+        DownloadStatus.damaged);
+    expect(await file.readAsBytes(), damagedBytes);
+  });
+
+  test('falls back to remote source while download is incomplete', () async {
+    final Directory directory =
+        await Directory.systemTemp.createTemp('partial_local_video_');
+    addTearDown(() => directory.delete(recursive: true));
+    final File file = File('${directory.path}/video.bin');
+    await file.writeAsBytes(const <int>[1, 2, 3, 4]);
+    await localDownloadsRepository.save(
+      DownloadItem(
+        videoId: 103,
+        status: DownloadStatus.downloading,
+        progress: 0.4,
+        remoteUrl: '/api/files/getFileById?fileId=103',
+        queuedAt: DateTime.now().toUtc(),
+        updatedAt: DateTime.now().toUtc(),
+        localPath: file.path,
+      ),
+    );
+
+    final PlayableVideo playable = await playVideoUseCase.call(videoId: 103);
+
+    expect(playable.sourceKind, PlayableSourceKind.remoteUrl);
+  });
+
   test('falls back to resolved remote url when local file is missing',
       () async {
     await localDownloadsRepository.save(

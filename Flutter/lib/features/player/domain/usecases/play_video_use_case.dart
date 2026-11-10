@@ -51,7 +51,17 @@ class PlayVideoUseCase {
             updatedAt: DateTime.now().toUtc(),
           ),
         );
-        rethrow;
+        // Offline there is no other source to play, so the damage is the answer.
+        // Online the downloaded copy is only preferred, not required.
+        if (localOnly) {
+          rethrow;
+        }
+        localUri = null;
+      } on FileSystemException {
+        // The file vanished or became unreadable after the existence check.
+        // That says nothing about its contents, so it is not marked damaged:
+        // online the remote source plays, offline playback is unavailable.
+        localUri = null;
       }
     }
     if (localOnly && localUri == null) {
