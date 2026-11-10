@@ -510,7 +510,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
 
     try {
       _logService.info('Initializing player controller for video=$_videoId.');
-      final PlayableVideo playable = await _playVideoUseCase.call(
+      PlayableVideo playable = await _playVideoUseCase.call(
         videoId: _videoId,
         localOnly: _localOnly,
       );
@@ -546,24 +546,13 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         'startMs=${playable.startPosition.inMilliseconds}.',
       );
 
-      final VideoPlayerController videoPlayer = await _createVideoPlayer(
-        playable,
-        refreshRemoteSession:
-            playable.sourceKind == PlayableSourceKind.remoteUrl,
-        refreshReason: 'initialize',
-      );
-      // Source resolution and authorization can finish after the page has closed.
-      // A controller created in that window was never owned by dispose().
-      if (_isDisposed) {
-        await videoPlayer.dispose();
+      final VideoPlayerController? videoPlayer =
+          await _openInitialVideoPlayer(playable);
+      if (videoPlayer == null || _isDisposed) {
         return;
       }
-      _videoPlayer = videoPlayer;
-      videoPlayer.addListener(_onVideoPlayerUpdated);
-      await videoPlayer.initialize();
-      if (_isDisposed) {
-        return;
-      }
+      // The downloaded copy may have been replaced by the remote source.
+      playable = _playable!;
       _logService.info(
         'Video controller initialized: ${_controllerSnapshot(videoPlayer.value)}',
       );
@@ -707,6 +696,109 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         error,
         stackTrace,
       );
+    }
+  }
+
+  /// Creates and initializes the first controller and makes it current.
+  /// Online, a downloaded copy the native player cannot open is replaced once
+  /// by the remote source, and the copy is then marked damaged. Returns null
+  /// when the page closed meanwhile.
+  Future<VideoPlayerController?> _openInitialVideoPlayer(
+    PlayableVideo playable,
+  ) async {
+    final bool canFallBackToRemote =
+        playable.sourceKind == PlayableSourceKind.localFile && !_localOnly;
+    final VideoPlayerController first = await _createVideoPlayer(
+      playable,
+      refreshRemoteSession: playable.sourceKind == PlayableSourceKind.remoteUrl,
+      refreshReason: 'initialize',
+    );
+    // Source resolution and authorization can finish after the page has closed.
+    // A controller created in that window was never owned by dispose().
+    if (_isDisposed) {
+      await first.dispose();
+      return null;
+    }
+    _videoPlayer = first;
+    // An unopenable local file must not start runtime recovery on itself while
+    // the fallback below is still deciding the source, so its listener waits.
+    if (!canFallBackToRemote) {
+      first.addListener(_onVideoPlayerUpdated);
+    }
+    try {
+      await first.initialize();
+      if (canFallBackToRemote) {
+        first.addListener(_onVideoPlayerUpdated);
+      }
+      return first;
+    } catch (error) {
+      if (!canFallBackToRemote || _isDisposed) {
+        rethrow;
+      }
+      _logService.warn(
+        'Downloaded copy failed to open for video=$_videoId, switching to the '
+        'remote source: ${_logService.sanitize(error.toString())}',
+      );
+      _videoPlayer = null;
+      await _disposeQuietly(first, reason: 'local-fallback');
+    }
+    if (_isDisposed) {
+      return null;
+    }
+
+    final PlayableVideo remote = await _playVideoUseCase.call(
+      videoId: _videoId,
+      forceRemote: true,
+    );
+    if (_isDisposed) {
+      return null;
+    }
+    _playable = remote;
+    await _setRemotePlaybackNetworkLock(true);
+    if (_isDisposed) {
+      return null;
+    }
+    final VideoPlayerController second = await _createVideoPlayer(
+      remote,
+      refreshRemoteSession: true,
+      refreshReason: 'local-fallback',
+    );
+    if (_isDisposed) {
+      await second.dispose();
+      return null;
+    }
+    _videoPlayer = second;
+    // Attached only once it opens: a failure here is reported by _initialize,
+    // and runtime recovery must not race it.
+    await second.initialize();
+    second.addListener(_onVideoPlayerUpdated);
+    // The same video plays from the server, so the downloaded copy is at fault.
+    await _markLocalCopyDamaged(playable.sourceUri);
+    return second;
+  }
+
+  Future<void> _markLocalCopyDamaged(Uri localFile) async {
+    try {
+      await _playVideoUseCase.markLocalCopyDamaged(
+        _videoId,
+        localFile: localFile,
+      );
+      _logService.warn('Downloaded copy of video=$_videoId marked damaged.');
+    } catch (error, stackTrace) {
+      _logService.error('Marking downloaded copy damaged failed', error,
+          stackTrace);
+    }
+  }
+
+  Future<void> _disposeQuietly(
+    VideoPlayerController controller, {
+    required String reason,
+  }) async {
+    try {
+      await controller.dispose();
+    } catch (error, stackTrace) {
+      _logService.error(
+          'Disposing video controller failed ($reason)', error, stackTrace);
     }
   }
 
@@ -1055,6 +1147,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     final Duration resumePosition = _resolveRecoveryResumePosition(
       rawResumePosition,
     );
+    bool switchedToRemote = false;
 
     state = state.copyWith(
       isRecovering: true,
@@ -1081,12 +1174,39 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         }
       }
 
+      // Retrying a downloaded copy that broke mid-playback rarely helps, so
+      // online the recovery moves to the remote source instead. The copy is
+      // not marked damaged here: a runtime error does not prove the file bad.
+      PlayableVideo source = playable;
+      if (playable.sourceKind == PlayableSourceKind.localFile && !_localOnly) {
+        source = await _playVideoUseCase.call(
+          videoId: _videoId,
+          forceRemote: true,
+        );
+        if (_isDisposed) {
+          return;
+        }
+        _logService.warn(
+          'Recovery ($reason) switches video=$_videoId from the downloaded '
+          'copy to the remote source.',
+        );
+        switchedToRemote = true;
+        await _setRemotePlaybackNetworkLock(true);
+        if (_isDisposed) {
+          return;
+        }
+      }
+
       await _replaceVideoController(
-        playable: playable,
+        playable: source,
         resumePosition: resumePosition,
         autoPlay: shouldResumePlaying,
         refreshReason: 'recover-$reason',
       );
+      if (switchedToRemote && !_isDisposed) {
+        _playable = source;
+        state = state.copyWith(sourceKind: source.sourceKind);
+      }
       _recoveryAttempts = 0;
       _stickyPlaybackErrorMessage = null;
       _lastRuntimeErrorSignature = null;
@@ -1109,6 +1229,10 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         error,
         stackTrace,
       );
+      if (switchedToRemote && !_isDisposed) {
+        // The downloaded copy stays the current source; it needs no network.
+        await _setRemotePlaybackNetworkLock(false);
+      }
       _stickyPlaybackErrorMessage = 'Unable to recover playback: $error';
       if (!_isDisposed) {
         state = state.copyWith(

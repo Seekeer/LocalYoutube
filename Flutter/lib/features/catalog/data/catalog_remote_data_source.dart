@@ -56,6 +56,24 @@ class CatalogRemoteDataSource {
     );
   }
 
+  /// Asks the server to add one video to Jellyfin; returns the server's
+  /// human-readable result (exported, already there, or queued until the
+  /// download finishes). Repeating the call never duplicates the entry.
+  Future<String> exportToJellyfin(int videoId) async {
+    final Response<dynamic> response = await _dio.post<dynamic>(
+      '/jellyfin/export/$videoId',
+      options: Options(extra: <String, dynamic>{'idempotent': true}),
+    );
+    final dynamic data = response.data;
+    if (data is Map && data['message'] is String) {
+      final String message = (data['message'] as String).trim();
+      if (message.isNotEmpty) {
+        return message;
+      }
+    }
+    return 'Добавлено в Jellyfin';
+  }
+
   Future<void> addToPlaylist({
     required int fileId,
     required int playlistId,

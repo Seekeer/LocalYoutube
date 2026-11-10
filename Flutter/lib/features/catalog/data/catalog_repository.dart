@@ -207,6 +207,16 @@ class CatalogRepository {
     }
   }
 
+  Future<(String?, Failure?)> exportToJellyfin(int videoId) async {
+    try {
+      final String message = await _remoteDataSource.exportToJellyfin(videoId);
+      return (message, null);
+    } catch (error, stackTrace) {
+      _logService.error('exportToJellyfin failed', error, stackTrace);
+      return (null, mapToFailure(error));
+    }
+  }
+
   Future<Failure?> addToPlaylist({
     required int videoId,
     required int playlistId,

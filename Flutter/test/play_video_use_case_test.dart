@@ -217,6 +217,79 @@ void main() {
     expect(playable.sourceKind, PlayableSourceKind.remoteUrl);
   });
 
+  test('forceRemote skips a usable downloaded copy', () async {
+    final Directory directory =
+        await Directory.systemTemp.createTemp('force_remote_video_');
+    addTearDown(() => directory.delete(recursive: true));
+    final File file = File('${directory.path}/video.bin');
+    await file.writeAsBytes(const <int>[1, 2, 3, 4]);
+    await localDownloadsRepository.save(
+      DownloadItem(
+        videoId: 104,
+        status: DownloadStatus.completed,
+        progress: 1,
+        remoteUrl: '/api/files/getFileById?fileId=104',
+        queuedAt: DateTime.now().toUtc(),
+        updatedAt: DateTime.now().toUtc(),
+        localPath: file.path,
+      ),
+    );
+
+    final PlayableVideo playable =
+        await playVideoUseCase.call(videoId: 104, forceRemote: true);
+
+    expect(playable.sourceKind, PlayableSourceKind.remoteUrl);
+    expect(
+      playable.sourceUri.toString(),
+      'https://example.localtube/api/files/getFileById?fileId=104',
+    );
+    expect((await localDownloadsRepository.findByVideoId(104))!.status,
+        DownloadStatus.completed);
+  });
+
+  test('markLocalCopyDamaged marks only the completed copy that failed',
+      () async {
+    final Directory directory =
+        await Directory.systemTemp.createTemp('mark_damaged_video_');
+    addTearDown(() => directory.delete(recursive: true));
+    String pathFor(int videoId) => '${directory.path}/video_$videoId.mp4';
+    for (final (int videoId, DownloadStatus status) in <(int, DownloadStatus)>[
+      (105, DownloadStatus.completed),
+      (106, DownloadStatus.downloading),
+      (108, DownloadStatus.completed),
+    ]) {
+      await localDownloadsRepository.save(
+        DownloadItem(
+          videoId: videoId,
+          status: status,
+          progress: 1,
+          remoteUrl: '/api/files/getFileById?fileId=$videoId',
+          queuedAt: DateTime.now().toUtc(),
+          updatedAt: DateTime.now().toUtc(),
+          localPath: pathFor(videoId),
+        ),
+      );
+    }
+
+    await playVideoUseCase.markLocalCopyDamaged(105,
+        localFile: File(pathFor(105)).uri);
+    await playVideoUseCase.markLocalCopyDamaged(106,
+        localFile: File(pathFor(106)).uri);
+    await playVideoUseCase.markLocalCopyDamaged(107,
+        localFile: File(pathFor(107)).uri);
+    // A replacement download now lives at another path than the failed one.
+    await playVideoUseCase.markLocalCopyDamaged(108,
+        localFile: File('${directory.path}/old_video_108.mp4').uri);
+
+    expect((await localDownloadsRepository.findByVideoId(105))!.status,
+        DownloadStatus.damaged);
+    expect((await localDownloadsRepository.findByVideoId(106))!.status,
+        DownloadStatus.downloading);
+    expect(await localDownloadsRepository.findByVideoId(107), isNull);
+    expect((await localDownloadsRepository.findByVideoId(108))!.status,
+        DownloadStatus.completed);
+  });
+
   test('falls back to resolved remote url when local file is missing',
       () async {
     await localDownloadsRepository.save(

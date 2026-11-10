@@ -165,6 +165,9 @@ class CatalogController extends StateNotifier<CatalogState> {
   Future<Failure?> deleteServer(CatalogItem item) =>
       _repository.deleteServer(item.id);
 
+  Future<(String?, Failure?)> exportToJellyfin(CatalogItem item) =>
+      _repository.exportToJellyfin(item.id);
+
   Future<(List<PlaylistSummary>, Failure?)> loadPlaylists() {
     return _repository.loadPlaylists();
   }

@@ -431,6 +431,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                           _deleteEverywhere(context, item,
                               section: state.section),
                         ),
+                        onExportToJellyfin: () =>
+                            unawaited(_exportToJellyfin(context, item)),
                         remoteActionsEnabled: !remoteActionsDisabled,
                       ),
               );
@@ -439,29 +441,41 @@ class _HomePageState extends ConsumerState<HomePage> {
           return listItem;
         }
 
-        final ActionPane? startActionPane =
-            isDownloaded || remoteActionsDisabled
-                ? null
-                : ActionPane(
-                    motion: const ScrollMotion(),
-                    dismissible: DismissiblePane(
-                      onDismissed: () {},
-                      closeOnCancel: true,
-                      confirmDismiss: () async {
-                        await _queueDownload(context, item);
-                        return false;
-                      },
-                    ),
-                    children: <Widget>[
-                      SlidableAction(
-                        onPressed: (_) => _queueDownload(context, item),
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        icon: Icons.download_outlined,
-                        label: 'Download',
+        final ActionPane? startActionPane = remoteActionsDisabled
+            ? null
+            : ActionPane(
+                motion: const ScrollMotion(),
+                // A full swipe queues the download; with the video already
+                // downloaded only the Jellyfin action remains, so no full swipe.
+                dismissible: isDownloaded
+                    ? null
+                    : DismissiblePane(
+                        onDismissed: () {},
+                        closeOnCancel: true,
+                        confirmDismiss: () async {
+                          await _queueDownload(context, item);
+                          return false;
+                        },
                       ),
-                    ],
-                  );
+                children: <Widget>[
+                  if (!isDownloaded)
+                    SlidableAction(
+                      onPressed: (_) => _queueDownload(context, item),
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      icon: Icons.download_outlined,
+                      label: 'Download',
+                    ),
+                  SlidableAction(
+                    onPressed: (_) =>
+                        unawaited(_exportToJellyfin(context, item)),
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    icon: Icons.live_tv_outlined,
+                    label: 'В Jellyfin',
+                  ),
+                ],
+              );
 
         final ActionPane? endActionPane =
             (remoteActionsDisabled && !isDownloaded)
@@ -541,6 +555,20 @@ class _HomePageState extends ConsumerState<HomePage> {
       return;
     }
     _showResult(context, failure, successMessage: 'Download queued');
+  }
+
+  Future<void> _exportToJellyfin(BuildContext context, CatalogItem item) async {
+    final (String? message, Failure? failure) = await ref
+        .read(catalogControllerProvider.notifier)
+        .exportToJellyfin(item);
+    if (!context.mounted) {
+      return;
+    }
+    _showResult(
+      context,
+      failure,
+      successMessage: message ?? 'Добавлено в Jellyfin',
+    );
   }
 
   Future<bool> _deleteFromDownloads(
@@ -896,12 +924,14 @@ class _LandscapeActions extends StatelessWidget {
     required this.onDownload,
     required this.onDeleteFromDownloads,
     required this.onDeleteEverywhere,
+    required this.onExportToJellyfin,
     required this.remoteActionsEnabled,
   });
 
   final VoidCallback onDownload;
   final VoidCallback onDeleteFromDownloads;
   final VoidCallback onDeleteEverywhere;
+  final VoidCallback onExportToJellyfin;
   final bool remoteActionsEnabled;
 
   @override
@@ -938,6 +968,17 @@ class _LandscapeActions extends StatelessWidget {
           constraints: const BoxConstraints.tightFor(width: 32, height: 32),
           splashRadius: 18,
           icon: const Icon(Icons.delete_forever_outlined),
+        ),
+        IconButton(
+          tooltip: remoteActionsEnabled
+              ? 'В Jellyfin'
+              : 'Available after reconnect',
+          onPressed: remoteActionsEnabled ? onExportToJellyfin : null,
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+          splashRadius: 18,
+          icon: const Icon(Icons.live_tv_outlined),
         ),
       ],
     );

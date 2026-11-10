@@ -565,25 +565,195 @@ void main() {
 
     controller.dispose();
   });
+
+  group('downloaded copy the native player cannot play', () {
+    PlayableVideo localPlayable(int videoId) => PlayableVideo(
+          videoId: videoId,
+          sourceUri: Uri.file('/downloads/video_$videoId.mp4'),
+          sourceKind: PlayableSourceKind.localFile,
+          startPosition: Duration.zero,
+          title: 'Local video',
+        );
+    PlayableVideo remotePlayable(int videoId) => PlayableVideo(
+          videoId: videoId,
+          sourceUri: Uri.parse('https://example.invalid/video_$videoId.mp4'),
+          sourceKind: PlayableSourceKind.remoteUrl,
+          startPosition: Duration.zero,
+          title: 'Local video',
+        );
+    _ScriptedStreamAuthorizationHeaderProvider oneAuthorization() =>
+        _ScriptedStreamAuthorizationHeaderProvider(
+          <StreamAuthorizationHeaderResult>[
+            StreamAuthorizationHeaderResult.success(
+              const <String, String>{
+                HttpHeaders.authorizationHeader: 'Bearer token',
+              },
+            ),
+          ],
+        );
+    Future<void> pumpUntilLoaded(
+      WidgetTester tester,
+      PlayerController controller,
+    ) async {
+      await tester.pump();
+      for (int attempt = 0;
+          attempt < 20 &&
+              (controller.state.isLoading ||
+                  !(controller.videoController?.value.isInitialized ?? false));
+          attempt += 1) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    testWidgets('online, failing to open switches to remote and marks damaged',
+        (WidgetTester tester) async {
+      fakePlatform.failFileInitialize = true;
+      final _FakePlayVideoUseCase useCase = _FakePlayVideoUseCase(
+        localPlayable(90),
+        remotePlayable: remotePlayable(90),
+      );
+      final PlayerController controller = PlayerController(
+        videoId: 90,
+        localOnly: false,
+        playVideoUseCase: useCase,
+        playbackSyncRepository: playbackSyncRepository,
+        bookmarksRepository: bookmarksRepository,
+        streamAuthorizationHeaderProvider: oneAuthorization(),
+        logService: logService,
+      );
+
+      await pumpUntilLoaded(tester, controller);
+
+      expect(fakePlatform.createdSourceTypes,
+          <DataSourceType>[DataSourceType.file, DataSourceType.network]);
+      expect(fakePlatform.disposedPlayerIds, contains(1));
+      expect(controller.videoController?.value.isInitialized, isTrue);
+      expect(controller.state.sourceKind, PlayableSourceKind.remoteUrl);
+      expect(controller.state.errorMessage, isNull);
+      expect(useCase.forceRemoteCallCount, 1);
+      expect(useCase.damagedVideoIds, <int>[90]);
+
+      controller.dispose();
+    });
+
+    testWidgets('offline, failing to open reports an error without network',
+        (WidgetTester tester) async {
+      fakePlatform.failFileInitialize = true;
+      final _FakePlayVideoUseCase useCase = _FakePlayVideoUseCase(
+        localPlayable(91),
+        remotePlayable: remotePlayable(91),
+      );
+      final PlayerController controller = PlayerController(
+        videoId: 91,
+        localOnly: true,
+        playVideoUseCase: useCase,
+        playbackSyncRepository: playbackSyncRepository,
+        bookmarksRepository: bookmarksRepository,
+        streamAuthorizationHeaderProvider:
+            _ScriptedStreamAuthorizationHeaderProvider(
+                const <StreamAuthorizationHeaderResult>[]),
+        logService: logService,
+      );
+
+      await pumpUntilLoaded(tester, controller);
+
+      // Offline the existing runtime recovery may retry the same file.
+      expect(fakePlatform.createdSourceTypes, isNotEmpty);
+      expect(fakePlatform.createdSourceTypes,
+          everyElement(DataSourceType.file));
+      expect(controller.state.isLoading, isFalse);
+      expect(controller.state.errorMessage, isNotNull);
+      expect(useCase.forceRemoteCallCount, 0);
+      expect(useCase.damagedVideoIds, isEmpty);
+
+      controller.dispose();
+    });
+
+    testWidgets('online, runtime error recovers from remote without marking',
+        (WidgetTester tester) async {
+      final _FakePlayVideoUseCase useCase = _FakePlayVideoUseCase(
+        localPlayable(92),
+        remotePlayable: remotePlayable(92),
+      );
+      final PlayerController controller = PlayerController(
+        videoId: 92,
+        localOnly: false,
+        playVideoUseCase: useCase,
+        playbackSyncRepository: playbackSyncRepository,
+        bookmarksRepository: bookmarksRepository,
+        streamAuthorizationHeaderProvider: oneAuthorization(),
+        logService: logService,
+      );
+      await pumpUntilLoaded(tester, controller);
+      final VideoPlayerController localController =
+          controller.videoController!;
+      expect(controller.state.sourceKind, PlayableSourceKind.localFile);
+
+      fakePlatform.pushError(
+        playerId: localController.playerId,
+        message: 'decoder failed on local file',
+      );
+      await tester.pump();
+      for (int attempt = 0;
+          attempt < 20 &&
+              identical(controller.videoController, localController);
+          attempt += 1) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      expect(controller.videoController, isNot(same(localController)));
+      expect(fakePlatform.createdSourceTypes.last, DataSourceType.network);
+      expect(controller.state.sourceKind, PlayableSourceKind.remoteUrl);
+      expect(useCase.forceRemoteCallCount, 1);
+      expect(useCase.damagedVideoIds, isEmpty);
+
+      controller.dispose();
+    });
+  });
 }
 
 class _FakePlayVideoUseCase implements PlayVideoUseCase {
-  _FakePlayVideoUseCase(this._playable, {this.error, this.gate});
+  _FakePlayVideoUseCase(
+    this._playable, {
+    this.error,
+    this.gate,
+    this.remotePlayable,
+  });
 
   final Future<void>? gate;
 
   final PlayableVideo? _playable;
   final Object? error;
 
+  /// What a call with `forceRemote` returns.
+  final PlayableVideo? remotePlayable;
+  int forceRemoteCallCount = 0;
+  final List<int> damagedVideoIds = <int>[];
+
   @override
-  Future<PlayableVideo> call(
-      {required int videoId, bool localOnly = false}) async {
+  Future<PlayableVideo> call({
+    required int videoId,
+    bool localOnly = false,
+    bool forceRemote = false,
+  }) async {
+    if (forceRemote) {
+      forceRemoteCallCount += 1;
+      return remotePlayable!;
+    }
     await gate;
     final Object? error = this.error;
     if (error != null) {
       throw error;
     }
     return _playable!;
+  }
+
+  @override
+  Future<void> markLocalCopyDamaged(
+    int videoId, {
+    required Uri localFile,
+  }) async {
+    damagedVideoIds.add(videoId);
   }
 }
 
@@ -685,6 +855,12 @@ class _FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   final Map<int, Duration> _positions = <int, Duration>{};
   final Map<int, Duration> _durations = <int, Duration>{};
   final Set<int> _pendingInitializedEvents = <int>{};
+  final Set<int> _pendingInitializeFailures = <int>{};
+
+  /// When set, every local-file player fails to initialize, like a downloaded
+  /// copy the native player cannot open.
+  bool failFileInitialize = false;
+  final List<DataSourceType> createdSourceTypes = <DataSourceType>[];
 
   @override
   Future<void> init() async {}
@@ -693,12 +869,18 @@ class _FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   Future<int?> createWithOptions(VideoCreationOptions options) async {
     final int playerId = _nextPlayerId++;
     createCallCount += 1;
+    createdSourceTypes.add(options.dataSource.sourceType);
     final StreamController<VideoEvent> controller =
         StreamController<VideoEvent>.broadcast();
     _events[playerId] = controller;
     _positions[playerId] = Duration.zero;
     _durations[playerId] = const Duration(seconds: 30);
-    _pendingInitializedEvents.add(playerId);
+    if (failFileInitialize &&
+        options.dataSource.sourceType == DataSourceType.file) {
+      _pendingInitializeFailures.add(playerId);
+    } else {
+      _pendingInitializedEvents.add(playerId);
+    }
     return playerId;
   }
 
@@ -772,6 +954,17 @@ class _FakeVideoPlayerPlatform extends VideoPlayerPlatform {
 
   @override
   Stream<VideoEvent> videoEventsFor(int playerId) {
+    if (_pendingInitializeFailures.remove(playerId)) {
+      scheduleMicrotask(() {
+        final StreamController<VideoEvent>? controller = _events[playerId];
+        if (controller == null || controller.isClosed) {
+          return;
+        }
+        controller.addError(
+          PlatformException(code: 'video', message: 'cannot open file'),
+        );
+      });
+    }
     if (_pendingInitializedEvents.remove(playerId)) {
       scheduleMicrotask(() {
         final StreamController<VideoEvent>? controller = _events[playerId];

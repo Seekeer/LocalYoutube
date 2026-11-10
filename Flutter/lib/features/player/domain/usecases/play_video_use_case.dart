@@ -27,13 +27,21 @@ class PlayVideoUseCase {
   final ApiRoute? _apiRoute;
   final DownloadFileValidator _fileValidator;
 
-  Future<PlayableVideo> call(
-      {required int videoId, bool localOnly = false}) async {
+  /// Resolves what to play: the downloaded copy when it is usable, otherwise
+  /// the remote source. [forceRemote] skips the downloaded copy, for when the
+  /// player already failed on it; it cannot be combined with [localOnly].
+  Future<PlayableVideo> call({
+    required int videoId,
+    bool localOnly = false,
+    bool forceRemote = false,
+  }) async {
+    assert(!(localOnly && forceRemote));
     final download = await _localDownloadsRepository.findByVideoId(videoId);
     if (localOnly && download?.status == DownloadStatus.damaged) {
       throw const InvalidDownloadException('Previously detected damaged file.');
     }
-    final bool canUseLocalFile = download?.status == DownloadStatus.completed;
+    final bool canUseLocalFile =
+        !forceRemote && download?.status == DownloadStatus.completed;
     Uri? localUri;
     if (canUseLocalFile) {
       try {
@@ -42,15 +50,7 @@ class PlayVideoUseCase {
           await _fileValidator.validate(localUri.toFilePath());
         }
       } on InvalidDownloadException {
-        await _localDownloadsRepository.save(
-          download!.copyWith(
-            status: DownloadStatus.damaged,
-            clearTaskId: true,
-            clearSpeedMbps: true,
-            clearEta: true,
-            updatedAt: DateTime.now().toUtc(),
-          ),
-        );
+        await _saveAsDamaged(download!);
         // Offline there is no other source to play, so the damage is the answer.
         // Online the downloaded copy is only preferred, not required.
         if (localOnly) {
@@ -95,6 +95,38 @@ class PlayVideoUseCase {
           : PlayableSourceKind.localFile,
       startPosition: startPosition,
       title: resolvedTitle.isEmpty ? 'Video #$videoId' : resolvedTitle,
+    );
+  }
+
+  /// Marks the downloaded copy damaged after the native player could not open
+  /// it while the remote copy of the same video could. Only the completed
+  /// download stored at [localFile] is marked, so a download that replaced it
+  /// meanwhile is left alone.
+  Future<void> markLocalCopyDamaged(
+    int videoId, {
+    required Uri localFile,
+  }) async {
+    final DownloadItem? download =
+        await _localDownloadsRepository.findByVideoId(videoId);
+    if (download == null || download.status != DownloadStatus.completed) {
+      return;
+    }
+    final String path = (download.localPath ?? '').trim();
+    if (path.isEmpty || File(path).uri != localFile) {
+      return;
+    }
+    await _saveAsDamaged(download);
+  }
+
+  Future<void> _saveAsDamaged(DownloadItem download) {
+    return _localDownloadsRepository.save(
+      download.copyWith(
+        status: DownloadStatus.damaged,
+        clearTaskId: true,
+        clearSpeedMbps: true,
+        clearEta: true,
+        updatedAt: DateTime.now().toUtc(),
+      ),
     );
   }
 
