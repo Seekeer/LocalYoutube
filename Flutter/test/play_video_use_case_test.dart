@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -400,6 +401,109 @@ void main() {
     );
   });
 
+  test('downloaded copy starts from the saved position when the server hangs',
+      () async {
+    final Directory tempDir = await Directory.systemTemp.createTemp(
+      'localtube_player_test',
+    );
+    addTearDown(() async {
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
+    });
+    final File file = File(
+      '${tempDir.path}${Platform.pathSeparator}video_101.bin',
+    );
+    await file.writeAsBytes(const <int>[1, 2, 3, 4]);
+    await localDownloadsRepository.save(
+      DownloadItem(
+        videoId: 101,
+        status: DownloadStatus.completed,
+        progress: 1,
+        remoteUrl: '/files/getFileById?fileId=101',
+        title: 'Video 101',
+        queuedAt: DateTime.now().toUtc(),
+        localPath: file.path,
+        updatedAt: DateTime.now().toUtc(),
+      ),
+    );
+    await localPlaybackRepository.savePosition(
+      videoId: 101,
+      positionSeconds: 30,
+    );
+    final Completer<void> serverNeverAnswers = Completer<void>();
+    remoteDataSource.getGate = serverNeverAnswers.future;
+
+    final Stopwatch stopwatch = Stopwatch()..start();
+    final PlayableVideo playable = await playVideoUseCase.call(videoId: 101);
+    stopwatch.stop();
+
+    expect(playable.sourceKind, PlayableSourceKind.localFile);
+    expect(playable.startPosition, const Duration(seconds: 30));
+    expect(remoteDataSource.getCallCount, greaterThan(0));
+    expect(
+      stopwatch.elapsed,
+      lessThan(PlayVideoUseCase.serverPositionWait + const Duration(seconds: 2)),
+    );
+  });
+
+  test('a late server answer does not overwrite progress saved meanwhile',
+      () async {
+    const int videoId = 102;
+    final Directory tempDir = await Directory.systemTemp.createTemp(
+      'localtube_player_test',
+    );
+    addTearDown(() async {
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
+    });
+    final File file = File(
+      '${tempDir.path}${Platform.pathSeparator}video_$videoId.bin',
+    );
+    await file.writeAsBytes(const <int>[1, 2, 3, 4]);
+    await localDownloadsRepository.save(
+      DownloadItem(
+        videoId: videoId,
+        status: DownloadStatus.completed,
+        progress: 1,
+        remoteUrl: '/files/getFileById?fileId=$videoId',
+        title: 'Video $videoId',
+        queuedAt: DateTime.now().toUtc(),
+        localPath: file.path,
+        updatedAt: DateTime.now().toUtc(),
+      ),
+    );
+    await localPlaybackRepository.savePosition(
+      videoId: videoId,
+      positionSeconds: 30,
+      updatedAt: DateTime.utc(2026, 2, 10, 8, 0, 0),
+    );
+    // Newer than the position the player opened with, older than what it saves while playing.
+    remoteDataSource.remoteByVideoId[videoId] = RemotePlaybackPosition(
+      positionSeconds: 45,
+      updatedAt: DateTime.utc(2026, 2, 10, 9, 0, 0),
+    );
+    final Completer<void> slowServer = Completer<void>();
+    remoteDataSource.getGate = slowServer.future;
+
+    final PlayableVideo playable =
+        await playVideoUseCase.call(videoId: videoId);
+    expect(playable.startPosition, const Duration(seconds: 30));
+
+    // Playback goes on and saves progress before the server answers.
+    await localPlaybackRepository.savePosition(
+      videoId: videoId,
+      positionSeconds: 60,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    slowServer.complete();
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+
+    final snapshot = await localPlaybackRepository.getSnapshot(videoId);
+    expect(snapshot?.positionSeconds, 60);
+  });
+
   test('uses fresher remote resume position when it wins by updated date',
       () async {
     const int videoId = 17;
@@ -430,9 +534,13 @@ class _FakePlaybackPositionRemoteDataSource
       <int, RemotePlaybackPosition>{};
   int getCallCount = 0;
 
+  /// When set, reading a position waits for it, like a server that does not answer.
+  Future<void>? getGate;
+
   @override
   Future<RemotePlaybackPosition?> getPosition(int videoId) async {
     getCallCount += 1;
+    await getGate;
     return remoteByVideoId[videoId];
   }
 

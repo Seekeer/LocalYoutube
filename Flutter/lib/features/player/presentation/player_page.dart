@@ -24,6 +24,7 @@ import '../domain/usecases/jump_to_nearest_timestamp_use_case.dart';
 import '../../transcript/presentation/transcript_panel.dart';
 import 'player_controller.dart';
 import 'player_navigation_result.dart';
+import 'player_screen_stack.dart';
 
 const MethodChannel _appControlChannel = MethodChannel(
   'org.localtube.app/app_control',
@@ -94,6 +95,11 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
   CastPlaybackBinding? _castBinding;
   _PlayerCastLocalPlayer? _castLocalPlayer;
 
+  /// This screen's place among the open player screens. Only the screen on top may play, so a
+  /// player this screen left behind can never be heard from under another one.
+  PlayerScreenStack? _screens;
+  Object? _screenToken;
+
   int? get _resolvedVideoId => int.tryParse(widget.videoId);
 
   /// Whether playback has moved to a Receiver. In that mode this page owns no video player, so
@@ -112,6 +118,10 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
     final int? parsedVideoId = _resolvedVideoId;
     if (parsedVideoId != null && parsedVideoId > 0) {
       final int videoId = parsedVideoId;
+      // Before anything builds this screen's player, so that player is on top from its start.
+      final PlayerScreenStack screens = ref.read(playerScreenStackProvider);
+      _screens = screens;
+      _screenToken = screens.enter(videoId);
       final _PlayerCastLocalPlayer player = _PlayerCastLocalPlayer(
         readState: () => ref.read(playerControllerProvider(videoId)),
         readVolume: () => ref.read(playerVolumeProvider).value,
@@ -154,6 +164,16 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.videoId != widget.videoId) {
       _downloadStartedForCurrentVideo = false;
+      // The same screen now shows another video, so its place on the stack names that video.
+      final Object? previousToken = _screenToken;
+      final PlayerScreenStack screens =
+          _screens ??= ref.read(playerScreenStackProvider);
+      final int? videoId = _resolvedVideoId;
+      _screenToken =
+          videoId != null && videoId > 0 ? screens.enter(videoId) : null;
+      if (previousToken != null) {
+        screens.leave(previousToken);
+      }
     }
     if (oldWidget.videoTitle != widget.videoTitle) {
       unawaited(_applyPreferredTitleIfNeeded());
@@ -168,6 +188,10 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
   void dispose() {
     _updatePlaybackSurfaces?.leave();
     WidgetsBinding.instance.removeObserver(this);
+    final Object? screenToken = _screenToken;
+    if (screenToken != null) {
+      _screens?.leave(screenToken);
+    }
     final _PlayerCastLocalPlayer? player = _castLocalPlayer;
     if (player != null) {
       _castBinding?.unbind(player);

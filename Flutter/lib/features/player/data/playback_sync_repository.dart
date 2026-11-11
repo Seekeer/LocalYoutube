@@ -113,14 +113,17 @@ class PlaybackSyncRepository {
       return null;
     }
 
-    final PlaybackPositionSnapshot? local =
-        await _localPlaybackRepository.getSnapshot(videoId);
-
     final _RemoteReadResult remoteRead = await _readRemotePosition(videoId);
     final RemotePlaybackPosition? remote = remoteRead.position;
     if (remoteRead.skippedByCooldown && remoteRead.nextAllowedReadAt != null) {
       _scheduleReconcileAt(videoId, remoteRead.nextAllowedReadAt!);
     }
+
+    // Read after the server answers, not before: a slow answer can arrive after playback has
+    // already saved newer progress here, and merging against a snapshot taken before the request
+    // would overwrite that progress with an older position.
+    final PlaybackPositionSnapshot? local =
+        await _localPlaybackRepository.getSnapshot(videoId);
 
     final PlaybackPositionSnapshot? merged = _mergeSnapshots(
       videoId: videoId,

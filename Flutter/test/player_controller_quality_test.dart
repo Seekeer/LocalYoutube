@@ -15,6 +15,7 @@ import 'package:localtube_flutter/features/player/data/stream_authorization_head
 import 'package:localtube_flutter/features/player/domain/player_models.dart';
 import 'package:localtube_flutter/features/player/domain/usecases/play_video_use_case.dart';
 import 'package:localtube_flutter/features/player/presentation/player_controller.dart';
+import 'package:localtube_flutter/features/player/presentation/player_screen_stack.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
@@ -680,7 +681,7 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('online, runtime error recovers from remote without marking',
+    testWidgets('online, runtime error recovers from the copy, not the server',
         (WidgetTester tester) async {
       final _FakePlayVideoUseCase useCase = _FakePlayVideoUseCase(
         localPlayable(92),
@@ -692,7 +693,9 @@ void main() {
         playVideoUseCase: useCase,
         playbackSyncRepository: playbackSyncRepository,
         bookmarksRepository: bookmarksRepository,
-        streamAuthorizationHeaderProvider: oneAuthorization(),
+        streamAuthorizationHeaderProvider:
+            _ScriptedStreamAuthorizationHeaderProvider(
+                const <StreamAuthorizationHeaderResult>[]),
         logService: logService,
       );
       await pumpUntilLoaded(tester, controller);
@@ -704,20 +707,155 @@ void main() {
         playerId: localController.playerId,
         message: 'decoder failed on local file',
       );
-      // The remote controller becomes current before the local one is
-      // disposed, and the source kind changes only after that.
+      await pumpPlaybackUntil(
+        tester,
+        () =>
+            !identical(controller.videoController, localController) &&
+            !controller.state.isRecovering,
+      );
+
+      // The server is never asked: a downloaded video does not depend on it.
+      expect(controller.videoController, isNot(same(localController)));
+      expect(controller.videoController?.value.isPlaying, isTrue);
+      expect(fakePlatform.createdSourceTypes,
+          everyElement(DataSourceType.file));
+      expect(controller.state.sourceKind, PlayableSourceKind.localFile);
+      expect(controller.state.errorMessage, isNull);
+      expect(useCase.forceRemoteCallCount, 0);
+      expect(useCase.damagedVideoIds, isEmpty);
+
+      controller.dispose();
+    });
+
+    testWidgets('online, a copy that will not reopen falls back to remote',
+        (WidgetTester tester) async {
+      final _FakePlayVideoUseCase useCase = _FakePlayVideoUseCase(
+        localPlayable(93),
+        remotePlayable: remotePlayable(93),
+      );
+      final PlayerController controller = PlayerController(
+        videoId: 93,
+        localOnly: false,
+        playVideoUseCase: useCase,
+        playbackSyncRepository: playbackSyncRepository,
+        bookmarksRepository: bookmarksRepository,
+        streamAuthorizationHeaderProvider: oneAuthorization(),
+        logService: logService,
+      );
+      await pumpUntilLoaded(tester, controller);
+      final VideoPlayerController localController =
+          controller.videoController!;
+
+      fakePlatform.failFileInitialize = true;
+      fakePlatform.pushError(
+        playerId: localController.playerId,
+        message: 'decoder failed on local file',
+      );
       await pumpPlaybackUntil(
         tester,
         () => controller.state.sourceKind == PlayableSourceKind.remoteUrl,
       );
 
-      expect(controller.videoController, isNot(same(localController)));
       expect(fakePlatform.createdSourceTypes.last, DataSourceType.network);
       expect(controller.state.sourceKind, PlayableSourceKind.remoteUrl);
       expect(useCase.forceRemoteCallCount, 1);
       expect(useCase.damagedVideoIds, isEmpty);
 
       controller.dispose();
+    });
+  });
+
+  group('player screen on top', () {
+    PlayableVideo localVideo(int videoId) => PlayableVideo(
+          videoId: videoId,
+          sourceUri: Uri.file('/downloads/video_$videoId.mp4'),
+          sourceKind: PlayableSourceKind.localFile,
+          startPosition: Duration.zero,
+          title: 'Video $videoId',
+        );
+    PlayerController openPlayer(int videoId, PlayerScreenStack screens) =>
+        PlayerController(
+          videoId: videoId,
+          localOnly: true,
+          playVideoUseCase: _FakePlayVideoUseCase(localVideo(videoId)),
+          playbackSyncRepository: playbackSyncRepository,
+          bookmarksRepository: bookmarksRepository,
+          streamAuthorizationHeaderProvider:
+              _ScriptedStreamAuthorizationHeaderProvider(
+                  const <StreamAuthorizationHeaderResult>[]),
+          logService: logService,
+          screens: screens,
+        );
+    Future<void> pumpUntilLoaded(
+      WidgetTester tester,
+      PlayerController controller,
+    ) async {
+      await tester.pump();
+      for (int attempt = 0;
+          attempt < 20 &&
+              (controller.state.isLoading ||
+                  !(controller.videoController?.value.isInitialized ??
+                      false));
+          attempt += 1) {
+        await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    test('only the video of the screen on top may play', () {
+      final PlayerScreenStack screens = PlayerScreenStack();
+      expect(screens.mayPlay(1), isFalse);
+      final Object first = screens.enter(1);
+      expect(screens.mayPlay(1), isTrue);
+      final Object second = screens.enter(2);
+      expect(screens.mayPlay(1), isFalse);
+      expect(screens.mayPlay(2), isTrue);
+      // A screen below that closes late changes nothing for the one on top.
+      screens.leave(first);
+      expect(screens.mayPlay(2), isTrue);
+      screens.leave(second);
+      expect(screens.topVideoId, isNull);
+    });
+
+    testWidgets('a player whose screen is not on top never starts',
+        (WidgetTester tester) async {
+      final PlayerScreenStack screens = PlayerScreenStack();
+      screens.enter(70);
+      // A player for a video whose screen closed, built after another opened.
+      final PlayerController orphan = openPlayer(71, screens);
+
+      await pumpUntilLoaded(tester, orphan);
+
+      expect(orphan.videoController?.value.isInitialized, isTrue);
+      expect(orphan.videoController?.value.isPlaying, isFalse);
+      await orphan.play();
+      expect(orphan.videoController?.value.isPlaying, isFalse);
+
+      orphan.dispose();
+    });
+
+    testWidgets('a screen opened on top pauses the player below it',
+        (WidgetTester tester) async {
+      final PlayerScreenStack screens = PlayerScreenStack();
+      screens.enter(72);
+      final PlayerController below = openPlayer(72, screens);
+      await pumpUntilLoaded(tester, below);
+      expect(below.videoController?.value.isPlaying, isTrue);
+
+      final Object onTop = screens.enter(73);
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pump();
+
+      expect(below.videoController?.value.isPlaying, isFalse);
+
+      // Back on top it may play again, once the viewer asks.
+      screens.leave(onTop);
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await below.play();
+      await tester.pump();
+      expect(below.videoController?.value.isPlaying, isTrue);
+
+      below.dispose();
     });
   });
 }

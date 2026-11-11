@@ -20,6 +20,7 @@ import '../domain/player_start_intent.dart';
 import '../domain/player_volume.dart';
 import '../domain/usecases/play_video_use_case.dart';
 import 'lock_screen_playback_service.dart';
+import 'player_screen_stack.dart';
 
 class PlayerNavigationEntry {
   const PlayerNavigationEntry({
@@ -179,6 +180,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     PlaybackScreenWakeLock? playbackScreenWakeLock,
     PlayerStartIntent? startIntent,
     PlayerVolume? playerVolume,
+    PlayerScreenStack? screens,
   })  : _videoId = videoId,
         _localOnly = localOnly,
         _playVideoUseCase = playVideoUseCase,
@@ -190,7 +192,20 @@ class PlayerController extends StateNotifier<PlayerUiState> {
             playbackScreenWakeLock ?? AndroidPlaybackScreenWakeLock.instance,
         _startIntent = startIntent,
         _playerVolume = playerVolume ?? PlayerVolume(),
+        _screens = screens,
         super(PlayerUiState.initial(videoId)) {
+    if (screens != null) {
+      screens.addListener(_onScreensChanged);
+      if (!screens.mayPlay(videoId)) {
+        // Nothing legitimate builds a player for a video whose screen is not on top, so where
+        // this one came from is worth knowing. It still loads, but it will not play.
+        _logService.warn(
+          'Player for video=$videoId created while the screen on top shows '
+          'video=${screens.topVideoId}; it will stay paused. '
+          'Created from: ${StackTrace.current}',
+        );
+      }
+    }
     _initialize();
   }
 
@@ -202,6 +217,10 @@ class PlayerController extends StateNotifier<PlayerUiState> {
   static const Duration _remoteResumeSeekThreshold = Duration(
     milliseconds: 500,
   );
+
+  /// How long a resume waits for the server's position before going on without it. An answer
+  /// that arrives later describes a moment the viewer has already watched past.
+  static const Duration _remoteResumeSyncTimeout = Duration(seconds: 3);
   static const String _manualBookmarkCaption = '(bookmark)';
   static const String _playPauseBookmarkCaption = '(play\\pause)';
   static const Duration _playbackHealthCheckPeriod = Duration(seconds: 2);
@@ -238,6 +257,14 @@ class PlayerController extends StateNotifier<PlayerUiState> {
 
   /// This installation's player volume, which outlives any one video.
   final PlayerVolume _playerVolume;
+
+  /// The open player screens. Only the video of the screen on top may play; `null` means this
+  /// player is not tied to screens at all and plays whenever asked.
+  final PlayerScreenStack? _screens;
+
+  /// The downloaded copy this player opened, kept so recovery never needs the server for it.
+  /// `null` when the video plays from the server, or the copy would not open at all.
+  PlayableVideo? _downloadedCopy;
 
   PlayableVideo? _playable;
   VideoPlayerController? _videoPlayer;
@@ -287,6 +314,13 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     }
 
     if (controller.value.isPlaying) {
+      return;
+    }
+    if (!_mayPlay) {
+      _logService.warn(
+        'Play refused for video=$_videoId: its screen is not the one on top '
+        '(top=${_screens?.topVideoId}).',
+      );
       return;
     }
 
@@ -518,6 +552,8 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         return;
       }
       _playable = playable;
+      _downloadedCopy =
+          playable.sourceKind == PlayableSourceKind.localFile ? playable : null;
       await _setRemotePlaybackNetworkLock(
         playable.sourceKind == PlayableSourceKind.remoteUrl,
       );
@@ -561,20 +597,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         startPosition,
         videoPlayer.value.duration,
       );
-      await LockScreenPlaybackService.instance.activate(
-        isCurrent: () => !_isDisposed,
-        videoId: playable.videoId,
-        title: _resolvedPlaybackTitle(),
-        duration: videoPlayer.value.duration,
-        callbacks: LockScreenPlaybackCallbacks(
-          onPlay: play,
-          onPause: pause,
-          onSeek: seek,
-          onSeekRelative: seekRelative,
-          onAddBookmark: addManualBookmark,
-          onStop: pause,
-        ),
-      );
+      await _activateLockScreen(videoPlayer);
       if (_isDisposed) {
         return;
       }
@@ -588,7 +611,12 @@ class PlayerController extends StateNotifier<PlayerUiState> {
       if (_isDisposed) {
         return;
       }
-      if (shouldAutoPlay) {
+      if (shouldAutoPlay && !_mayPlay) {
+        _logService.warn(
+          'Autoplay refused for video=$_videoId: its screen is not the one on '
+          'top (top=${_screens?.topVideoId}).',
+        );
+      } else if (shouldAutoPlay) {
         await videoPlayer.play();
         _logService.info(
           'Autoplay started after initialization: '
@@ -672,6 +700,76 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     }
   }
 
+  /// Whether this player may play now: only while its screen is the player screen on top.
+  bool get _mayPlay => _screens?.mayPlay(_videoId) ?? true;
+
+  /// Hands the system media controls to this player. A player that may not play does not take
+  /// them, or the lock screen would show and drive a video the viewer cannot see.
+  Future<void> _activateLockScreen(VideoPlayerController videoPlayer) async {
+    final PlayableVideo? playable = _playable;
+    if (playable == null || !_mayPlay) {
+      return;
+    }
+    await LockScreenPlaybackService.instance.activate(
+      isCurrent: () => !_isDisposed && _mayPlay,
+      videoId: playable.videoId,
+      title: _resolvedPlaybackTitle(),
+      duration: videoPlayer.value.duration,
+      callbacks: LockScreenPlaybackCallbacks(
+        onPlay: play,
+        onPause: pause,
+        onSeek: seek,
+        onSeekRelative: seekRelative,
+        onAddBookmark: addManualBookmark,
+        onStop: pause,
+      ),
+    );
+  }
+
+  /// Another player screen opened over this one, or the one over it closed.
+  ///
+  /// Screens come and go while the widget tree is being built, where no provider state may change,
+  /// so the reaction waits until that build is over.
+  void _onScreensChanged() {
+    scheduleMicrotask(_applyScreenChange);
+  }
+
+  void _applyScreenChange() {
+    if (_isDisposed) {
+      return;
+    }
+    final VideoPlayerController? controller = _videoPlayer;
+    if (controller == null || !controller.value.isInitialized) {
+      return;
+    }
+    if (_mayPlay) {
+      // Back on top: the media controls belong to this player again. It stays paused until the
+      // viewer starts it, like any player they come back to.
+      unawaited(_activateLockScreen(controller));
+      return;
+    }
+    if (!controller.value.isPlaying) {
+      return;
+    }
+    _logService.info(
+      'Pausing video=$_videoId: the player screen on top now shows '
+      'video=${_screens?.topVideoId}.',
+    );
+    unawaited(_pauseBecauseCovered(controller));
+  }
+
+  Future<void> _pauseBecauseCovered(VideoPlayerController controller) async {
+    try {
+      await controller.pause();
+      await _saveCurrentPosition(force: true);
+    } catch (error, stackTrace) {
+      _logService.error('Pausing a covered player failed', error, stackTrace);
+    }
+    if (!_isDisposed) {
+      _syncFromVideoPlayer();
+    }
+  }
+
   Future<void> _setRemotePlaybackNetworkLock(bool enabled) async {
     try {
       await AndroidRemotePlaybackNetworkLock.instance.setEnabled(enabled);
@@ -740,6 +838,8 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         'remote source: ${_logService.sanitize(error.toString())}',
       );
       _videoPlayer = null;
+      // A copy that will not even open is no copy to recover from later.
+      _downloadedCopy = null;
       await _disposeQuietly(first, reason: 'local-fallback');
     }
     if (_isDisposed) {
@@ -948,8 +1048,16 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     }
 
     try {
-      final merged = await _playbackSyncRepository.reconcileVideo(_videoId);
-      if (merged == null) {
+      final merged = await _playbackSyncRepository
+          .reconcileVideo(_videoId)
+          .timeout(_remoteResumeSyncTimeout, onTimeout: () {
+        _logService.warn(
+          'Resume sync for video=$_videoId got no server answer in '
+          '${_remoteResumeSyncTimeout.inSeconds}s; playback continues as is.',
+        );
+        return null;
+      });
+      if (merged == null || _isDisposed || !identical(_videoPlayer, controller)) {
         return;
       }
 
@@ -1174,11 +1282,30 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         }
       }
 
-      // Retrying a downloaded copy that broke mid-playback rarely helps, so
-      // online the recovery moves to the remote source instead. The copy is
-      // not marked damaged here: a runtime error does not prove the file bad.
-      PlayableVideo source = playable;
-      if (playable.sourceKind == PlayableSourceKind.localFile && !_localOnly) {
+      // A downloaded copy recovers from itself, even after an earlier recovery
+      // moved playback to the server: it needs no server, so a server that is
+      // down or slow cannot stop a downloaded video. The remote source is only
+      // the fallback for a copy that will not reopen, and only online. The copy
+      // is not marked damaged here: a runtime error does not prove the file bad.
+      PlayableVideo source = _downloadedCopy ?? playable;
+      try {
+        await _replaceVideoController(
+          playable: source,
+          resumePosition: resumePosition,
+          autoPlay: shouldResumePlaying,
+          refreshReason: 'recover-$reason',
+        );
+      } catch (error) {
+        if (source.sourceKind != PlayableSourceKind.localFile ||
+            _localOnly ||
+            _isDisposed) {
+          rethrow;
+        }
+        _logService.warn(
+          'Recovery ($reason) could not reopen the downloaded copy of '
+          'video=$_videoId, switching to the remote source: '
+          '${_logService.sanitize(error.toString())}',
+        );
         source = await _playVideoUseCase.call(
           videoId: _videoId,
           forceRemote: true,
@@ -1186,26 +1313,25 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         if (_isDisposed) {
           return;
         }
-        _logService.warn(
-          'Recovery ($reason) switches video=$_videoId from the downloaded '
-          'copy to the remote source.',
-        );
         switchedToRemote = true;
         await _setRemotePlaybackNetworkLock(true);
         if (_isDisposed) {
           return;
         }
+        await _replaceVideoController(
+          playable: source,
+          resumePosition: resumePosition,
+          autoPlay: shouldResumePlaying,
+          refreshReason: 'recover-$reason-remote',
+        );
       }
-
-      await _replaceVideoController(
-        playable: source,
-        resumePosition: resumePosition,
-        autoPlay: shouldResumePlaying,
-        refreshReason: 'recover-$reason',
-      );
-      if (switchedToRemote && !_isDisposed) {
+      if (!_isDisposed && !identical(source, playable)) {
         _playable = source;
         state = state.copyWith(sourceKind: source.sourceKind);
+        if (source.sourceKind == PlayableSourceKind.localFile) {
+          // Back on the downloaded copy, which needs no network.
+          await _setRemotePlaybackNetworkLock(false);
+        }
       }
       _recoveryAttempts = 0;
       _stickyPlaybackErrorMessage = null;
@@ -1229,7 +1355,9 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         error,
         stackTrace,
       );
-      if (switchedToRemote && !_isDisposed) {
+      if (switchedToRemote &&
+          !_isDisposed &&
+          _playable?.sourceKind == PlayableSourceKind.localFile) {
         // The downloaded copy stays the current source; it needs no network.
         await _setRemotePlaybackNetworkLock(false);
       }
@@ -1331,7 +1459,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
       }
       _videoPlayer = next;
       nextActivated = true;
-      if (autoPlay) {
+      if (autoPlay && _mayPlay) {
         await next.play();
         _logService.debug(
           'Auto-play requested after controller replace; '
@@ -1600,6 +1728,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
   @override
   void dispose() {
     _isDisposed = true;
+    _screens?.removeListener(_onScreensChanged);
     _periodicSaveTimer?.cancel();
     _bookmarksOutboxTimer?.cancel();
     _playbackHealthTimer?.cancel();
@@ -1635,7 +1764,10 @@ final playerControllerProvider = StateNotifierProvider.autoDispose
     .family<PlayerController, PlayerUiState, int>(
   (Ref ref, int videoId) => PlayerController(
     videoId: videoId,
-    localOnly: ref.watch(effectiveAutonomousModeProvider),
+    // Read once, when the player opens. Watching it rebuilt the player - and so
+    // stopped and restarted the video - each time the connection came or went,
+    // which a downloaded video must not notice at all.
+    localOnly: ref.read(effectiveAutonomousModeProvider),
     playVideoUseCase: ref.watch(playVideoUseCaseProvider),
     playbackSyncRepository: ref.watch(playbackSyncRepositoryProvider),
     bookmarksRepository: ref.watch(bookmarksRepositoryProvider),
@@ -1646,5 +1778,6 @@ final playerControllerProvider = StateNotifierProvider.autoDispose
     // null and the player resumes and plays exactly as it always has.
     startIntent: ref.watch(playerStartIntentsProvider).take(videoId),
     playerVolume: ref.watch(playerVolumeProvider),
+    screens: ref.watch(playerScreenStackProvider),
   ),
 );
