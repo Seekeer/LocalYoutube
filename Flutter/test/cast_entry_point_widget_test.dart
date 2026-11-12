@@ -88,12 +88,14 @@ CastDevice receiver({
   required String deviceId,
   required String name,
   String model = 'Pixel Tablet',
+  bool isBusy = false,
 }) {
   return CastDevice(
     deviceId: deviceId,
     name: name,
     model: model,
     role: CastDeviceRole.receiver,
+    isBusy: isBusy,
   );
 }
 
@@ -420,6 +422,36 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(CastEntryPoint.cancelButtonKey), findsNothing);
+  });
+
+  testWidgets('a busy Receiver is listed as busy and cannot be cast to', (
+    WidgetTester tester,
+  ) async {
+    final MockCastController controller = MockCastController(
+      stateWith(
+        receivers: <CastDevice>[
+          receiver(deviceId: 'x5m', name: 'X5M', isBusy: true),
+          receiver(deviceId: 'tv-1', name: 'Living room'),
+        ],
+        selectedReceiverDeviceId: 'x5m',
+      ),
+    );
+
+    await tester.pumpWidget(buildEntryPoint(controller, videoId: 42));
+    await tester.pumpAndSettle();
+
+    // Still on the list - the person who wanted it is told why it cannot be used - but marked busy,
+    // and the free one is not.
+    expect(find.byKey(CastEntryPoint.receiverKey('x5m')), findsOneWidget);
+    expect(find.byKey(CastEntryPoint.receiverBusyKey('x5m')), findsOneWidget);
+    expect(find.text(CastEntryPoint.busyLabel), findsOneWidget);
+    expect(find.byKey(CastEntryPoint.receiverBusyKey('tv-1')), findsNothing);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(CastEntryPoint.castButtonKey))
+          .onPressed,
+      isNull,
+    );
   });
 
   testWidgets('a refused cast is explained rather than silently dropped', (

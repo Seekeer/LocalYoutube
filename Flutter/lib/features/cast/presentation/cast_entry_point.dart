@@ -20,10 +20,14 @@ class CastEntryPoint extends ConsumerWidget {
 
   static const String title = 'Watch on another device';
 
-  /// Shown instead of the list while the account has no online Receiver.
+  /// Shown instead of the list while no Receiver is online on this server.
   static const String noReceiversMessage =
       'No Receiver is online. Open LocalTube on the device you want to watch '
       'on and turn on Receiver Mode there.';
+
+  /// Shown on a Receiver that is playing for another phone. It cannot be cast to until that phone
+  /// is done with it.
+  static const String busyLabel = 'Busy';
 
   /// The action that starts Handoff of the current video to the picked Receiver.
   static const String castLabel = 'Cast';
@@ -36,8 +40,11 @@ class CastEntryPoint extends ConsumerWidget {
   static const String cancelLabel = 'Cancel';
 
   /// Shown when the API refused, so the viewer is not left wondering why nothing happened.
+  ///
+  /// The refusal means the Receiver went to another phone first - two phones pressing cast at the
+  /// same moment, possibly on different accounts - or this phone is already casting.
   static const String alreadyCastingMessage =
-      'Something on this account is already casting.';
+      'This Receiver is busy: another phone is already casting to it.';
   static const String castFailedMessage = 'Could not start casting.';
 
   static const Key noReceiversMessageKey = Key('cast-no-receivers-message');
@@ -52,6 +59,10 @@ class CastEntryPoint extends ConsumerWidget {
 
   /// The key of the row for [deviceId], so a test can tap one particular Receiver.
   static Key receiverKey(String deviceId) => Key('cast-receiver-$deviceId');
+
+  /// The key of the busy mark on the row for [deviceId].
+  static Key receiverBusyKey(String deviceId) =>
+      Key('cast-receiver-busy-$deviceId');
 
   /// What a refusal reads as. An unrecognised reason still says the cast did not happen.
   static String failureMessage(String reason) {
@@ -149,17 +160,27 @@ class CastEntryPoint extends ConsumerWidget {
     required CastDeviceLabel receiver,
     required bool isSelected,
   }) {
+    final bool isBusy = receiver.device.isBusy;
+    final String? detail = receiver.detail;
     return ListTile(
       key: receiverKey(receiver.deviceId),
       dense: true,
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.tv),
       title: Text(receiver.name),
-      subtitle: receiver.detail == null ? null : Text(receiver.detail!),
+      subtitle: detail == null ? null : Text(detail),
       selected: isSelected,
-      trailing: isSelected
-          ? const Icon(Icons.check, key: selectedReceiverKey)
-          : null,
+      // A busy Receiver is still listed, so the person who wanted it knows why it cannot be cast to
+      // rather than wondering where it went.
+      trailing: isBusy
+          ? Text(
+              busyLabel,
+              key: receiverBusyKey(receiver.deviceId),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            )
+          : isSelected
+              ? const Icon(Icons.check, key: selectedReceiverKey)
+              : null,
       onTap: () => unawaited(
         ref.read(castControllerProvider.notifier).selectReceiver(
               receiver.deviceId,

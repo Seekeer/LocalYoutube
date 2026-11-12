@@ -16,7 +16,7 @@ class PlaybackSyncRepository {
     Duration remoteReadCooldown = const Duration(seconds: 30),
     Duration staleReconcileDelay = const Duration(seconds: 5),
     DateTime Function()? nowProvider,
-    bool Function()? isProgressWrittenElsewhere,
+    bool Function(int videoId)? isProgressWrittenElsewhere,
   })  : _localPlaybackRepository = localPlaybackRepository,
         _remoteDataSource = remoteDataSource,
         _localSyncOutboxRepository = localSyncOutboxRepository,
@@ -40,12 +40,14 @@ class PlaybackSyncRepository {
   final Duration _staleReconcileDelay;
   final DateTime Function() _nowProvider;
 
-  /// Whether playback progress is another device's to write right now.
+  /// Whether a video's playback progress is kept somewhere other than this path right now.
   ///
-  /// During a Cast Session the Receiver is the device that is playing, and the progress kept for
-  /// the video is the one it reports through this very path. Defaults to never, which is what a
-  /// device that is casting nowhere is.
-  final bool Function() _isProgressWrittenElsewhere;
+  /// During a Cast Session the Receiver is the device that is playing, and the server keeps the
+  /// video's progress for the phone that started the cast from what the Receiver reports - so the
+  /// phone writes nothing while it is the remote, and the Receiver writes nothing of the cast video
+  /// to its own account, which may be a different one. Defaults to never, which is what a device
+  /// that is casting nowhere is.
+  final bool Function(int videoId) _isProgressWrittenElsewhere;
   bool _isProcessingOutbox = false;
   bool _isRunningScheduledReconciles = false;
   final Map<int, DateTime> _lastRemoteReadAtByVideo = <int, DateTime>{};
@@ -57,13 +59,13 @@ class PlaybackSyncRepository {
     DateTime? updatedAt,
     bool syncRemote = true,
   }) async {
-    if (_isProgressWrittenElsewhere()) {
-      // Another device is the one playing, and its progress is the progress this video has. That
-      // is a Cast Session seen from the phone: the Receiver plays the video and writes what it is
-      // doing on this same path, while all this device has is where the viewer was when the
-      // Receiver took over. Written from here it would carry a fresh timestamp and overwrite the
-      // Receiver's real position with a stale one - on the server, and locally where the next
-      // reconcile would carry it there anyway. So nothing is written at all.
+    if (_isProgressWrittenElsewhere(videoId)) {
+      // This video's progress is kept elsewhere right now, which is a Cast Session seen from either
+      // side. On the phone, the Receiver plays the video and the server keeps what it reports,
+      // while all this device has is where the viewer was when the Receiver took over: written
+      // from here it would carry a fresh timestamp and overwrite the real position with a stale
+      // one. On the Receiver, the video is somebody else's viewing, possibly on another account,
+      // and has no place in this one's history. So nothing is written at all.
       return;
     }
 
@@ -102,6 +104,13 @@ class PlaybackSyncRepository {
   }
 
   Future<PlaybackPositionSnapshot?> reconcileVideo(int videoId) async {
+    if (_isProgressWrittenElsewhere(videoId)) {
+      // What this account has for the video is not where it is: the Cast Session's own position
+      // is. Reconciling against it would hand the player a position to jump to - a Receiver
+      // resuming after a pause, say, sent back to wherever its own account last left the video -
+      // and the next report would carry that wrong position to the phone's account.
+      return null;
+    }
     await _runDueScheduledReconciles();
     return _reconcileVideo(videoId: videoId);
   }
@@ -484,7 +493,7 @@ class PlaybackSyncRepository {
   static DateTime _defaultNowUtc() => DateTime.now().toUtc();
 
   /// What a device that is not casting anywhere answers: its own progress is its own to write.
-  static bool _progressIsNeverWrittenElsewhere() => false;
+  static bool _progressIsNeverWrittenElsewhere(int _) => false;
 
   double _normalizePosition(double value) {
     if (value.isNaN || value.isInfinite) {

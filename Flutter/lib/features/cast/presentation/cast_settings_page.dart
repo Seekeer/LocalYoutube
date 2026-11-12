@@ -14,9 +14,12 @@ class CastSettingsPage extends ConsumerStatefulWidget {
 
   static const String title = 'Cast';
   static const String receiverModeTitle = 'Receiver Mode';
+  /// Switching Receiver Mode on is the whole consent: there is no pairing, so the description says
+  /// plainly who can cast here.
   static const String receiverModeDescription =
-      'Offer this device as a Receiver. It is available only while LocalTube '
-      'is open on it.';
+      'Offer this device as a Receiver to every account on this LocalTube '
+      'server, with no pairing. It plays for one phone at a time, and only '
+      'while LocalTube is open on it.';
   static const String deviceNameLabel = 'Device name';
   static const String deviceNameHelper =
       'Leave it empty to be named after the Android device model.';

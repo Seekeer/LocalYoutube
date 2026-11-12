@@ -132,6 +132,26 @@ void main() {
           <String>['tv-1']);
     });
 
+    test('reads whether a Receiver is busy, and an API that does not say as free',
+        () {
+      final CastDevicesSnapshot? snapshot = CastDevicesSnapshot.tryParse(
+        _decode('''
+        {
+          "devices": [
+            {"deviceId": "x5m", "name": "X5M", "model": "X5M", "role": "receiver", "isBusy": true},
+            {"deviceId": "tv-1", "name": "Living room", "model": "M", "role": "receiver", "isBusy": false},
+            {"deviceId": "tv-2", "name": "Bedroom", "model": "M", "role": "receiver"}
+          ]
+        }
+        '''),
+      );
+
+      expect(
+        snapshot!.devices.map((CastDevice device) => device.isBusy),
+        <bool>[true, false, false],
+      );
+    });
+
     test('names a device after its model when the hub sent no name', () {
       final CastDevicesSnapshot? snapshot = CastDevicesSnapshot.tryParse(
         _decode(

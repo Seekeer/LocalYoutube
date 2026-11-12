@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:localtube_flutter/features/cast/domain/cast_playback_endpoint.dart';
+import 'package:localtube_flutter/features/cast/domain/cast_receiver_progress_hold.dart';
 import 'package:localtube_flutter/features/cast/domain/cast_session_models.dart';
 import 'package:localtube_flutter/features/cast/presentation/cast_receiver_controller.dart';
 
@@ -530,6 +531,119 @@ void main() {
     expect(harness.controller.state.phase, CastReceiverPhase.idle);
   });
 
+  group('The cast video is somebody else's viewing', () {
+    test('it is held back from this account from the commit on', () async {
+      final _ReceiverHarness harness = _ReceiverHarness.start(
+        playing: const CastLocalPlayback(
+          videoId: displacedVideoId,
+          position: Duration(minutes: 10),
+          isPlaying: true,
+        ),
+      );
+
+      harness.gateway.emitPrepareCommand(videoId: castVideoId);
+      await pumpEventQueue();
+      expect(harness.hold.heldVideoIds, isEmpty);
+
+      harness.gateway.emitCommitCommand(
+        videoId: castVideoId,
+        position: const Duration(seconds: 30),
+        isPlaying: true,
+      );
+      await pumpEventQueue();
+
+      // The displaced video is this room's own and is still kept; the cast video is not.
+      expect(harness.progressWriter.writes, hasLength(1));
+      expect(harness.hold.heldVideoIds, <int>{castVideoId});
+    });
+
+    test('the hold outlives the session until this television moves on',
+        () async {
+      final _ReceiverHarness harness = _ReceiverHarness.start();
+      await _handOff(harness);
+
+      harness.gateway.emitSessionEnded(reason: CastEndReason.returnHandoff);
+      await pumpEventQueue();
+      await harness.advance(CastReceiverController.samplePeriod * 4);
+
+      // Paused on the cast video: closing its player now would still be the phone's viewing.
+      expect(harness.hold.heldVideoIds, <int>{castVideoId});
+
+      harness.playback.playback = const CastLocalPlayback(
+        videoId: displacedVideoId,
+        position: Duration.zero,
+        isPlaying: true,
+      );
+
+      // Not at once: the player it left may still be closing, and closing saves once more.
+      await harness.advance(CastReceiverController.samplePeriod);
+      expect(harness.hold.heldVideoIds, <int>{castVideoId});
+
+      await harness.advance(const Duration(seconds: 3));
+      expect(harness.hold.heldVideoIds, isEmpty);
+    });
+
+    test('playing the paused cast video again here gives it back to this account',
+        () async {
+      final _ReceiverHarness harness = _ReceiverHarness.start();
+      await _handOff(harness);
+
+      harness.gateway.emitSessionEnded(reason: CastEndReason.playbackCompleted);
+      await pumpEventQueue();
+      await harness.advance(CastReceiverController.samplePeriod * 2);
+      expect(harness.hold.heldVideoIds, <int>{castVideoId});
+
+      // Somebody in front of the television presses play with its own remote.
+      harness.playback.playback = const CastLocalPlayback(
+        videoId: castVideoId,
+        position: Duration(minutes: 1),
+        isPlaying: true,
+      );
+      await harness.advance(CastReceiverController.samplePeriod);
+
+      expect(harness.hold.heldVideoIds, isEmpty);
+    });
+
+    test('pressing play here before the watch has looked still gives the video back',
+        () async {
+      final _ReceiverHarness harness = _ReceiverHarness.start();
+      await _handOff(harness);
+
+      harness.gateway.emitSessionEnded(reason: CastEndReason.returnHandoff);
+      await pumpEventQueue();
+
+      // Somebody resumes it at once, before a single look at the player after the ending pause.
+      harness.playback.playback = const CastLocalPlayback(
+        videoId: castVideoId,
+        position: Duration(seconds: 31),
+        isPlaying: true,
+      );
+      await harness.advance(CastReceiverController.samplePeriod);
+
+      expect(harness.hold.heldVideoIds, isEmpty);
+    });
+
+    test('a later Handoff keeps the earlier video held until its player has closed',
+        () async {
+      final _ReceiverHarness harness = _ReceiverHarness.start();
+      await _handOff(harness);
+      harness.gateway.emitSessionEnded(reason: CastEndReason.returnHandoff);
+      await pumpEventQueue();
+
+      harness.gateway.emitPrepareCommand(sessionId: 'session-2', videoId: 43);
+      await pumpEventQueue();
+      harness.gateway.emitCommitCommand(sessionId: 'session-2', videoId: 43);
+      await pumpEventQueue();
+
+      // The earlier cast video's player is being replaced, and replacing it saves once more: that
+      // save is still the earlier phone's viewing.
+      expect(harness.hold.heldVideoIds, <int>{castVideoId, 43});
+
+      await harness.advance(const Duration(seconds: 3));
+      expect(harness.hold.heldVideoIds, <int>{43});
+    });
+  });
+
   group('Ends only this television can see', () {
     test('leaving the cast video ends the session as navigated away', () async {
       final _ReceiverHarness harness = _ReceiverHarness.start();
@@ -1040,6 +1154,7 @@ class _ReceiverHarness {
     required this.clock,
     required this.controller,
     required this.journal,
+    required this.hold,
   });
 
   /// This installation's stable identity. It is the Receiver the sessions in [cast_doubles.dart]
@@ -1061,6 +1176,7 @@ class _ReceiverHarness {
     final RecordingCastProgressWriter progressWriter =
         RecordingCastProgressWriter(journal: journal);
     final FakeCastClock clock = FakeCastClock();
+    final CastReceiverProgressHoldFlag hold = CastReceiverProgressHoldFlag();
     final CastReceiverController controller = CastReceiverController(
       gateway: gateway,
       playback: playback,
@@ -1068,6 +1184,7 @@ class _ReceiverHarness {
       identityRepository: FixedCastDeviceIdentityRepository(deviceId),
       clock: clock,
       logService: NoopLogService(),
+      progressHold: hold,
     );
 
     final _ReceiverHarness harness = _ReceiverHarness(
@@ -1077,6 +1194,7 @@ class _ReceiverHarness {
       clock: clock,
       controller: controller,
       journal: journal,
+      hold: hold,
     );
     addTearDown(harness.dispose);
     return harness;
@@ -1088,6 +1206,9 @@ class _ReceiverHarness {
   final FakeCastClock clock;
   final CastReceiverController controller;
   final List<String> journal;
+
+  /// What the app's ordinary playback-progress path reads before it writes.
+  final CastReceiverProgressHoldFlag hold;
 
   /// Moves the Receiver's own clock on and lets everything it started finish.
   Future<void> advance(Duration by) async {

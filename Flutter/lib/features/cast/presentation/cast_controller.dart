@@ -127,9 +127,14 @@ class CastUiState {
   /// Whether this device still owns a local video player. False exactly in Remote Control Mode.
   bool get ownsLocalPlayer => phase != CastPhase.remoteControl;
 
-  /// Whether a cast can be started right now: something to cast to, and nothing in flight.
+  /// Whether a cast can be started right now: something free to cast to, and nothing in flight.
+  ///
+  /// A busy Receiver is playing for another phone - of this account or of another one - and stays
+  /// that phone's until it is done, so it is shown but cannot be cast to.
   bool get canStartCast =>
-      phase == CastPhase.idle && selectedReceiver != null;
+      phase == CastPhase.idle &&
+      selectedReceiver != null &&
+      !selectedReceiver!.device.isBusy;
 
   CastDeviceLabel? get selectedReceiver {
     final String? deviceId = selectedReceiverDeviceId;
@@ -380,7 +385,7 @@ class CastController extends StateNotifier<CastUiState> {
       return;
     }
     final CastDeviceLabel? receiver = state.selectedReceiver;
-    if (receiver == null) {
+    if (receiver == null || receiver.device.isBusy) {
       return;
     }
 

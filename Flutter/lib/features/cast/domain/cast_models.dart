@@ -87,22 +87,30 @@ class CastDeviceRegistration {
   int get hashCode => Object.hash(deviceId, name, model, role);
 }
 
-/// One device of the account, as the API reports it.
+/// One device this account can see, as the API reports it: one of the account's own devices, or a
+/// Receiver of any account of the server.
 ///
 /// There is no connection id here on purpose: the SignalR connection is a routing address the server
-/// keeps to itself, and a device is addressed by [deviceId].
+/// keeps to itself, and a device is addressed by [deviceId]. Nor is there an account: a Receiver
+/// offered to every account says what it is called and whether it is free, and nothing about whose
+/// it is.
 class CastDevice {
   const CastDevice({
     required this.deviceId,
     required this.name,
     required this.model,
     required this.role,
+    this.isBusy = false,
   });
 
   final String deviceId;
   final String name;
   final String model;
   final CastDeviceRole role;
+
+  /// Whether the device is taking part in a Cast Session right now. A busy Receiver plays for one
+  /// phone and cannot be cast to until that phone is done with it.
+  final bool isBusy;
 
   /// Returns `null` when the payload is not a device this client can use.
   static CastDevice? tryParse(Object? rawValue) {
@@ -128,6 +136,8 @@ class CastDevice {
       name: name.isNotEmpty ? name : (model.isNotEmpty ? model : deviceId),
       model: model,
       role: role,
+      // Absent from an API that predates shared Receivers, where nothing is ever shown as busy.
+      isBusy: rawValue['isBusy'] == true,
     );
   }
 
@@ -140,14 +150,16 @@ class CastDevice {
         other.deviceId == deviceId &&
         other.name == name &&
         other.model == model &&
-        other.role == role;
+        other.role == role &&
+        other.isBusy == isBusy;
   }
 
   @override
-  int get hashCode => Object.hash(deviceId, name, model, role);
+  int get hashCode => Object.hash(deviceId, name, model, role, isBusy);
 }
 
-/// The authoritative list of the account's currently online devices.
+/// The authoritative list of the devices this account can see: its own online devices, and every
+/// account's online Receivers.
 ///
 /// The API answers a registration with one and pushes a fresh one whenever the account's devices
 /// change. It is always the full list, never a delta, so a client that missed a message still

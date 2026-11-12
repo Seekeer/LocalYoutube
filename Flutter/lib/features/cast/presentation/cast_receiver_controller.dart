@@ -9,6 +9,7 @@ import '../domain/cast_gateway.dart';
 import '../domain/cast_playback_endpoint.dart';
 import '../domain/cast_playback_progress_writer.dart';
 import '../domain/cast_receiver_playback.dart';
+import '../domain/cast_receiver_progress_hold.dart';
 import '../domain/cast_session_models.dart';
 
 /// What this device is doing as a Receiver.
@@ -140,11 +141,13 @@ class CastReceiverController extends StateNotifier<CastReceiverUiState> {
     required CastDeviceIdentityRepository identityRepository,
     required CastClock clock,
     required LogService logService,
+    CastReceiverProgressHold? progressHold,
   })  : _gateway = gateway,
         _playback = playback,
         _progressWriter = progressWriter,
         _clock = clock,
         _logService = logService,
+        _progressHold = progressHold ?? CastReceiverProgressHoldFlag(),
         super(CastReceiverUiState.initial) {
     _prepareSubscription = _gateway.watchPrepareCommands().listen(_onPrepare);
     _commitSubscription = _gateway.watchCommitCommands().listen(_onCommit);
@@ -178,6 +181,12 @@ class CastReceiverController extends StateNotifier<CastReceiverUiState> {
   final CastPlaybackProgressWriter _progressWriter;
   final CastClock _clock;
   final LogService _logService;
+
+  /// Keeps the cast video's progress out of this installation's account. The phone that started the
+  /// cast may be signed in to another account, and the video is that account's to have watched: the
+  /// server keeps its progress from the state this device reports.
+  final _CastProgressHoldOwner _progressHoldOwner = _CastProgressHoldOwner();
+  final CastReceiverProgressHold _progressHold;
 
   StreamSubscription<CastPrepareCommand>? _prepareSubscription;
   StreamSubscription<CastCommitCommand>? _commitSubscription;
@@ -225,6 +234,7 @@ class CastReceiverController extends StateNotifier<CastReceiverUiState> {
   @override
   void dispose() {
     _stopReporting();
+    _progressHoldOwner.stopWatching();
     unawaited(_prepareSubscription?.cancel());
     unawaited(_commitSubscription?.cancel());
     unawaited(_commandSubscription?.cancel());
@@ -319,6 +329,10 @@ class CastReceiverController extends StateNotifier<CastReceiverUiState> {
     if (!_isStillHandling(command.sessionId)) {
       return;
     }
+
+    // From here on the player is playing somebody else's viewing: the video starting, every save
+    // while it plays, and the one it makes when it is paused or closed afterwards.
+    _holdProgress(command.videoId);
 
     try {
       final CastLocalPlayback reached = await _playback.start(
@@ -716,6 +730,15 @@ class CastReceiverController extends StateNotifier<CastReceiverUiState> {
   Future<void> _pausePlayback() async {
     try {
       await _playback.setPlaying(false);
+      // The cast video this ending paused is now paused here, whether or not the watch gets to
+      // see it before somebody in the room presses play again - which is exactly what gives the
+      // video back to this account.
+      final CastLocalPlayback? paused = _playback.readPlayback();
+      final _HeldVideo? held =
+          paused == null ? null : _progressHoldOwner.held[paused.videoId];
+      if (held != null && !paused!.isPlaying) {
+        held.sawPaused = true;
+      }
     } catch (error, stackTrace) {
       // The Cast Session is over either way. A Receiver that would not pause - one whose player
       // screen has already gone, most likely - is worth a log and nothing else.
@@ -735,6 +758,9 @@ class CastReceiverController extends StateNotifier<CastReceiverUiState> {
 
   void _leaveCastState() {
     _stopReporting();
+    // The cast video's progress stays held back after this: the watch started with the hold goes
+    // on until this device has moved on from the video, so the pause every ending brings, and the
+    // save when its player closes, are not written here.
     _phase = CastReceiverPhase.idle;
     _sessionId = null;
     _castVideoId = null;
@@ -742,6 +768,53 @@ class CastReceiverController extends StateNotifier<CastReceiverUiState> {
     _lastAppliedSeq = 0;
     _sessionIsMissing = false;
     _rebuild();
+  }
+
+  /// How long a held video has to have been off the screen before it is released. Long enough
+  /// that the save its player makes when it closes has already been made and refused.
+  static const Duration _offScreenGrace = Duration(seconds: 2);
+
+  void _holdProgress(int videoId) {
+    _progressHoldOwner.held[videoId] = _HeldVideo();
+    _progressHold.hold(videoId);
+    _progressHoldOwner.watch(() => _clock.periodic(samplePeriod, _reviewHeld));
+  }
+
+  /// One look at the player for every held video, releasing those that have stopped being somebody
+  /// else's viewing: off the screen for good, or picked up again here after the cast paused them.
+  ///
+  /// The video of a Cast Session still under way is never released. And a video that is still
+  /// playing when its session ends is not released for that: every ending pauses this device, and
+  /// that pause may still be on its way. Only playing after a pause is somebody here resuming it.
+  void _reviewHeld() {
+    final CastLocalPlayback? playback = _playback.readPlayback();
+    for (final int videoId in _progressHoldOwner.held.keys.toList()) {
+      if (_sessionId != null && videoId == _castVideoId) {
+        continue;
+      }
+      final _HeldVideo held = _progressHoldOwner.held[videoId]!;
+      if (playback == null || playback.videoId != videoId) {
+        held.offScreen += samplePeriod;
+        if (held.offScreen >= _offScreenGrace) {
+          _releaseProgress(videoId);
+        }
+        continue;
+      }
+      held.offScreen = Duration.zero;
+      if (!playback.isPlaying) {
+        held.sawPaused = true;
+      } else if (held.sawPaused) {
+        _releaseProgress(videoId);
+      }
+    }
+  }
+
+  void _releaseProgress(int videoId) {
+    _progressHoldOwner.held.remove(videoId);
+    _progressHold.release(videoId);
+    if (_progressHoldOwner.held.isEmpty) {
+      _progressHoldOwner.stopWatching();
+    }
   }
 
   void _rebuild() {
@@ -752,6 +825,29 @@ class CastReceiverController extends StateNotifier<CastReceiverUiState> {
       controllerName: _controllerName,
       lastAppliedSeq: _lastAppliedSeq,
     );
+  }
+}
+
+/// One video a Receiver holds back from its own account, and what has been seen of it since.
+class _HeldVideo {
+  Duration offScreen = Duration.zero;
+  bool sawPaused = false;
+}
+
+/// The bookkeeping behind [CastReceiverController]'s progress hold: which videos are held, and the
+/// one watch that releases them once the Receiver has moved on.
+class _CastProgressHoldOwner {
+  final Map<int, _HeldVideo> held = <int, _HeldVideo>{};
+  CastTimer? _watch;
+
+  /// Starts the watch unless it is already running.
+  void watch(CastTimer Function() start) {
+    _watch ??= start();
+  }
+
+  void stopWatching() {
+    _watch?.cancel();
+    _watch = null;
   }
 }
 

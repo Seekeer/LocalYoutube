@@ -49,6 +49,7 @@ import '../../features/cast/domain/cast_device_identity_service.dart';
 import '../../features/cast/domain/cast_gateway.dart';
 import '../../features/cast/domain/cast_playback_progress_writer.dart';
 import '../../features/cast/domain/cast_progress_write_ownership.dart';
+import '../../features/cast/domain/cast_receiver_progress_hold.dart';
 import '../../features/cast/domain/cast_registration_service.dart';
 import '../../features/cast/presentation/cast_receiver_controller.dart';
 import '../../features/catalog/data/catalog_remote_data_source.dart';
@@ -215,19 +216,24 @@ class AppBootstrap {
       localSyncOutboxRepository: localSyncOutboxRepository,
       logService: logService,
     );
-    // Watch history follows the device that is actually playing. During a Cast Session that is the
-    // Receiver, which writes what it plays on this very path; this phone stops writing for exactly
-    // as long as that is true, and the Cast Controller is what says when.
+    // During a Cast Session the server keeps the video's progress for the phone's account from what
+    // the Receiver reports. This phone stops writing for exactly as long as the Receiver is playing,
+    // and the Cast Controller is what says when.
     final CastProgressWriteOwnershipFlag castProgressWriteOwnership =
         CastProgressWriteOwnershipFlag();
+    // The Receiver's half: a video cast here is the casting phone's viewing, possibly on another
+    // account, and the server keeps its progress there. This installation writes none of it.
+    final CastReceiverProgressHoldFlag castReceiverProgressHold =
+        CastReceiverProgressHoldFlag();
     final PlaybackSyncRepository playbackSyncRepository =
         PlaybackSyncRepository(
       localPlaybackRepository: localPlaybackRepository,
       remoteDataSource: playbackPositionRemoteDataSource,
       localSyncOutboxRepository: localSyncOutboxRepository,
       logService: logService,
-      isProgressWrittenElsewhere: () =>
-          castProgressWriteOwnership.isReceiverOwned,
+      isProgressWrittenElsewhere: (int videoId) =>
+          castProgressWriteOwnership.isReceiverOwned ||
+          castReceiverProgressHold.isHeld(videoId),
     );
     final StreamAuthorizationHeaderProvider streamAuthHeaderBuilder =
         StreamAuthorizationHeaderProvider(
@@ -349,6 +355,7 @@ class AppBootstrap {
       // advances itself there. Nothing else about it differs.
       clock: const SystemCastClock(),
       logService: logService,
+      progressHold: castReceiverProgressHold,
     );
 
     final downloadedTranscripts = DownloadedTranscriptCache(

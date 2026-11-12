@@ -5,6 +5,7 @@ import 'package:localtube_flutter/core/db/app_database.dart';
 import 'package:localtube_flutter/core/db/daos/playback_positions_dao.dart';
 import 'package:localtube_flutter/core/db/daos/sync_outbox_dao.dart';
 import 'package:localtube_flutter/features/cast/domain/cast_progress_write_ownership.dart';
+import 'package:localtube_flutter/features/cast/domain/cast_receiver_progress_hold.dart';
 import 'package:localtube_flutter/features/player/data/local_playback_repository.dart';
 import 'package:localtube_flutter/features/player/data/playback_position_remote_data_source.dart';
 import 'package:localtube_flutter/features/player/data/playback_sync_repository.dart';
@@ -15,52 +16,41 @@ import 'cast_doubles.dart';
 /// Where a Cast Session's playback progress actually lands, against the app's real
 /// playback-progress path rather than a recorded stand-in.
 ///
-/// Two devices and one server, which is what a Cast Session is. The Receiver plays the cast video
-/// through the ordinary player, so its progress travels the path an ordinary viewer's progress
-/// travels and the server keeps what arrives on it. The phone in Remote Control Mode has only where
-/// the viewer was when the Receiver took over, and its silence is what leaves the Receiver's
-/// progress standing: nothing here reorders writes or teaches the server whose they are.
+/// Two devices, each signed in to its own account with its own store on the server, which is what
+/// a Cast Session to a shared Receiver is. The video is watched by the person holding the phone, so
+/// its progress is the phone's account's, and the server keeps it there from what the Receiver
+/// reports. Neither device writes the cast video on its ordinary path while that is so: the phone
+/// has only where the viewer was when the Receiver took over, and the Receiver's account never
+/// watched it.
 void main() {
   const int castVideoId = 42;
+  const int ownVideoId = 7;
 
-  late _FakePlaybackPositionRemoteDataSource server;
+  late _FakePlaybackPositionRemoteDataSource phoneAccount;
+  late _FakePlaybackPositionRemoteDataSource receiverAccount;
   late CastProgressWriteOwnershipFlag ownership;
+  late CastReceiverProgressHoldFlag hold;
   late _Device receiver;
   late _Device phone;
 
   setUp(() async {
-    server = _FakePlaybackPositionRemoteDataSource();
+    phoneAccount = _FakePlaybackPositionRemoteDataSource();
+    receiverAccount = _FakePlaybackPositionRemoteDataSource();
     ownership = CastProgressWriteOwnershipFlag();
+    hold = CastReceiverProgressHoldFlag();
 
-    // The Receiver: the device playing the cast video, writing where it has got to exactly as
-    // any device writes its own progress. Only a device's own Cast Controller ever says otherwise,
-    // and a Receiver's never does.
-    receiver = await _Device.create(server: server);
+    // The Receiver, whose Receiver Controller holds the cast video back from its own account.
+    receiver = await _Device.create(
+      server: receiverAccount,
+      isProgressWrittenElsewhere: (int videoId) => hold.isHeld(videoId),
+    );
 
     // The phone, whose Cast Controller hands progress writing over for as long as the Receiver
     // is playing.
     phone = await _Device.create(
-      server: server,
-      isProgressWrittenElsewhere: () => ownership.isReceiverOwned,
+      server: phoneAccount,
+      isProgressWrittenElsewhere: (int _) => ownership.isReceiverOwned,
     );
-  });
-
-  test('the progress the server keeps during a Cast Session is the Receiver\'s',
-      () async {
-    await receiver.progress.savePosition(
-      videoId: castVideoId,
-      positionSeconds: 600,
-    );
-
-    // The phone's last idea of this video is where the viewer was when the Receiver took over,
-    // ten minutes behind and carrying the newer timestamp of the two.
-    ownership.giveToReceiver();
-    await phone.progress.savePosition(
-      videoId: castVideoId,
-      positionSeconds: 30,
-    );
-
-    expect(server.remoteByVideoId[castVideoId]?.positionSeconds, 600);
   });
 
   test('a phone in Remote Control Mode writes progress nowhere at all',
@@ -72,7 +62,7 @@ void main() {
       positionSeconds: 30,
     );
 
-    expect(server.setCallCount, 0);
+    expect(phoneAccount.setCallCount, 0);
     expect(
       await phone.progress.resolveStartPosition(castVideoId, localOnly: true),
       Duration.zero,
@@ -96,31 +86,75 @@ void main() {
       positionSeconds: 660,
     );
 
-    expect(server.remoteByVideoId[castVideoId]?.positionSeconds, 660);
+    expect(phoneAccount.remoteByVideoId[castVideoId]?.positionSeconds, 660);
     expect(
       await phone.progress.resolveStartPosition(castVideoId, localOnly: true),
       const Duration(minutes: 11),
     );
   });
 
-  test('a Receiver writes its progress on the ordinary playback-progress path',
+  test('a Receiver writes nothing of a held cast video to its own account',
       () async {
-    ownership.giveToReceiver();
+    hold.hold(castVideoId);
 
     await receiver.progress.savePosition(
       videoId: castVideoId,
       positionSeconds: 600,
     );
 
-    // The existing server persistence behaviour, reached by the same call an ordinary viewer's
-    // progress reaches it by. A Cast Session adds no second way of keeping a position.
-    expect(server.setCallCount, 1);
-    expect(server.remoteByVideoId[castVideoId]?.positionSeconds, 600);
+    expect(receiverAccount.setCallCount, 0);
+    expect(receiverAccount.remoteByVideoId, isEmpty);
     expect(
       await receiver.progress
           .resolveStartPosition(castVideoId, localOnly: true),
-      const Duration(minutes: 10),
+      Duration.zero,
     );
+    expect(await receiver.outbox.listPending(limit: 100), isEmpty);
+  });
+
+  test('a Receiver still keeps its own videos while a cast video is held',
+      () async {
+    hold.hold(castVideoId);
+
+    // The video the cast displaced is this room's own viewing, kept before it is replaced.
+    await receiver.progress.savePosition(
+      videoId: ownVideoId,
+      positionSeconds: 120,
+    );
+
+    expect(receiverAccount.remoteByVideoId[ownVideoId]?.positionSeconds, 120);
+  });
+
+  test('a held cast video is not reconciled against the Receiver account',
+      () async {
+    // The Receiver's own account watched this video long ago, five minutes in.
+    await receiver.progress.savePosition(
+      videoId: castVideoId,
+      positionSeconds: 300,
+    );
+
+    hold.hold(castVideoId);
+
+    // Resuming after a pause asks for the reconciled position before it plays on. During a cast
+    // there is none to give: the session's position is the one that counts.
+    expect(await receiver.progress.reconcileVideo(castVideoId), isNull);
+  });
+
+  test('a Receiver keeps the video again once the hold is released', () async {
+    hold.hold(castVideoId);
+    await receiver.progress.savePosition(
+      videoId: castVideoId,
+      positionSeconds: 600,
+    );
+
+    // Somebody in front of the Receiver picked the video up again after the cast: their viewing.
+    hold.release(castVideoId);
+    await receiver.progress.savePosition(
+      videoId: castVideoId,
+      positionSeconds: 610,
+    );
+
+    expect(receiverAccount.remoteByVideoId[castVideoId]?.positionSeconds, 610);
   });
 }
 
@@ -130,7 +164,7 @@ class _Device {
 
   static Future<_Device> create({
     required PlaybackPositionRemoteDataSource server,
-    bool Function()? isProgressWrittenElsewhere,
+    bool Function(int videoId)? isProgressWrittenElsewhere,
   }) async {
     final AppDatabase database = AppDatabase(executor: NativeDatabase.memory());
     await database.initialize();

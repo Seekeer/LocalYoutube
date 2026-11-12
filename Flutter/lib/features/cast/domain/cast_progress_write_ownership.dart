@@ -1,9 +1,9 @@
 /// Which device's playback progress this installation writes.
 ///
-/// Watch history follows the device that is actually playing, and during a Cast Session that device
-/// is the Receiver. It plays the cast video through the ordinary player, so its progress already
-/// travels the app's ordinary playback-progress path and the server keeps what it sends. Nothing
-/// had to be built for that half; this is the other half.
+/// Watch history belongs to the person holding the phone, and during a Cast Session the device
+/// playing is the Receiver - possibly signed in to another account. The server keeps the video's
+/// progress for the phone's account from what the Receiver reports, and the Receiver holds the cast
+/// video back from its own account (`CastReceiverProgressHold`). This is the phone's half.
 ///
 /// A phone in Remote Control Mode plays nothing. The only position it has is where the viewer was
 /// when the Receiver took over, and writing that carries a fresh timestamp - which is exactly
