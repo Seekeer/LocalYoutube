@@ -26,8 +26,11 @@ import '../../notes/presentation/mark_caption_dialog.dart';
 import '../../notes/presentation/notes_section.dart';
 import '../../transcript/presentation/transcript_panel.dart';
 import 'player_controller.dart';
+import 'player_keyboard_shortcuts.dart';
 import 'player_navigation_result.dart';
 import 'player_screen_stack.dart';
+import 'player_stage_layout.dart';
+import 'player_window_fullscreen.dart';
 
 const MethodChannel _appControlChannel = MethodChannel(
   'org.localtube.app/app_control',
@@ -40,6 +43,13 @@ Future<void> _minimizeApp() async {
     await SystemNavigator.pop();
   }
 }
+
+/// The live video on the ordinary player page, for finding it in tests.
+@visibleForTesting
+const Key playerVideoSurfaceKey = Key('player-video-surface');
+
+/// The space above and below the player page's content.
+const double _pageVerticalPadding = 12;
 
 Future<void> _jumpToNearestTimestamp({
   required BuildContext context,
@@ -91,6 +101,10 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
   bool _completionDialogShownForCurrentCompletion = false;
   bool _isDeleteDialogVisible = false;
   bool _isFullscreenOpen = false;
+
+  /// The player's own keyboard focus: Space plays or pauses while it holds the focus, and Ctrl+F
+  /// opens fullscreen from anywhere on the page.
+  final FocusNode _keyboardFocusNode = FocusNode(debugLabel: 'Player keyboard');
 
   /// This page's local player, offered to the Cast Session while the page owns one. A Handoff reads
   /// the latest position through it and releases playback through it, without the Cast Controller
@@ -197,6 +211,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
 
   @override
   void dispose() {
+    _keyboardFocusNode.dispose();
     _updatePlaybackSurfaces?.leave();
     WidgetsBinding.instance.removeObserver(this);
     final Object? screenToken = _screenToken;
@@ -360,447 +375,506 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
             .clamp(0, maxSeconds)
             .toDouble();
 
-    return Scaffold(
-      appBar: AppBar(title: Text(_resolvedTitle(videoId))),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            if (videoController != null && videoController.value.isInitialized)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: ColoredBox(
-                  color: Colors.black,
-                  child: AspectRatio(
-                    aspectRatio: videoController.value.aspectRatio > 0
-                        ? videoController.value.aspectRatio
-                        : (16 / 9),
-                    child: Stack(
-                      fit: StackFit.expand,
+    final bool canToggleFullscreen = state.errorMessage == null &&
+        !_isDeleteInProgress &&
+        !_isFullscreenOpen;
+
+    return PlayerKeyboardShortcuts(
+      focusNode: _keyboardFocusNode,
+      onTogglePlayback: state.errorMessage != null
+          ? null
+          : () => unawaited(controller.togglePlayback()),
+      onToggleFullscreen: canToggleFullscreen
+          ? () => unawaited(_openFullscreen(videoId: videoId))
+          : null,
+      child: Scaffold(
+        appBar: AppBar(title: Text(_resolvedTitle(videoId))),
+        body: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints viewport) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: _pageVerticalPadding,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  // The video and the controls under it fit the window together, the way the
+                  // web player caps its video: the page scrolls on to the notes and the rest,
+                  // never down to the play button.
+                  PlayerStageLayout(
+                    availableHeight:
+                        viewport.maxHeight - 2 * _pageVerticalPadding,
+                    video: _buildVideoSurface(
+                      videoId: videoId,
+                      state: state,
+                      controller: controller,
+                      videoController: videoController,
+                    ),
+                    controls: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
-                        VideoPlayer(videoController),
-                        Positioned.fill(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onTap: state.errorMessage != null
-                                ? null
-                                : () => unawaited(controller.togglePlayback()),
-                            child: const SizedBox.expand(),
+                        if (isOffline) ...<Widget>[
+                          const SizedBox(height: 8),
+                          StateFeedbackBanner(
+                            message: state.sourceKind == PlayableSourceKind.localFile
+                                ? 'Offline mode: local playback is available.'
+                                : 'Offline mode: remote playback may be unavailable.',
+                            tone: StateFeedbackTone.warning,
                           ),
-                        ),
-                        Positioned.fill(
-                            child: TranscriptCaptions(
-                                videoId: int.parse(widget.videoId),
-                                controller: videoController)),
-                        if (state.isBuffering)
-                          const Positioned.fill(
-                            child: IgnorePointer(
-                              child: ColoredBox(
-                                color: Color(0x55000000),
-                                child: Center(
-                                  child: CircularProgressIndicator(),
+                        ],
+                        if (state.isRecovering) ...<Widget>[
+                          const SizedBox(height: 8),
+                          const StateFeedbackBanner(
+                            message: 'Playback interrupted. Reconnecting stream...',
+                            tone: StateFeedbackTone.warning,
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        if (state.errorMessage != null)
+                          StateFeedbackBanner(
+                            message: state.errorMessage!,
+                            tone: StateFeedbackTone.error,
+                          ),
+                        if (state.isLoading) ...<Widget>[
+                          const SizedBox(height: 16),
+                          const LinearProgressIndicator(),
+                        ],
+                        const SizedBox(height: 8),
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: SliderTheme(
+                                data: SliderTheme.of(context).copyWith(
+                                  trackHeight: 8,
+                                  thumbShape: const RoundSliderThumbShape(
+                                    enabledThumbRadius: 8,
+                                  ),
+                                ),
+                                child: Slider(
+                                  min: 0,
+                                  max: maxSeconds,
+                                  value: positionSeconds,
+                                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                                  onChanged: state.errorMessage != null
+                                      ? null
+                                      : (double value) {
+                                          setState(() {
+                                            _dragSeconds = value;
+                                          });
+                                        },
+                                  onChangeEnd: state.errorMessage != null
+                                      ? null
+                                      : (double value) {
+                                          setState(() {
+                                            _dragSeconds = null;
+                                          });
+                                          unawaited(
+                                            controller.seek(
+                                              Duration(
+                                                milliseconds: (value * 1000).round(),
+                                              ),
+                                            ),
+                                          );
+                                        },
                                 ),
                               ),
                             ),
+                            const SizedBox(width: 8),
+                            Tooltip(
+                              message: _sourceStatusLabel(state.sourceKind),
+                              child: Icon(
+                                _sourceStatusIcon(state.sourceKind),
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: <Widget>[
+                            Text(_formatDuration(state.position)),
+                            const Spacer(),
+                            Text(_formatDuration(state.duration)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              _buildSecondaryControlButton(
+                                icon: Icons.replay_10,
+                                tooltip: 'Back 10s',
+                                enabled: state.errorMessage == null,
+                                onPressed: () => unawaited(
+                                  controller.seekRelative(const Duration(seconds: -10)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                height: 84,
+                                child: FilledButton.icon(
+                                  onPressed: state.errorMessage != null
+                                      ? null
+                                      : () => unawaited(controller.togglePlayback()),
+                                  icon: Icon(
+                                    state.isPlaying ? Icons.pause : Icons.play_arrow,
+                                  ),
+                                  label: Text(state.isPlaying ? 'Pause' : 'Play'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildSecondaryControlButton(
+                                icon: Icons.forward_10,
+                                tooltip: 'Forward 10s',
+                                enabled: state.errorMessage == null,
+                                onPressed: () => unawaited(
+                                  controller.seekRelative(const Duration(seconds: 10)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildSecondaryControlButton(
+                                icon: Icons.skip_next,
+                                tooltip: 'Next chapter',
+                                enabled:
+                                    state.errorMessage == null && timestamps.isNotEmpty,
+                                onPressed: () => unawaited(
+                                  _jumpToNearestTimestamp(
+                                    context: context,
+                                    controller: controller,
+                                    currentPosition: state.position,
+                                    timestamps: timestamps,
+                                    jumpToNearestTimestampUseCase:
+                                        jumpToNearestTimestampUseCase,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: <Widget>[
+                            _buildSecondaryControlButton(
+                              icon: Icons.bookmark_add_outlined,
+                              tooltip: 'Add bookmark',
+                              enabled: state.errorMessage == null && !_isDeleteInProgress,
+                              onPressed: () => unawaited(controller.addManualBookmark()),
+                            ),
+                            if (state.sourceKind != PlayableSourceKind.localFile &&
+                                !_downloadStartedForCurrentVideo)
+                              _buildSecondaryControlButton(
+                                icon: Icons.download_outlined,
+                                tooltip: remoteActionsDisabled
+                                    ? 'Available after reconnect'
+                                    : 'Download',
+                                enabled: state.errorMessage == null &&
+                                    !remoteActionsDisabled &&
+                                    !_isDeleteInProgress,
+                                onPressed: () => unawaited(_downloadCurrentVideo(videoId)),
+                              ),
+                            _buildSecondaryControlButton(
+                              icon: Icons.delete_outline,
+                              tooltip: 'Delete',
+                              enabled: state.errorMessage == null && !_isDeleteInProgress,
+                              onPressed: () => unawaited(
+                                _startDeleteFlow(
+                                  videoId: videoId,
+                                  controller: controller,
+                                ),
+                              ),
+                            ),
+                            _buildSecondaryControlButton(
+                              icon: Icons.fullscreen,
+                              tooltip: 'Fullscreen',
+                              enabled: state.errorMessage == null && !_isDeleteInProgress,
+                              onPressed: () => unawaited(_openFullscreen(videoId: videoId)),
+                            ),
+                            _buildSecondaryControlButton(
+                              icon: Icons.share_outlined,
+                              tooltip: 'Share',
+                              enabled: state.errorMessage == null && !_isDeleteInProgress,
+                              onPressed: () => unawaited(_shareVideo(videoId)),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
-                ),
-              )
-            else
-              Container(
-                height: 220,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: state.isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text('Video stream is unavailable'),
-              ),
-            if (isOffline) ...<Widget>[
-              const SizedBox(height: 8),
-              StateFeedbackBanner(
-                message: state.sourceKind == PlayableSourceKind.localFile
-                    ? 'Offline mode: local playback is available.'
-                    : 'Offline mode: remote playback may be unavailable.',
-                tone: StateFeedbackTone.warning,
-              ),
-            ],
-            if (state.isRecovering) ...<Widget>[
-              const SizedBox(height: 8),
-              const StateFeedbackBanner(
-                message: 'Playback interrupted. Reconnecting stream...',
-                tone: StateFeedbackTone.warning,
-              ),
-            ],
-            const SizedBox(height: 8),
-            if (state.errorMessage != null)
-              StateFeedbackBanner(
-                message: state.errorMessage!,
-                tone: StateFeedbackTone.error,
-              ),
-            if (state.isLoading) ...<Widget>[
-              const SizedBox(height: 16),
-              const LinearProgressIndicator(),
-            ],
-            const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      trackHeight: 8,
-                      thumbShape: const RoundSliderThumbShape(
-                        enabledThumbRadius: 8,
+                  if (state.navigationEntries.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 20),
+                    ExpansionTile(
+                      key: const PageStorageKey<String>('player-navigation'),
+                      initiallyExpanded: true,
+                      tilePadding: EdgeInsets.zero,
+                      shape: const Border(),
+                      collapsedShape: const Border(),
+                      title: Text(
+                        'Navigation',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                    ),
-                    child: Slider(
-                      min: 0,
-                      max: maxSeconds,
-                      value: positionSeconds,
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      onChanged: state.errorMessage != null
-                          ? null
-                          : (double value) {
-                              setState(() {
-                                _dragSeconds = value;
-                              });
-                            },
-                      onChangeEnd: state.errorMessage != null
-                          ? null
-                          : (double value) {
-                              setState(() {
-                                _dragSeconds = null;
-                              });
-                              unawaited(
-                                controller.seek(
-                                  Duration(
-                                    milliseconds: (value * 1000).round(),
+                      children: <Widget>[
+                        SizedBox(
+                          height: math.min(state.navigationEntries.length, 3) * 72.0,
+                          child: ListView.builder(
+                            primary: false,
+                            padding: EdgeInsets.zero,
+                            itemCount: state.navigationEntries.length,
+                            physics: state.navigationEntries.length > 3
+                                ? const ClampingScrollPhysics()
+                                : const NeverScrollableScrollPhysics(),
+                            itemBuilder: (BuildContext context, int index) {
+                              final PlayerNavigationEntry entry =
+                                  state.navigationEntries[index];
+                              return ListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                leading: SizedBox(
+                                  width: 56,
+                                  child: Text(
+                                    _formatDuration(entry.fromPosition),
+                                    style: Theme.of(context).textTheme.labelLarge,
                                   ),
                                 ),
+                                title: Text(
+                                  'Back to ${_formatDuration(entry.fromPosition)}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Text(
+                                  'Jumped to ${_formatDuration(entry.toPosition)}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                trailing: const Icon(Icons.undo),
+                                onTap: state.errorMessage != null
+                                    ? null
+                                    : () => unawaited(
+                                        controller.seekToNavigationOrigin(entry.id),
+                                      ),
                               );
                             },
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Tooltip(
-                  message: _sourceStatusLabel(state.sourceKind),
-                  child: Icon(
-                    _sourceStatusIcon(state.sourceKind),
-                    size: 20,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              children: <Widget>[
-                Text(_formatDuration(state.position)),
-                const Spacer(),
-                Text(_formatDuration(state.duration)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  _buildSecondaryControlButton(
-                    icon: Icons.replay_10,
-                    tooltip: 'Back 10s',
-                    enabled: state.errorMessage == null,
-                    onPressed: () => unawaited(
-                      controller.seekRelative(const Duration(seconds: -10)),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    height: 84,
-                    child: FilledButton.icon(
-                      onPressed: state.errorMessage != null
-                          ? null
-                          : () => unawaited(controller.togglePlayback()),
-                      icon: Icon(
-                        state.isPlaying ? Icons.pause : Icons.play_arrow,
-                      ),
-                      label: Text(state.isPlaying ? 'Pause' : 'Play'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildSecondaryControlButton(
-                    icon: Icons.forward_10,
-                    tooltip: 'Forward 10s',
-                    enabled: state.errorMessage == null,
-                    onPressed: () => unawaited(
-                      controller.seekRelative(const Duration(seconds: 10)),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildSecondaryControlButton(
-                    icon: Icons.skip_next,
-                    tooltip: 'Next chapter',
-                    enabled:
-                        state.errorMessage == null && timestamps.isNotEmpty,
-                    onPressed: () => unawaited(
-                      _jumpToNearestTimestamp(
-                        context: context,
-                        controller: controller,
-                        currentPosition: state.position,
-                        timestamps: timestamps,
-                        jumpToNearestTimestampUseCase:
-                            jumpToNearestTimestampUseCase,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                _buildSecondaryControlButton(
-                  icon: Icons.bookmark_add_outlined,
-                  tooltip: 'Add bookmark',
-                  enabled: state.errorMessage == null && !_isDeleteInProgress,
-                  onPressed: () => unawaited(controller.addManualBookmark()),
-                ),
-                if (state.sourceKind != PlayableSourceKind.localFile &&
-                    !_downloadStartedForCurrentVideo)
-                  _buildSecondaryControlButton(
-                    icon: Icons.download_outlined,
-                    tooltip: remoteActionsDisabled
-                        ? 'Available after reconnect'
-                        : 'Download',
-                    enabled: state.errorMessage == null &&
-                        !remoteActionsDisabled &&
-                        !_isDeleteInProgress,
-                    onPressed: () => unawaited(_downloadCurrentVideo(videoId)),
-                  ),
-                _buildSecondaryControlButton(
-                  icon: Icons.delete_outline,
-                  tooltip: 'Delete',
-                  enabled: state.errorMessage == null && !_isDeleteInProgress,
-                  onPressed: () => unawaited(
-                    _startDeleteFlow(
-                      videoId: videoId,
-                      controller: controller,
-                    ),
-                  ),
-                ),
-                _buildSecondaryControlButton(
-                  icon: Icons.fullscreen,
-                  tooltip: 'Fullscreen',
-                  enabled: state.errorMessage == null && !_isDeleteInProgress,
-                  onPressed: () => unawaited(_openFullscreen(videoId: videoId)),
-                ),
-                _buildSecondaryControlButton(
-                  icon: Icons.share_outlined,
-                  tooltip: 'Share',
-                  enabled: state.errorMessage == null && !_isDeleteInProgress,
-                  onPressed: () => unawaited(_shareVideo(videoId)),
-                ),
-              ],
-            ),
-            if (state.navigationEntries.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 20),
-              ExpansionTile(
-                key: const PageStorageKey<String>('player-navigation'),
-                initiallyExpanded: true,
-                tilePadding: EdgeInsets.zero,
-                shape: const Border(),
-                collapsedShape: const Border(),
-                title: Text(
-                  'Navigation',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                children: <Widget>[
-                  SizedBox(
-                    height: math.min(state.navigationEntries.length, 3) * 72.0,
-                    child: ListView.builder(
-                      primary: false,
-                      padding: EdgeInsets.zero,
-                      itemCount: state.navigationEntries.length,
-                      physics: state.navigationEntries.length > 3
-                          ? const ClampingScrollPhysics()
-                          : const NeverScrollableScrollPhysics(),
-                      itemBuilder: (BuildContext context, int index) {
-                        final PlayerNavigationEntry entry =
-                            state.navigationEntries[index];
-                        return ListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          leading: SizedBox(
-                            width: 56,
-                            child: Text(
-                              _formatDuration(entry.fromPosition),
-                              style: Theme.of(context).textTheme.labelLarge,
-                            ),
                           ),
-                          title: Text(
-                            'Back to ${_formatDuration(entry.fromPosition)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            'Jumped to ${_formatDuration(entry.toPosition)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: const Icon(Icons.undo),
-                          onTap: state.errorMessage != null
-                              ? null
-                              : () => unawaited(
-                                  controller.seekToNavigationOrigin(entry.id),
-                                ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-            if (state.bookmarks.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 20),
-              Row(
-                children: <Widget>[
-                  Text(
-                    'Bookmarks',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              ...state.bookmarks.map(
-                (bookmark) => ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: SizedBox(
-                    width: 56,
-                    child: Text(
-                      _formatDuration(bookmark.position),
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                  ),
-                  title: Text(
-                    bookmark.caption.isEmpty ? 'Bookmark' : bookmark.caption,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: bookmark.isPendingSync
-                      ? const Text('Pending sync')
-                      : null,
-                  trailing: IconButton(
-                    onPressed: state.errorMessage != null
-                        ? null
-                        : () =>
-                            unawaited(controller.deleteBookmark(bookmark.id)),
-                    icon: const Icon(Icons.delete_outline),
-                    tooltip: 'Delete bookmark',
-                  ),
-                  onTap: state.errorMessage != null
-                      ? null
-                      : () => unawaited(controller.seek(bookmark.position)),
-                  onLongPress: state.errorMessage != null
-                      ? null
-                      : () => unawaited(
-                            _editBookmarkCaption(
-                              controller: controller,
-                              bookmarkId: bookmark.id,
-                              caption: bookmark.caption,
-                            ),
-                          ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 20),
-            NotesSection(
-              videoId: videoId,
-              title: (widget.videoTitle ?? '').trim(),
-              onPausePlayback: controller.pause,
-            ),
-            const SizedBox(height: 8),
-            TranscriptPanel(
-              videoId: int.parse(widget.videoId),
-              onSeek: (position) => controller.seek(position),
-              onBookmark: controller.addTextBookmark,
-            ),
-            if (timestamps.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 20),
-              ExpansionTile(
-                key: const PageStorageKey<String>('player-timestamps'),
-                initiallyExpanded: true,
-                tilePadding: EdgeInsets.zero,
-                shape: const Border(),
-                collapsedShape: const Border(),
-                title: Row(
-                  children: <Widget>[
-                    Text(
-                      'Timestamps',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const Spacer(),
-                    TextButton.icon(
-                      onPressed: state.errorMessage != null
-                          ? null
-                          : () => unawaited(
-                              _jumpToNearestTimestamp(
-                                context: context,
-                                controller: controller,
-                                currentPosition: state.position,
-                                timestamps: timestamps,
-                                jumpToNearestTimestampUseCase:
-                                    jumpToNearestTimestampUseCase,
-                              ),
-                            ),
-                      icon: const Icon(Icons.skip_next),
-                      label: const Text('Next'),
+                        ),
+                      ],
                     ),
                   ],
-                ),
-                children: <Widget>[
-                  const SizedBox(height: 6),
-                  ...timestamps.map(
-                    (VideoTimestamp timestamp) => ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: SizedBox(
-                        width: 56,
-                        child: Text(
-                          _formatDuration(timestamp.position),
-                          style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                fontWeight: state.position >= timestamp.position
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                              ),
+                  if (state.bookmarks.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 20),
+                    Row(
+                      children: <Widget>[
+                        Text(
+                          'Bookmarks',
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                      ),
-                      title: Text(
-                        timestamp.label,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: state.errorMessage != null
-                          ? null
-                          : () =>
-                                unawaited(controller.seek(timestamp.position)),
+                      ],
                     ),
+                    const SizedBox(height: 6),
+                    ...state.bookmarks.map(
+                      (bookmark) => ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: SizedBox(
+                          width: 56,
+                          child: Text(
+                            _formatDuration(bookmark.position),
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                        ),
+                        title: Text(
+                          bookmark.caption.isEmpty ? 'Bookmark' : bookmark.caption,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: bookmark.isPendingSync
+                            ? const Text('Pending sync')
+                            : null,
+                        trailing: IconButton(
+                          onPressed: state.errorMessage != null
+                              ? null
+                              : () =>
+                                  unawaited(controller.deleteBookmark(bookmark.id)),
+                          icon: const Icon(Icons.delete_outline),
+                          tooltip: 'Delete bookmark',
+                        ),
+                        onTap: state.errorMessage != null
+                            ? null
+                            : () => unawaited(controller.seek(bookmark.position)),
+                        onLongPress: state.errorMessage != null
+                            ? null
+                            : () => unawaited(
+                                  _editBookmarkCaption(
+                                    controller: controller,
+                                    bookmarkId: bookmark.id,
+                                    caption: bookmark.caption,
+                                  ),
+                                ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  NotesSection(
+                    videoId: videoId,
+                    title: (widget.videoTitle ?? '').trim(),
+                    onPausePlayback: controller.pause,
                   ),
+                  const SizedBox(height: 8),
+                  TranscriptPanel(
+                    videoId: int.parse(widget.videoId),
+                    onSeek: (position) => controller.seek(position),
+                    onBookmark: controller.addTextBookmark,
+                  ),
+                  if (timestamps.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 20),
+                    ExpansionTile(
+                      key: const PageStorageKey<String>('player-timestamps'),
+                      initiallyExpanded: true,
+                      tilePadding: EdgeInsets.zero,
+                      shape: const Border(),
+                      collapsedShape: const Border(),
+                      title: Row(
+                        children: <Widget>[
+                          Text(
+                            'Timestamps',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const Spacer(),
+                          TextButton.icon(
+                            onPressed: state.errorMessage != null
+                                ? null
+                                : () => unawaited(
+                                    _jumpToNearestTimestamp(
+                                      context: context,
+                                      controller: controller,
+                                      currentPosition: state.position,
+                                      timestamps: timestamps,
+                                      jumpToNearestTimestampUseCase:
+                                          jumpToNearestTimestampUseCase,
+                                    ),
+                                  ),
+                            icon: const Icon(Icons.skip_next),
+                            label: const Text('Next'),
+                          ),
+                        ],
+                      ),
+                      children: <Widget>[
+                        const SizedBox(height: 6),
+                        ...timestamps.map(
+                          (VideoTimestamp timestamp) => ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: SizedBox(
+                              width: 56,
+                              child: Text(
+                                _formatDuration(timestamp.position),
+                                style: Theme.of(context).textTheme.labelLarge
+                                    ?.copyWith(
+                                      fontWeight: state.position >= timestamp.position
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                    ),
+                              ),
+                            ),
+                            title: Text(
+                              timestamp.label,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: state.errorMessage != null
+                                ? null
+                                : () =>
+                                      unawaited(controller.seek(timestamp.position)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  CastEntryPoint(videoId: videoId),
                 ],
               ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// The live video, or a placeholder while there is none to show.
+  ///
+  /// The video keeps its own aspect ratio inside whatever height [PlayerStageLayout] leaves it, so
+  /// a tall window and a short one both show the whole picture.
+  Widget _buildVideoSurface({
+    required int videoId,
+    required PlayerUiState state,
+    required PlayerController controller,
+    required VideoPlayerController? videoController,
+  }) {
+    if (videoController == null || !videoController.value.isInitialized) {
+      return Container(
+        height: 220,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        alignment: Alignment.center,
+        child: state.isLoading
+            ? const CircularProgressIndicator()
+            : const Text('Video stream is unavailable'),
+      );
+    }
+    return AspectRatio(
+      key: playerVideoSurfaceKey,
+      aspectRatio: videoController.value.aspectRatio > 0
+          ? videoController.value.aspectRatio
+          : (16 / 9),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: ColoredBox(
+          color: Colors.black,
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              VideoPlayer(videoController),
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: state.errorMessage != null
+                      ? null
+                      : () {
+                          // A click on the picture also gives the keyboard back to the player,
+                          // out of a text field it was typing in, so Space works again.
+                          _keyboardFocusNode.requestFocus();
+                          unawaited(controller.togglePlayback());
+                        },
+                  child: const SizedBox.expand(),
+                ),
+              ),
+              Positioned.fill(
+                child: TranscriptCaptions(
+                  videoId: videoId,
+                  controller: videoController,
+                ),
+              ),
+              if (state.isBuffering)
+                const Positioned.fill(
+                  child: IgnorePointer(
+                    child: ColoredBox(
+                      color: Color(0x55000000),
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                  ),
+                ),
             ],
-            const SizedBox(height: 20),
-            CastEntryPoint(videoId: videoId),
-          ],
+          ),
         ),
       ),
     );
@@ -825,6 +899,8 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
     setState(() {
       _isFullscreenOpen = false;
     });
+    // Back from fullscreen, the keyboard belongs to this page's player again.
+    _keyboardFocusNode.requestFocus();
     if (result != null) {
       Navigator.of(context).pop(result);
     }
@@ -1183,6 +1259,22 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
   bool _completionDialogShownForCurrentCompletion = false;
   bool _isDeleteDialogVisible = false;
 
+  /// The keyboard inside fullscreen: Space plays or pauses, Ctrl+F and Escape leave fullscreen.
+  final FocusNode _keyboardFocusNode = FocusNode(
+    debugLabel: 'Fullscreen player keyboard',
+  );
+
+  /// With a mouse the controls come up when the pointer moves and go away once it rests, the way a
+  /// desktop video player behaves. Touch never hovers, so on a phone nothing of this runs and the
+  /// controls stay a double tap away.
+  Timer? _pointerControlsHideTimer;
+  bool _isPointerOverControls = false;
+  static const Duration _pointerControlsHideDelay = Duration(seconds: 3);
+
+  /// Whether the window has been asked to leave fullscreen already. The route asks once, as early
+  /// as it can: when it is popped, or when it goes away without a pop.
+  bool _hasLeftWindowFullscreen = false;
+
   /// Whether this route has already been asked to close because playback moved to a Receiver. A
   /// route is closed once, however many times it rebuilds while the closing frame is pending.
   bool _isLeavingForRemoteControlMode = false;
@@ -1199,14 +1291,28 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
         DeviceOrientation.landscapeRight,
       ]),
     );
+    // On Windows the window itself goes fullscreen: no title bar, frame or taskbar over the video.
+    unawaited(PlayerWindowFullscreen.setFullScreen(true));
   }
 
   @override
   void dispose() {
     _lockedOverlayHideTimer?.cancel();
+    _pointerControlsHideTimer?.cancel();
+    _keyboardFocusNode.dispose();
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     unawaited(SystemChrome.setPreferredOrientations(DeviceOrientation.values));
+    // Normally already left when the route was popped; this covers a route removed without one.
+    _leaveWindowFullscreen();
     super.dispose();
+  }
+
+  void _leaveWindowFullscreen() {
+    if (_hasLeftWindowFullscreen) {
+      return;
+    }
+    _hasLeftWindowFullscreen = true;
+    unawaited(PlayerWindowFullscreen.setFullScreen(false));
   }
 
   @override
@@ -1283,217 +1389,262 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
             .clamp(0, maxSeconds)
             .toDouble();
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: GestureDetector(
-          key: const Key('fullscreen-player-gesture-area'),
-          behavior: HitTestBehavior.opaque,
-          onTap: _isScreenLocked
-              ? _showLockedOverlayAfterTap
-              : () => unawaited(controller.togglePlayback()),
-          onDoubleTap: _isScreenLocked
-              ? null
-              : () {
-                  setState(() {
-                    _showControls = !_showControls;
-                  });
-                },
-          child: Stack(
-            fit: StackFit.expand,
-            children: <Widget>[
-              if (videoController != null &&
-                  videoController.value.isInitialized)
-                FittedBox(
-                  fit: BoxFit.contain,
-                  child: SizedBox(
-                    width: videoController.value.size.width,
-                    height: videoController.value.size.height,
-                    child: VideoPlayer(videoController),
-                  ),
-                )
-              else
-                const Center(child: CircularProgressIndicator()),
-              if (videoController != null &&
-                  videoController.value.isInitialized)
-                Positioned.fill(
-                    child: TranscriptCaptions(
-                        videoId: widget.videoId, controller: videoController)),
-              if (state.isBuffering)
-                const Positioned.fill(
-                  child: IgnorePointer(
-                    child: ColoredBox(
-                      color: Color(0x44000000),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  ),
-                ),
-              if (_isScreenLocked ? _showLockedOverlay : _showControls)
-                Positioned.fill(
-                  child: ColoredBox(
-                    color: const Color(0x33000000),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: <Widget>[
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 16,
-                            runSpacing: 16,
-                            children: <Widget>[
-                              _fullscreenActionButton(
-                                icon: _isScreenLocked
-                                    ? Icons.lock_open
-                                    : Icons.lock_outline,
-                                tooltip: _isScreenLocked
-                                    ? 'Unlock screen'
-                                    : 'Lock screen',
-                                onPressed: _toggleScreenLock,
-                              ),
-                              if (!_isScreenLocked) ...<Widget>[
-                                _fullscreenActionButton(
-                                  icon: Icons.replay_10,
-                                  tooltip: 'Back 10s',
-                                  onPressed: () => unawaited(
-                                    controller.seekRelative(
-                                      const Duration(seconds: -10),
-                                    ),
-                                  ),
-                                ),
-                                _fullscreenActionButton(
-                                  icon: state.isPlaying
-                                      ? Icons.pause
-                                      : Icons.play_arrow,
-                                  tooltip: state.isPlaying ? 'Pause' : 'Play',
-                                  onPressed: controller.togglePlayback,
-                                ),
-                                _fullscreenActionButton(
-                                  icon: Icons.forward_10,
-                                  tooltip: 'Forward 10s',
-                                  onPressed: () => unawaited(
-                                    controller.seekRelative(
-                                      const Duration(seconds: 10),
-                                    ),
-                                  ),
-                                ),
-                                _fullscreenActionButton(
-                                  icon: Icons.bookmark_add_outlined,
-                                  tooltip: 'Add bookmark',
-                                  onPressed: _isDeleteInProgress
-                                      ? null
-                                      : () => unawaited(
-                                          controller.addManualBookmark()),
-                                ),
-                                _fullscreenActionButton(
-                                  icon: Icons.skip_next,
-                                  tooltip: 'Next section',
-                                  onPressed: _isDeleteInProgress
-                                      ? null
-                                      : () => unawaited(
-                                            _jumpToNearestTimestamp(
-                                              context: context,
-                                              controller: controller,
-                                              currentPosition: state.position,
-                                              timestamps: timestamps,
-                                              jumpToNearestTimestampUseCase:
-                                                  jumpToNearestTimestampUseCase,
-                                            ),
-                                          ),
-                                ),
-                                _fullscreenActionButton(
-                                  icon: Icons.undo,
-                                  tooltip: 'Back',
-                                  onPressed: _isDeleteInProgress ||
-                                          state.navigationEntries.isEmpty
-                                      ? null
-                                      : () => unawaited(
-                                            controller.seekToNavigationOrigin(
-                                              state.navigationEntries.last.id,
-                                            ),
-                                          ),
-                                ),
-                                _fullscreenActionButton(
-                                  icon: Icons.stop_screen_share_outlined,
-                                  tooltip: 'Pause and minimize',
-                                  onPressed: _isDeleteInProgress
-                                      ? null
-                                      : () => unawaited(
-                                            _pauseAndMinimize(controller),
-                                          ),
-                                ),
-                                _fullscreenActionButton(
-                                  icon: Icons.picture_in_picture_alt_outlined,
-                                  tooltip: 'Minimize',
-                                  onPressed: _isDeleteInProgress
-                                      ? null
-                                      : () => unawaited(_minimizeApp()),
-                                ),
-                                _fullscreenActionButton(
-                                  icon: Icons.fullscreen_exit,
-                                  tooltip: 'Exit fullscreen',
-                                  onPressed: () =>
-                                      Navigator.of(context).maybePop(),
-                                ),
-                              ],
-                            ],
+    final bool isOverlayVisible =
+        _isScreenLocked ? _showLockedOverlay : _showControls;
+
+    return PopScope<Object?>(
+      // The window leaves fullscreen as the route starts closing, not once its animation is over.
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (didPop) {
+          _leaveWindowFullscreen();
+        }
+      },
+      child: PlayerKeyboardShortcuts(
+        focusNode: _keyboardFocusNode,
+        onTogglePlayback: _isScreenLocked
+            ? null
+            : () => unawaited(controller.togglePlayback()),
+        onToggleFullscreen: _closeFullscreen,
+        onExitFullscreen: _closeFullscreen,
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: SafeArea(
+            top: false,
+            bottom: false,
+            child: MouseRegion(
+              // The pointer is hidden together with the controls, so it does not sit over the video.
+              cursor: isOverlayVisible ? MouseCursor.defer : SystemMouseCursors.none,
+              onHover: _onPointerHover,
+              child: GestureDetector(
+                key: const Key('fullscreen-player-gesture-area'),
+                behavior: HitTestBehavior.opaque,
+                onTap: _isScreenLocked
+                    ? _showLockedOverlayAfterTap
+                    : () {
+                        _keyboardFocusNode.requestFocus();
+                        unawaited(controller.togglePlayback());
+                      },
+                onDoubleTap: _isScreenLocked
+                    ? null
+                    : () {
+                        _pointerControlsHideTimer?.cancel();
+                        setState(() {
+                          _showControls = !_showControls;
+                          if (!_showControls) {
+                            _isPointerOverControls = false;
+                          }
+                        });
+                      },
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    if (videoController != null &&
+                        videoController.value.isInitialized)
+                      FittedBox(
+                        fit: BoxFit.contain,
+                        child: SizedBox(
+                          width: videoController.value.size.width,
+                          height: videoController.value.size.height,
+                          child: VideoPlayer(videoController),
+                        ),
+                      )
+                    else
+                      const Center(child: CircularProgressIndicator()),
+                    if (videoController != null &&
+                        videoController.value.isInitialized)
+                      Positioned.fill(
+                          child: TranscriptCaptions(
+                              videoId: widget.videoId, controller: videoController)),
+                    if (state.isBuffering)
+                      const Positioned.fill(
+                        child: IgnorePointer(
+                          child: ColoredBox(
+                            color: Color(0x44000000),
+                            child: Center(child: CircularProgressIndicator()),
                           ),
-                          const SizedBox(height: 14),
-                          SliderTheme(
-                            data: SliderTheme.of(context).copyWith(
-                              disabledActiveTrackColor: Colors.white,
-                              disabledInactiveTrackColor: Colors.white24,
-                              disabledThumbColor: Colors.white,
-                            ),
-                            child: Slider(
-                              min: 0,
-                              max: maxSeconds,
-                              value: positionSeconds,
-                              onChanged: _isScreenLocked
-                                  ? null
-                                  : (double value) {
-                                      setState(() {
-                                        _dragSeconds = value;
-                                      });
-                                    },
-                              onChangeEnd: _isScreenLocked
-                                  ? null
-                                  : (double value) {
-                                      setState(() {
-                                        _dragSeconds = null;
-                                      });
-                                      unawaited(
-                                        controller.seek(
-                                          Duration(
-                                            milliseconds: (value * 1000)
-                                                .round(),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                            ),
-                          ),
-                          Row(
-                            children: <Widget>[
-                              Text(
-                                _formatDuration(state.position),
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                              const Spacer(),
-                              Text(
-                                _formatDuration(state.duration),
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
+                    if (isOverlayVisible)
+                      Positioned.fill(
+                        child: ColoredBox(
+                          color: const Color(0x33000000),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+                            child: Align(
+                              alignment: Alignment.bottomCenter,
+                              child: MouseRegion(
+                                // Controls under the pointer stay up while it rests on them.
+                                onEnter: (_) {
+                                  _isPointerOverControls = true;
+                                  _pointerControlsHideTimer?.cancel();
+                                },
+                                onExit: (_) {
+                                  _isPointerOverControls = false;
+                                  _restartPointerControlsTimer();
+                                },
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Wrap(
+                                      alignment: WrapAlignment.center,
+                                      spacing: 16,
+                                      runSpacing: 16,
+                                      children: <Widget>[
+                                        _fullscreenActionButton(
+                                          icon: _isScreenLocked
+                                              ? Icons.lock_open
+                                              : Icons.lock_outline,
+                                          tooltip: _isScreenLocked
+                                              ? 'Unlock screen'
+                                              : 'Lock screen',
+                                          onPressed: _toggleScreenLock,
+                                        ),
+                                        if (!_isScreenLocked) ...<Widget>[
+                                          _fullscreenActionButton(
+                                            icon: Icons.replay_10,
+                                            tooltip: 'Back 10s',
+                                            onPressed: () => unawaited(
+                                              controller.seekRelative(
+                                                const Duration(seconds: -10),
+                                              ),
+                                            ),
+                                          ),
+                                          _fullscreenActionButton(
+                                            icon: state.isPlaying
+                                                ? Icons.pause
+                                                : Icons.play_arrow,
+                                            tooltip: state.isPlaying ? 'Pause' : 'Play',
+                                            onPressed: controller.togglePlayback,
+                                          ),
+                                          _fullscreenActionButton(
+                                            icon: Icons.forward_10,
+                                            tooltip: 'Forward 10s',
+                                            onPressed: () => unawaited(
+                                              controller.seekRelative(
+                                                const Duration(seconds: 10),
+                                              ),
+                                            ),
+                                          ),
+                                          _fullscreenActionButton(
+                                            icon: Icons.bookmark_add_outlined,
+                                            tooltip: 'Add bookmark',
+                                            onPressed: _isDeleteInProgress
+                                                ? null
+                                                : () => unawaited(
+                                                    controller.addManualBookmark()),
+                                          ),
+                                          _fullscreenActionButton(
+                                            icon: Icons.skip_next,
+                                            tooltip: 'Next section',
+                                            onPressed: _isDeleteInProgress
+                                                ? null
+                                                : () => unawaited(
+                                                      _jumpToNearestTimestamp(
+                                                        context: context,
+                                                        controller: controller,
+                                                        currentPosition: state.position,
+                                                        timestamps: timestamps,
+                                                        jumpToNearestTimestampUseCase:
+                                                            jumpToNearestTimestampUseCase,
+                                                      ),
+                                                    ),
+                                          ),
+                                          _fullscreenActionButton(
+                                            icon: Icons.undo,
+                                            tooltip: 'Back',
+                                            onPressed: _isDeleteInProgress ||
+                                                    state.navigationEntries.isEmpty
+                                                ? null
+                                                : () => unawaited(
+                                                      controller.seekToNavigationOrigin(
+                                                        state.navigationEntries.last.id,
+                                                      ),
+                                                    ),
+                                          ),
+                                          _fullscreenActionButton(
+                                            icon: Icons.stop_screen_share_outlined,
+                                            tooltip: 'Pause and minimize',
+                                            onPressed: _isDeleteInProgress
+                                                ? null
+                                                : () => unawaited(
+                                                      _pauseAndMinimize(controller),
+                                                    ),
+                                          ),
+                                          _fullscreenActionButton(
+                                            icon: Icons.picture_in_picture_alt_outlined,
+                                            tooltip: 'Minimize',
+                                            onPressed: _isDeleteInProgress
+                                                ? null
+                                                : () => unawaited(_minimizeApp()),
+                                          ),
+                                          _fullscreenActionButton(
+                                            icon: Icons.fullscreen_exit,
+                                            tooltip: 'Exit fullscreen',
+                                            onPressed: () =>
+                                                Navigator.of(context).maybePop(),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 14),
+                                    SliderTheme(
+                                      data: SliderTheme.of(context).copyWith(
+                                        disabledActiveTrackColor: Colors.white,
+                                        disabledInactiveTrackColor: Colors.white24,
+                                        disabledThumbColor: Colors.white,
+                                      ),
+                                      child: Slider(
+                                        min: 0,
+                                        max: maxSeconds,
+                                        value: positionSeconds,
+                                        onChanged: _isScreenLocked
+                                            ? null
+                                            : (double value) {
+                                                setState(() {
+                                                  _dragSeconds = value;
+                                                });
+                                              },
+                                        onChangeEnd: _isScreenLocked
+                                            ? null
+                                            : (double value) {
+                                                setState(() {
+                                                  _dragSeconds = null;
+                                                });
+                                                unawaited(
+                                                  controller.seek(
+                                                    Duration(
+                                                      milliseconds: (value * 1000)
+                                                          .round(),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                      ),
+                                    ),
+                                    Row(
+                                      children: <Widget>[
+                                        Text(
+                                          _formatDuration(state.position),
+                                          style: const TextStyle(color: Colors.white),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          _formatDuration(state.duration),
+                                          style: const TextStyle(color: Colors.white),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-            ],
+              ),
+            ),
           ),
         ),
       ),
@@ -1524,6 +1675,42 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
     });
   }
 
+  void _closeFullscreen() {
+    unawaited(Navigator.of(context).maybePop());
+  }
+
+  /// A mouse moved over fullscreen: bring the controls up (or, while the screen is locked, the
+  /// unlock button) and hide them again once the pointer has rested for a while.
+  void _onPointerHover(PointerHoverEvent event) {
+    if (_isScreenLocked) {
+      if (!_showLockedOverlay) {
+        _showLockedOverlayAfterTap();
+      }
+      return;
+    }
+    if (!_showControls) {
+      setState(() {
+        _showControls = true;
+      });
+    }
+    _restartPointerControlsTimer();
+  }
+
+  void _restartPointerControlsTimer() {
+    _pointerControlsHideTimer?.cancel();
+    if (_isScreenLocked || _isPointerOverControls) {
+      return;
+    }
+    _pointerControlsHideTimer = Timer(_pointerControlsHideDelay, () {
+      if (!mounted || _isScreenLocked || _isPointerOverControls) {
+        return;
+      }
+      setState(() {
+        _showControls = false;
+      });
+    });
+  }
+
   Future<void> _pauseAndMinimize(PlayerController controller) async {
     await controller.pause();
     await _minimizeApp();
@@ -1531,6 +1718,8 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
 
   void _toggleScreenLock() {
     final bool wasLocked = _isScreenLocked;
+    _pointerControlsHideTimer?.cancel();
+    _isPointerOverControls = false;
     setState(() {
       _isScreenLocked = !_isScreenLocked;
       _dragSeconds = null;

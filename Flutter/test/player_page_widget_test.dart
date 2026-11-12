@@ -1,4 +1,4 @@
-import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
+import 'package:flutter/gestures.dart' show PointerDeviceKind, kDoubleTapTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +22,7 @@ import 'package:localtube_flutter/features/player/domain/usecases/extract_timest
 import 'package:localtube_flutter/features/player/domain/usecases/jump_to_nearest_timestamp_use_case.dart';
 import 'package:localtube_flutter/features/player/presentation/player_page.dart';
 import 'package:localtube_flutter/features/player/presentation/player_controller.dart';
+import 'package:localtube_flutter/features/player/presentation/player_window_fullscreen.dart';
 import 'package:localtube_flutter/features/sync/domain/sync_models.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:video_player/video_player.dart';
@@ -36,12 +37,15 @@ class MockPlayerController extends StateNotifier<PlayerUiState>
   int pauseCallCount = 0;
   int togglePlaybackCallCount = 0;
 
+  /// The video this player shows, when a test needs one on screen.
+  VideoPlayerController? fakeVideoController;
+
   void updatePosition(Duration position) {
     state = state.copyWith(position: position);
   }
 
   @override
-  VideoPlayerController? get videoController => null;
+  VideoPlayerController? get videoController => fakeVideoController;
 
   @override
   Future<void> togglePlayback() async {
@@ -1209,6 +1213,212 @@ void main() {
       await tester.tapAt(playerCenter);
       await tester.pump(const Duration(milliseconds: 350));
       expect(mockController.togglePlaybackCallCount, 1);
+    },
+  );
+
+  /// A 1920x1080 video that is ready to play. It never reaches a platform player: the page only
+  /// reads its size, and an uninitialized player id renders nothing.
+  VideoPlayerController initializedVideo() {
+    final VideoPlayerController video = VideoPlayerController.networkUrl(
+      Uri.parse('https://example.invalid/video.mp4'),
+    );
+    video.value = const VideoPlayerValue(
+      duration: Duration(minutes: 10),
+      size: Size(1920, 1080),
+      isInitialized: true,
+    );
+    return video;
+  }
+
+  void setWindowSize(WidgetTester tester, Size size) {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+  }
+
+  /// Records what the player asks of the Windows window.
+  List<MethodCall> recordWindowCalls() {
+    final List<MethodCall> calls = <MethodCall>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(PlayerWindowFullscreen.channel,
+            (MethodCall call) async {
+      calls.add(call);
+      return true;
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(PlayerWindowFullscreen.channel, null);
+    });
+    return calls;
+  }
+
+  /// Lets a route transition finish. Fullscreen without a video shows an endless spinner, so it
+  /// never settles on its own.
+  Future<void> finishTransition(WidgetTester tester) async {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+  }
+
+  Future<void> pressCtrlF(WidgetTester tester) async {
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await finishTransition(tester);
+  }
+
+  testWidgets(
+    'the video and its controls fit the window without scrolling and follow its size',
+    (WidgetTester tester) async {
+      addTearDown(tester.view.reset);
+      setWindowSize(tester, const Size(1280, 720));
+      final MockPlayerController controller = buildLocalPlayer()
+        ..fakeVideoController = initializedVideo();
+
+      await tester.pumpWidget(
+        buildPlayerPage(videoId: '42', controller: controller),
+      );
+      await tester.pumpAndSettle();
+
+      void expectFitsWindow(double windowHeight) {
+        final Rect video = tester.getRect(find.byKey(playerVideoSurfaceKey));
+        expect(video.top, greaterThanOrEqualTo(0));
+        expect(video.width / video.height, closeTo(16 / 9, 0.01));
+        for (final String tooltip in <String>[
+          'Back 10s',
+          'Forward 10s',
+          'Add bookmark',
+          'Delete',
+          'Fullscreen',
+          'Share',
+        ]) {
+          expect(
+            tester.getRect(find.byTooltip(tooltip)).bottom,
+            lessThanOrEqualTo(windowHeight),
+            reason: '$tooltip is below the window',
+          );
+        }
+        expect(
+          tester.getRect(find.text('Pause')).bottom,
+          lessThanOrEqualTo(windowHeight),
+        );
+      }
+
+      expectFitsWindow(720);
+      final double heightAt720 =
+          tester.getSize(find.byKey(playerVideoSurfaceKey)).height;
+      // The full width would make the video 711px tall and push the controls off the window.
+      expect(heightAt720, lessThan(500));
+
+      setWindowSize(tester, const Size(1600, 1000));
+      await tester.pumpAndSettle();
+      expectFitsWindow(1000);
+      expect(
+        tester.getSize(find.byKey(playerVideoSurfaceKey)).height,
+        greaterThan(heightAt720),
+      );
+    },
+  );
+
+  testWidgets(
+    'Ctrl+F puts the Windows window in fullscreen and takes it back out',
+    (WidgetTester tester) async {
+      final List<MethodCall> windowCalls = recordWindowCalls();
+      await tester.pumpWidget(
+        buildPlayerPage(videoId: '42', controller: buildLocalPlayer()),
+      );
+      await tester.pumpAndSettle();
+      final Finder fullscreen = find.byKey(
+        const Key('fullscreen-player-gesture-area'),
+      );
+
+      await pressCtrlF(tester);
+      expect(fullscreen, findsOneWidget);
+      expect(
+        windowCalls.map((MethodCall call) => call.method).toList(),
+        <String>['setFullScreen'],
+      );
+      expect(windowCalls.single.arguments, isTrue);
+
+      await pressCtrlF(tester);
+      expect(fullscreen, findsNothing);
+      expect(
+        windowCalls.map((MethodCall call) => call.arguments).toList(),
+        <Object?>[true, false],
+      );
+
+      // The page has the keyboard back: Ctrl+F opens fullscreen again, and Escape leaves it.
+      await pressCtrlF(tester);
+      expect(fullscreen, findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await finishTransition(tester);
+      expect(fullscreen, findsNothing);
+      expect(
+        windowCalls.map((MethodCall call) => call.arguments).toList(),
+        <Object?>[true, false, true, false],
+      );
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'other platforms leave the window alone in fullscreen',
+    (WidgetTester tester) async {
+      final List<MethodCall> windowCalls = recordWindowCalls();
+      await tester.pumpWidget(
+        buildPlayerPage(videoId: '42', controller: buildLocalPlayer()),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Fullscreen'));
+      await finishTransition(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await finishTransition(tester);
+
+      expect(find.byKey(const Key('fullscreen-player-gesture-area')), findsNothing);
+      expect(windowCalls, isEmpty);
+    },
+  );
+
+  testWidgets('Space plays or pauses on the page and in fullscreen',
+      (WidgetTester tester) async {
+    final MockPlayerController controller = buildLocalPlayer();
+    await tester.pumpWidget(
+      buildPlayerPage(videoId: '42', controller: controller),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    expect(controller.togglePlaybackCallCount, 1);
+
+    await tester.tap(find.byTooltip('Fullscreen'));
+    await finishTransition(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    expect(controller.togglePlaybackCallCount, 2);
+  });
+
+  testWidgets(
+    'a mouse brings the fullscreen controls up and they go once it rests',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        buildPlayerPage(videoId: '42', controller: buildLocalPlayer()),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Fullscreen'));
+      await finishTransition(tester);
+      expect(find.byTooltip('Exit fullscreen'), findsNothing);
+
+      final TestGesture mouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+      );
+      await mouse.addPointer(location: const Offset(400, 40));
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(const Offset(420, 50));
+      await tester.pump();
+      expect(find.byTooltip('Exit fullscreen'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 4));
+      expect(find.byTooltip('Exit fullscreen'), findsNothing);
     },
   );
 }

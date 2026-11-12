@@ -1,8 +1,22 @@
 #include "flutter_window.h"
 
+#include <flutter/standard_method_codec.h>
+
 #include <optional>
+#include <string>
+#include <variant>
 
 #include "flutter/generated_plugin_registrant.h"
+
+namespace {
+
+// Fullscreen for the player: the window itself, not only the Flutter view.
+constexpr char kWindowChannel[] = "org.localtube.app/window";
+
+// The channel the player already uses on Android to send the app away.
+constexpr char kAppControlChannel[] = "org.localtube.app/app_control";
+
+}  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -25,6 +39,29 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  window_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), kWindowChannel,
+          &flutter::StandardMethodCodec::GetInstance());
+  window_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) { HandleWindowMethodCall(call, std::move(result)); });
+  app_control_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), kAppControlChannel,
+          &flutter::StandardMethodCodec::GetInstance());
+  app_control_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        if (call.method_name() == "moveToBackground") {
+          ShowWindow(GetHandle(), SW_MINIMIZE);
+          result->Success();
+          return;
+        }
+        result->NotImplemented();
+      });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -40,6 +77,8 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  window_channel_ = nullptr;
+  app_control_channel_ = nullptr;
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -51,6 +90,21 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  const LRESULT result = HandleMessage(hwnd, message, wparam, lparam);
+  switch (message) {
+    // Win32Window and Windows resize the window for a new DPI or display
+    // layout as if it still had a frame; fullscreen covers the monitor again.
+    case WM_DPICHANGED:
+    case WM_DISPLAYCHANGE:
+      fullscreen_.FitToMonitor(hwnd);
+      break;
+  }
+  return result;
+}
+
+LRESULT FlutterWindow::HandleMessage(HWND hwnd, UINT const message,
+                                     WPARAM const wparam,
+                                     LPARAM const lparam) noexcept {
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =
@@ -68,4 +122,28 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
+}
+
+void FlutterWindow::HandleWindowMethodCall(
+    const flutter::MethodCall<flutter::EncodableValue>& call,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+  const std::string& method = call.method_name();
+  if (method == "setFullScreen") {
+    const auto* fullscreen = std::get_if<bool>(call.arguments());
+    if (fullscreen == nullptr) {
+      result->Error("invalid_arguments", "setFullScreen expects a bool");
+      return;
+    }
+    if (!fullscreen_.Set(GetHandle(), *fullscreen)) {
+      result->Error("unavailable", "The window could not change fullscreen");
+      return;
+    }
+    result->Success(flutter::EncodableValue(fullscreen_.IsFullscreen()));
+    return;
+  }
+  if (method == "isFullScreen") {
+    result->Success(flutter::EncodableValue(fullscreen_.IsFullscreen()));
+    return;
+  }
+  result->NotImplemented();
 }
