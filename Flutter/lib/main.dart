@@ -9,7 +9,6 @@ import 'app/app.dart';
 import 'app/bootstrap/app_bootstrap.dart';
 import 'app/bootstrap/bootstrap_providers.dart';
 import 'core/config/server_connection.dart';
-import 'core/playback/initialize_video_playback.dart';
 import 'core/storage/secure_storage_service.dart';
 import 'features/server_connection/presentation/server_connection_page.dart';
 import 'app/cast/cast_receiver_player_host.dart';
@@ -31,7 +30,6 @@ Future<void> runLocalTubeApp({
   await runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
-      initializeVideoPlayback();
       await _initializeMediaControls();
       runApp(_ConfiguredApplication(
         environment: environmentOverride,

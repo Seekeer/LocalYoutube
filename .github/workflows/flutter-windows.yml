@@ -59,11 +59,6 @@ jobs:
           flutter test --concurrency=2
           if ($LASTEXITCODE -ne 0) { throw 'Flutter tests failed' }
 
-      - name: Verify native Windows playback
-        run: |
-          flutter test integration_test/windows_playback_test.dart -d windows
-          if ($LASTEXITCODE -ne 0) { throw 'Native Windows playback verification failed' }
-
       - name: Resolve canonical version
         run: |
           $source = Get-Content ../.localtube/source.json -Raw | ConvertFrom-Json

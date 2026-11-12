@@ -53,6 +53,6 @@ void main() {
     final entries = await Directory('${directory.path}/transcripts/server-a')
         .list()
         .toList();
-    expect(entries.map((entry) => entry.uri.pathSegments.last), ['42.json']);
+    expect(entries.map((entry) => entry.path.split('/').last), ['42.json']);
   });
 }

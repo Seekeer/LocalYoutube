@@ -71,9 +71,7 @@ class TranscriptRepository {
     try {
       final File temporary = File('${staging.path}/transcript.json');
       await temporary.writeAsString(jsonEncode(payload));
-      // Windows cannot replace a file while another asynchronous rename holds it.
-      // Complete this short local operation before another writer can start.
-      temporary.renameSync(file.path);
+      await temporary.rename(file.path);
     } finally {
       await staging.delete(recursive: true);
     }

@@ -169,7 +169,7 @@ void main() {
 
     expect(stored.status, DownloadStatus.completed);
     expect(stored.progress, 1);
-    expect(File(stored.localPath!).uri, file.uri);
+    expect(stored.localPath, file.path);
     expect(stored.taskId, isNull);
     expect(snapshots.last.single.status, DownloadStatus.completed);
     verifyNever(() => logs.error(any(), any(), any()));
