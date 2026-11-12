@@ -88,7 +88,8 @@ void main() {
           expect(initializationError, isNull);
           expect(initialized, isTrue, reason: 'Video initialization timed out');
           await initialization;
-          expect(controller.value.isInitialized, isTrue);
+          expect(controller.value.isInitialized, isTrue,
+              reason: controller.value.errorDescription);
           expect(controller.value.size, const Size(160, 90));
           expect(controller.value.duration, greaterThan(Duration.zero));
           await tester.runAsync(() async {
