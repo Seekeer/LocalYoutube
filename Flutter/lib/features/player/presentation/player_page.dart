@@ -177,7 +177,8 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       // The same screen now shows another video, so its place on the stack names that video.
       final Object? previousToken = _screenToken;
       final PlayerScreenStack screens =
-          _screens ??= ref.read(playerScreenStackProvider);
+          _screens ?? ref.read(playerScreenStackProvider);
+      _screens = screens;
       final int? videoId = _resolvedVideoId;
       _screenToken =
           videoId != null && videoId > 0 ? screens.enter(videoId) : null;
