@@ -71,11 +71,26 @@ class TranscriptRepository {
     try {
       final File temporary = File('${staging.path}/transcript.json');
       await temporary.writeAsString(jsonEncode(payload));
-      await temporary.rename(file.path);
+      await _replace(temporary, file);
     } finally {
       await staging.delete(recursive: true);
     }
     return transcript;
+  }
+
+  // Windows refuses to replace a file that another load is replacing or
+  // reading at the same moment ("Access is denied"); POSIX never does. Such
+  // a concurrent writer stores the same server text, so retry briefly.
+  static Future<void> _replace(File temporary, File target) async {
+    for (int attempt = 1;; attempt++) {
+      try {
+        await temporary.rename(target.path);
+        return;
+      } on FileSystemException {
+        if (attempt >= 10) rethrow;
+        await Future<void>.delayed(Duration(milliseconds: 20 * attempt));
+      }
+    }
   }
 
   Future<String> srt(int id) async {

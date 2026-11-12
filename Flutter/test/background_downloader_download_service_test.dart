@@ -112,8 +112,10 @@ void main() {
     final Directory directory =
         await Directory.systemTemp.createTemp('download_completion_');
     addTearDown(() => directory.delete(recursive: true));
-    final File file = await File('${directory.path}/video.webm')
-        .writeAsBytes(<int>[1, 2, 3]);
+    // The service stores task.filePath(), which uses the platform separator.
+    final File file =
+        await File('${directory.path}${Platform.pathSeparator}video.webm')
+            .writeAsBytes(<int>[1, 2, 3]);
     final DownloadTask task = DownloadTask(
       taskId: 'completion-race',
       url: 'https://example.com/video.webm',
