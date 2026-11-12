@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fvp/fvp.dart' as fvp;
 
 import 'app/app.dart';
 import 'app/bootstrap/app_bootstrap.dart';
@@ -30,6 +31,7 @@ Future<void> runLocalTubeApp({
   await runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+      _registerDesktopVideoBackend();
       await _initializeMediaControls();
       runApp(_ConfiguredApplication(
         environment: environmentOverride,
@@ -84,6 +86,18 @@ void _installCrashHandlers(CrashReporter crashReporter) {
     );
     return true;
   };
+}
+
+/// `video_player` ships no Windows implementation, so without this every
+/// controller fails with "init() has not been implemented". Android keeps the
+/// official ExoPlayer backend.
+void _registerDesktopVideoBackend() {
+  if (!Platform.isWindows) {
+    return;
+  }
+  fvp.registerWith(options: <String, Object>{
+    'platforms': <String>['windows'],
+  });
 }
 
 Future<void> _initializeMediaControls() async {

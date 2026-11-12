@@ -30,6 +30,8 @@ dependencies:
   just_audio_background: ^0.0.1-beta.17
   audio_service: ^0.18.18
   video_player: ^2.9.2
+  # video_player has no Windows implementation; fvp (libmdk) plays video there.
+  fvp: ^0.40.0
 
 dev_dependencies:
   flutter_test:
