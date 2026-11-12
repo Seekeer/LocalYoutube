@@ -67,15 +67,30 @@ void main() {
         ),
       ]) {
         try {
-          await tester.runAsync(() =>
-              controller.initialize().timeout(const Duration(seconds: 30)));
-          expect(controller.value.isInitialized, isTrue);
-          expect(controller.value.size, const Size(160, 90));
-          expect(controller.value.duration, greaterThan(Duration.zero));
           await tester.pumpWidget(MaterialApp(
             home: Scaffold(body: VideoPlayer(controller)),
           ));
-          await tester.pump();
+          Object? initializationError;
+          bool initialized = false;
+          final initialization = controller.initialize().then((_) {
+            initialized = true;
+          }, onError: (Object error) {
+            initializationError = error;
+          });
+          final deadline = DateTime.now().add(const Duration(seconds: 30));
+          // Media Kit attaches its native video output after a Flutter frame.
+          // Keep rendering while initialization waits for that output.
+          while (!initialized &&
+              initializationError == null &&
+              DateTime.now().isBefore(deadline)) {
+            await tester.pump(const Duration(milliseconds: 100));
+          }
+          expect(initializationError, isNull);
+          expect(initialized, isTrue, reason: 'Video initialization timed out');
+          await initialization;
+          expect(controller.value.isInitialized, isTrue);
+          expect(controller.value.size, const Size(160, 90));
+          expect(controller.value.duration, greaterThan(Duration.zero));
           await tester.runAsync(() async {
             await controller.play();
             final deadline = DateTime.now().add(const Duration(seconds: 15));
