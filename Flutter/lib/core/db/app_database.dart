@@ -2,7 +2,8 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:path_provider/path_provider.dart';
+
+import '../config/windows_edition.dart';
 
 class AppDatabase {
   AppDatabase({QueryExecutor? executor, String fileName = 'localtube_app.db'})
@@ -11,7 +12,7 @@ class AppDatabase {
               LazyDatabase(
                 () async {
                   final Directory directory =
-                      await getApplicationDocumentsDirectory();
+                      await applicationDocumentsDirectory();
                   final File file = File(
                     '${directory.path}${Platform.pathSeparator}$fileName',
                   );

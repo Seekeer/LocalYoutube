@@ -1,3 +1,7 @@
+/// Windows has no package identity; CI-built portable bundles use these IDs.
+const String windowsApplicationId = 'localtube.windows';
+const String windowsPreviewApplicationId = 'localtube.windows.preview';
+
 class InstalledApp {
   const InstalledApp(this.applicationId, this.versionCode, this.versionName);
 
@@ -12,8 +16,19 @@ class InstalledApp {
         const String.fromEnvironment('LOCALTUBE_STABLE_APPLICATION_ID',
               defaultValue: 'org.localtube.app.stable') =>
           'stable',
+        windowsApplicationId => 'windows-stable',
+        windowsPreviewApplicationId => 'windows-preview',
         _ => null,
       };
+
+  String get channelLabel => switch (channel) {
+        'preview' => 'Preview',
+        'windows-stable' => 'Windows Stable',
+        'windows-preview' => 'Windows Preview',
+        _ => 'Stable',
+      };
+
+  bool get isWindows => channel?.startsWith('windows-') ?? false;
 }
 
 class AvailableUpdate {

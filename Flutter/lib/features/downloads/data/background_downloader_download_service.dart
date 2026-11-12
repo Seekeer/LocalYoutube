@@ -5,6 +5,7 @@ import 'package:background_downloader/background_downloader.dart';
 
 import '../../../core/auth/token_repository.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/config/windows_edition.dart';
 import '../../../core/logging/log_service.dart';
 import '../../../core/network/api_route.dart';
 import '../domain/download_models.dart';
@@ -386,8 +387,8 @@ class BackgroundDownloaderDownloadService implements DownloadService {
       url: requestUri.toString(),
       filename: _buildDownloadFilename(videoId: videoId, title: title),
       directory: _appConfig.serverStorageNamespace.isEmpty
-          ? 'downloads'
-          : 'downloads/${_appConfig.serverStorageNamespace}',
+          ? '${documentsSubdirectoryPrefix}downloads'
+          : '${documentsSubdirectoryPrefix}downloads/${_appConfig.serverStorageNamespace}',
       group: _taskGroup,
       baseDirectory: BaseDirectory.applicationDocuments,
       headers: headers,

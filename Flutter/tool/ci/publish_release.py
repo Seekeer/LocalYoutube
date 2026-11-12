@@ -5,13 +5,18 @@ from pathlib import Path
 import subprocess
 import zipfile
 
+BUNDLES = {'update.zip': ['manifest.json', 'update.apk'],
+           'windows-update.zip': ['localtube-windows-x64.zip', 'manifest.json']}
+
 
 def publish(prefix, files, prerelease=True, bundle='results.zip'):
     files = [Path(path) for path in files if Path(path).is_file()]
     if not files:
         raise ValueError('No files to publish')
-    if bundle == 'update.zip' and sorted(path.name for path in files) != ['manifest.json', 'update.apk']:
-        raise ValueError('Expected exactly manifest.json and update.apk')
+    # Delivery reads fixed bundle members; refuse anything else before creating a release.
+    expected = BUNDLES.get(bundle)
+    if expected is not None and sorted(path.name for path in files) != expected:
+        raise ValueError('Expected exactly ' + ' and '.join(expected))
     archive = Path(os.environ['RUNNER_TEMP']) / bundle
     with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as output:
         for path in files:

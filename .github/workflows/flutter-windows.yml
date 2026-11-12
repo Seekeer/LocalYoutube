@@ -1,5 +1,6 @@
 name: Flutter Windows Release
-run-name: Windows release · ${{ github.sha }}
+# Delivery recognises builds by this exact title; keep "Windows stable · <sha>".
+run-name: Windows stable · ${{ github.sha }}
 
 on:
   workflow_dispatch:
@@ -21,6 +22,8 @@ jobs:
     env:
       LOCALTUBE_BINARY_NAME: localtube
       LOCALTUBE_PRODUCT_NAME: localtube
+      UPDATE_CHANNEL: windows-stable
+      WINDOWS_APPLICATION_ID: localtube.windows
     defaults:
       run:
         working-directory: Flutter
@@ -74,31 +77,58 @@ jobs:
           flutter build windows --release --target lib/main_stage.dart `
             --dart-define-from-file=config/env/stage.json `
             --dart-define=LOCALTUBE_REQUIRE_SERVER_CONFIG=true `
+            --dart-define=LOCALTUBE_WINDOWS_VERSION_CODE="$env:BUILD_NUMBER" `
+            --dart-define=LOCALTUBE_WINDOWS_VERSION_NAME="$env:VERSION_NAME" `
+            --dart-define=LOCALTUBE_WINDOWS_UPDATE_CHANNEL="$env:UPDATE_CHANNEL" `
             --build-name="$env:VERSION_NAME" --build-number="$env:BUILD_NUMBER"
           if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
 
-      - name: Package portable Windows application
+      # The ZIP is both the portable download and the in-app update package. Python
+      # writes portable "/" member names; localtube-update.json records its identity.
+      - name: Package Windows update and delivery manifest
+        shell: python
         run: |
-          $releasePath = Join-Path $PWD 'build/windows/x64/runner/Release'
-          if (-not (Test-Path "$releasePath/localtube.exe") -or
-              -not (Test-Path "$releasePath/data") -or
-              -not (Test-Path "$releasePath/flutter_windows.dll")) {
-            throw 'Windows application bundle is incomplete'
-          }
-          $archive = Join-Path $env:RUNNER_TEMP 'localtube-windows-x64.zip'
-          Compress-Archive -Path "$releasePath/*" -DestinationPath $archive -Force
-          "WINDOWS_ARCHIVE=$archive" >> $env:GITHUB_ENV
+          import hashlib, json, os, zipfile
+          from pathlib import Path
+          release = Path('build/windows/x64/runner/Release')
+          required = ['localtube.exe', 'flutter_windows.dll', 'data/app.so', 'data/icudtl.dat']
+          missing = [name for name in required if not (release / name).is_file()]
+          if missing:
+              raise SystemExit('Windows application bundle is incomplete: ' + ', '.join(missing))
+          if (release / 'localtube-update.json').exists():
+              raise SystemExit('Unexpected identity file in the build output')
+          code, name = int(os.environ['BUILD_NUMBER']), os.environ['VERSION_NAME']
+          channel, application = os.environ['UPDATE_CHANNEL'], os.environ['WINDOWS_APPLICATION_ID']
+          delivery = Path('../delivery')
+          delivery.mkdir(exist_ok=True)
+          package = delivery / 'localtube-windows-x64.zip'
+          with zipfile.ZipFile(package, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+              for path in sorted(release.rglob('*')):
+                  if path.is_file():
+                      archive.write(path, path.relative_to(release).as_posix())
+              archive.writestr('localtube-update.json', json.dumps({
+                  'schemaVersion': 1, 'channel': channel, 'applicationId': application,
+                  'versionCode': code, 'versionName': name}, indent=2) + '\n')
+          # The runner's default Python may predate hashlib.file_digest.
+          hasher = hashlib.sha256()
+          with package.open('rb') as stream:
+              for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                  hasher.update(chunk)
+          digest = hasher.hexdigest()
+          source = json.loads(Path('../.localtube/source.json').read_text())
+          metadata = {'channel': channel, 'applicationId': application, 'versionCode': code,
+                      'versionName': name, 'size': package.stat().st_size, 'sha256': digest,
+                      'artifactId': f'{code}-{digest}'}
+          manifest = {'schemaVersion': 1, 'repository': os.environ['GITHUB_REPOSITORY'],
+                      'githubCommit': os.environ['GITHUB_SHA'], 'sourceCommit': source['sourceCommit'],
+                      'runId': int(os.environ['GITHUB_RUN_ID']), 'runAttempt': int(os.environ['GITHUB_RUN_ATTEMPT']),
+                      'channel': channel, 'package': metadata}
+          (delivery / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
 
       - name: Publish Windows GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "localtube-windows-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
-          $notes = "CI run: https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
-          gh release create $tag --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA `
-            --draft --latest=false --title "LocalTube Windows $env:VERSION_NAME" --notes $notes
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to create draft release' }
-          gh release upload $tag $env:WINDOWS_ARCHIVE --repo $env:GITHUB_REPOSITORY
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to upload Windows archive' }
-          gh release edit $tag --draft=false --latest=false --repo $env:GITHUB_REPOSITORY
+          python tool/ci/publish_release.py --prefix "localtube-$env:UPDATE_CHANNEL" --stable `
+            --bundle windows-update.zip ../delivery/localtube-windows-x64.zip ../delivery/manifest.json
           if ($LASTEXITCODE -ne 0) { throw 'Failed to publish Windows release' }

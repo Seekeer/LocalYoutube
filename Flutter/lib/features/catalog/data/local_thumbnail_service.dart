@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:path_provider/path_provider.dart';
 
+import '../../../core/config/windows_edition.dart';
 import '../../../core/logging/log_service.dart';
 import '../domain/catalog_models.dart';
 import 'local_video_metadata_repository.dart';
@@ -35,7 +35,7 @@ class LocalThumbnailService {
     }
 
     try {
-      final Directory root = await getApplicationDocumentsDirectory();
+      final Directory root = await applicationDocumentsDirectory();
       final Directory thumbnailsDir = Directory(
         '${root.path}${Platform.pathSeparator}thumbnails/$_storageNamespace',
       );

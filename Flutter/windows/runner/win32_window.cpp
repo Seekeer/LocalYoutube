@@ -29,6 +29,31 @@ constexpr const wchar_t kGetPreferredBrightnessRegValue[] = L"AppsUseLightTheme"
 // The number of Win32Window objects that currently exist.
 static int g_active_window_count = 0;
 
+// Sets the title bar, taskbar and Alt+Tab icons from the multi-size application
+// icon at the current DPI. The class icon alone is a 32px image that Windows
+// upscales on high-DPI monitors.
+void UpdateWindowIcons(HWND window, UINT dpi) {
+  const HINSTANCE instance = GetModuleHandle(nullptr);
+  const struct {
+    WPARAM type;
+    int size;
+  } icons[] = {{ICON_BIG, MulDiv(32, dpi, 96)}, {ICON_SMALL, MulDiv(16, dpi, 96)}};
+  for (const auto& icon : icons) {
+    auto handle = static_cast<HICON>(
+        LoadImage(instance, MAKEINTRESOURCE(IDI_APP_ICON), IMAGE_ICON,
+                  icon.size, icon.size, LR_DEFAULTCOLOR));
+    if (!handle) {
+      continue;
+    }
+    // Only this function sets window icons, so a previous one is ours to free.
+    auto previous = reinterpret_cast<HICON>(SendMessage(
+        window, WM_SETICON, icon.type, reinterpret_cast<LPARAM>(handle)));
+    if (previous) {
+      DestroyIcon(previous);
+    }
+  }
+}
+
 using EnableNonClientDpiScaling = BOOL __stdcall(HWND hwnd);
 
 // Scale helper to convert logical scaler values to physical using passed in
@@ -145,6 +170,7 @@ bool Win32Window::Create(const std::wstring& title,
   }
 
   UpdateTheme(window);
+  UpdateWindowIcons(window, dpi);
 
   return OnCreate();
 }
@@ -194,6 +220,7 @@ Win32Window::MessageHandler(HWND hwnd,
 
       SetWindowPos(hwnd, nullptr, newRectSize->left, newRectSize->top, newWidth,
                    newHeight, SWP_NOZORDER | SWP_NOACTIVATE);
+      UpdateWindowIcons(hwnd, HIWORD(wparam));
 
       return 0;
     }
