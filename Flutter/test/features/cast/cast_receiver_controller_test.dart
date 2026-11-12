@@ -531,7 +531,7 @@ void main() {
     expect(harness.controller.state.phase, CastReceiverPhase.idle);
   });
 
-  group('The cast video is somebody else's viewing', () {
+  group("The cast video is somebody else's viewing", () {
     test('it is held back from this account from the commit on', () async {
       final _ReceiverHarness harness = _ReceiverHarness.start(
         playing: const CastLocalPlayback(
