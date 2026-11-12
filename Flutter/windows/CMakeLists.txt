@@ -2,14 +2,8 @@
 cmake_minimum_required(VERSION 3.14)
 project(localtube_flutter LANGUAGES CXX)
 
-# The name of the executable created for the application.
-# Can be overridden in CI via LOCALTUBE_BINARY_NAME environment variable.
-set(BINARY_NAME_FROM_ENV $ENV{LOCALTUBE_BINARY_NAME})
-if(BINARY_NAME_FROM_ENV)
-  set(BINARY_NAME "${BINARY_NAME_FROM_ENV}")
-else()
-  set(BINARY_NAME "localtube")
-endif()
+# Flutter tooling reads this literal to locate the executable for run/test.
+set(BINARY_NAME "localtube")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
