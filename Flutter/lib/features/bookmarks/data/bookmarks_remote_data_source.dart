@@ -44,6 +44,24 @@ class BookmarksRemoteDataSource {
     return _parseBookmarkId(response.data);
   }
 
+  Future<void> update({
+    required int bookmarkId,
+    required int videoId,
+    required double positionSeconds,
+    required String caption,
+  }) async {
+    await _dio.post<dynamic>(
+      '/marks/update',
+      data: <String, dynamic>{
+        'id': bookmarkId,
+        'dbFileId': videoId,
+        'position': positionSeconds,
+        'caption': caption,
+      },
+      options: Options(extra: <String, dynamic>{'idempotent': true}),
+    );
+  }
+
   Future<void> delete(int bookmarkId) async {
     await _dio.delete<dynamic>(
       '/marks/$bookmarkId',

@@ -360,6 +360,9 @@ class AppBootstrap {
       playbackSyncRepository: playbackSyncRepository,
       logService: logService,
       cacheTranscripts: downloadedTranscripts.sync,
+      // Note Drafts are bound by AppSyncLifecycleListener to
+      // notesRepositoryProvider, whose offline check includes the manual
+      // Autonomous Mode that only the provider scope knows.
     );
 
     logService.info(

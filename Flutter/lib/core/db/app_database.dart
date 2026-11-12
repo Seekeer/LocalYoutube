@@ -200,6 +200,65 @@ class AppDatabase {
       ''',
     );
 
+    // Video notes: Drafts stay on the device until the person confirms them,
+    // and the last known notes of a video are kept for read-only offline use.
+    await _database.customStatement(
+      '''
+      CREATE TABLE IF NOT EXISTS note_drafts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account TEXT NOT NULL DEFAULT '',
+        video_id INTEGER NOT NULL,
+        kind TEXT NOT NULL,
+        status TEXT NOT NULL,
+        text TEXT NOT NULL DEFAULT '',
+        clip_path TEXT NOT NULL DEFAULT '',
+        error TEXT NOT NULL DEFAULT '',
+        title TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+      ''',
+    );
+
+    await _database.customStatement(
+      '''
+      CREATE TABLE IF NOT EXISTS notes_cache (
+        cache_key TEXT PRIMARY KEY,
+        payload_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+      ''',
+    );
+
+    // Drafts and cached notes are private to an account. Installs that
+    // created note_drafts before the column existed get it once; their rows
+    // have no known owner, so no account sees them, and the unowned cache
+    // is dropped (it is only a copy of server data).
+    final List<QueryRow> noteDraftColumns = await _database
+        .customSelect('PRAGMA table_info(note_drafts)')
+        .get();
+    final bool hasDraftAccount = noteDraftColumns
+        .any((QueryRow column) => column.data['name'] == 'account');
+    if (!hasDraftAccount) {
+      await _database.customStatement(
+        "ALTER TABLE note_drafts ADD COLUMN account TEXT NOT NULL DEFAULT ''",
+      );
+      await _database.customStatement('DELETE FROM notes_cache');
+    }
+
+    await _database.customStatement(
+      '''
+      CREATE INDEX IF NOT EXISTS idx_note_drafts_video
+      ON note_drafts(video_id, id)
+      ''',
+    );
+    await _database.customStatement(
+      '''
+      CREATE INDEX IF NOT EXISTS idx_note_drafts_account
+      ON note_drafts(account, video_id, id)
+      ''',
+    );
+
     await _database.customStatement(
       '''
       CREATE INDEX IF NOT EXISTS idx_videos_cache_section_updated

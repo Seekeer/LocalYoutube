@@ -104,6 +104,50 @@ void main() {
     expect(outbox, isEmpty);
     expect(await repository.listLocalForVideo(77), isEmpty);
   });
+
+  test('caption edited offline is kept locally and synced later', () async {
+    await repository.addBookmark(
+      videoId: 5,
+      positionSeconds: 30,
+      caption: '(bookmark)',
+    );
+    final int id = (await repository.listLocalForVideo(5)).single.id;
+    expect(id, greaterThan(0));
+
+    remoteDataSource.failUpdate = true;
+    await repository.updateCaption(bookmarkId: id, caption: 'Важная мысль');
+    expect((await repository.listLocalForVideo(5)).single.caption,
+        'Важная мысль');
+    expect(await localSyncOutboxRepository.listPending(limit: 100),
+        hasLength(1));
+
+    remoteDataSource.failUpdate = false;
+    await repository.loadForVideo(5);
+
+    expect(await localSyncOutboxRepository.listPending(limit: 100), isEmpty);
+    expect(remoteDataSource.captionOf(id), 'Важная мысль');
+    expect((await repository.listLocalForVideo(5)).single.caption,
+        'Важная мысль');
+  });
+
+  test('caption of a Mark awaiting its first sync goes with the add',
+      () async {
+    remoteDataSource.failAdd = true;
+    await repository.addBookmark(
+      videoId: 6,
+      positionSeconds: 10,
+      caption: '(bookmark)',
+    );
+    final int localId = (await repository.listLocalForVideo(6)).single.id;
+    await repository.updateCaption(bookmarkId: localId, caption: 'Подпись');
+
+    remoteDataSource.failAdd = false;
+    await repository.processOutbox();
+
+    final int remoteId = (await repository.listLocalForVideo(6)).single.id;
+    expect(remoteId, greaterThan(0));
+    expect(remoteDataSource.captionOf(remoteId), 'Подпись');
+  });
 }
 
 class _FakeBookmarksRemoteDataSource extends BookmarksRemoteDataSource {
@@ -111,6 +155,7 @@ class _FakeBookmarksRemoteDataSource extends BookmarksRemoteDataSource {
 
   bool failAdd = false;
   bool failDelete = false;
+  bool failUpdate = false;
   int _nextId = 1;
   final List<Map<String, dynamic>> _remote = <Map<String, dynamic>>[];
 
@@ -144,6 +189,34 @@ class _FakeBookmarksRemoteDataSource extends BookmarksRemoteDataSource {
       },
     );
     return id;
+  }
+
+  String? captionOf(int bookmarkId) {
+    for (final Map<String, dynamic> item in _remote) {
+      if (item['id'] == bookmarkId) {
+        return item['caption'] as String?;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<void> update({
+    required int bookmarkId,
+    required int videoId,
+    required double positionSeconds,
+    required String caption,
+  }) async {
+    if (failUpdate) {
+      throw DioException(
+        requestOptions: RequestOptions(path: '/marks/update'),
+      );
+    }
+    for (final Map<String, dynamic> item in _remote) {
+      if (item['id'] == bookmarkId) {
+        item['caption'] = caption;
+      }
+    }
   }
 
   @override

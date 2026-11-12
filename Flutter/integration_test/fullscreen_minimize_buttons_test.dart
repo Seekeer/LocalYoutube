@@ -40,6 +40,9 @@ class _TestPlayerController extends StateNotifier<PlayerUiState>
   Future<void> deleteBookmark(int id) async {}
 
   @override
+  Future<void> updateBookmarkCaption(int bookmarkId, String caption) async {}
+
+  @override
   Future<void> onLifecycleStateChanged(AppLifecycleState state) async {}
 
   @override

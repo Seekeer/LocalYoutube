@@ -957,6 +957,12 @@ class _FakeBookmarksRepository implements BookmarksRepository {
   Future<void> deleteBookmark(int bookmarkId) async {}
 
   @override
+  Future<void> updateCaption({
+    required int bookmarkId,
+    required String caption,
+  }) async {}
+
+  @override
   Future<List<BookmarkItem>> listLocalForVideo(int videoId) async {
     return const <BookmarkItem>[];
   }

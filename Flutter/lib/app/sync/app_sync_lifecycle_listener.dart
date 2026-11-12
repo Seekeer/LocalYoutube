@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../bootstrap/bootstrap_providers.dart';
 import '../../core/network/network_status.dart';
+import '../../features/notes/data/notes_repository.dart';
 
 class AppSyncLifecycleListener extends ConsumerStatefulWidget {
   const AppSyncLifecycleListener({
@@ -40,6 +41,14 @@ class _AppSyncLifecycleListenerState
       return;
     }
     final appSyncCoordinator = ref.read(appSyncCoordinatorProvider);
+    // The same repository the screens use: it treats both the offline
+    // fallback and the manual Autonomous Mode as offline.
+    appSyncCoordinator.bindNoteDraftsSync(() async {
+      if (!mounted) {
+        return;
+      }
+      await ref.read(notesRepositoryProvider).syncDrafts();
+    });
     unawaited(appSyncCoordinator.initialize());
     _networkStatusSubscription = ref.listenManual<AsyncValue<NetworkStatus>>(
       networkStatusProvider,

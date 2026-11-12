@@ -21,10 +21,12 @@ class BookmarksRepository {
 
   static const String _operationAdd = 'bookmark_add';
   static const String _operationDelete = 'bookmark_delete';
+  static const String _operationUpdate = 'bookmark_update';
   static const Duration _duplicateWindow = Duration(seconds: 5);
   static const List<String> _outboxOperationTypes = <String>[
     _operationAdd,
     _operationDelete,
+    _operationUpdate,
   ];
 
   final BookmarksRemoteDataSource _remoteDataSource;
@@ -104,6 +106,51 @@ class BookmarksRepository {
     return true;
   }
 
+  /// Changes a Mark's caption. A Mark still waiting for its first sync keeps
+  /// the caption locally and sends it with the pending add.
+  Future<void> updateCaption({
+    required int bookmarkId,
+    required String caption,
+  }) async {
+    final Map<String, Object?>? row =
+        await _localBookmarksRepository.findById(bookmarkId);
+    if (row == null) {
+      return;
+    }
+    final BookmarkItem item = BookmarkItem.fromLocalRow(row);
+    await _localBookmarksRepository.upsertBookmark(
+      bookmarkId: item.id,
+      videoId: item.videoId,
+      positionSeconds: item.positionSeconds,
+      caption: caption,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    if (bookmarkId <= 0) {
+      return;
+    }
+    try {
+      await _remoteDataSource.update(
+        bookmarkId: item.id,
+        videoId: item.videoId,
+        positionSeconds: item.positionSeconds,
+        caption: caption,
+      );
+    } catch (error, stackTrace) {
+      _logService.error('updateCaption remote call failed', error, stackTrace);
+      await _localSyncOutboxRepository.enqueue(
+        operationType: _operationUpdate,
+        payloadJson: jsonEncode(
+          <String, Object?>{
+            'bookmarkId': item.id,
+            'videoId': item.videoId,
+            'positionSeconds': item.positionSeconds,
+            'caption': caption,
+          },
+        ),
+      );
+    }
+  }
+
   Future<void> deleteBookmark(int bookmarkId) async {
     await _localBookmarksRepository.deleteBookmark(bookmarkId);
 
@@ -173,6 +220,9 @@ class BookmarksRepository {
               break;
             case _operationDelete:
               await _processDeleteOperation(payload);
+              break;
+            case _operationUpdate:
+              await _processUpdateOperation(payload);
               break;
             default:
               _logService.warn('Unknown outbox operation: $operationType');
@@ -249,13 +299,15 @@ class BookmarksRepository {
     final int localBookmarkId = _asInt(payload['localBookmarkId']);
     final int videoId = _asInt(payload['videoId']);
     final double positionSeconds = _asDouble(payload['positionSeconds']);
-    final String caption = (payload['caption'] ?? 'Bookmark').toString();
 
     final Map<String, Object?>? localRow =
         await _localBookmarksRepository.findById(localBookmarkId);
     if (localRow == null) {
       return;
     }
+    // The caption may have been edited while the add was waiting.
+    final String caption =
+        (localRow['caption'] ?? payload['caption'] ?? 'Bookmark').toString();
 
     final int remoteId = await _remoteDataSource.add(
       videoId: videoId,
@@ -273,6 +325,35 @@ class BookmarksRepository {
       positionSeconds: positionSeconds,
       caption: caption,
     );
+  }
+
+  Future<void> _processUpdateOperation(Map<String, dynamic> payload) async {
+    final int bookmarkId = _asInt(payload['bookmarkId']);
+    if (bookmarkId <= 0) {
+      return;
+    }
+    final Map<String, Object?>? localRow =
+        await _localBookmarksRepository.findById(bookmarkId);
+    // The queued caption is the person's edit; a reconcile may have put the
+    // older server caption into the local row meanwhile.
+    final String caption = (payload['caption'] ?? '').toString();
+    final int videoId = _asInt(payload['videoId']);
+    final double positionSeconds = _asDouble(payload['positionSeconds']);
+    await _remoteDataSource.update(
+      bookmarkId: bookmarkId,
+      videoId: videoId,
+      positionSeconds: positionSeconds,
+      caption: caption,
+    );
+    if (localRow != null) {
+      await _localBookmarksRepository.upsertBookmark(
+        bookmarkId: bookmarkId,
+        videoId: videoId,
+        positionSeconds: positionSeconds,
+        caption: caption,
+        updatedAt: DateTime.now().toUtc(),
+      );
+    }
   }
 
   Future<void> _processDeleteOperation(Map<String, dynamic> payload) async {

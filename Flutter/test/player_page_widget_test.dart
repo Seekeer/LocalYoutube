@@ -84,6 +84,9 @@ class MockPlayerController extends StateNotifier<PlayerUiState>
   Future<void> deleteBookmark(int id) async {}
 
   @override
+  Future<void> updateBookmarkCaption(int bookmarkId, String caption) async {}
+
+  @override
   Future<void> seekToNavigationOrigin(int id) async {
     lastSeekToNavigationOriginId = id;
   }

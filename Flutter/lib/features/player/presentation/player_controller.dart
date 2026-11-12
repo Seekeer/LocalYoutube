@@ -448,6 +448,18 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     }
   }
 
+  Future<void> updateBookmarkCaption(int bookmarkId, String caption) async {
+    try {
+      await _bookmarksRepository.updateCaption(
+        bookmarkId: bookmarkId,
+        caption: caption,
+      );
+      await _refreshBookmarks(syncRemote: false);
+    } catch (error, stackTrace) {
+      _logService.error('updateBookmarkCaption failed', error, stackTrace);
+    }
+  }
+
   Future<void> seekToNavigationOrigin(int navigationEntryId) async {
     PlayerNavigationEntry? entry;
     for (final PlayerNavigationEntry item in state.navigationEntries) {

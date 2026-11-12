@@ -15,6 +15,8 @@ import '../../catalog/presentation/catalog_controller.dart';
 import '../../downloads/data/offline_history_repository.dart';
 import '../../downloads/domain/download_models.dart';
 import '../../downloads/domain/download_service.dart';
+import '../../notes/data/notes_repository.dart';
+import '../../notes/presentation/notes_shelf.dart';
 import '../../player/presentation/player_navigation_result.dart';
 
 class StartPage extends ConsumerStatefulWidget {
@@ -141,6 +143,7 @@ class _StartPageState extends ConsumerState<StartPage> {
                           ),
                         ),
                       if (promoteUpdateMenu) const AppUpdatesMenu(),
+                      const NotesShelf(),
                       _buildMenuButton(
                         label: _labelDownloaded,
                         width: width,
@@ -390,6 +393,13 @@ class _StartPageState extends ConsumerState<StartPage> {
 
   Future<void> _logout() async {
     await _runBusy(() async {
+      // Read up front: Drafts are forgotten even if this page goes away.
+      NotesRepository? notes;
+      try {
+        notes = ref.read(notesRepositoryProvider);
+      } catch (_) {
+        notes = null;
+      }
       if (ref.read(authNotifierProvider).isOfflineFallback) {
         await ref.read(authRepositoryProvider).logoutOfflineFallback();
       } else {
@@ -411,9 +421,18 @@ class _StartPageState extends ConsumerState<StartPage> {
           return;
         }
       }
+      // Drafts, clips and cached notes are private to the account that
+      // signed out; the next account must not see or sync them.
+      try {
+        await notes?.clearLocalData();
+      } catch (_) {
+        // Rows stay tied to their account, so the next one still cannot see them.
+      }
       if (!mounted) {
         return;
       }
+      ref.invalidate(notesShelfProvider);
+      ref.read(notesRevisionProvider.notifier).state++;
       ref.read(authNotifierProvider).enterSignedOut();
       context.go(AppRoutes.login);
     });

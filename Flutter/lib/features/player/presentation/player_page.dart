@@ -21,6 +21,9 @@ import '../../downloads/domain/download_models.dart';
 import '../domain/player_models.dart';
 import '../domain/player_volume.dart';
 import '../domain/usecases/jump_to_nearest_timestamp_use_case.dart';
+import '../../notes/data/notes_repository.dart';
+import '../../notes/presentation/mark_caption_dialog.dart';
+import '../../notes/presentation/notes_section.dart';
 import '../../transcript/presentation/transcript_panel.dart';
 import 'player_controller.dart';
 import 'player_navigation_result.dart';
@@ -149,6 +152,13 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       // from here does.
       if (!_isRemoteControlMode) {
         binding.bind(player);
+      }
+      // The end-of-video choices should not wait for the video type.
+      try {
+        ref.read(notesRepositoryProvider).prefetchPostViewing(videoId);
+      } catch (_) {
+        // Without a network composition root (lightweight tests) there is
+        // nothing to look up.
       }
     }
 
@@ -324,11 +334,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
           return;
         }
         unawaited(
-          _startDeleteFlow(
-            videoId: videoId,
-            controller: controller,
-            allowRestart: true,
-          ),
+          _onPlaybackCompleted(videoId: videoId, controller: controller),
         );
       });
     });
@@ -701,10 +707,25 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
                   onTap: state.errorMessage != null
                       ? null
                       : () => unawaited(controller.seek(bookmark.position)),
+                  onLongPress: state.errorMessage != null
+                      ? null
+                      : () => unawaited(
+                            _editBookmarkCaption(
+                              controller: controller,
+                              bookmarkId: bookmark.id,
+                              caption: bookmark.caption,
+                            ),
+                          ),
                 ),
               ),
             ],
             const SizedBox(height: 20),
+            NotesSection(
+              videoId: videoId,
+              title: (widget.videoTitle ?? '').trim(),
+              onPausePlayback: controller.pause,
+            ),
+            const SizedBox(height: 8),
             TranscriptPanel(
               videoId: int.parse(widget.videoId),
               onSeek: (position) => controller.seek(position),
@@ -874,6 +895,55 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       return false;
     }
     return state.position >= state.duration;
+  }
+
+  /// The post-viewing menu comes first for ExternalVideo and Courses videos,
+  /// then the usual end-of-video choices.
+  Future<void> _onPlaybackCompleted({
+    required int videoId,
+    required PlayerController controller,
+  }) async {
+    bool showNotes = false;
+    try {
+      showNotes =
+          await ref.read(notesRepositoryProvider).isPostViewingVideo(videoId);
+    } catch (_) {
+      showNotes = false;
+    }
+    if (!mounted || _isFullscreenOpen) {
+      return;
+    }
+    if (showNotes) {
+      await showPostViewingNotes(
+        context: context,
+        videoId: videoId,
+        title: (widget.videoTitle ?? '').trim(),
+      );
+      if (!mounted || _isFullscreenOpen) {
+        return;
+      }
+    }
+    await _startDeleteFlow(
+      videoId: videoId,
+      controller: controller,
+      allowRestart: true,
+    );
+  }
+
+  Future<void> _editBookmarkCaption({
+    required PlayerController controller,
+    required int bookmarkId,
+    required String caption,
+  }) async {
+    final String? updated = await showMarkCaptionDialog(
+      context: context,
+      caption: caption,
+      onPausePlayback: controller.pause,
+    );
+    if (updated == null || !mounted) {
+      return;
+    }
+    await controller.updateBookmarkCaption(bookmarkId, updated);
   }
 
   Future<void> _startDeleteFlow({
@@ -1196,7 +1266,7 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
         if (!mounted) {
           return;
         }
-        unawaited(_startDeleteFlow(controller: controller, allowRestart: true));
+        unawaited(_onPlaybackCompleted(controller: controller));
       });
     });
     final VideoPlayerController? videoController = controller.videoController;
@@ -1543,6 +1613,33 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
       return false;
     }
     return state.position >= state.duration;
+  }
+
+  Future<void> _onPlaybackCompleted({
+    required PlayerController controller,
+  }) async {
+    bool showNotes = false;
+    try {
+      showNotes = await ref
+          .read(notesRepositoryProvider)
+          .isPostViewingVideo(widget.videoId);
+    } catch (_) {
+      showNotes = false;
+    }
+    if (!mounted) {
+      return;
+    }
+    if (showNotes) {
+      await showPostViewingNotes(
+        context: context,
+        videoId: widget.videoId,
+        title: (widget.videoTitle ?? '').trim(),
+      );
+      if (!mounted) {
+        return;
+      }
+    }
+    await _startDeleteFlow(controller: controller, allowRestart: true);
   }
 
   Future<void> _startDeleteFlow({

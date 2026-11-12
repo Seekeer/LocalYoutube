@@ -1,6 +1,9 @@
 package org.localtube.app
 
+import android.Manifest
 import android.app.NotificationChannel
+import android.content.pm.PackageManager
+import android.media.MediaRecorder
 import android.app.NotificationManager
 import android.os.Bundle
 import android.content.Intent
@@ -13,11 +16,20 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.util.Log
 import android.view.WindowManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : AudioServiceActivity() {
+    private var voiceRecorder: MediaRecorder? = null
+    private var voiceRecorderChannel: MethodChannel? = null
+
+    // Outcome of a recording the system stopped in onStop, handed to the next "stop" call.
+    private var interruptedRecordingStopped: Boolean? = null
+    private var pendingMicrophoneResult: MethodChannel.Result? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         configureDownloadNotifications()
@@ -157,6 +169,32 @@ class MainActivity : AudioServiceActivity() {
                 else -> result.notImplemented()
             }
         }
+        // Dictation clips for video notes. One Android API does not justify another Flutter package.
+        val voiceChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            VOICE_RECORDER_CHANNEL,
+        )
+        voiceRecorderChannel = voiceChannel
+        voiceChannel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isSupported" -> result.success(
+                    packageManager.hasSystemFeature(PackageManager.FEATURE_MICROPHONE),
+                )
+                "requestPermission" -> requestMicrophone(result)
+                "start" -> {
+                    try {
+                        startVoiceRecording(requireNotNull(call.argument<String>("path")))
+                        result.success(null)
+                    } catch (error: Exception) {
+                        releaseVoiceRecorder()
+                        result.error("record_failed", error.message ?: "Cannot start recording", null)
+                    }
+                }
+                // true when the clip file was finished properly.
+                "stop" -> result.success(stopVoiceRecording())
+                else -> result.notImplemented()
+            }
+        }
         // The device model is the default name of a Cast Session device that has not been renamed.
         // One string from one Android API does not justify another Flutter package.
         MethodChannel(
@@ -170,6 +208,100 @@ class MainActivity : AudioServiceActivity() {
         }
     }
 
+    private fun requestMicrophone(result: MethodChannel.Result) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            result.success(true)
+            return
+        }
+        pendingMicrophoneResult?.success(false)
+        pendingMicrophoneResult = result
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.RECORD_AUDIO),
+            MICROPHONE_REQUEST_CODE,
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != MICROPHONE_REQUEST_CODE) return
+        val granted = grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
+        pendingMicrophoneResult?.success(granted)
+        pendingMicrophoneResult = null
+    }
+
+    private fun startVoiceRecording(path: String) {
+        releaseVoiceRecorder()
+        interruptedRecordingStopped = null
+        val file = File(path)
+        file.parentFile?.mkdirs()
+        @Suppress("DEPRECATION")
+        val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            MediaRecorder(this)
+        } else {
+            MediaRecorder()
+        }
+        recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
+        recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+        recorder.setAudioChannels(1)
+        recorder.setAudioSamplingRate(16000)
+        recorder.setAudioEncodingBitRate(64000)
+        recorder.setOutputFile(file.absolutePath)
+        voiceRecorder = recorder
+        recorder.prepare()
+        recorder.start()
+    }
+
+    private fun stopVoiceRecording(): Boolean {
+        val recorder = voiceRecorder
+        if (recorder == null) {
+            val interrupted = interruptedRecordingStopped ?: false
+            interruptedRecordingStopped = null
+            return interrupted
+        }
+        var stopped = true
+        try {
+            recorder.stop()
+        } catch (error: Exception) {
+            // MediaRecorder throws when it got no valid data; the file is unusable.
+            Log.w("VoiceRecorder", "Recording stopped without data", error)
+            stopped = false
+        }
+        releaseVoiceRecorder()
+        return stopped
+    }
+
+    override fun onStop() {
+        // The microphone is not kept recording in the background. Dart collects the clip.
+        if (voiceRecorder != null) {
+            interruptedRecordingStopped = stopVoiceRecording()
+            voiceRecorderChannel?.invokeMethod("interrupted", null)
+        }
+        super.onStop()
+    }
+
+    private fun releaseVoiceRecorder() {
+        try {
+            voiceRecorder?.release()
+        } catch (error: Exception) {
+            Log.w("VoiceRecorder", "Recorder release failed", error)
+        }
+        voiceRecorder = null
+    }
+
+    override fun onDestroy() {
+        releaseVoiceRecorder()
+        super.onDestroy()
+    }
+
     private companion object {
         const val PLAYER_NETWORK_LOCK_CHANNEL =
             "org.localtube.app/player_network_lock"
@@ -177,6 +309,8 @@ class MainActivity : AudioServiceActivity() {
             "org.localtube.app/playback_screen_wake_lock"
         const val APP_CONTROL_CHANNEL = "org.localtube.app/app_control"
         const val DEVICE_INFO_CHANNEL = "org.localtube.app/device_info"
+        const val VOICE_RECORDER_CHANNEL = "org.localtube.app/voice_recorder"
+        const val MICROPHONE_REQUEST_CODE = 4711
     }
 }
 
