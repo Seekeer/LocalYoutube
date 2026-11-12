@@ -3,6 +3,7 @@ abstract final class AppRoutes {
   static const String login = '/login';
   static const String home = '/home';
   static const String catalog = '/catalog';
+  static const String films = '/films';
   static const String player = '/player';
   static const String downloads = '/downloads';
   static const String offlineHistory = '/offline-history';

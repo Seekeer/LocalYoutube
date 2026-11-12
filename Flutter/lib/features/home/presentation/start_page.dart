@@ -15,6 +15,7 @@ import '../../catalog/presentation/catalog_controller.dart';
 import '../../downloads/data/offline_history_repository.dart';
 import '../../downloads/domain/download_models.dart';
 import '../../downloads/domain/download_service.dart';
+import '../../films/presentation/films_page.dart';
 import '../../notes/data/notes_repository.dart';
 import '../../notes/presentation/notes_shelf.dart';
 import '../../player/presentation/player_navigation_result.dart';
@@ -39,6 +40,7 @@ class _StartPageState extends ConsumerState<StartPage> {
     Color(0xFFEF6C00),
     Color(0xFF546E7A),
     Color(0xFF6D4C41),
+    Color(0xFFC62828),
   ];
 
   static const String _titleMainMenu =
@@ -52,6 +54,7 @@ class _StartPageState extends ConsumerState<StartPage> {
   static const String _labelHistory =
       '\u0418\u0441\u0442\u043e\u0440\u0438\u044f';
   static const String _labelSeries = '\u0421\u0435\u0440\u0438\u0438';
+  static const String _labelFilms = '\u0424\u0438\u043b\u044c\u043c\u044b';
   static const String _labelAutonomous =
       '\u0410\u0432\u0442\u043e\u043d\u043e\u043c\u043d\u043e';
   /// Deliberately the product's own word: Receiver Mode is set behind this entry.
@@ -190,6 +193,14 @@ class _StartPageState extends ConsumerState<StartPage> {
                               : _openSeries,
                           disabledHint: _availableAfterReconnect,
                         ),
+                      if (canUseOnlineActions && filmsMenuAvailable)
+                        _buildMenuButton(
+                          key: const Key('start-films-button'),
+                          label: _labelFilms,
+                          width: width,
+                          backgroundColor: _buttonPalette[8],
+                          onPressed: _isBusy ? null : _openFilms,
+                        ),
                       _buildMenuButton(
                         label: _labelDownloading,
                         width: width,
@@ -239,6 +250,7 @@ class _StartPageState extends ConsumerState<StartPage> {
   }
 
   Widget _buildMenuButton({
+    Key? key,
     required String label,
     required double width,
     required Color backgroundColor,
@@ -250,6 +262,7 @@ class _StartPageState extends ConsumerState<StartPage> {
       child: SizedBox(
         width: width,
         child: ElevatedButton(
+          key: key,
           style: ElevatedButton.styleFrom(
             backgroundColor: backgroundColor,
             disabledBackgroundColor: backgroundColor.withValues(alpha: 0.35),
@@ -375,6 +388,13 @@ class _StartPageState extends ConsumerState<StartPage> {
       return;
     }
     await context.push('${AppRoutes.catalog}/${CatalogSection.series.key}');
+  }
+
+  Future<void> _openFilms() async {
+    if (!mounted) {
+      return;
+    }
+    await context.push(AppRoutes.films);
   }
 
   Future<void> _openDownloading() async {

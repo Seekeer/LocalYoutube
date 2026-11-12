@@ -5,6 +5,7 @@ import '../../features/auth/presentation/login_page.dart';
 import '../../features/cast/presentation/cast_settings_page.dart';
 import '../../features/catalog/domain/catalog_models.dart';
 import '../../features/downloads/presentation/downloads_page.dart';
+import '../../features/films/presentation/films_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/home/presentation/offline_history_page.dart';
 import '../../features/home/presentation/start_page.dart';
@@ -52,6 +53,10 @@ GoRouter buildAppRouter({
             state.pathParameters['section'],
           ),
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.films,
+        builder: (_, __) => const FilmsPage(),
       ),
       GoRoute(
         path: AppRoutes.offlineHistory,

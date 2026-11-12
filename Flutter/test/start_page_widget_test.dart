@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -438,6 +439,64 @@ void main() {
     );
     expect(autonomousSwitch.value, isFalse);
     expect(autonomousSwitch.onChanged, isNotNull);
+  });
+
+  Widget buildOnlineStartPage() {
+    return ProviderScope(
+      overrides: <Override>[
+        authNotifierProvider.overrideWith(
+          (Ref ref) =>
+              AuthNotifier(initialMode: AppAccessMode.onlineAuthenticated),
+        ),
+        appConfigProvider.overrideWithValue(
+          const AppConfig(
+            apiBaseUrl: 'https://example.com',
+            connectTimeoutMs: 15000,
+            receiveTimeoutMs: 30000,
+            sendTimeoutMs: 15000,
+          ),
+        ),
+        offlineHistoryRepositoryProvider
+            .overrideWithValue(_DummyOfflineHistoryRepository()),
+        networkStatusProvider.overrideWith(
+          (Ref ref) => Stream<NetworkStatus>.value(NetworkStatus.online),
+        ),
+      ],
+      child: const MaterialApp(home: StartPage()),
+    );
+  }
+
+  testWidgets('Windows main menu opens the Films screen entry', (
+    WidgetTester tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      await tester.pumpWidget(buildOnlineStartPage());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final ElevatedButton filmsButton = tester.widget<ElevatedButton>(
+        find.byKey(const Key('start-films-button')),
+      );
+      expect(filmsButton.onPressed, isNotNull);
+      expect(find.text('Фильмы'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('autonomous-mode-switch')));
+      await tester.pump();
+      expect(find.byKey(const Key('start-films-button')), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('Android main menu has no Films entry', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(buildOnlineStartPage());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.byKey(const Key('start-films-button')), findsNothing);
   });
 }
 
