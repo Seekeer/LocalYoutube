@@ -14,6 +14,7 @@ import '../../core/config/windows_edition.dart';
 import 'apk_update_controller.dart' show updateInstallBlockProvider;
 import 'update_models.dart';
 import 'update_sources.dart';
+import 'windows_applier_launcher.dart';
 
 // Only CI-built Windows bundles carry a version, so only they offer updates.
 final windowsUpdatesEnabledProvider = Provider<bool>((ref) =>
@@ -641,37 +642,17 @@ class SystemWindowsUpdateInstaller implements WindowsUpdateInstaller {
     final marker = File(_path(directory, 'applying.lock'));
     await marker.writeAsString('$pid', flush: true);
     try {
-      await Process.start(
-          'powershell.exe',
-          [
-            '-NoProfile',
-            '-NonInteractive',
-            '-ExecutionPolicy',
-            'Bypass',
-            '-WindowStyle',
-            'Hidden',
-            '-File',
-            script.path,
-            '-ProcessId',
-            '$pid',
-            '-Source',
-            _path(directory, 'staging'),
-            '-Target',
-            _application.path,
-            '-Backup',
-            _path(directory, 'backup'),
-            '-Result',
-            _path(directory, 'apply-result.json'),
-            '-Lock',
-            marker.path,
-            '-MutexPath',
-            _path(directory, 'updater.lock'),
-            '-Executable',
-            Platform.resolvedExecutable,
-            '-VersionCode',
-            '${update.versionCode}',
-          ],
-          mode: ProcessStartMode.detached);
+      await launchWindowsApplier(script.path, <String, String>{
+        'ProcessId': '$pid',
+        'Source': _path(directory, 'staging'),
+        'Target': _application.path,
+        'Backup': _path(directory, 'backup'),
+        'Result': _path(directory, 'apply-result.json'),
+        'Lock': marker.path,
+        'MutexPath': _path(directory, 'updater.lock'),
+        'Executable': Platform.resolvedExecutable,
+        'VersionCode': '${update.versionCode}',
+      });
       // The OS lock stays held until this process exits; the applier then
       // takes it over and removes the marker after writing its result.
     } catch (_) {
@@ -702,9 +683,11 @@ param(
   [Parameter(Mandatory = $true)][string]$Lock,
   [Parameter(Mandatory = $true)][string]$MutexPath,
   [Parameter(Mandatory = $true)][string]$Executable,
-  [Parameter(Mandatory = $true)][long]$VersionCode
+  [Parameter(Mandatory = $true)][long]$VersionCode,
+  [Parameter(Mandatory = $true)][string]$StartupSignal
 )
 $ErrorActionPreference = 'Stop'
+[System.IO.File]::WriteAllText($StartupSignal, 'started')
 
 function Write-Result([string]$Status, [string]$Reason) {
   $json = @{ schemaVersion = 1; status = $Status; versionCode = $VersionCode; reason = $Reason } |
