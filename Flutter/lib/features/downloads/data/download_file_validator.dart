@@ -31,6 +31,13 @@ class DownloadFileValidator {
 
     final RandomAccessFile input = await file.open();
     try {
+      // Download filenames can be derived from a display title and default to
+      // .mp4 even when the server sends an unchanged MKV, AVI or MPEG file.
+      // Recognize those containers before applying MP4 box parsing.
+      final Uint8List signature = await input.read(12);
+      if (_isOtherVideoContainer(signature)) {
+        return;
+      }
       final int length = await input.length();
       final Set<String> boxes = <String>{};
       int position = 0;
@@ -80,5 +87,15 @@ class DownloadFileValidator {
     } finally {
       await input.close();
     }
+  }
+
+  bool _isOtherVideoContainer(Uint8List bytes) {
+    if (bytes.length < 12) return false;
+    final ByteData data = ByteData.sublistView(bytes);
+    final int magic = data.getUint32(0);
+    return magic == 0x1a45dfa3 || // Matroska / WebM (EBML).
+        magic == 0x000001ba || // MPEG program stream pack header.
+        (magic == 0x52494646 && // RIFF with AVI form type.
+            data.getUint32(8) == 0x41564920);
   }
 }

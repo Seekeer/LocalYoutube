@@ -127,6 +127,38 @@ void main() {
     final File file = await fixture(<int>[1, 2, 3], extension: 'mkv');
     await validator.validate(file.path);
   });
+
+  test('recognizes server containers saved with the default mp4 extension',
+      () async {
+    // Headers captured from the five server files rejected by released clients.
+    for (final String hex in <String>[
+      '1a45dfa3a34286810142f7810142f2810442f381084282886d6174726f736b61',
+      '1a45dfa3934282886d6174726f736b6142878101428581011853806701000001',
+      '52494646d621497f415649204c4953547e4300006864726c6176696838000000',
+      '000001ba4400040484010189c3f8000001bb001280c4e104e17fb9e0e8b8c020',
+    ]) {
+      final File file = await fixture(<int>[
+        for (int i = 0; i < hex.length; i += 2)
+          int.parse(hex.substring(i, i + 2), radix: 16),
+      ]);
+      await validator.validate(file.path);
+    }
+  });
+
+  test('does not exempt an arbitrary RIFF file from MP4 validation', () async {
+    final File file = await fixture(<int>[
+      ...'RIFF'.codeUnits,
+      4,
+      0,
+      0,
+      0,
+      ...'WAVE'.codeUnits,
+    ]);
+    await expectLater(
+      validator.validate(file.path),
+      throwsA(isA<InvalidDownloadException>()),
+    );
+  });
 }
 
 List<int> box(String type, List<int> payload) {
