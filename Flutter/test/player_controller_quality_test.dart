@@ -9,6 +9,7 @@ import 'package:localtube_flutter/features/bookmarks/data/bookmarks_repository.d
 import 'package:localtube_flutter/features/bookmarks/domain/bookmark_models.dart';
 import 'package:localtube_flutter/features/downloads/data/download_file_validator.dart';
 import 'package:localtube_flutter/features/player/data/local_playback_repository.dart';
+import 'package:localtube_flutter/features/player/data/player_subtitles.dart';
 import 'package:localtube_flutter/features/player/data/playback_screen_wake_lock.dart';
 import 'package:localtube_flutter/features/player/data/playback_sync_repository.dart';
 import 'package:localtube_flutter/features/player/data/stream_authorization_header_provider.dart';
@@ -41,6 +42,36 @@ void main() {
     VideoPlayerPlatform.instance = originalPlatform;
   });
 
+  test('subtitles start disabled and can be enabled and disabled', () async {
+    final subtitles = _FakePlayerSubtitles();
+    final controller = PlayerController(
+      subtitles: subtitles,
+      videoId: 87,
+      localOnly: false,
+      playVideoUseCase: _FakePlayVideoUseCase(PlayableVideo(
+        videoId: 87,
+        sourceUri: Uri.parse('https://example.invalid/video.mkv'),
+        sourceKind: PlayableSourceKind.remoteUrl,
+        startPosition: Duration.zero,
+        title: 'Subtitles',
+      )),
+      playbackSyncRepository: playbackSyncRepository,
+      bookmarksRepository: bookmarksRepository,
+      streamAuthorizationHeaderProvider:
+          _DeferredAuthorizationProvider(Future<void>.value()),
+      logService: logService,
+    );
+    addTearDown(controller.dispose);
+    await _flushPlaybackTasks();
+    expect(subtitles.selections, <bool>[false]);
+    expect(controller.state.subtitlesEnabled, isFalse);
+    controller.toggleSubtitles();
+    expect(controller.state.subtitlesEnabled, isTrue);
+    controller.toggleSubtitles();
+    expect(controller.state.subtitlesEnabled, isFalse);
+    expect(subtitles.selections, <bool>[false, true, false]);
+  });
+
   for (final String boundary in <String>['source', 'authorization', 'volume']) {
     test('closing player during $boundary never leaves playback alive',
         () async {
@@ -56,6 +87,7 @@ void main() {
         fakePlatform.volumeGate = gate.future;
       }
       final PlayerController controller = PlayerController(
+        subtitles: _FakePlayerSubtitles(),
         videoId: 87,
         localOnly: false,
         playVideoUseCase: _FakePlayVideoUseCase(
@@ -90,6 +122,7 @@ void main() {
       () async {
     final Completer<void> gate = Completer<void>();
     final PlayerController controller = PlayerController(
+        subtitles: _FakePlayerSubtitles(),
       videoId: 87,
       localOnly: false,
       playVideoUseCase: _FakePlayVideoUseCase(
@@ -114,6 +147,7 @@ void main() {
       () async {
     final Completer<void> gate = Completer<void>();
     final PlayerController controller = PlayerController(
+        subtitles: _FakePlayerSubtitles(),
       videoId: 87,
       localOnly: false,
       playVideoUseCase: _FakePlayVideoUseCase(PlayableVideo(
@@ -150,6 +184,7 @@ void main() {
       final _RecordingPlaybackScreenWakeLock screenWakeLock =
           _RecordingPlaybackScreenWakeLock();
       final PlayerController controller = PlayerController(
+        subtitles: _FakePlayerSubtitles(),
         videoId: 73,
         playVideoUseCase: _FakePlayVideoUseCase(
           PlayableVideo(
@@ -210,6 +245,7 @@ void main() {
       'player aborts remote initialization before networkUrl create when auth fails',
       (WidgetTester tester) async {
     final PlayerController controller = PlayerController(
+        subtitles: _FakePlayerSubtitles(),
       videoId: 42,
       playVideoUseCase: _FakePlayVideoUseCase(
         PlayableVideo(
@@ -254,6 +290,7 @@ void main() {
       'failed recovery keeps prior controller alive and a later retry can still replace it',
       (WidgetTester tester) async {
     final PlayerController controller = PlayerController(
+        subtitles: _FakePlayerSubtitles(),
       videoId: 99,
       playVideoUseCase: _FakePlayVideoUseCase(
         PlayableVideo(
@@ -343,6 +380,7 @@ void main() {
       'previous controller cleanup failure after commit does not surface false recovery failure',
       (WidgetTester tester) async {
     final PlayerController controller = PlayerController(
+        subtitles: _FakePlayerSubtitles(),
       videoId: 77,
       playVideoUseCase: _FakePlayVideoUseCase(
         PlayableVideo(
@@ -450,7 +488,9 @@ void main() {
 
   testWidgets('recovery resumes playback automatically after runtime error',
       (WidgetTester tester) async {
+    final subtitles = _FakePlayerSubtitles();
     final PlayerController controller = PlayerController(
+      subtitles: subtitles,
       videoId: 56,
       playVideoUseCase: _FakePlayVideoUseCase(
         PlayableVideo(
@@ -497,6 +537,87 @@ void main() {
     final int originalPlayerId = originalController.playerId;
     expect(originalController.value.isPlaying, isTrue);
 
+    final gate = Completer<void>();
+    fakePlatform.volumeGate = gate.future;
+    fakePlatform.pushError(
+      playerId: originalPlayerId,
+      message: 'recover and continue',
+    );
+    await tester.pump();
+    for (int attempt = 0;
+        attempt < 10 &&
+            identical(controller.videoController, originalController);
+        attempt += 1) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    expect(controller.videoController, same(originalController));
+    controller.toggleSubtitles();
+    expect(controller.state.subtitlesEnabled, isTrue);
+    gate.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(subtitles.selections.last, isTrue);
+    expect(controller.videoController, isNot(same(originalController)));
+    expect(controller.videoController?.value.isPlaying, isTrue);
+
+    controller.dispose();
+  });
+
+  testWidgets('rollback reapplies subtitles toggled while replacement play is pending',
+      (WidgetTester tester) async {
+    final subtitles = _FakePlayerSubtitles();
+    final PlayerController controller = PlayerController(
+      subtitles: subtitles,
+      videoId: 56,
+      playVideoUseCase: _FakePlayVideoUseCase(
+        PlayableVideo(
+          videoId: 56,
+          sourceUri: Uri.parse('https://example.invalid/video.mp4'),
+          sourceKind: PlayableSourceKind.remoteUrl,
+          startPosition: Duration.zero,
+          title: 'Auto resume video',
+        ),
+      ),
+      playbackSyncRepository: playbackSyncRepository,
+      bookmarksRepository: bookmarksRepository,
+      streamAuthorizationHeaderProvider:
+          _ScriptedStreamAuthorizationHeaderProvider(
+        <StreamAuthorizationHeaderResult>[
+          StreamAuthorizationHeaderResult.success(
+            const <String, String>{
+              HttpHeaders.authorizationHeader: 'Bearer first-token',
+            },
+          ),
+          StreamAuthorizationHeaderResult.success(
+            const <String, String>{
+              HttpHeaders.authorizationHeader: 'Bearer second-token',
+            },
+          ),
+        ],
+      ),
+      logService: logService,
+      localOnly: false,
+    );
+
+    await tester.pump();
+    for (int attempt = 0;
+        attempt < 10 &&
+            (controller.videoController == null ||
+                !(controller.videoController?.value.isInitialized ?? false) ||
+                controller.state.isLoading);
+        attempt += 1) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    final VideoPlayerController originalController =
+        controller.videoController!;
+    final int originalPlayerId = originalController.playerId;
+    expect(originalController.value.isPlaying, isTrue);
+
+    final gate = Completer<void>();
+    fakePlatform.replacementPlayGate = gate.future;
+    fakePlatform.failReplacementPlay = true;
     fakePlatform.pushError(
       playerId: originalPlayerId,
       message: 'recover and continue',
@@ -510,16 +631,25 @@ void main() {
     }
 
     expect(controller.videoController, isNot(same(originalController)));
-    expect(controller.videoController?.value.isPlaying, isTrue);
+    controller.toggleSubtitles();
+    expect(controller.state.subtitlesEnabled, isTrue);
+    gate.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(controller.videoController, same(originalController));
+    expect(subtitles.selectionByPlayer[originalPlayerId], isTrue);
+    expect(controller.state.subtitlesEnabled, isTrue);
 
     controller.dispose();
   });
+
 
   testWidgets('damaged download shows an actionable error without recovery',
       (WidgetTester tester) async {
     const InvalidDownloadException failure =
         InvalidDownloadException('Invalid MP4 box size.');
     final PlayerController controller = PlayerController(
+        subtitles: _FakePlayerSubtitles(),
       videoId: 42,
       localOnly: true,
       playVideoUseCase: _FakePlayVideoUseCase(null, error: failure),
@@ -543,6 +673,7 @@ void main() {
     const OfflinePlaybackUnavailableException failure =
         OfflinePlaybackUnavailableException(videoId: 42);
     final PlayerController controller = PlayerController(
+        subtitles: _FakePlayerSubtitles(),
       videoId: 42,
       localOnly: true,
       playVideoUseCase: _FakePlayVideoUseCase(
@@ -625,6 +756,7 @@ void main() {
         remotePlayable: remotePlayable(90),
       );
       final PlayerController controller = PlayerController(
+        subtitles: _FakePlayerSubtitles(),
         videoId: 90,
         localOnly: false,
         playVideoUseCase: useCase,
@@ -656,6 +788,7 @@ void main() {
         remotePlayable: remotePlayable(91),
       );
       final PlayerController controller = PlayerController(
+        subtitles: _FakePlayerSubtitles(),
         videoId: 91,
         localOnly: true,
         playVideoUseCase: useCase,
@@ -688,6 +821,7 @@ void main() {
         remotePlayable: remotePlayable(92),
       );
       final PlayerController controller = PlayerController(
+        subtitles: _FakePlayerSubtitles(),
         videoId: 92,
         localOnly: false,
         playVideoUseCase: useCase,
@@ -734,6 +868,7 @@ void main() {
         remotePlayable: remotePlayable(93),
       );
       final PlayerController controller = PlayerController(
+        subtitles: _FakePlayerSubtitles(),
         videoId: 93,
         localOnly: false,
         playVideoUseCase: useCase,
@@ -775,6 +910,7 @@ void main() {
         );
     PlayerController openPlayer(int videoId, PlayerScreenStack screens) =>
         PlayerController(
+        subtitles: _FakePlayerSubtitles(),
           videoId: videoId,
           localOnly: true,
           playVideoUseCase: _FakePlayVideoUseCase(localVideo(videoId)),
@@ -999,6 +1135,8 @@ class _ScriptedStreamAuthorizationHeaderProvider
 
 class _FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   Future<void>? volumeGate;
+  Future<void>? replacementPlayGate;
+  bool failReplacementPlay = false;
   final List<int> playedPlayerIds = <int>[];
   int createCallCount = 0;
   int _nextPlayerId = 1;
@@ -1075,6 +1213,10 @@ class _FakeVideoPlayerPlatform extends VideoPlayerPlatform {
 
   @override
   Future<void> play(int playerId) async {
+    if (playerId > 1) {
+      await replacementPlayGate;
+      if (failReplacementPlay) throw StateError('replacement play failed');
+    }
     playedPlayerIds.add(playerId);
     _events[playerId]?.add(
       VideoEvent(
@@ -1189,5 +1331,17 @@ class _DeferredAuthorizationProvider
 Future<void> _flushPlaybackTasks() async {
   for (int i = 0; i < 20; i += 1) {
     await Future<void>.delayed(Duration.zero);
+  }
+}
+
+class _FakePlayerSubtitles extends PlayerSubtitles {
+  final List<bool> selections = <bool>[];
+  final Map<int, bool> selectionByPlayer = <int, bool>{};
+  @override
+  bool hasTracks(VideoPlayerController controller) => true;
+  @override
+  void apply(VideoPlayerController controller, {required bool enabled}) {
+    selections.add(enabled);
+    selectionByPlayer[controller.playerId] = enabled;
   }
 }

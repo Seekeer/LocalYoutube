@@ -14,6 +14,7 @@ import '../../downloads/data/download_file_validator.dart';
 import '../data/android_remote_playback_network_lock.dart';
 import '../data/playback_screen_wake_lock.dart';
 import '../data/playback_sync_repository.dart';
+import '../data/player_subtitles.dart';
 import '../data/stream_authorization_header_provider.dart';
 import '../domain/player_models.dart';
 import '../domain/player_start_intent.dart';
@@ -49,6 +50,7 @@ class PlayerUiState {
     required this.bookmarks,
     required this.navigationEntries,
     this.errorMessage,
+    this.subtitlesEnabled = false,
   });
 
   final int videoId;
@@ -62,6 +64,7 @@ class PlayerUiState {
   final List<BookmarkItem> bookmarks;
   final List<PlayerNavigationEntry> navigationEntries;
   final String? errorMessage;
+  final bool subtitlesEnabled;
 
   factory PlayerUiState.initial(int videoId) => PlayerUiState(
         videoId: videoId,
@@ -89,9 +92,11 @@ class PlayerUiState {
     String? errorMessage,
     bool clearError = false,
     bool clearSourceKind = false,
+    bool? subtitlesEnabled,
   }) {
     return PlayerUiState(
       videoId: videoId,
+      subtitlesEnabled: subtitlesEnabled ?? this.subtitlesEnabled,
       isLoading: isLoading ?? this.isLoading,
       isPlaying: isPlaying ?? this.isPlaying,
       isBuffering: isBuffering ?? this.isBuffering,
@@ -181,7 +186,9 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     PlayerStartIntent? startIntent,
     PlayerVolume? playerVolume,
     PlayerScreenStack? screens,
+    PlayerSubtitles? subtitles,
   })  : _videoId = videoId,
+        _subtitles = subtitles ?? PlayerSubtitles(),
         _localOnly = localOnly,
         _playVideoUseCase = playVideoUseCase,
         _playbackSyncRepository = playbackSyncRepository,
@@ -293,6 +300,22 @@ class PlayerController extends StateNotifier<PlayerUiState> {
   String? _stickyPlaybackErrorMessage;
 
   VideoPlayerController? get videoController => _videoPlayer;
+
+  final PlayerSubtitles _subtitles;
+
+  bool get hasSubtitleTracks => _videoPlayer != null &&
+      _subtitles.hasTracks(_videoPlayer!);
+
+  void toggleSubtitles() {
+    if (!hasSubtitleTracks) return;
+    final bool enabled = !state.subtitlesEnabled;
+    _applySubtitleSelection(_videoPlayer!, enabled: enabled);
+    state = state.copyWith(subtitlesEnabled: enabled);
+  }
+
+  void _applySubtitleSelection(VideoPlayerController controller, {bool? enabled}) {
+    _subtitles.apply(controller, enabled: enabled ?? state.subtitlesEnabled);
+  }
 
   Future<void> togglePlayback() async {
     final VideoPlayerController? controller = _videoPlayer;
@@ -837,6 +860,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     }
     try {
       await first.initialize();
+      _applySubtitleSelection(first);
       if (canFallBackToRemote) {
         first.addListener(_onVideoPlayerUpdated);
       }
@@ -883,6 +907,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     // Attached only once it opens: a failure here is reported by _initialize,
     // and runtime recovery must not race it.
     await second.initialize();
+    _applySubtitleSelection(second);
     second.addListener(_onVideoPlayerUpdated);
     // The same video plays from the server, so the downloaded copy is at fault.
     await _markLocalCopyDamaged(playable.sourceUri);
@@ -1469,6 +1494,8 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         await next.dispose();
         return;
       }
+      // Use the latest selection: the viewer may have toggled during seek or pause.
+      _applySubtitleSelection(next);
       _videoPlayer = next;
       nextActivated = true;
       if (autoPlay && _mayPlay) {
@@ -1494,6 +1521,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
       if (nextActivated && !_isDisposed) {
         _videoPlayer = previous;
         if (previous != null) {
+          _applySubtitleSelection(previous);
           previous.addListener(_onVideoPlayerUpdated);
           if (wasPreviousPlaying && previous.value.isInitialized) {
             try {

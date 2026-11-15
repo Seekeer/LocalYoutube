@@ -560,6 +560,17 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
                           spacing: 8,
                           runSpacing: 8,
                           children: <Widget>[
+                            if (controller.hasSubtitleTracks)
+                              _buildSecondaryControlButton(
+                                icon: state.subtitlesEnabled
+                                    ? Icons.closed_caption
+                                    : Icons.closed_caption_off,
+                                tooltip: state.subtitlesEnabled
+                                    ? 'Выключить субтитры'
+                                    : 'Включить субтитры',
+                                enabled: !state.isLoading && state.errorMessage == null,
+                                onPressed: controller.toggleSubtitles,
+                              ),
                             _buildSecondaryControlButton(
                               icon: Icons.bookmark_add_outlined,
                               tooltip: 'Add bookmark',
@@ -1533,6 +1544,16 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
                                                 : () => unawaited(
                                                     controller.addManualBookmark()),
                                           ),
+                                          if (controller.hasSubtitleTracks)
+                                            _fullscreenActionButton(
+                                              icon: state.subtitlesEnabled
+                                                  ? Icons.closed_caption
+                                                  : Icons.closed_caption_off,
+                                              tooltip: state.subtitlesEnabled
+                                                  ? 'Выключить субтитры'
+                                                  : 'Включить субтитры',
+                                              onPressed: controller.toggleSubtitles,
+                                            ),
                                           _fullscreenActionButton(
                                             icon: Icons.skip_next,
                                             tooltip: 'Next section',

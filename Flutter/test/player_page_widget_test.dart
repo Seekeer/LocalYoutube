@@ -36,6 +36,12 @@ class MockPlayerController extends StateNotifier<PlayerUiState>
   double? lastPlayerVolume;
   int pauseCallCount = 0;
   int togglePlaybackCallCount = 0;
+  @override
+  bool get hasSubtitleTracks => true;
+  @override
+  void toggleSubtitles() {
+    state = state.copyWith(subtitlesEnabled: !state.subtitlesEnabled);
+  }
 
   /// The video this player shows, when a test needs one on screen.
   VideoPlayerController? fakeVideoController;
@@ -318,6 +324,21 @@ void main() {
     registerFallbackValue(const Duration(seconds: 1));
     registerFallbackValue(AppLifecycleState.resumed);
     registerFallbackValue(MockAppConfig());
+  });
+
+  testWidgets('subtitle button switches native subtitle state both ways', (tester) async {
+    final controller = MockPlayerController(PlayerUiState.initial(1).copyWith(
+      isLoading: false, isBuffering: false,
+    ));
+    await tester.pumpWidget(buildPlayerPage(videoId: '1', controller: controller));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.closed_caption_off));
+    await tester.pump();
+    expect(controller.state.subtitlesEnabled, isTrue);
+    expect(find.byIcon(Icons.closed_caption), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.closed_caption));
+    await tester.pump();
+    expect(controller.state.subtitlesEnabled, isFalse);
   });
 
   testWidgets('paused viewing owns the update installation guard until the page closes', (tester) async {
