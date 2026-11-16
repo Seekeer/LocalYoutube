@@ -22,8 +22,8 @@ final Provider<NotesRepository> notesRepositoryProvider =
   ),
 );
 
-/// Bumped whenever notes or Drafts change, so the home shelf and the player
-/// section reload.
+/// Bumped whenever notes or Drafts change, so the «Заметки» screen,
+/// its home button and the player section reload.
 final StateProvider<int> notesRevisionProvider =
     StateProvider<int>((Ref ref) => 0);
 
@@ -121,15 +121,16 @@ class NotesRepository {
     if ((await _store.currentAccount()).isEmpty) {
       return const NotesShelfData(items: <NotesShelfItem>[]);
     }
-    List<TriageItem> triage = await _store.readTriage();
+    TriageQueue queue = await _store.readTriage();
     if (!isOffline) {
       try {
-        triage = await _api.triage();
-        await _store.saveTriage(triage);
+        queue = await _api.triage();
+        await _store.saveTriage(queue);
       } catch (_) {
         // The cached Triage Queue is shown.
       }
     }
+    final List<TriageItem> triage = queue.items;
     final List<NoteDraft> drafts = await _store.allDrafts();
     final Map<int, NoteDraft> draftByVideo = <int, NoteDraft>{};
     for (final NoteDraft draft in drafts) {
@@ -140,9 +141,14 @@ class NotesRepository {
     }
     final List<NotesShelfItem> items = <NotesShelfItem>[];
     final Set<int> seen = <int>{};
+    // Videos with Drafts that the listed part of the queue does not hold.
+    int draftsOnly = 0;
     for (final NoteDraft draft in draftByVideo.values) {
       final TriageItem? queued = _find(triage, draft.videoId);
       seen.add(draft.videoId);
+      if (queued == null) {
+        draftsOnly++;
+      }
       items.add(
         NotesShelfItem(
           videoId: draft.videoId,
@@ -166,7 +172,14 @@ class NotesRepository {
         );
       }
     }
-    return NotesShelfData(items: items);
+    // With the whole queue listed, those videos are certainly outside it. A
+    // truncated queue may hold them further on, where the server already
+    // counted them, so its count is not added to.
+    final bool wholeQueue = queue.count <= queue.items.length;
+    return NotesShelfData(
+      items: items,
+      count: wholeQueue ? queue.count + draftsOnly : queue.count,
+    );
   }
 
   TriageItem? _find(List<TriageItem> items, int videoId) {
@@ -228,9 +241,9 @@ class NotesRepository {
       if (notes.postViewing != null) {
         return notes.postViewing!;
       }
-      final List<TriageItem> triage = await _api.triage();
+      final TriageQueue triage = await _api.triage();
       await _store.saveTriage(triage);
-      return _find(triage, videoId) != null;
+      return _find(triage.items, videoId) != null;
     } catch (_) {
       // Not remembered: the next call asks again.
       _postViewing.remove(videoId);

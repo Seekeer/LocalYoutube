@@ -241,10 +241,11 @@ class NotesLocalStore {
     }
   }
 
-  Future<void> saveTriage(List<TriageItem> items) => _write(
+  Future<void> saveTriage(TriageQueue queue) => _write(
         _triageKey,
-        jsonEncode(
-          items
+        jsonEncode(<String, dynamic>{
+          'count': queue.count,
+          'items': queue.items
               .map(
                 (TriageItem item) => <String, dynamic>{
                   'videoId': item.videoId,
@@ -255,20 +256,18 @@ class NotesLocalStore {
                 },
               )
               .toList(),
-        ),
+        }),
       );
 
-  Future<List<TriageItem>> readTriage() async {
+  Future<TriageQueue> readTriage() async {
     final String? payload = await _read(_triageKey);
     if (payload == null) {
-      return const <TriageItem>[];
+      return TriageQueue.empty;
     }
     try {
-      return notesJsonList(jsonDecode(payload))
-          .map(TriageItem.fromJson)
-          .toList(growable: false);
+      return TriageQueue.fromJson(jsonDecode(payload));
     } on FormatException {
-      return const <TriageItem>[];
+      return TriageQueue.empty;
     }
   }
 

@@ -293,6 +293,49 @@ class TriageItem {
       );
 }
 
+/// The Triage Queue as the server sends it: at most 100 [items], while
+/// [count] is the whole queue.
+class TriageQueue {
+  const TriageQueue({required this.count, required this.items});
+
+  static const TriageQueue empty =
+      TriageQueue(count: 0, items: <TriageItem>[]);
+
+  final int count;
+  final List<TriageItem> items;
+
+  /// Accepts the `{count, items}` object and the bare item list cached by
+  /// earlier versions.
+  factory TriageQueue.fromJson(Object? json) {
+    if (json is List) {
+      final List<TriageItem> items = json
+          .whereType<Map<dynamic, dynamic>>()
+          .map((Map<dynamic, dynamic> item) =>
+              TriageItem.fromJson(Map<String, dynamic>.from(item)))
+          .toList(growable: false);
+      return TriageQueue(count: items.length, items: items);
+    }
+    if (json is! Map) {
+      return empty;
+    }
+    final Object? rawItems = json['items'];
+    final List<TriageItem> items = rawItems is List
+        ? rawItems
+            .whereType<Map<dynamic, dynamic>>()
+            .map((Map<dynamic, dynamic> item) =>
+                TriageItem.fromJson(Map<String, dynamic>.from(item)))
+            .toList(growable: false)
+        : const <TriageItem>[];
+    final Object? count = json['count'];
+    return TriageQueue(
+      count: count is num && count.toInt() >= items.length
+          ? count.toInt()
+          : items.length,
+      items: items,
+    );
+  }
+}
+
 /// What a Draft holds.
 enum NoteDraftKind {
   review,
@@ -402,7 +445,7 @@ class NotesSnapshot {
   final bool offline;
 }
 
-/// A video on the home shelf «Заметки».
+/// A video on the «Заметки» screen.
 class NotesShelfItem {
   const NotesShelfItem({
     required this.videoId,
@@ -430,12 +473,22 @@ class NotesShelfItem {
   }
 }
 
+/// What the «Заметки» screen lists. The server sends at most 100 videos of
+/// the Triage Queue, so [count] can be larger than [items].
 class NotesShelfData {
-  const NotesShelfData({required this.items});
+  const NotesShelfData({required this.items, int? count}) : _count = count;
 
   final List<NotesShelfItem> items;
+  final int? _count;
 
-  int get count => items.length;
+  /// Videos waiting for the person, including those beyond [items].
+  int get count {
+    final int? count = _count;
+    return count == null || count < items.length ? items.length : count;
+  }
+
+  /// Videos counted in [count] but not listed.
+  int get more => count - items.length;
 }
 
 /// Outcome of a dictation clip.

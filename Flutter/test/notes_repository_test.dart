@@ -18,6 +18,7 @@ class _FakeServer {
   /// Requests ('METHOD /path') that reach the server but get no answer in time.
   final Set<String> timeouts = <String>{};
   String recognized = 'Распознанный текст';
+  int triageCount = 1;
   final List<String> requests = <String>[];
   final List<Object?> bodies = <Object?>[];
 
@@ -105,7 +106,7 @@ class _FakeServer {
             data = <String, dynamic>{'id': 9, 'videoType': null};
           } else if (key == 'GET /notes/triage') {
             data = <String, dynamic>{
-              'count': 1,
+              'count': triageCount,
               'items': <Map<String, dynamic>>[
                 <String, dynamic>{
                   'videoId': 9,
@@ -546,5 +547,51 @@ void main() {
     expect(shelf.items.first.title, 'Подкаст');
     expect(shelf.items.last.videoId, 9);
     expect(shelf.items.last.reasonLabel, 'разобрать');
+  });
+
+  test('the shelf counts the whole Triage Queue, not just the listed part',
+      () async {
+    server.triageCount = 140;
+    autonomous = true;
+    await repository.saveDraftText(7, NoteDraftKind.query, 'Какие книги?');
+    autonomous = false;
+
+    final NotesShelfData shelf = await repository.shelf();
+    expect(shelf.items, hasLength(2));
+    // The video with a Draft may be one of the 139 unlisted ones, which the
+    // server already counted.
+    expect(shelf.count, 140);
+    expect(shelf.more, 138);
+
+    // Offline, the cached count is shown.
+    server.unreachable = true;
+    expect((await repository.shelf()).count, 140);
+  });
+
+  test('with the whole queue listed, videos with Drafts add to its count',
+      () async {
+    autonomous = true;
+    await repository.saveDraftText(7, NoteDraftKind.query, 'Какие книги?');
+    autonomous = false;
+
+    final NotesShelfData shelf = await repository.shelf();
+    expect(shelf.count, 2);
+    expect(shelf.more, 0);
+  });
+
+  test('a Triage Queue cached as a bare list by older versions still reads',
+      () async {
+    await database.execute(
+      'INSERT OR REPLACE INTO notes_cache(cache_key, payload_json, updated_at) '
+      'VALUES (?, ?, ?)',
+      variables: <Object?>[
+        'alice|triage',
+        '[{"videoId":9,"title":"Лекция","seriesName":"","reason":"classify"}]',
+        '2026-11-01T00:00:00Z',
+      ],
+    );
+    final TriageQueue queue = await store.readTriage();
+    expect(queue.count, 1);
+    expect(queue.items.single.videoId, 9);
   });
 }

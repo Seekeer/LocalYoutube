@@ -10,6 +10,7 @@ import '../../features/home/presentation/home_page.dart';
 import '../../features/home/presentation/offline_history_page.dart';
 import '../../features/home/presentation/start_page.dart';
 import '../../features/logs/presentation/logs_page.dart';
+import '../../features/notes/presentation/notes_page.dart';
 import '../../features/player/presentation/player_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import 'app_routes.dart';
@@ -58,6 +59,10 @@ GoRouter buildAppRouter({
       GoRoute(
         path: AppRoutes.films,
         builder: (_, __) => const FilmsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.notes,
+        builder: (_, __) => const NotesPage(),
       ),
       GoRoute(
         path: AppRoutes.offlineHistory,

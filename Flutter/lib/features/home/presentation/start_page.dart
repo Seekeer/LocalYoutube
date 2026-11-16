@@ -18,7 +18,6 @@ import '../../downloads/domain/download_models.dart';
 import '../../downloads/domain/download_service.dart';
 import '../../films/presentation/films_page.dart';
 import '../../notes/data/notes_repository.dart';
-import '../../notes/presentation/notes_shelf.dart';
 import '../../player/presentation/player_navigation_result.dart';
 
 class StartPage extends ConsumerStatefulWidget {
@@ -42,6 +41,7 @@ class _StartPageState extends ConsumerState<StartPage> {
     Color(0xFF546E7A),
     Color(0xFF6D4C41),
     Color(0xFFC62828),
+    Color(0xFFAD1457),
   ];
 
   static const String _labelDownloaded =
@@ -54,6 +54,8 @@ class _StartPageState extends ConsumerState<StartPage> {
       '\u0418\u0441\u0442\u043e\u0440\u0438\u044f';
   static const String _labelSeries = '\u0421\u0435\u0440\u0438\u0438';
   static const String _labelFilms = '\u0424\u0438\u043b\u044c\u043c\u044b';
+  static const String _labelNotes =
+      '\u0417\u0430\u043c\u0435\u0442\u043a\u0438';
   static const String _labelAutonomous =
       '\u0410\u0432\u0442\u043e\u043d\u043e\u043c\u043d\u043e';
   /// Deliberately the product's own word: Receiver Mode is set behind this entry.
@@ -93,6 +95,8 @@ class _StartPageState extends ConsumerState<StartPage> {
     final bool useOfflineActions = ref.watch(effectiveAutonomousModeProvider);
     final bool canUseOnlineActions = !useOfflineActions;
     final bool updateNeedsAttention = ref.watch(appUpdateAttentionProvider);
+    final int notesCount =
+        ref.watch(notesShelfProvider).valueOrNull?.count ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -159,7 +163,6 @@ class _StartPageState extends ConsumerState<StartPage> {
                             tone: StateFeedbackTone.warning,
                           ),
                         ),
-                      const NotesShelf(),
                       _buildMenuButton(
                         label: _labelDownloaded,
                         width: width,
@@ -234,6 +237,15 @@ class _StartPageState extends ConsumerState<StartPage> {
                         width: width,
                         backgroundColor: _buttonPalette[7],
                         onPressed: _isBusy ? null : _logout,
+                      ),
+                      _buildMenuButton(
+                        key: const Key('start-notes-button'),
+                        label: notesCount > 0
+                            ? '$_labelNotes · $notesCount'
+                            : _labelNotes,
+                        width: width,
+                        backgroundColor: _buttonPalette[9],
+                        onPressed: _isBusy ? null : _openNotes,
                       ),
                     ],
                   ),
@@ -400,6 +412,13 @@ class _StartPageState extends ConsumerState<StartPage> {
       return;
     }
     await context.push('${AppRoutes.catalog}/${CatalogSection.series.key}');
+  }
+
+  Future<void> _openNotes() async {
+    if (!mounted) {
+      return;
+    }
+    await context.push(AppRoutes.notes);
   }
 
   Future<void> _openFilms() async {

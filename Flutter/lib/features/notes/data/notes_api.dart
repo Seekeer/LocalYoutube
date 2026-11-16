@@ -132,12 +132,10 @@ class NotesApi {
     return NoteAnswer.fromJson(notesJsonMap(response.data));
   }
 
-  Future<List<TriageItem>> triage() async {
+  Future<TriageQueue> triage() async {
     final Response<dynamic> response =
         await _dio.get<dynamic>('/notes/triage', options: _idempotent);
-    return notesJsonList(notesJsonMap(response.data)['items'])
-        .map(TriageItem.fromJson)
-        .toList(growable: false);
+    return TriageQueue.fromJson(notesJsonMap(response.data));
   }
 
   /// VideoType of a video as a number (Courses = 8, ExternalVideo = 10).

@@ -16,6 +16,8 @@ import 'package:localtube_flutter/core/playback/playback_mode.dart';
 import 'package:localtube_flutter/features/catalog/data/local_video_metadata_repository.dart';
 import 'package:localtube_flutter/features/downloads/data/offline_history_repository.dart';
 import 'package:localtube_flutter/features/home/presentation/start_page.dart';
+import 'package:localtube_flutter/features/notes/data/notes_repository.dart';
+import 'package:localtube_flutter/features/notes/domain/notes_models.dart';
 import 'package:localtube_flutter/features/settings/presentation/settings_page.dart';
 import 'package:localtube_flutter/app/router/app_routes.dart';
 import 'package:localtube_flutter/features/app_updates/app_updates.dart';
@@ -827,6 +829,28 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.byKey(const Key('start-films-button')), findsNothing);
+  });
+
+  testWidgets('notes are a button at the bottom of the menu, with their count',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(buildOnlineStartPage(extraOverrides: <Override>[
+      notesShelfProvider.overrideWith(
+        (Ref ref) async => const NotesShelfData(
+          items: <NotesShelfItem>[NotesShelfItem(videoId: 9, title: 'Лекция')],
+          count: 140,
+        ),
+      ),
+    ]));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Лекция'), findsNothing);
+    final Finder notes = find.byKey(const Key('start-notes-button'));
+    expect(find.descendant(of: notes, matching: find.text('Заметки · 140')),
+        findsOneWidget);
+    final List<ElevatedButton> menu =
+        tester.widgetList<ElevatedButton>(find.byType(ElevatedButton)).toList();
+    expect(menu.last.key, const Key('start-notes-button'));
   });
 }
 
