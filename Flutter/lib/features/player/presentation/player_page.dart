@@ -26,6 +26,7 @@ import '../../notes/presentation/mark_caption_dialog.dart';
 import '../../notes/presentation/notes_section.dart';
 import '../../notes/presentation/rating_dialog.dart';
 import '../../transcript/presentation/transcript_panel.dart';
+import 'player_chapter_bar.dart';
 import 'player_controller.dart';
 import 'player_keyboard_shortcuts.dart';
 import 'player_navigation_result.dart';
@@ -62,6 +63,14 @@ enum _FullscreenRequest {
   /// The viewer pressed «Завершить просмотр»: the Rating and delete dialogs belong to the page,
   /// and the page is what closes afterwards.
   finishViewing,
+}
+
+/// The chapters the server imported for the video; until they arrive, or when
+/// they cannot (offline, an older server), the description's «00:00 Название»
+/// lines by the server's rule.
+List<VideoTimestamp> _chapters(WidgetRef ref, int videoId, String? description) {
+  return ref.watch(videoChaptersProvider(videoId)).valueOrNull ??
+      ref.read(extractTimestampsUseCaseProvider).call(description ?? '');
 }
 
 Future<void> _jumpToNearestTimestamp({
@@ -369,9 +378,11 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       });
     });
     final VideoPlayerController? videoController = controller.videoController;
-    final List<VideoTimestamp> timestamps = ref
-        .read(extractTimestampsUseCaseProvider)
-        .call(widget.videoDescription ?? '');
+    final List<VideoTimestamp> timestamps = _chapters(
+      ref,
+      videoId,
+      widget.videoDescription,
+    );
     final JumpToNearestTimestampUseCase jumpToNearestTimestampUseCase =
         ref.read(jumpToNearestTimestampUseCaseProvider);
     final bool isOffline = ref.watch(networkStatusProvider).maybeWhen(
@@ -459,7 +470,20 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
                         Row(
                           children: <Widget>[
                             Expanded(
-                              child: SliderTheme(
+                              child: ChapterTimeline(
+                                sliderPadding: const EdgeInsets.symmetric(horizontal: 2),
+                                chapterBar: PlayerChapterBar(
+                                  chapters: timestamps,
+                                  duration: state.duration,
+                                  position: Duration(
+                                    milliseconds: (positionSeconds * 1000).round(),
+                                  ),
+                                  isSeeking: _dragSeconds != null,
+                                  enabled: state.errorMessage == null,
+                                  onSeek: (Duration start) =>
+                                      unawaited(controller.seek(start)),
+                                ),
+                                slider: SliderTheme(
                                 data: SliderTheme.of(context).copyWith(
                                   trackHeight: 8,
                                   thumbShape: const RoundSliderThumbShape(
@@ -493,6 +517,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
                                           );
                                         },
                                 ),
+                              ),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -1477,9 +1502,11 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
       });
     });
     final VideoPlayerController? videoController = controller.videoController;
-    final List<VideoTimestamp> timestamps = ref
-        .read(extractTimestampsUseCaseProvider)
-        .call(widget.videoDescription ?? '');
+    final List<VideoTimestamp> timestamps = _chapters(
+      ref,
+      widget.videoId,
+      widget.videoDescription,
+    );
     final JumpToNearestTimestampUseCase jumpToNearestTimestampUseCase =
         ref.read(jumpToNearestTimestampUseCaseProvider);
     final double maxSeconds =
@@ -1715,7 +1742,24 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
                                     Row(
                                       children: <Widget>[
                                         Expanded(
-                                          child: SliderTheme(
+                                          child: ChapterTimeline(
+                                            chapterBar: PlayerChapterBar(
+                                              chapters: timestamps,
+                                              duration: state.duration,
+                                              position: Duration(
+                                                milliseconds:
+                                                    (positionSeconds * 1000).round(),
+                                              ),
+                                              isSeeking: _dragSeconds != null,
+                                              enabled: !_isScreenLocked,
+                                              onSeek: (Duration start) =>
+                                                  unawaited(controller.seek(start)),
+                                              trackColor: Colors.white24,
+                                              fillColor: Colors.white,
+                                              textColor: Colors.white,
+                                              compact: true,
+                                            ),
+                                            slider: SliderTheme(
                                             data: SliderTheme.of(context).copyWith(
                                               disabledActiveTrackColor: Colors.white,
                                               disabledInactiveTrackColor: Colors.white24,
@@ -1748,6 +1792,7 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
                                                       );
                                                     },
                                             ),
+                                          ),
                                           ),
                                         ),
                                         // A locked screen is read-only, so it shows no volume either.

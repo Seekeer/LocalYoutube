@@ -10,6 +10,18 @@ import 'update_models.dart';
 typedef InstalledAppSource = Future<InstalledApp?> Function();
 typedef UpdateSource = Future<Map<String, dynamic>?> Function(String channel);
 
+/// The update server answered but does not know this installation's channel:
+/// it runs an API older than the channel.
+class UpdateChannelNotServed implements Exception {
+  const UpdateChannelNotServed();
+}
+
+/// This build has no usable address of its update server.
+class UpdateServerNotConfigured implements Exception {
+  const UpdateServerNotConfigured(this.reason);
+  final String reason;
+}
+
 // CI passes the canonical version into Windows distribution builds. Local
 // builds have no version and therefore no update channel.
 const int windowsVersionCode =
@@ -47,7 +59,8 @@ Uri updateServerUri(AppConfig config, String channel, String path) {
   if (channel.startsWith('windows-')) {
     final base = Uri.tryParse(config.apiBaseUrl.trim());
     if (base == null || base.scheme != 'https' || base.host.isEmpty) {
-      throw StateError('HTTPS update server is not configured');
+      throw const UpdateServerNotConfigured(
+          'HTTPS update server is not configured');
     }
     final prefix = base.path.endsWith('/')
         ? base.path.substring(0, base.path.length - 1)
@@ -59,7 +72,8 @@ Uri updateServerUri(AppConfig config, String channel, String path) {
         path: '$prefix$path');
   }
   if (config.localApiHost.trim().isEmpty || config.localApiPort <= 0) {
-    throw StateError('LAN update server is not configured');
+    throw const UpdateServerNotConfigured(
+        'LAN update server is not configured');
   }
   return Uri(
       scheme: 'http',
@@ -81,10 +95,25 @@ final updateSourceProvider = Provider<UpdateSource>((ref) => (channel) async {
         final response = await client.getUri<dynamic>(uri,
             options: Options(
                 headers: {'Cache-Control': 'no-cache'},
-                validateStatus: (status) => status == 200 || status == 404));
-        if (response.statusCode == 404) return null;
-        return Map<String, dynamic>.from(response.data as Map);
+                validateStatus: (status) =>
+                    status == 200 || status == 400 || status == 404));
+        return parseLatestUpdateResponse(response.statusCode, response.data);
       } finally {
         client.close();
       }
     });
+
+/// Interprets the answer of `GET /app-updates/{channel}/latest`: metadata on
+/// 200, no publication on 404, an unknown channel on the API's 400.
+Map<String, dynamic>? parseLatestUpdateResponse(int? status, Object? body) {
+  if (status == 404) return null;
+  if (status == 400) {
+    if (body is String && body.contains('Unknown update channel')) {
+      throw const UpdateChannelNotServed();
+    }
+    throw StateError('Update server rejected the request');
+  }
+  // A proxy or web front end may answer 200 with a page instead of JSON.
+  if (body is! Map) throw const FormatException('Update metadata is not JSON');
+  return Map<String, dynamic>.from(body);
+}

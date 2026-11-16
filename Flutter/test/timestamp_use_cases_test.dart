@@ -30,15 +30,19 @@ void main() {
       );
     });
 
-    test('extracts multiple timestamps from one line and deduplicates', () {
+    test('takes only a leading timestamp and keeps one chapter per second', () {
       final List<VideoTimestamp> result = useCase.call(
-        '00:00 Intro 05:10 Middle 05:10 Duplicate',
+        <String>[
+          '00:00 Intro 05:10 Middle',
+          '05:10 Middle',
+          '05:10 Duplicate',
+        ].join('\n'),
       );
 
       expect(
         result,
         const <VideoTimestamp>[
-          VideoTimestamp(position: Duration.zero, label: 'Intro'),
+          VideoTimestamp(position: Duration.zero, label: 'Intro 05:10 Middle'),
           VideoTimestamp(
             position: Duration(minutes: 5, seconds: 10),
             label: 'Middle',
@@ -47,14 +51,17 @@ void main() {
       );
     });
 
-    test('uses formatted timestamp as fallback label', () {
-      final List<VideoTimestamp> result = useCase.call('00:00');
-
+    test('ordinary text, links and untitled timestamps are not chapters', () {
       expect(
-        result,
-        const <VideoTimestamp>[
-          VideoTimestamp(position: Duration.zero, label: '00:00'),
-        ],
+        useCase.call(
+          <String>[
+            'Discussed at 01:30 yesterday',
+            'https://example.com:8080/watch',
+            '00:00',
+            '10:60 Not a time',
+          ].join('\n'),
+        ),
+        isEmpty,
       );
     });
   });

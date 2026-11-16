@@ -72,6 +72,63 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
   });
 
+  testWidgets('a server that does not know the channel says so',
+      (tester) async {
+    await tester.pumpWidget(
+        app((_) async => throw const UpdateChannelNotServed()));
+    await tester.pumpAndSettle();
+    expect(
+        find.text('Сервер обновлений пока не поддерживает канал Preview. '
+            'Обновления появятся, когда сервер обновят.'),
+        findsOneWidget);
+    expect(find.textContaining('недоступен'), findsNothing);
+    expect(find.text('Проверить обновления'), findsOneWidget);
+  });
+
+  testWidgets('a build without an update server address says so',
+      (tester) async {
+    await tester.pumpWidget(app((_) async =>
+        throw const UpdateServerNotConfigured('LAN update server')));
+    await tester.pumpAndSettle();
+    expect(
+        find.text('В этой сборке не задан адрес локального сервера обновлений.'),
+        findsOneWidget);
+    expect(find.textContaining('недоступен'), findsNothing);
+  });
+
+  testWidgets('a build without a channel shows its version and no check',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(overrides: [
+      apkDownloadServiceProvider.overrideWithValue(FakeApkDownloads()),
+      installedAppProvider.overrideWithValue(
+          () async => const InstalledApp('org.localtube.app.dev', 7, '0.0.7')),
+      updateSourceProvider.overrideWithValue(
+          (_) async => fail('a build without a channel asks no server')),
+    ], child: const MaterialApp(home: Scaffold(body: AppUpdatesMenu()))));
+    await tester.pumpAndSettle();
+    expect(find.text('Установлена: 0.0.7 (7)'), findsOneWidget);
+    expect(find.textContaining('не получает обновлений'), findsOneWidget);
+    expect(find.text('Проверить обновления'), findsNothing);
+  });
+
+  group('latest update response', () {
+    test('404 means nothing is published', () {
+      expect(parseLatestUpdateResponse(404, ''), isNull);
+    });
+    test('the API rejecting an unknown channel is not an outage', () {
+      expect(() => parseLatestUpdateResponse(400, 'Unknown update channel.'),
+          throwsA(isA<UpdateChannelNotServed>()));
+      expect(() => parseLatestUpdateResponse(400, 'Bad request'),
+          throwsStateError);
+    });
+    test('a page instead of JSON is incompatible metadata', () {
+      expect(() => parseLatestUpdateResponse(200, '<!DOCTYPE html>'),
+          throwsFormatException);
+      expect(parseLatestUpdateResponse(200, {'versionCode': 1}),
+          {'versionCode': 1});
+    });
+  });
+
   testWidgets('startup and repeated resumes share one active check',
       (tester) async {
     final pending = Completer<Map<String, dynamic>?>();

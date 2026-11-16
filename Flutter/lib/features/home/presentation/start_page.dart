@@ -11,6 +11,7 @@ import '../../../core/playback/playback_mode.dart';
 import '../../../shared/widgets/state_feedback.dart';
 import '../../catalog/domain/catalog_models.dart';
 import '../../app_updates/app_updates.dart';
+import '../../app_updates/app_version_update_button.dart';
 import '../../catalog/presentation/catalog_controller.dart';
 import '../../downloads/data/offline_history_repository.dart';
 import '../../downloads/domain/download_models.dart';
@@ -43,8 +44,6 @@ class _StartPageState extends ConsumerState<StartPage> {
     Color(0xFFC62828),
   ];
 
-  static const String _titleMainMenu =
-      '\u0413\u043b\u0430\u0432\u043d\u043e\u0435 \u043c\u0435\u043d\u044e';
   static const String _labelDownloaded =
       '\u0421\u043a\u0430\u0447\u0430\u043d\u043d\u043e\u0435';
   static const String _labelFresh =
@@ -59,6 +58,9 @@ class _StartPageState extends ConsumerState<StartPage> {
       '\u0410\u0432\u0442\u043e\u043d\u043e\u043c\u043d\u043e';
   /// Deliberately the product's own word: Receiver Mode is set behind this entry.
   static const String _labelCast = 'Cast';
+  static const String _labelSettings = 'Настройки';
+  static const String _labelSettingsWithUpdate =
+      'Настройки · доступно обновление';
   static const String _labelDownloading =
       '\u0421\u043a\u0430\u0447\u0438\u0432\u0430\u0435\u043c\u043e\u0435';
   static const String _labelLogs =
@@ -90,19 +92,31 @@ class _StartPageState extends ConsumerState<StartPage> {
     final bool internetEnabled = networkStatus != NetworkStatus.offline;
     final bool useOfflineActions = ref.watch(effectiveAutonomousModeProvider);
     final bool canUseOnlineActions = !useOfflineActions;
-    final AppUpdateState updateState = ref.watch(appUpdateControllerProvider);
-    final bool promoteUpdateMenu = updateState.status == UpdateStatus.available &&
-        updateState.available != null;
+    final bool updateNeedsAttention = ref.watch(appUpdateAttentionProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(_titleMainMenu),
+        centerTitle: false,
+        title: AppVersionUpdateButton(
+          onOpenSettings: () => context.push(AppRoutes.settings),
+        ),
         actions: <Widget>[
           IconButton(
             key: const Key('cast-settings-button'),
             onPressed: () => context.push(AppRoutes.cast),
             icon: const Icon(Icons.cast),
             tooltip: _labelCast,
+          ),
+          IconButton(
+            key: const Key('settings-button'),
+            onPressed: () => context.push(AppRoutes.settings),
+            icon: Badge(
+              isLabelVisible: updateNeedsAttention,
+              child: const Icon(Icons.settings_outlined),
+            ),
+            tooltip: updateNeedsAttention
+                ? _labelSettingsWithUpdate
+                : _labelSettings,
           ),
           const Center(child: Text(_labelAutonomous)),
           Switch(
@@ -145,7 +159,6 @@ class _StartPageState extends ConsumerState<StartPage> {
                             tone: StateFeedbackTone.warning,
                           ),
                         ),
-                      if (promoteUpdateMenu) const AppUpdatesMenu(),
                       const NotesShelf(),
                       _buildMenuButton(
                         label: _labelDownloaded,
@@ -222,7 +235,6 @@ class _StartPageState extends ConsumerState<StartPage> {
                         backgroundColor: _buttonPalette[7],
                         onPressed: _isBusy ? null : _logout,
                       ),
-                      if (!promoteUpdateMenu) const AppUpdatesMenu(),
                     ],
                   ),
                 ),

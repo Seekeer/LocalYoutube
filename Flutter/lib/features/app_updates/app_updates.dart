@@ -18,7 +18,13 @@ enum UpdateStatus {
   current,
   available,
   unavailable,
-  incompatible
+  incompatible,
+
+  /// The server runs an API that does not know this channel yet.
+  channelNotServed,
+
+  /// The build has no usable update server address.
+  misconfigured,
 }
 
 class AppUpdateState {
@@ -50,6 +56,10 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
     state = AppUpdateState(UpdateStatus.checking, installed: installed);
     try {
       installed = await _installedApp();
+      // The main menu shows the version while the server is still answering.
+      if (mounted && installed != null && state.installed == null) {
+        state = AppUpdateState(UpdateStatus.checking, installed: installed);
+      }
       if (installed?.channel == null) {
         if (mounted) {
           state =
@@ -76,12 +86,68 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
       if (mounted) {
         state = AppUpdateState(UpdateStatus.incompatible, installed: installed);
       }
+    } on UpdateChannelNotServed {
+      if (mounted) {
+        state =
+            AppUpdateState(UpdateStatus.channelNotServed, installed: installed);
+      }
+    } on UpdateServerNotConfigured {
+      if (mounted) {
+        state = AppUpdateState(UpdateStatus.misconfigured, installed: installed);
+      }
     } catch (_) {
       if (mounted) {
         state = AppUpdateState(UpdateStatus.unavailable, installed: installed);
       }
     }
   }
+}
+
+/// Something in the update card waits for the user: a newer version, a
+/// downloaded package or a failed Windows installation. The entry to
+/// Settings carries a badge while this holds.
+final appUpdateAttentionProvider = Provider<bool>((ref) {
+  final state = ref.watch(appUpdateControllerProvider);
+  if (state.status == UpdateStatus.available && state.available != null) {
+    return true;
+  }
+  if (ref.watch(windowsUpdatesEnabledProvider)) {
+    final phase = ref.watch(windowsUpdateControllerProvider).phase;
+    if (phase == WindowsUpdatePhase.ready ||
+        phase == WindowsUpdatePhase.failed) {
+      return true;
+    }
+  }
+  if (ref.watch(apkUpdatesEnabledProvider) &&
+      ref.watch(apkUpdateControllerProvider).phase == ApkUpdatePhase.ready) {
+    return true;
+  }
+  return false;
+});
+
+/// Text of the update card for [status]; null while nothing was checked.
+String? appUpdateStatusMessage(UpdateStatus status, InstalledApp? installed) {
+  final windows = installed?.isWindows ?? false;
+  return switch (status) {
+    UpdateStatus.idle => null,
+    UpdateStatus.checking => 'Проверка обновлений…',
+    UpdateStatus.available => 'Доступна новая версия',
+    UpdateStatus.current => 'Новых обновлений нет',
+    UpdateStatus.noBuilds => 'Для этого канала ещё нет опубликованных сборок',
+    UpdateStatus.unavailable => windows
+        ? 'Сервер обновлений недоступен. Проверьте подключение к серверу и повторите проверку.'
+        : 'Сервер обновлений недоступен. Подключитесь к локальной сети и повторите проверку.',
+    UpdateStatus.incompatible =>
+      'Сервер вернул несовместимые сведения об обновлении',
+    UpdateStatus.channelNotServed =>
+      'Сервер обновлений пока не поддерживает канал ${installed?.channelLabel ?? ''}. '
+          'Обновления появятся, когда сервер обновят.',
+    UpdateStatus.misconfigured => windows
+        ? 'Обновления Windows приходят только с HTTPS-адреса сервера. Подключитесь к серверу по HTTPS.'
+        : 'В этой сборке не задан адрес локального сервера обновлений.',
+    UpdateStatus.unsupported =>
+      'Эта сборка не получает обновлений: они есть только у сборок Preview и Stable.',
+  };
 }
 
 class AppUpdatesMenu extends ConsumerStatefulWidget {
@@ -113,10 +179,7 @@ class _AppUpdatesMenuState extends ConsumerState<AppUpdatesMenu> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(appUpdateControllerProvider);
-    if (state.status == UpdateStatus.unsupported ||
-        state.status == UpdateStatus.idle) {
-      return const SizedBox.shrink();
-    }
+    if (state.status == UpdateStatus.idle) return const SizedBox.shrink();
     final apkEnabled = ref.watch(apkUpdatesEnabledProvider);
     final apk = apkEnabled
         ? ref.watch(apkUpdateControllerProvider)
@@ -124,19 +187,9 @@ class _AppUpdatesMenuState extends ConsumerState<AppUpdatesMenu> {
     final installed = state.installed;
     final available = state.available;
     final download = apkEnabled ? (apk.apk?.update ?? available) : null;
-    final message = switch (state.status) {
-      UpdateStatus.checking => 'Проверка обновлений…',
-      UpdateStatus.available => 'Доступна новая версия',
-      UpdateStatus.current => 'Новых обновлений нет',
-      UpdateStatus.noBuilds => 'Для этого канала ещё нет опубликованных сборок',
-      UpdateStatus.unavailable => installed?.isWindows ?? false
-          ? 'Сервер обновлений недоступен. Проверьте подключение к серверу и повторите проверку.'
-          : 'Сервер обновлений недоступен. Подключитесь к локальной сети и повторите проверку.',
-      UpdateStatus.incompatible =>
-        'Сервер вернул несовместимые сведения об обновлении',
-      _ => '',
-    };
+    final message = appUpdateStatusMessage(state.status, installed) ?? '';
     return Card(
+        key: const Key('app-updates-card'),
         child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -150,8 +203,9 @@ class _AppUpdatesMenuState extends ConsumerState<AppUpdatesMenu> {
                   const Text('Обновление приложения'),
                 ]),
                 if (installed != null)
-                  Text(
-                      '${installed.channelLabel} · Установлена: ${installed.versionName} (${installed.versionCode})'),
+                  Text(installed.channel == null
+                      ? 'Установлена: ${installed.versionName} (${installed.versionCode})'
+                      : '${installed.channelLabel} · Установлена: ${installed.versionName} (${installed.versionCode})'),
                 if (available != null)
                   Text(
                       'Доступна: ${available.versionName} (${available.versionCode})'),
@@ -193,13 +247,15 @@ class _AppUpdatesMenuState extends ConsumerState<AppUpdatesMenu> {
                               apk.phase == ApkUpdatePhase.canceled
                           ? 'Повторить скачивание'
                           : 'Скачать обновление')),
-                TextButton(
-                    onPressed: state.status == UpdateStatus.checking
-                        ? null
-                        : () => ref
-                            .read(appUpdateControllerProvider.notifier)
-                            .check(),
-                    child: const Text('Проверить обновления')),
+                // A build without a channel has nothing to check.
+                if (state.status != UpdateStatus.unsupported)
+                  TextButton(
+                      onPressed: state.status == UpdateStatus.checking
+                          ? null
+                          : () => ref
+                              .read(appUpdateControllerProvider.notifier)
+                              .check(),
+                      child: const Text('Проверить обновления')),
               ],
             )));
   }
@@ -227,6 +283,12 @@ class _AppUpdateLifecycleListenerState
 
   void _check() {
     if (mounted) {
+      // Reports the last Windows installation and restores a downloaded
+      // package before Settings is opened.
+      if (ref.read(windowsUpdatesEnabledProvider)) {
+        unawaited(
+            ref.read(windowsUpdateControllerProvider.notifier).initialize());
+      }
       unawaited(ref.read(appUpdateControllerProvider.notifier).check());
       if (ref.read(apkUpdatesEnabledProvider)) {
         unawaited(ref.read(apkUpdateControllerProvider.notifier).refresh());

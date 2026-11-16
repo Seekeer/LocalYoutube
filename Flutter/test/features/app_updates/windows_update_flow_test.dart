@@ -173,7 +173,7 @@ void main() {
         localApiHost: '192.0.2.10',
         localApiPort: 55);
     expect(() => updateServerUri(plain, 'windows-stable', '/x'),
-        throwsStateError);
+        throwsA(isA<UpdateServerNotConfigured>()));
   });
 
   group('system installer files', () {
@@ -461,7 +461,7 @@ void main() {
     expect(find.text('LocalTube перезапустится с новой версией…'), findsOneWidget);
   });
 
-  testWidgets('local Windows builds without a version show no update card',
+  testWidgets('local Windows builds without a version offer no check',
       (tester) async {
     await tester.pumpWidget(ProviderScope(overrides: [
       apkDownloadServiceProvider.overrideWithValue(FakeApkDownloads()),
@@ -469,6 +469,68 @@ void main() {
       updateSourceProvider.overrideWithValue((_) async => null),
     ], child: const MaterialApp(home: Scaffold(body: AppUpdatesMenu()))));
     await tester.pumpAndSettle();
-    expect(find.byType(Card), findsNothing);
+    expect(find.textContaining('не получает обновлений'), findsOneWidget);
+    expect(find.text('Проверить обновления'), findsNothing);
+    expect(find.text('Скачать обновление'), findsNothing);
+  });
+
+  for (final channel in ['windows-stable', 'windows-preview']) {
+    testWidgets('$channel asks only its own channel and names it',
+        (tester) async {
+      final id = channel == 'windows-preview'
+          ? windowsPreviewApplicationId
+          : windowsApplicationId;
+      final requested = <String>[];
+      await tester.pumpWidget(ProviderScope(overrides: [
+        apkDownloadServiceProvider.overrideWithValue(FakeApkDownloads()),
+        installedAppProvider
+            .overrideWithValue(() async => InstalledApp(id, 10, '1.1.10')),
+        updateSourceProvider.overrideWithValue((requestedChannel) async {
+          requested.add(requestedChannel);
+          throw const UpdateChannelNotServed();
+        }),
+      ], child: const MaterialApp(home: Scaffold(body: AppUpdatesMenu()))));
+      await tester.pumpAndSettle();
+      final label =
+          channel == 'windows-preview' ? 'Windows Preview' : 'Windows Stable';
+      expect(requested, [channel]);
+      expect(find.textContaining('$label · Установлена: 1.1.10 (10)'),
+          findsOneWidget);
+      expect(
+          find.textContaining('не поддерживает канал $label'), findsOneWidget);
+    });
+  }
+
+  testWidgets('an HTTP server address explains the HTTPS requirement',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(overrides: [
+      apkDownloadServiceProvider.overrideWithValue(FakeApkDownloads()),
+      installedAppProvider.overrideWithValue(() async => installed),
+      updateSourceProvider.overrideWithValue((channel) async =>
+          throw const UpdateServerNotConfigured('HTTPS update server')),
+    ], child: const MaterialApp(home: Scaffold(body: AppUpdatesMenu()))));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('только с HTTPS-адреса сервера'),
+        findsOneWidget);
+  });
+
+  test('a downloaded Windows package asks for attention', () async {
+    final installer = FakeWindowsInstaller()..selection = windowsUpdate(11);
+    final container = ProviderContainer(overrides: [
+      apkDownloadServiceProvider.overrideWithValue(FakeApkDownloads()),
+      windowsUpdatesEnabledProvider.overrideWithValue(true),
+      windowsUpdateInstallerProvider.overrideWithValue(installer),
+      updateInstallBlockProvider.overrideWithValue(null),
+      installedAppProvider.overrideWithValue(() async => installed),
+      updateSourceProvider.overrideWithValue((_) async => windowsMetadata(10)),
+    ]);
+    addTearDown(container.dispose);
+    expect(container.read(appUpdateAttentionProvider), isFalse);
+    await container.read(appUpdateControllerProvider.notifier).check();
+    expect(container.read(appUpdateAttentionProvider), isFalse);
+    await container.read(windowsUpdateControllerProvider.notifier).initialize();
+    expect(container.read(windowsUpdateControllerProvider).phase,
+        WindowsUpdatePhase.ready);
+    expect(container.read(appUpdateAttentionProvider), isTrue);
   });
 }

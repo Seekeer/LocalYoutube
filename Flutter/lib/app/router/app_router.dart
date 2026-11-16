@@ -11,6 +11,7 @@ import '../../features/home/presentation/offline_history_page.dart';
 import '../../features/home/presentation/start_page.dart';
 import '../../features/logs/presentation/logs_page.dart';
 import '../../features/player/presentation/player_page.dart';
+import '../../features/settings/presentation/settings_page.dart';
 import 'app_routes.dart';
 import 'auth_notifier.dart';
 
@@ -98,6 +99,10 @@ GoRouter buildAppRouter({
       GoRoute(
         path: AppRoutes.cast,
         builder: (_, __) => const CastSettingsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.settings,
+        builder: (_, __) => const SettingsPage(),
       ),
     ],
   );

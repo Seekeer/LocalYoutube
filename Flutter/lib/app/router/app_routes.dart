@@ -9,4 +9,5 @@ abstract final class AppRoutes {
   static const String offlineHistory = '/offline-history';
   static const String logs = '/logs';
   static const String cast = '/cast';
+  static const String settings = '/settings';
 }
