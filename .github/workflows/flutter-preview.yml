@@ -2,17 +2,9 @@ name: Flutter Android Preview
 run-name: Android preview · ${{ github.sha }}
 
 on:
+  # Started by hand only: the Gitea «Flutter * Preview (GitHub)» triggers
+  # or the GitHub Actions tab. No builds on push or pull request.
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'Flutter/**'
-      - '.localtube/source.json'
-      - '.github/workflows/flutter-preview.yml'
-  pull_request:
-    paths:
-      - 'Flutter/**'
-      - '.github/workflows/flutter-preview.yml'
 
 permissions:
   contents: read

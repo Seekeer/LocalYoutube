@@ -2,15 +2,10 @@ name: Flutter Windows Preview
 # Delivery recognises builds by this exact title; keep "Windows preview · <sha>".
 run-name: Windows preview · ${{ github.sha }}
 
-# Like Android Preview: every Flutter change on main, or on demand.
 on:
+  # Started by hand only: the Gitea «Flutter * Preview (GitHub)» triggers
+  # or the GitHub Actions tab. No builds on push or pull request.
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'Flutter/**'
-      - '.localtube/source.json'
-      - '.github/workflows/flutter-windows-preview.yml'
 
 permissions:
   contents: read
