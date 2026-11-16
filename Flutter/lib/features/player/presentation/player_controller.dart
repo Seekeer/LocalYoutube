@@ -201,6 +201,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         _playerVolume = playerVolume ?? PlayerVolume(),
         _screens = screens,
         super(PlayerUiState.initial(videoId)) {
+    _playerVolume.addListener(_onPlayerVolumeChanged);
     if (screens != null) {
       screens.addListener(_onScreensChanged);
       if (!screens.mayPlay(videoId)) {
@@ -286,6 +287,10 @@ class PlayerController extends StateNotifier<PlayerUiState> {
   DateTime? _lastUserPauseAtUtc;
   Duration? _pendingExternalStartPosition;
   bool _completionPositionSaved = false;
+
+  /// Set once the viewer finished this viewing by hand ([finishViewing]): from then on the video
+  /// is saved as watched to its end, whatever position the player happens to be stopped at.
+  bool _viewingFinished = false;
   String? _preferredTitle;
   int _nextNavigationEntryId = 1;
   DateTime? _bufferingStartedAtUtc;
@@ -349,6 +354,8 @@ class PlayerController extends StateNotifier<PlayerUiState> {
 
     final DateTime? pauseStartedAt = _lastUserPauseAtUtc;
     final Duration positionBeforeResume = controller.value.position;
+    // Playing again is watching again: the position is the player's own once more.
+    _viewingFinished = false;
     await controller.play();
     _lastUserPauseAtUtc = null;
     _syncFromVideoPlayer();
@@ -413,18 +420,74 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     await seek(state.position + offset);
   }
 
+  /// Ends this viewing by hand: the video stops and is saved as watched to its end, which is what
+  /// the server and the catalog read as finished (more than 90% of a video, the last 10 seconds of
+  /// a Course), wherever the viewer actually stopped.
+  ///
+  /// The player is not moved to the end, so nothing that waits for the video to end - the
+  /// end-of-video menu, the next video - starts by itself. Until it plays again, every later save,
+  /// closing the player included, keeps the end position rather than the one it stopped at.
+  ///
+  /// Answers whether the video was marked: one that never opened has no end to save.
+  Future<bool> finishViewing() async {
+    final VideoPlayerController? controller = _videoPlayer;
+    final PlayableVideo? playable = _playable;
+    if (_isDisposed ||
+        controller == null ||
+        playable == null ||
+        !controller.value.isInitialized ||
+        _videoDuration(controller) <= Duration.zero) {
+      return false;
+    }
+    await pause();
+    if (_isDisposed) {
+      return false;
+    }
+    _viewingFinished = true;
+    final double seconds = _positionSecondsToSave(controller);
+    _lastSavedSeconds = seconds;
+    await _playbackSyncRepository.savePosition(
+      videoId: playable.videoId,
+      positionSeconds: seconds,
+    );
+    return true;
+  }
+
+  Duration _videoDuration(VideoPlayerController controller) {
+    final Duration duration = controller.value.duration;
+    return duration > Duration.zero ? duration : state.duration;
+  }
+
+  /// Where this video stands for the saved position: the player's position, or its end once the
+  /// viewing was finished by hand.
+  double _positionSecondsToSave(VideoPlayerController controller) {
+    final Duration position =
+        _viewingFinished ? _videoDuration(controller) : controller.value.position;
+    return position.inMilliseconds / 1000;
+  }
+
   /// Sets the LocalTube player's own volume, from 0 (silent) to 1 (loudest).
   ///
   /// The value is this installation's rather than this video's: it is remembered whether or not
   /// there is a player to apply it to right now, and the next video starts at it. It is never the
   /// Android system volume, so it cannot turn down anything else on the device.
   Future<void> setPlayerVolume(double volume) async {
-    final double kept = _playerVolume.setValue(volume);
+    _playerVolume.setValue(volume);
+    await _applyCurrentPlayerVolume();
+  }
+
+  /// The installation's volume moved - from this player's slider or mute button, a Cast Session,
+  /// or another screen - so the video playing here follows it at once.
+  void _onPlayerVolumeChanged() {
+    unawaited(_applyCurrentPlayerVolume());
+  }
+
+  Future<void> _applyCurrentPlayerVolume() async {
     final VideoPlayerController? controller = _videoPlayer;
     if (_isDisposed || controller == null || !controller.value.isInitialized) {
       return;
     }
-    await controller.setVolume(kept);
+    await _applyPlayerVolume(controller);
   }
 
   /// Puts this installation's volume on a player that has just been opened, so a video that
@@ -1127,7 +1190,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         !controller.value.isInitialized) {
       return;
     }
-    final double seconds = controller.value.position.inMilliseconds / 1000;
+    final double seconds = _positionSecondsToSave(controller);
     if (!force && (seconds - _lastSavedSeconds).abs() < 1) {
       return;
     }
@@ -1769,6 +1832,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
   void dispose() {
     _isDisposed = true;
     _screens?.removeListener(_onScreensChanged);
+    _playerVolume.removeListener(_onPlayerVolumeChanged);
     _periodicSaveTimer?.cancel();
     _bookmarksOutboxTimer?.cancel();
     _playbackHealthTimer?.cancel();
@@ -1778,7 +1842,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     if (controller != null &&
         playable != null &&
         controller.value.isInitialized) {
-      final double seconds = controller.value.position.inMilliseconds / 1000;
+      final double seconds = _positionSecondsToSave(controller);
       _lastSavedSeconds = seconds;
       unawaited(
         _playbackSyncRepository.savePosition(

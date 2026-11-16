@@ -65,6 +65,7 @@ import '../../features/player/data/local_playback_repository.dart';
 import '../../features/player/data/playback_position_remote_data_source.dart';
 import '../../features/player/data/playback_sync_repository.dart';
 import '../../features/player/data/stream_authorization_header_provider.dart';
+import '../../features/player/domain/player_volume.dart';
 import '../../features/player/domain/usecases/extract_timestamps_use_case.dart';
 import '../../features/player/domain/usecases/jump_to_nearest_timestamp_use_case.dart';
 import '../../features/player/domain/usecases/play_video_use_case.dart';
@@ -281,6 +282,9 @@ class AppBootstrap {
     );
     final ExtractTimestampsUseCase extractTimestampsUseCase =
         ExtractTimestampsUseCase();
+    // Read before anything plays, so the first video already sounds like the last one did.
+    final PlayerVolume playerVolume =
+        await PlayerVolume.load(FilePlayerVolumeStore());
     final JumpToNearestTimestampUseCase jumpToNearestTimestampUseCase =
         JumpToNearestTimestampUseCase();
 
@@ -394,6 +398,7 @@ class AppBootstrap {
         }
         dio.close(force: true);
         router.dispose();
+        await playerVolume.flush();
         await appDatabase.close();
       },
       overrides: <Override>[
@@ -417,6 +422,7 @@ class AppBootstrap {
         tryAutoLoginUseCaseProvider.overrideWithValue(tryAutoLoginUseCase),
         logoutUseCaseProvider.overrideWithValue(logoutUseCase),
         playVideoUseCaseProvider.overrideWithValue(playVideoUseCase),
+        playerVolumeProvider.overrideWithValue(playerVolume),
         extractTimestampsUseCaseProvider
             .overrideWithValue(extractTimestampsUseCase),
         jumpToNearestTimestampUseCaseProvider

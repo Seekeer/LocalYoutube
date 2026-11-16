@@ -122,6 +122,7 @@ class VideoNotes {
     this.noTopics = false,
     this.review,
     this.reviewUpdatedDate,
+    this.rating,
     this.description,
     this.descriptionEdited = false,
     this.descriptionStatus,
@@ -138,6 +139,9 @@ class VideoNotes {
   final bool noTopics;
   final String? review;
   final DateTime? reviewUpdatedDate;
+
+  /// The person's Rating of the video, from [minRating] to [maxRating]; null until they give one.
+  final int? rating;
   final String? description;
   final bool descriptionEdited;
 
@@ -155,6 +159,9 @@ class VideoNotes {
 
   bool get isClassified => topics.isNotEmpty || noTopics;
 
+  static const int minRating = 1;
+  static const int maxRating = 10;
+
   factory VideoNotes.fromJson(Map<String, dynamic> json) {
     return VideoNotes(
       videoId: _int(json['videoId']),
@@ -164,6 +171,7 @@ class VideoNotes {
       noTopics: _bool(json['noTopics']),
       review: _nullableString(json['review']),
       reviewUpdatedDate: _date(json['reviewUpdatedDate']),
+      rating: _rating(json['rating']),
       description: _nullableString(json['description']),
       descriptionEdited: _bool(json['descriptionEdited']),
       descriptionStatus: _nullableString(json['descriptionStatus']),
@@ -176,6 +184,15 @@ class VideoNotes {
       telegramLinked: _bool(json['telegramLinked']),
       postViewing: _postViewing(json),
     );
+  }
+
+  /// A Rating the server sent, or null for none or for anything outside the scale.
+  static int? _rating(Object? value) {
+    if (value is! num) {
+      return null;
+    }
+    final int rating = value.toInt();
+    return rating >= minRating && rating <= maxRating ? rating : null;
   }
 
   static bool? _postViewing(Map<String, dynamic> json) {
@@ -200,6 +217,7 @@ class VideoNotes {
         'noTopics': noTopics,
         'review': review,
         'reviewUpdatedDate': reviewUpdatedDate?.toIso8601String(),
+        'rating': rating,
         'description': description,
         'descriptionEdited': descriptionEdited,
         'descriptionStatus': descriptionStatus,
@@ -218,6 +236,7 @@ class VideoNotes {
       noTopics: noTopics ?? this.noTopics,
       review: review,
       reviewUpdatedDate: reviewUpdatedDate,
+      rating: rating,
       description: description,
       descriptionEdited: descriptionEdited,
       descriptionStatus: descriptionStatus,

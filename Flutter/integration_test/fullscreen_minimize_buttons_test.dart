@@ -60,6 +60,15 @@ class _TestPlayerController extends StateNotifier<PlayerUiState>
   Future<void> seekRelative(Duration offset) async {}
 
   @override
+  Future<bool> finishViewing() async => true;
+
+  @override
+  bool get hasSubtitleTracks => false;
+
+  @override
+  void toggleSubtitles() {}
+
+  @override
   Future<void> seekToNavigationOrigin(int id) async {}
 
   @override

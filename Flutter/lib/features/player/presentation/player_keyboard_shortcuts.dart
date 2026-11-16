@@ -8,9 +8,9 @@ enum PlayerKeyAction { togglePlayback, toggleFullscreen, exitFullscreen }
 ///
 /// - Ctrl+F switches fullscreen. It types nothing and no field of the player's screen uses it, so
 ///   it works wherever the focus is on that screen, a text field included.
-/// - Space plays or pauses only while the player itself holds the focus ([ownsFocus]). A focused
-///   button, slider, checkbox or text field keeps its own Space - activation or typing - so one
-///   press never does two things.
+/// - Space plays or pauses wherever the focus is on the player's screen - on the player, a button,
+///   the volume slider - the way a desktop player's Space does. The one exception is a focused text
+///   field ([isTextInputFocused]): there Space types, and pausing as well would do two things at once.
 /// - Escape leaves fullscreen when there is a fullscreen to leave ([canExitFullscreen]).
 ///
 /// Ctrl+F is matched on the physical key as well, so it is the same key with any keyboard layout
@@ -18,7 +18,6 @@ enum PlayerKeyAction { togglePlayback, toggleFullscreen, exitFullscreen }
 PlayerKeyAction? resolvePlayerKeyAction({
   required KeyEvent event,
   required Set<LogicalKeyboardKey> pressedModifiers,
-  required bool ownsFocus,
   required bool isTextInputFocused,
   required bool canExitFullscreen,
 }) {
@@ -36,7 +35,7 @@ PlayerKeyAction? resolvePlayerKeyAction({
     return PlayerKeyAction.toggleFullscreen;
   }
   if (event.logicalKey == LogicalKeyboardKey.space &&
-      ownsFocus &&
+      !isTextInputFocused &&
       !control &&
       !otherModifier) {
     return PlayerKeyAction.togglePlayback;
@@ -77,7 +76,8 @@ bool _anyPressed(Set<LogicalKeyboardKey> pressed, Set<LogicalKeyboardKey> keys) 
 /// The player's keyboard, for everything under [child].
 ///
 /// [focusNode] is the player's own focus: it is what holds the focus while nothing more specific
-/// on the screen does, and the only place Space plays or pauses from. When a text field gives its
+/// on the screen does. Space reaches it from any focused control below it before that control's own
+/// activation does, so a button that was clicked last is not pressed again by Space. When a text field gives its
 /// focus up and nothing on the screen holds the focus any more, the player takes it back, so Space
 /// works again without a click. A callback left null turns its key off (for example while playback
 /// has failed), and the key is then left to the rest of the app.
@@ -136,7 +136,6 @@ class _PlayerKeyboardShortcutsState extends State<PlayerKeyboardShortcuts> {
     final PlayerKeyAction? action = resolvePlayerKeyAction(
       event: event,
       pressedModifiers: HardwareKeyboard.instance.logicalKeysPressed,
-      ownsFocus: widget.focusNode.hasPrimaryFocus,
       isTextInputFocused: _isTextInputFocused(),
       canExitFullscreen: widget.onExitFullscreen != null,
     );

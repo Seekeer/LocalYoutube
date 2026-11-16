@@ -78,6 +78,16 @@ class NotesApi {
     return VideoNotes.fromJson(notesJsonMap(response.data));
   }
 
+  /// Sets the person's Rating of the video, from 1 to 10; null takes it back.
+  Future<VideoNotes> saveRating(int videoId, int? rating) async {
+    final Response<dynamic> response = await _dio.put<dynamic>(
+      '/notes/videos/$videoId/rating',
+      data: <String, dynamic>{'rating': rating},
+      options: _idempotent,
+    );
+    return VideoNotes.fromJson(notesJsonMap(response.data));
+  }
+
   Future<VideoNotes> regenerateDescription(int videoId) async {
     final Response<dynamic> response = await _dio
         .post<dynamic>('/notes/videos/$videoId/description/regenerate');

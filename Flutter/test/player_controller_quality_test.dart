@@ -14,6 +14,7 @@ import 'package:localtube_flutter/features/player/data/playback_screen_wake_lock
 import 'package:localtube_flutter/features/player/data/playback_sync_repository.dart';
 import 'package:localtube_flutter/features/player/data/stream_authorization_header_provider.dart';
 import 'package:localtube_flutter/features/player/domain/player_models.dart';
+import 'package:localtube_flutter/features/player/domain/player_volume.dart';
 import 'package:localtube_flutter/features/player/domain/usecases/play_video_use_case.dart';
 import 'package:localtube_flutter/features/player/presentation/player_controller.dart';
 import 'package:localtube_flutter/features/player/presentation/player_screen_stack.dart';
@@ -238,6 +239,116 @@ void main() {
 
       controller.dispose();
       expect(screenWakeLock.isPlayingByVideo[73], isFalse);
+    },
+  );
+
+  PlayerController openPlayingController({
+    required int videoId,
+    PlayerVolume? playerVolume,
+  }) {
+    return PlayerController(
+      subtitles: _FakePlayerSubtitles(),
+      videoId: videoId,
+      playVideoUseCase: _FakePlayVideoUseCase(
+        PlayableVideo(
+          videoId: videoId,
+          sourceUri: Uri.parse('https://example.invalid/video.mp4'),
+          sourceKind: PlayableSourceKind.remoteUrl,
+          startPosition: Duration.zero,
+          title: 'Video $videoId',
+        ),
+      ),
+      playbackSyncRepository: playbackSyncRepository,
+      bookmarksRepository: bookmarksRepository,
+      streamAuthorizationHeaderProvider:
+          _ScriptedStreamAuthorizationHeaderProvider(
+        <StreamAuthorizationHeaderResult>[
+          StreamAuthorizationHeaderResult.success(
+            const <String, String>{
+              HttpHeaders.authorizationHeader: 'Bearer token',
+            },
+          ),
+        ],
+      ),
+      logService: logService,
+      localOnly: false,
+      playbackScreenWakeLock: _RecordingPlaybackScreenWakeLock(),
+      playerVolume: playerVolume,
+    );
+  }
+
+  Future<void> waitUntilPlaying(
+    WidgetTester tester,
+    PlayerController controller,
+  ) async {
+    await tester.pump();
+    for (int attempt = 0;
+        attempt < 10 && !controller.state.isPlaying;
+        attempt += 1) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(controller.state.isPlaying, isTrue);
+  }
+
+  testWidgets(
+    'the playing video follows the installation volume, its mute and its level',
+    (WidgetTester tester) async {
+      final PlayerVolume volume = PlayerVolume(level: 0.4);
+      final PlayerController controller = openPlayingController(
+        videoId: 74,
+        playerVolume: volume,
+      );
+      await waitUntilPlaying(tester, controller);
+      expect(fakePlatform.volumes.last, 0.4);
+
+      volume.setMuted(true);
+      await tester.pump();
+      expect(fakePlatform.volumes.last, 0.0);
+
+      volume.setValue(0.7);
+      await tester.pump();
+      expect(fakePlatform.volumes.last, 0.7);
+
+      controller.dispose();
+      final int applied = fakePlatform.volumes.length;
+      volume.setValue(0.2);
+      await tester.pump();
+      expect(fakePlatform.volumes.length, applied);
+    },
+  );
+
+  testWidgets(
+    'finishing a viewing stops the video and keeps it saved as watched to its end',
+    (WidgetTester tester) async {
+      final PlayerController controller = openPlayingController(videoId: 75);
+      await waitUntilPlaying(tester, controller);
+      await controller.seek(const Duration(seconds: 5));
+
+      expect(await controller.finishViewing(), isTrue);
+      await tester.pump();
+
+      expect(controller.state.isPlaying, isFalse);
+      // The fake video is 30 seconds long; the viewer stopped at 5.
+      expect(playbackSyncRepository.savedPositions.last, 30.0);
+
+      controller.dispose();
+      expect(playbackSyncRepository.savedPositions.last, 30.0);
+    },
+  );
+
+  testWidgets(
+    'playing again after finishing saves the real position once more',
+    (WidgetTester tester) async {
+      final PlayerController controller = openPlayingController(videoId: 76);
+      await waitUntilPlaying(tester, controller);
+      await controller.seek(const Duration(seconds: 5));
+      await controller.finishViewing();
+
+      await controller.play();
+      await controller.pause();
+
+      expect(playbackSyncRepository.savedPositions.last, 5.0);
+      controller.dispose();
     },
   );
 
@@ -1070,13 +1181,18 @@ class _FakePlaybackSyncRepository implements PlaybackSyncRepository {
   }) async =>
       Duration.zero;
 
+  /// Every position saved, oldest first.
+  final List<double> savedPositions = <double>[];
+
   @override
   Future<void> savePosition({
     required int videoId,
     required double positionSeconds,
     DateTime? updatedAt,
     bool syncRemote = true,
-  }) async {}
+  }) async {
+    savedPositions.add(positionSeconds);
+  }
 }
 
 class _FakeBookmarksRepository implements BookmarksRepository {
@@ -1243,8 +1359,12 @@ class _FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   @override
   Future<void> setPlaybackSpeed(int playerId, double speed) async {}
 
+  /// Every volume a player was set to, oldest first.
+  final List<double> volumes = <double>[];
+
   @override
   Future<void> setVolume(int playerId, double volume) async {
+    volumes.add(volume);
     await volumeGate;
   }
 

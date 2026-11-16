@@ -18,14 +18,12 @@ KeyDownEvent _down(
 PlayerKeyAction? _resolve(
   KeyEvent event, {
   Set<LogicalKeyboardKey> modifiers = const <LogicalKeyboardKey>{},
-  bool ownsFocus = true,
   bool isTextInputFocused = false,
   bool canExitFullscreen = false,
 }) {
   return resolvePlayerKeyAction(
     event: event,
     pressedModifiers: modifiers,
-    ownsFocus: ownsFocus,
     isTextInputFocused: isTextInputFocused,
     canExitFullscreen: canExitFullscreen,
   );
@@ -133,17 +131,16 @@ void main() {
         _resolve(
           _down(LogicalKeyboardKey.keyF, physical: PhysicalKeyboardKey.keyF),
           modifiers: <LogicalKeyboardKey>{LogicalKeyboardKey.controlLeft},
-          ownsFocus: false,
           isTextInputFocused: true,
         ),
         PlayerKeyAction.toggleFullscreen,
       );
     });
 
-    test('Space plays or pauses only while the player holds the focus', () {
+    test('Space plays or pauses unless a text field is typing it', () {
       final KeyDownEvent space = _down(LogicalKeyboardKey.space);
       expect(_resolve(space), PlayerKeyAction.togglePlayback);
-      expect(_resolve(space, ownsFocus: false), isNull);
+      expect(_resolve(space, isTextInputFocused: true), isNull);
       expect(
         _resolve(
           space,
@@ -198,7 +195,7 @@ void main() {
       expect(harness.buttonPresses, 0);
     });
 
-    testWidgets('a focused button keeps its own Space and nothing plays',
+    testWidgets('Space plays or pauses with a button focused and does not press it',
         (WidgetTester tester) async {
       await tester.pumpWidget(harness.build());
       harness.buttonFocus.requestFocus();
@@ -207,8 +204,38 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.space);
       await tester.pump();
 
-      expect(harness.buttonPresses, 1);
-      expect(harness.toggles, 0);
+      expect(harness.toggles, 1);
+      expect(harness.buttonPresses, 0);
+    });
+
+    testWidgets('Space plays or pauses with a slider focused',
+        (WidgetTester tester) async {
+      final FocusNode sliderFocus = FocusNode(debugLabel: 'slider');
+      addTearDown(sliderFocus.dispose);
+      double value = 0.5;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PlayerKeyboardShortcuts(
+            focusNode: harness.playerFocus,
+            onTogglePlayback: () => harness.toggles++,
+            child: Scaffold(
+              body: Slider(
+                focusNode: sliderFocus,
+                value: value,
+                onChanged: (double next) => value = next,
+              ),
+            ),
+          ),
+        ),
+      );
+      sliderFocus.requestFocus();
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pump();
+
+      expect(harness.toggles, 1);
+      expect(value, 0.5);
     });
 
     testWidgets(

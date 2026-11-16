@@ -24,12 +24,14 @@ import '../domain/usecases/jump_to_nearest_timestamp_use_case.dart';
 import '../../notes/data/notes_repository.dart';
 import '../../notes/presentation/mark_caption_dialog.dart';
 import '../../notes/presentation/notes_section.dart';
+import '../../notes/presentation/rating_dialog.dart';
 import '../../transcript/presentation/transcript_panel.dart';
 import 'player_controller.dart';
 import 'player_keyboard_shortcuts.dart';
 import 'player_navigation_result.dart';
 import 'player_screen_stack.dart';
 import 'player_stage_layout.dart';
+import 'player_volume_control.dart';
 import 'player_window_fullscreen.dart';
 
 const MethodChannel _appControlChannel = MethodChannel(
@@ -50,6 +52,17 @@ const Key playerVideoSurfaceKey = Key('player-video-surface');
 
 /// The space above and below the player page's content.
 const double _pageVerticalPadding = 12;
+
+/// The «Завершить просмотр» button, on the page and in fullscreen, for finding it in tests.
+@visibleForTesting
+const Key finishViewingButtonKey = Key('player-finish-viewing');
+
+/// What fullscreen asks the page to do once it has closed, besides an ordinary close.
+enum _FullscreenRequest {
+  /// The viewer pressed «Завершить просмотр»: the Rating and delete dialogs belong to the page,
+  /// and the page is what closes afterwards.
+  finishViewing,
+}
 
 Future<void> _jumpToNearestTimestamp({
   required BuildContext context,
@@ -101,6 +114,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
   bool _completionDialogShownForCurrentCompletion = false;
   bool _isDeleteDialogVisible = false;
   bool _isFullscreenOpen = false;
+  bool _isFinishingViewing = false;
 
   /// The player's own keyboard focus: Space plays or pauses while it holds the focus, and Ctrl+F
   /// opens fullscreen from anywhere on the page.
@@ -496,6 +510,10 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
                           children: <Widget>[
                             Text(_formatDuration(state.position)),
                             const Spacer(),
+                            PlayerVolumeControl(
+                              volume: ref.watch(playerVolumeProvider),
+                            ),
+                            const Spacer(),
                             Text(_formatDuration(state.duration)),
                           ],
                         ),
@@ -595,6 +613,21 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
                               enabled: state.errorMessage == null && !_isDeleteInProgress,
                               onPressed: () => unawaited(
                                 _startDeleteFlow(
+                                  videoId: videoId,
+                                  controller: controller,
+                                ),
+                              ),
+                            ),
+                            _buildSecondaryControlButton(
+                              key: finishViewingButtonKey,
+                              icon: Icons.task_alt,
+                              tooltip: 'Завершить просмотр',
+                              enabled: !state.isLoading &&
+                                  state.errorMessage == null &&
+                                  !_isDeleteInProgress &&
+                                  !_isFinishingViewing,
+                              onPressed: () => unawaited(
+                                _finishViewing(
                                   videoId: videoId,
                                   controller: controller,
                                 ),
@@ -895,8 +928,8 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
     setState(() {
       _isFullscreenOpen = true;
     });
-    final PlayerNavigationResult? result = await Navigator.of(context).push(
-      MaterialPageRoute<PlayerNavigationResult>(
+    final Object? result = await Navigator.of(context).push<Object?>(
+      MaterialPageRoute<Object?>(
         builder: (_) => _FullscreenPlayerView(
           videoId: videoId,
           videoTitle: widget.videoTitle,
@@ -912,8 +945,62 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
     });
     // Back from fullscreen, the keyboard belongs to this page's player again.
     _keyboardFocusNode.requestFocus();
-    if (result != null) {
+    if (result is PlayerNavigationResult) {
       Navigator.of(context).pop(result);
+      return;
+    }
+    if (result == _FullscreenRequest.finishViewing) {
+      await _finishViewing(
+        videoId: videoId,
+        controller: ref.read(playerControllerProvider(videoId).notifier),
+      );
+    }
+  }
+
+  /// «Завершить просмотр»: the video is saved as watched, the viewer is asked for a Rating and then
+  /// whether to delete the file, and the player closes whatever they answer.
+  Future<void> _finishViewing({
+    required int videoId,
+    required PlayerController controller,
+  }) async {
+    if (_isFinishingViewing || _isDeleteInProgress || _isDeleteDialogVisible) {
+      return;
+    }
+    setState(() {
+      _isFinishingViewing = true;
+    });
+    try {
+      final bool marked = await controller.finishViewing();
+      if (!mounted) {
+        return;
+      }
+      if (!marked) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Видео ещё не открылось')),
+        );
+        return;
+      }
+      await showFinishViewingRating(
+        context: context,
+        ref: ref,
+        videoId: videoId,
+        title: (widget.videoTitle ?? '').trim(),
+      );
+      if (!mounted) {
+        return;
+      }
+      await _startDeleteFlow(videoId: videoId, controller: controller);
+      // A delete has already closed the page; anything else - «Нет», a dismissed dialog, a delete
+      // that failed - ends the viewing all the same.
+      if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isFinishingViewing = false;
+        });
+      }
     }
   }
 
@@ -1216,12 +1303,14 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
   }
 
   Widget _buildSecondaryControlButton({
+    Key? key,
     required IconData icon,
     required String tooltip,
     required bool enabled,
     required VoidCallback onPressed,
   }) {
     return IconButton.filledTonal(
+      key: key,
       onPressed: enabled ? onPressed : null,
       tooltip: tooltip,
       icon: Icon(icon, size: 30),
@@ -1599,6 +1688,19 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
                                                 : () => unawaited(_minimizeApp()),
                                           ),
                                           _fullscreenActionButton(
+                                            key: finishViewingButtonKey,
+                                            icon: Icons.task_alt,
+                                            tooltip: 'Завершить просмотр',
+                                            onPressed: _isDeleteInProgress ||
+                                                    _isDeleteDialogVisible ||
+                                                    state.isLoading ||
+                                                    state.errorMessage != null
+                                                ? null
+                                                : () => Navigator.of(context).pop(
+                                                      _FullscreenRequest.finishViewing,
+                                                    ),
+                                          ),
+                                          _fullscreenActionButton(
                                             icon: Icons.fullscreen_exit,
                                             tooltip: 'Exit fullscreen',
                                             onPressed: () =>
@@ -1608,39 +1710,54 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
                                       ],
                                     ),
                                     const SizedBox(height: 14),
-                                    SliderTheme(
-                                      data: SliderTheme.of(context).copyWith(
-                                        disabledActiveTrackColor: Colors.white,
-                                        disabledInactiveTrackColor: Colors.white24,
-                                        disabledThumbColor: Colors.white,
-                                      ),
-                                      child: Slider(
-                                        min: 0,
-                                        max: maxSeconds,
-                                        value: positionSeconds,
-                                        onChanged: _isScreenLocked
-                                            ? null
-                                            : (double value) {
-                                                setState(() {
-                                                  _dragSeconds = value;
-                                                });
-                                              },
-                                        onChangeEnd: _isScreenLocked
-                                            ? null
-                                            : (double value) {
-                                                setState(() {
-                                                  _dragSeconds = null;
-                                                });
-                                                unawaited(
-                                                  controller.seek(
-                                                    Duration(
-                                                      milliseconds: (value * 1000)
-                                                          .round(),
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                      ),
+                                    // The volume shares the timeline's row, so fullscreen's controls are no
+                                    // taller than before: a phone on its side has little height to give.
+                                    Row(
+                                      children: <Widget>[
+                                        Expanded(
+                                          child: SliderTheme(
+                                            data: SliderTheme.of(context).copyWith(
+                                              disabledActiveTrackColor: Colors.white,
+                                              disabledInactiveTrackColor: Colors.white24,
+                                              disabledThumbColor: Colors.white,
+                                            ),
+                                            child: Slider(
+                                              min: 0,
+                                              max: maxSeconds,
+                                              value: positionSeconds,
+                                              onChanged: _isScreenLocked
+                                                  ? null
+                                                  : (double value) {
+                                                      setState(() {
+                                                        _dragSeconds = value;
+                                                      });
+                                                    },
+                                              onChangeEnd: _isScreenLocked
+                                                  ? null
+                                                  : (double value) {
+                                                      setState(() {
+                                                        _dragSeconds = null;
+                                                      });
+                                                      unawaited(
+                                                        controller.seek(
+                                                          Duration(
+                                                            milliseconds: (value * 1000)
+                                                                .round(),
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                            ),
+                                          ),
+                                        ),
+                                        // A locked screen is read-only, so it shows no volume either.
+                                        if (!_isScreenLocked)
+                                          PlayerVolumeControl(
+                                            volume: ref.watch(playerVolumeProvider),
+                                            color: Colors.white,
+                                            sliderWidth: 120,
+                                          ),
+                                      ],
                                     ),
                                     Row(
                                       children: <Widget>[
@@ -1793,11 +1910,13 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
   }
 
   Widget _fullscreenActionButton({
+    Key? key,
     required IconData icon,
     required String tooltip,
     required VoidCallback? onPressed,
   }) {
     return IconButton.filledTonal(
+      key: key,
       onPressed: onPressed,
       tooltip: tooltip,
       style: IconButton.styleFrom(minimumSize: const Size(88, 88)),

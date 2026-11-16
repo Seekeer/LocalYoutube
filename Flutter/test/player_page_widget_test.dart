@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import 'package:drift/native.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind, kDoubleTapTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:localtube_flutter/app/bootstrap/bootstrap_providers.dart';
 import 'package:localtube_flutter/app/router/auth_notifier.dart';
 import 'package:localtube_flutter/core/config/app_config.dart';
+import 'package:localtube_flutter/core/db/app_database.dart';
 import 'package:localtube_flutter/core/network/network_status.dart';
 import 'package:localtube_flutter/features/bookmarks/domain/bookmark_models.dart';
 import 'package:localtube_flutter/features/app_updates/apk_update_controller.dart';
@@ -17,11 +20,19 @@ import 'package:localtube_flutter/features/cast/presentation/cast_entry_point.da
 import 'package:localtube_flutter/features/cast/presentation/remote_control_mode_view.dart';
 import 'package:localtube_flutter/features/catalog/data/local_video_metadata_repository.dart';
 import 'package:localtube_flutter/features/catalog/domain/catalog_models.dart';
+import 'package:localtube_flutter/features/downloads/data/local_downloads_repository.dart';
+import 'package:localtube_flutter/features/downloads/domain/download_models.dart';
+import 'package:localtube_flutter/features/notes/data/notes_api.dart';
+import 'package:localtube_flutter/features/notes/data/notes_local_store.dart';
+import 'package:localtube_flutter/features/notes/data/notes_repository.dart';
+import 'package:localtube_flutter/features/notes/domain/notes_models.dart';
+import 'package:localtube_flutter/features/notes/presentation/rating_dialog.dart';
 import 'package:localtube_flutter/features/player/domain/player_models.dart';
 import 'package:localtube_flutter/features/player/domain/usecases/extract_timestamps_use_case.dart';
 import 'package:localtube_flutter/features/player/domain/usecases/jump_to_nearest_timestamp_use_case.dart';
 import 'package:localtube_flutter/features/player/presentation/player_page.dart';
 import 'package:localtube_flutter/features/player/presentation/player_controller.dart';
+import 'package:localtube_flutter/features/player/presentation/player_volume_control.dart';
 import 'package:localtube_flutter/features/player/presentation/player_window_fullscreen.dart';
 import 'package:localtube_flutter/features/sync/domain/sync_models.dart';
 import 'package:mocktail/mocktail.dart';
@@ -36,6 +47,7 @@ class MockPlayerController extends StateNotifier<PlayerUiState>
   double? lastPlayerVolume;
   int pauseCallCount = 0;
   int togglePlaybackCallCount = 0;
+  int finishViewingCallCount = 0;
   @override
   bool get hasSubtitleTracks => true;
   @override
@@ -74,6 +86,12 @@ class MockPlayerController extends StateNotifier<PlayerUiState>
 
   @override
   Future<void> seekRelative(Duration offset) async {}
+
+  @override
+  Future<bool> finishViewing() async {
+    finishViewingCallCount += 1;
+    return true;
+  }
 
   @override
   Future<void> setPlayerVolume(double volume) async {
@@ -233,6 +251,58 @@ class MockLocalVideoMetadataRepository implements LocalVideoMetadataRepository {
   }
 }
 
+/// Notes that remember what the Rating dialog saved, without a server.
+class RecordingNotesRepository extends NotesRepository {
+  RecordingNotesRepository({this.current})
+      : super(
+          api: NotesApi(Dio()),
+          store: NotesLocalStore(AppDatabase(executor: NativeDatabase.memory())),
+        );
+
+  VideoNotes? current;
+  final List<int?> savedRatings = <int?>[];
+  final List<String> savedReviews = <String>[];
+
+  @override
+  void prefetchPostViewing(int videoId) {}
+
+  @override
+  Future<bool> isPostViewingVideo(
+    int videoId, {
+    Duration timeout = const Duration(seconds: 3),
+  }) async =>
+      false;
+
+  @override
+  Future<NotesSnapshot> load(int videoId) async => NotesSnapshot(
+        notes: current ?? VideoNotes(videoId: videoId),
+        drafts: const <NoteDraft>[],
+        offline: false,
+      );
+
+  @override
+  Future<void> saveRating(int videoId, int? rating) async {
+    savedRatings.add(rating);
+  }
+
+  @override
+  Future<bool> confirmReview(
+    int videoId,
+    String text, {
+    int? draftId,
+    String title = '',
+  }) async {
+    savedReviews.add(text);
+    return true;
+  }
+}
+
+/// No video of the tests is downloaded, so the delete dialog offers the server only.
+class NothingDownloaded extends Fake implements LocalDownloadsRepository {
+  @override
+  Future<DownloadItem?> findByVideoId(int videoId) async => null;
+}
+
 Widget buildPlayerPage({
   required String videoId,
   required MockPlayerController controller,
@@ -240,8 +310,11 @@ Widget buildPlayerPage({
   JumpToNearestTimestampUseCase? jumpToNearestTimestampUseCase,
   CastUiState? castState,
   MockCastController? castController,
+  List<Override> extraOverrides = const <Override>[],
+  bool openedFromHome = false,
 }) {
   final int parsedVideoId = int.parse(videoId);
+  const String description = '00:10 Intro\n00:40 Chapter 2';
 
   return ProviderScope(
     overrides: <Override>[
@@ -267,14 +340,58 @@ Widget buildPlayerPage({
         (ref) => const Stream<NetworkStatus>.empty(),
       ),
       authNotifierProvider.overrideWith((ref) => MockAuthNotifier()),
+      ...extraOverrides,
     ],
     child: MaterialApp(
-      home: PlayerPage(
-        videoId: videoId,
-        videoDescription: '00:10 Intro\n00:40 Chapter 2',
-      ),
+      home: openedFromHome
+          ? Builder(
+              builder: (BuildContext context) => Scaffold(
+                body: Center(
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => PlayerPage(
+                          videoId: videoId,
+                          videoTitle: 'Лекция',
+                          videoDescription: description,
+                        ),
+                      ),
+                    ),
+                    child: const Text('Open player'),
+                  ),
+                ),
+              ),
+            )
+          : PlayerPage(
+              videoId: videoId,
+              videoDescription: description,
+            ),
     ),
   );
+}
+
+/// A player page opened from a home screen, so finishing can close it.
+Future<RecordingNotesRepository> openPlayerFromHome(
+  WidgetTester tester,
+  MockPlayerController controller, {
+  VideoNotes? currentNotes,
+}) async {
+  final RecordingNotesRepository notes =
+      RecordingNotesRepository(current: currentNotes);
+  await tester.pumpWidget(
+    buildPlayerPage(
+      videoId: '42',
+      controller: controller,
+      openedFromHome: true,
+      extraOverrides: <Override>[
+        notesRepositoryProvider.overrideWithValue(notes),
+        localDownloadsRepositoryProvider.overrideWithValue(NothingDownloaded()),
+      ],
+    ),
+  );
+  await tester.tap(find.text('Open player'));
+  await tester.pumpAndSettle();
+  return notes;
 }
 
 /// A phone in Remote Control Mode: the Cast Session reached the Receiver, so playback lives
@@ -1223,10 +1340,16 @@ void main() {
       expect(find.byTooltip('Lock screen'), findsOneWidget);
       expect(find.byTooltip('Pause'), findsOneWidget);
       expect(find.byTooltip('Exit fullscreen'), findsOneWidget);
-      expect(tester.widget<Slider>(find.byType(Slider)).onChanged, isNotNull);
-      expect(tester.widget<Slider>(find.byType(Slider)).onChangeEnd, isNotNull);
+      // Unlocked, the volume is back beside the timeline.
+      expect(find.byKey(PlayerVolumeControl.sliderKey), findsOneWidget);
+      final Finder timeline = find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is Slider && widget.key != PlayerVolumeControl.sliderKey,
+      );
+      expect(tester.widget<Slider>(timeline).onChanged, isNotNull);
+      expect(tester.widget<Slider>(timeline).onChangeEnd, isNotNull);
 
-      await tester.drag(find.byType(Slider), const Offset(200, 0));
+      await tester.drag(timeline, const Offset(200, 0));
       await tester.pump();
       expect(mockController.lastSeekPosition, isNotNull);
       expect(mockController.lastSeekPosition!.inSeconds, greaterThan(45));
@@ -1442,4 +1565,157 @@ void main() {
       expect(find.byTooltip('Exit fullscreen'), findsNothing);
     },
   );
+
+  testWidgets(
+      'Завершить просмотр marks the video, asks for a Rating and about deleting, '
+      'then closes the player', (WidgetTester tester) async {
+    final MockPlayerController controller = buildLocalPlayer();
+    final RecordingNotesRepository notes =
+        await openPlayerFromHome(tester, controller);
+
+    await tester.ensureVisible(find.byKey(finishViewingButtonKey));
+    await tester.tap(find.byKey(finishViewingButtonKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.finishViewingCallCount, 1);
+    expect(find.text('Оцените видео'), findsOneWidget);
+    expect(find.text('Лекция'), findsWidgets);
+
+    await tester.tap(find.byKey(RatingDialog.scoreKey(8)));
+    await tester.enterText(find.byKey(RatingDialog.reviewFieldKey), 'Про реакторы');
+    await tester.pump();
+    await tester.tap(find.byKey(RatingDialog.saveKey));
+    await tester.pumpAndSettle();
+
+    expect(notes.savedRatings, <int?>[8]);
+    expect(notes.savedReviews, <String>['Про реакторы']);
+    expect(find.text('Удалить файл?'), findsOneWidget);
+    // Finishing is not watching again, so the delete dialog offers no restart.
+    expect(find.text('С начала'), findsNothing);
+
+    await tester.tap(find.text('Нет'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PlayerPage), findsNothing);
+    expect(find.text('Open player'), findsOneWidget);
+  });
+
+  testWidgets('a skipped Rating saves nothing and the player still closes',
+      (WidgetTester tester) async {
+    final MockPlayerController controller = buildLocalPlayer();
+    final RecordingNotesRepository notes = await openPlayerFromHome(
+      tester,
+      controller,
+      currentNotes: const VideoNotes(videoId: 42, rating: 6, review: 'Было'),
+    );
+
+    await tester.ensureVisible(find.byKey(finishViewingButtonKey));
+    await tester.tap(find.byKey(finishViewingButtonKey));
+    await tester.pumpAndSettle();
+
+    // What was given before is shown to start with.
+    expect(
+      tester.widget<ChoiceChip>(find.byKey(RatingDialog.scoreKey(6))).selected,
+      isTrue,
+    );
+    expect(find.text('Было'), findsOneWidget);
+
+    await tester.tap(find.byKey(RatingDialog.skipKey));
+    await tester.pumpAndSettle();
+    expect(notes.savedRatings, isEmpty);
+    expect(notes.savedReviews, isEmpty);
+
+    // Dismissing the delete dialog ends the viewing too.
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayerPage), findsNothing);
+  });
+
+  testWidgets('taking back a Rating and erasing the Review saves them as cleared',
+      (WidgetTester tester) async {
+    final MockPlayerController controller = buildLocalPlayer();
+    final RecordingNotesRepository notes = await openPlayerFromHome(
+      tester,
+      controller,
+      currentNotes: const VideoNotes(videoId: 42, rating: 6, review: 'Было'),
+    );
+    await tester.ensureVisible(find.byKey(finishViewingButtonKey));
+    await tester.tap(find.byKey(finishViewingButtonKey));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(RatingDialog.scoreKey(6)));
+    await tester.enterText(find.byKey(RatingDialog.reviewFieldKey), '');
+    await tester.pump();
+    await tester.tap(find.byKey(RatingDialog.saveKey));
+    await tester.pumpAndSettle();
+
+    expect(notes.savedRatings, <int?>[null]);
+    expect(notes.savedReviews, <String>['']);
+  });
+
+  testWidgets('Завершить просмотр in fullscreen leaves it and finishes on the page',
+      (WidgetTester tester) async {
+    final MockPlayerController controller = buildLocalPlayer();
+    final RecordingNotesRepository notes =
+        await openPlayerFromHome(tester, controller);
+
+    await tester.ensureVisible(find.byTooltip('Fullscreen'));
+    await tester.tap(find.byTooltip('Fullscreen'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    final Offset center =
+        tester.getCenter(find.byKey(const Key('fullscreen-player-gesture-area')));
+    await tester.tapAt(center);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tapAt(center);
+    await tester.pump(const Duration(milliseconds: 350));
+
+    await tester.tap(find.byKey(finishViewingButtonKey));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('fullscreen-player-gesture-area')), findsNothing);
+    expect(controller.finishViewingCallCount, 1);
+    expect(find.text('Оцените видео'), findsOneWidget);
+
+    await tester.tap(find.byKey(RatingDialog.scoreKey(10)));
+    await tester.pump();
+    await tester.tap(find.byKey(RatingDialog.saveKey));
+    await tester.pumpAndSettle();
+    expect(notes.savedRatings, <int?>[10]);
+    expect(notes.savedReviews, isEmpty);
+
+    await tester.tap(find.text('Нет'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayerPage), findsNothing);
+  });
+
+  testWidgets('the volume control is on the page and in fullscreen',
+      (WidgetTester tester) async {
+    final MockPlayerController controller = buildLocalPlayer();
+    await openPlayerFromHome(tester, controller);
+    expect(find.byKey(PlayerVolumeControl.sliderKey), findsOneWidget);
+
+    await tester.ensureVisible(find.byTooltip('Fullscreen'));
+    await tester.tap(find.byTooltip('Fullscreen'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    final Offset center =
+        tester.getCenter(find.byKey(const Key('fullscreen-player-gesture-area')));
+    await tester.tapAt(center);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tapAt(center);
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('fullscreen-player-gesture-area')),
+        matching: find.byKey(PlayerVolumeControl.sliderKey),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(PlayerVolumeControl.muteButtonKey));
+    // Fullscreen waits out a double tap before a single one counts.
+    await tester.pump(kDoubleTapTimeout + const Duration(milliseconds: 50));
+    expect(find.byTooltip('Включить звук'), findsOneWidget);
+  });
 }

@@ -317,6 +317,15 @@ class NotesRepository {
     );
   }
 
+  // ---- Rating ----
+
+  /// Saves the person's Rating of the video, or takes it back with null. It needs the server: a
+  /// score is given once, at the end of a viewing, and is not worth a Draft. A failure is thrown so
+  /// the dialog can say so.
+  Future<void> saveRating(int videoId, int? rating) => _online(() async {
+        await _store.saveNotes(await _api.saveRating(videoId, rating));
+      });
+
   Future<void> regenerateDescription(int videoId) => _online(
         () async => _store.saveNotes(await _api.regenerateDescription(videoId)),
       );
