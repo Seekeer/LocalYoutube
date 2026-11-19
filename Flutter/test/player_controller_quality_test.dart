@@ -810,18 +810,26 @@ void main() {
   });
 
   group('downloaded copy the native player cannot play', () {
-    PlayableVideo localPlayable(int videoId) => PlayableVideo(
+    PlayableVideo localPlayable(
+      int videoId, {
+      Duration start = Duration.zero,
+    }) =>
+        PlayableVideo(
           videoId: videoId,
           sourceUri: Uri.file('/downloads/video_$videoId.mp4'),
           sourceKind: PlayableSourceKind.localFile,
-          startPosition: Duration.zero,
+          startPosition: start,
           title: 'Local video',
         );
-    PlayableVideo remotePlayable(int videoId) => PlayableVideo(
+    PlayableVideo remotePlayable(
+      int videoId, {
+      Duration start = Duration.zero,
+    }) =>
+        PlayableVideo(
           videoId: videoId,
           sourceUri: Uri.parse('https://example.invalid/video_$videoId.mp4'),
           sourceKind: PlayableSourceKind.remoteUrl,
-          startPosition: Duration.zero,
+          startPosition: start,
           title: 'Local video',
         );
     _ScriptedStreamAuthorizationHeaderProvider oneAuthorization() =>
@@ -858,6 +866,95 @@ void main() {
               !controller.state.isLoading &&
               (controller.videoController?.value.isInitialized ?? false),
         );
+
+    PlayerController openDownloaded(_FakePlayVideoUseCase useCase) =>
+        PlayerController(
+          subtitles: _FakePlayerSubtitles(),
+          videoId: useCase._playable!.videoId,
+          localOnly: false,
+          playVideoUseCase: useCase,
+          playbackSyncRepository: playbackSyncRepository,
+          bookmarksRepository: bookmarksRepository,
+          streamAuthorizationHeaderProvider: oneAuthorization(),
+          logService: logService,
+        );
+
+    testWidgets('a downloaded copy moves to the server position once it plays',
+        (WidgetTester tester) async {
+      playbackSyncRepository.reconciled = PlaybackPositionSnapshot(
+        videoId: 95,
+        positionSeconds: 20,
+        updatedAt: DateTime.utc(2026, 11, 20),
+      );
+      final PlayerController controller = openDownloaded(
+        _FakePlayVideoUseCase(
+          localPlayable(95, start: const Duration(seconds: 5)),
+        ),
+      );
+
+      await pumpUntilLoaded(tester, controller);
+      await pumpPlaybackUntil(
+        tester,
+        () =>
+            controller.videoController?.value.position ==
+            const Duration(seconds: 20),
+      );
+
+      expect(controller.state.sourceKind, PlayableSourceKind.localFile);
+      expect(controller.videoController?.value.position,
+          const Duration(seconds: 20));
+
+      controller.dispose();
+    });
+
+    testWidgets('a late server position does not undo a seek',
+        (WidgetTester tester) async {
+      final Completer<void> slowServer = Completer<void>();
+      playbackSyncRepository
+        ..reconcileGate = slowServer.future
+        ..reconciled = PlaybackPositionSnapshot(
+          videoId: 96,
+          positionSeconds: 20,
+          updatedAt: DateTime.utc(2026, 11, 20),
+        );
+      final PlayerController controller = openDownloaded(
+        _FakePlayVideoUseCase(
+          localPlayable(96, start: const Duration(seconds: 5)),
+        ),
+      );
+
+      await pumpUntilLoaded(tester, controller);
+      // Playing started at the phone's position, without the server.
+      expect(controller.videoController?.value.position,
+          const Duration(seconds: 5));
+      await controller.seek(const Duration(seconds: 10));
+      slowServer.complete();
+      await pumpPlaybackUntil(tester, () => false);
+
+      expect(controller.videoController?.value.position,
+          const Duration(seconds: 10));
+
+      controller.dispose();
+    });
+
+    testWidgets('switching to the server starts at its position',
+        (WidgetTester tester) async {
+      fakePlatform.failFileInitialize = true;
+      final PlayerController controller = openDownloaded(
+        _FakePlayVideoUseCase(
+          localPlayable(97, start: const Duration(seconds: 5)),
+          remotePlayable: remotePlayable(97, start: const Duration(seconds: 20)),
+        ),
+      );
+
+      await pumpUntilLoaded(tester, controller);
+
+      expect(controller.state.sourceKind, PlayableSourceKind.remoteUrl);
+      expect(controller.videoController?.value.position,
+          const Duration(seconds: 20));
+
+      controller.dispose();
+    });
 
     testWidgets('online, failing to open switches to remote and marks damaged',
         (WidgetTester tester) async {
@@ -1168,8 +1265,15 @@ class _FakePlaybackSyncRepository implements PlaybackSyncRepository {
   @override
   Future<void> processOutbox() async {}
 
+  /// What the server's position comes back as, once [reconcileGate] opens.
+  PlaybackPositionSnapshot? reconciled;
+  Future<void>? reconcileGate;
+
   @override
-  Future<PlaybackPositionSnapshot?> reconcileVideo(int videoId) async => null;
+  Future<PlaybackPositionSnapshot?> reconcileVideo(int videoId) async {
+    await reconcileGate;
+    return reconciled;
+  }
 
   @override
   Future<void> reconcileRecent({int limit = 20}) async {}

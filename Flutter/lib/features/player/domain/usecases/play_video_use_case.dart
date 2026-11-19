@@ -27,11 +27,6 @@ class PlayVideoUseCase {
   final ApiRoute? _apiRoute;
   final DownloadFileValidator _fileValidator;
 
-  /// How long a downloaded video waits for the server's resume position before it starts from
-  /// the position this device saved. A downloaded copy plays without the server, so a server that
-  /// is down or slow must not keep it from starting.
-  static const Duration serverPositionWait = Duration(seconds: 3);
-
   /// Resolves what to play: the downloaded copy when it is usable, otherwise
   /// the remote source. [forceRemote] skips the downloaded copy, for when the
   /// player already failed on it; it cannot be combined with [localOnly].
@@ -85,12 +80,11 @@ class PlayVideoUseCase {
           : await _apiRoute.routeMediaUri(remoteUri);
     }
 
-    final Duration startPosition = localUri != null && !localOnly
-        ? await _resolveDownloadedStartPosition(videoId)
-        : await _playbackSyncRepository.resolveStartPosition(
-            videoId,
-            localOnly: localOnly,
-          );
+    // A downloaded copy starts at once from the position saved on this phone:
+    // the server is not asked here, since a network that looks up but is not
+    // would hold the start for seconds. The player asks it after starting.
+    final Duration startPosition = await _playbackSyncRepository
+        .resolveStartPosition(videoId, localOnly: localOnly || localUri != null);
     final String resolvedTitle = (download?.title ?? '').trim();
 
     return PlayableVideo(
@@ -134,21 +128,6 @@ class PlayVideoUseCase {
         updatedAt: DateTime.now().toUtc(),
       ),
     );
-  }
-
-  /// The resume position for a downloaded copy: the server's when it answers in time, otherwise
-  /// the one saved on this device. The server's answer still lands locally when it comes late.
-  Future<Duration> _resolveDownloadedStartPosition(int videoId) async {
-    try {
-      return await _playbackSyncRepository
-          .resolveStartPosition(videoId)
-          .timeout(serverPositionWait);
-    } on Object {
-      return _playbackSyncRepository.resolveStartPosition(
-        videoId,
-        localOnly: true,
-      );
-    }
   }
 
   Future<Uri?> _resolveLocalUri(String? rawPath) async {

@@ -477,39 +477,28 @@ class _HomePageState extends ConsumerState<HomePage> {
         }
 
         final LtPalette palette = LtPalette.of(context);
-        final ActionPane? startActionPane = remoteActionsDisabled
+        // Swipe right only downloads; Jellyfin lives in the row's ⋮ menu.
+        final ActionPane? startActionPane = remoteActionsDisabled || isDownloaded
             ? null
             : ActionPane(
                 motion: const ScrollMotion(),
-                extentRatio: isDownloaded ? 0.28 : 0.56,
-                // A full swipe queues the download; with the video already
-                // downloaded only the Jellyfin action remains, so no full swipe.
-                dismissible: isDownloaded
-                    ? null
-                    : DismissiblePane(
-                        onDismissed: () {},
-                        closeOnCancel: true,
-                        confirmDismiss: () async {
-                          await _queueDownload(context, item);
-                          return false;
-                        },
-                      ),
+                extentRatio: 0.28,
+                // A full swipe queues the download.
+                dismissible: DismissiblePane(
+                  onDismissed: () {},
+                  closeOnCancel: true,
+                  confirmDismiss: () async {
+                    await _queueDownload(context, item);
+                    return false;
+                  },
+                ),
                 children: <Widget>[
-                  if (!isDownloaded)
-                    SlidableAction(
-                      onPressed: (_) => _queueDownload(context, item),
-                      backgroundColor: palette.mint.strong,
-                      foregroundColor: Colors.white,
-                      icon: Icons.download_rounded,
-                      label: 'Скачать',
-                    ),
                   SlidableAction(
-                    onPressed: (_) =>
-                        unawaited(_exportToJellyfin(context, item)),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    icon: Icons.live_tv_rounded,
-                    label: 'В Jellyfin',
+                    onPressed: (_) => _queueDownload(context, item),
+                    backgroundColor: palette.mint.strong,
+                    foregroundColor: Colors.white,
+                    icon: Icons.download_rounded,
+                    label: 'Скачать',
                   ),
                 ],
               );

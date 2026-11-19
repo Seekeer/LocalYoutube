@@ -222,6 +222,12 @@ class PlayerController extends StateNotifier<PlayerUiState> {
   static const Duration _quickResumeBookmarkThreshold = Duration(seconds: 2);
   static const Duration _navigationCaptureThreshold = Duration(seconds: 2);
   static const int _maxNavigationEntries = 20;
+  /// Seeks made through [seek]; a late server position does not undo them.
+  int _userSeekCount = 0;
+
+  /// While a downloaded copy waits for the server's position, routine saves
+  /// hold off: a fresh local save would win the merge and hide that position.
+  bool _awaitingServerStartPosition = false;
   static const Duration _remoteResumeSeekThreshold = Duration(
     milliseconds: 500,
   );
@@ -229,6 +235,10 @@ class PlayerController extends StateNotifier<PlayerUiState> {
   /// How long a resume waits for the server's position before going on without it. An answer
   /// that arrives later describes a moment the viewer has already watched past.
   static const Duration _remoteResumeSyncTimeout = Duration(seconds: 3);
+  /// How long a downloaded copy, already playing, waits for the server's position.
+  static const Duration _downloadedCopyServerPositionTimeout = Duration(
+    seconds: 10,
+  );
   static const String _manualBookmarkCaption = '(bookmark)';
   static const String _playPauseBookmarkCaption = '(play\\pause)';
   static const Duration _playbackHealthCheckPeriod = Duration(seconds: 2);
@@ -411,6 +421,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     if (trackNavigation) {
       _recordNavigation(fromPosition: previousPosition, toPosition: bounded);
     }
+    _userSeekCount++;
     await controller.seekTo(bounded);
     await _saveCurrentPosition(force: true);
     _syncFromVideoPlayer();
@@ -663,8 +674,7 @@ class PlayerController extends StateNotifier<PlayerUiState> {
       // Where this video begins, and whether it begins playing. Without an intent both are what
       // they have always been: the resolved resume position, and playing.
       final PlayerStartIntent? startIntent = _startIntent;
-      final Duration startPosition =
-          startIntent?.position ?? playable.startPosition;
+      Duration startPosition = startIntent?.position ?? playable.startPosition;
       final bool shouldAutoPlay = startIntent?.isPlaying ?? true;
 
       _lastSavedSeconds = startPosition.inMilliseconds / 1000;
@@ -685,8 +695,15 @@ class PlayerController extends StateNotifier<PlayerUiState> {
       if (videoPlayer == null || _isDisposed) {
         return;
       }
-      // The downloaded copy may have been replaced by the remote source.
-      playable = _playable!;
+      // The downloaded copy may have been replaced by the remote source, which
+      // resolved its own start: the server's position, not just the phone's.
+      if (!identical(_playable, playable)) {
+        playable = _playable!;
+        if (startIntent?.position == null) {
+          startPosition = playable.startPosition;
+          _lastSavedSeconds = startPosition.inMilliseconds / 1000;
+        }
+      }
       _logService.info(
         'Video controller initialized: ${_controllerSnapshot(videoPlayer.value)}',
       );
@@ -743,7 +760,18 @@ class PlayerController extends StateNotifier<PlayerUiState> {
         isBuffering: false,
         sourceKind: playable.sourceKind,
       );
+      final bool hadExternalStart = _pendingExternalStartPosition != null;
       await _seekToExternalStartIfNeeded();
+      if (playable.sourceKind == PlayableSourceKind.localFile &&
+          !_localOnly &&
+          startIntent?.position == null &&
+          !hadExternalStart) {
+        _awaitingServerStartPosition = true;
+        unawaited(_adoptServerPositionForDownloadedCopy(
+          videoPlayer,
+          startPosition: boundedStart,
+        ));
+      }
       await _refreshBookmarks(syncRemote: true);
       if (_isDisposed) {
         return;
@@ -1139,6 +1167,54 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     }
   }
 
+  /// A downloaded copy starts from this phone's position without waiting for
+  /// the server. When the server then answers with a position watched
+  /// elsewhere, playback moves there, unless the viewer has already moved.
+  Future<void> _adoptServerPositionForDownloadedCopy(
+    VideoPlayerController controller, {
+    required Duration startPosition,
+  }) async {
+    final int seeksAtStart = _userSeekCount;
+    try {
+      final merged = await _playbackSyncRepository
+          .reconcileVideo(_videoId)
+          .timeout(_downloadedCopyServerPositionTimeout, onTimeout: () {
+        _logService.warn(
+          'Downloaded copy of video=$_videoId got no server position in '
+          '${_downloadedCopyServerPositionTimeout.inSeconds}s; '
+          'it keeps playing from the saved one.',
+        );
+        return null;
+      });
+      if (merged == null ||
+          _isDisposed ||
+          !identical(_videoPlayer, controller) ||
+          !controller.value.isInitialized ||
+          _userSeekCount != seeksAtStart) {
+        return;
+      }
+      final Duration target = _clampToMaxDuration(
+        Duration(milliseconds: (merged.positionSeconds * 1000).round()),
+        controller.value.duration,
+      );
+      if ((target - startPosition).abs() < _remoteResumeSeekThreshold) {
+        return;
+      }
+      _logService.info(
+        'Downloaded copy of video=$_videoId moves to the server position '
+        '${target.inSeconds}s (started at ${startPosition.inSeconds}s).',
+      );
+      await controller.seekTo(target);
+      _lastSavedSeconds = merged.positionSeconds;
+      _syncFromVideoPlayer();
+    } catch (error, stackTrace) {
+      _logService.error(
+          'adoptServerPositionForDownloadedCopy failed', error, stackTrace);
+    } finally {
+      _awaitingServerStartPosition = false;
+    }
+  }
+
   Future<void> _syncWithRemoteBeforeResume(
     VideoPlayerController controller,
     Duration positionBeforeResume,
@@ -1188,6 +1264,9 @@ class PlayerController extends StateNotifier<PlayerUiState> {
     if (playable == null ||
         controller == null ||
         !controller.value.isInitialized) {
+      return;
+    }
+    if (!force && _awaitingServerStartPosition) {
       return;
     }
     final double seconds = _positionSecondsToSave(controller);

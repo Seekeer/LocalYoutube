@@ -440,11 +440,9 @@ void main() {
 
     expect(playable.sourceKind, PlayableSourceKind.localFile);
     expect(playable.startPosition, const Duration(seconds: 30));
-    expect(remoteDataSource.getCallCount, greaterThan(0));
-    expect(
-      stopwatch.elapsed,
-      lessThan(PlayVideoUseCase.serverPositionWait + const Duration(seconds: 2)),
-    );
+    // The start does not wait for the server at all; the player asks it later.
+    expect(remoteDataSource.getCallCount, 0);
+    expect(stopwatch.elapsed, lessThan(const Duration(seconds: 1)));
   });
 
   test('a late server answer does not overwrite progress saved meanwhile',
@@ -490,6 +488,9 @@ void main() {
     final PlayableVideo playable =
         await playVideoUseCase.call(videoId: videoId);
     expect(playable.startPosition, const Duration(seconds: 30));
+    // The player asks the server once the downloaded copy plays.
+    final Future<void> serverAsked =
+        playbackSyncRepository.reconcileVideo(videoId);
 
     // Playback goes on and saves progress before the server answers.
     await localPlaybackRepository.savePosition(
@@ -498,7 +499,7 @@ void main() {
       updatedAt: DateTime.now().toUtc(),
     );
     slowServer.complete();
-    await Future<void>.delayed(const Duration(milliseconds: 200));
+    await serverAsked;
 
     final snapshot = await localPlaybackRepository.getSnapshot(videoId);
     expect(snapshot?.positionSeconds, 60);

@@ -19,6 +19,7 @@ import '../../player/data/local_playback_repository.dart';
 import '../../catalog/data/local_video_metadata_repository.dart';
 import '../../player/presentation/player_navigation_result.dart';
 import '../domain/download_models.dart';
+import '../domain/download_queue_estimate.dart';
 import 'downloads_controller.dart';
 
 final downloadMetadataProvider =
@@ -95,7 +96,9 @@ class DownloadsPage extends ConsumerWidget {
             )
           : null,
       appBar: AppBar(
-        title: Text(showCompletedOnly ? 'Скачанное' : 'Загрузки'),
+        title: showCompletedOnly
+            ? const Text('Скачанное')
+            : _QueueTitle(estimate: DownloadQueueEstimate.of(visibleItems)),
         actions: <Widget>[
           if (!showCompletedOnly && active.isNotEmpty)
             TextButton(
@@ -711,33 +714,84 @@ class _ActiveDownloadTile extends ConsumerWidget {
       if (etaLabel.isNotEmpty) 'ещё $etaLabel',
     ].join(' · ');
   }
+}
 
-  String _formatSpeed(double? speedMbps) {
-    if (speedMbps == null || speedMbps.isNaN || speedMbps <= 0) {
-      return '';
-    }
-    if (speedMbps >= 1) {
-      return '${speedMbps.toStringAsFixed(1).replaceAll('.', ',')} МБ/с';
-    }
-    return '${(speedMbps * 1000).toStringAsFixed(0)} КБ/с';
+String _formatSpeed(double? speedMbps) {
+  if (speedMbps == null || speedMbps.isNaN || speedMbps <= 0) {
+    return '';
   }
+  if (speedMbps >= 1) {
+    return '${speedMbps.toStringAsFixed(1).replaceAll('.', ',')} МБ/с';
+  }
+  return '${(speedMbps * 1000).toStringAsFixed(0)} КБ/с';
+}
 
-  /// «≈1 мин», «≈2 ч 5 мин», «меньше минуты».
-  String _formatEta(Duration? eta) {
-    if (eta == null || eta.isNegative) {
-      return '';
-    }
-    final int minutes = (eta.inSeconds / 60).round();
-    if (minutes < 1) {
-      return 'меньше минуты';
-    }
-    if (minutes >= 60) {
-      final int hours = minutes ~/ 60;
-      final int rest = minutes % 60;
-      return rest == 0 ? '≈$hours ч' : '≈$hours ч $rest мин';
-    }
-    return '≈$minutes мин';
+/// «≈1 мин», «≈2 ч 5 мин», «меньше минуты».
+String _formatEta(Duration? eta) {
+  if (eta == null || eta.isNegative) {
+    return '';
   }
+  final int minutes = (eta.inSeconds / 60).round();
+  if (minutes < 1) {
+    return 'меньше минуты';
+  }
+  if (minutes >= 60) {
+    final int hours = minutes ~/ 60;
+    final int rest = minutes % 60;
+    return rest == 0 ? '≈$hours ч' : '≈$hours ч $rest мин';
+  }
+  return '≈$minutes мин';
+}
+
+/// «Загрузки» and, under it while something downloads, the queue's total
+/// speed and roughly when all of it will be on the phone.
+class _QueueTitle extends StatelessWidget {
+  const _QueueTitle({required this.estimate});
+
+  final DownloadQueueEstimate? estimate;
+
+  @override
+  Widget build(BuildContext context) {
+    final DownloadQueueEstimate? queue = estimate;
+    if (queue == null) {
+      return const Text('Загрузки');
+    }
+    final ThemeData theme = Theme.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text('Загрузки'),
+        Text(
+          queueEstimateLabel(queue, now: DateTime.now()),
+          key: const Key('downloads-queue-estimate'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// «4,2 МБ/с · ≈25 мин, к 14:35»; the clock is left out past most of a day.
+@visibleForTesting
+String queueEstimateLabel(DownloadQueueEstimate queue, {required DateTime now}) {
+  final String speed = _formatSpeed(queue.speedMbps);
+  final Duration? remaining = queue.remaining;
+  if (remaining == null) {
+    return speed;
+  }
+  final String left = _formatEta(remaining);
+  if (remaining.inMinutes < 1 || remaining.inHours >= 20) {
+    return '$speed · $left';
+  }
+  final DateTime end = now.add(remaining);
+  final String clock = '${end.hour.toString().padLeft(2, '0')}:'
+      '${end.minute.toString().padLeft(2, '0')}';
+  return '$speed · $left, к $clock';
 }
 
 /// «4 видео» — the word does not change with the number.
