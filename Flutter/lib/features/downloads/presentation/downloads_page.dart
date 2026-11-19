@@ -8,10 +8,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/bootstrap/bootstrap_providers.dart';
 import '../../../app/router/app_routes.dart';
+import '../../../app/theme/app_theme.dart';
 import '../../../core/network/network_status.dart';
-import '../../../core/playback/playback_mode.dart';
+import '../../../shared/widgets/autonomous_mode_card.dart';
+import '../../../shared/widgets/lt_widgets.dart';
 import '../../../shared/widgets/state_feedback.dart';
 import '../../../shared/widgets/video_list_item.dart';
+import '../../../shared/widgets/watch_progress.dart';
+import '../../player/data/local_playback_repository.dart';
 import '../../catalog/data/local_video_metadata_repository.dart';
 import '../../player/presentation/player_navigation_result.dart';
 import '../domain/download_models.dart';
@@ -21,6 +25,21 @@ final downloadMetadataProvider =
     FutureProvider.family<LocalVideoMetadata?, int>(
         (Ref ref, int videoId) async {
   return ref.read(localVideoMetadataRepositoryProvider).findByVideoId(videoId);
+});
+
+/// How far each video was watched on this phone, in seconds.
+final AutoDisposeFutureProvider<Map<int, double>> _watchedSecondsProvider =
+    FutureProvider.autoDispose<Map<int, double>>((Ref ref) async {
+  try {
+    final List<PlaybackPositionSnapshot> snapshots =
+        await ref.read(localPlaybackRepositoryProvider).listRecent(limit: 1000);
+    return <int, double>{
+      for (final PlaybackPositionSnapshot s in snapshots)
+        s.videoId: s.positionSeconds,
+    };
+  } catch (_) {
+    return const <int, double>{};
+  }
 });
 
 class DownloadsPage extends ConsumerWidget {
@@ -40,7 +59,6 @@ class DownloadsPage extends ConsumerWidget {
         );
     final bool isOfflineFallback =
         ref.watch(authNotifierProvider).isOfflineFallback;
-    final bool useOfflinePlayback = ref.watch(effectiveAutonomousModeProvider);
     final List<DownloadItem> visibleItems = showCompletedOnly
         ? state.items
             .where((DownloadItem item) =>
@@ -52,46 +70,125 @@ class DownloadsPage extends ConsumerWidget {
                 (DownloadItem item) => item.status != DownloadStatus.completed)
             .toList(growable: false);
 
+    final List<DownloadItem> active = visibleItems
+        .where((DownloadItem item) => item.status.isActive)
+        .toList(growable: false);
+    final int downloading = visibleItems
+        .where((DownloadItem i) => i.status == DownloadStatus.downloading)
+        .length;
+    final int waiting = visibleItems
+        .where((DownloadItem i) => i.status == DownloadStatus.queued)
+        .length;
+    final int paused = visibleItems
+        .where((DownloadItem i) => i.status == DownloadStatus.paused)
+        .length;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(showCompletedOnly
-            ? '\u0421\u043a\u0430\u0447\u0430\u043d\u043d\u043e\u0435'
-            : '\u0421\u043a\u0430\u0447\u0438\u0432\u0430\u0435\u043c\u043e\u0435'),
-        actions: <Widget>[
-          if (showCompletedOnly) ...<Widget>[
-            const Center(
-              child: Text(
-                '\u0410\u0432\u0442\u043e\u043d\u043e\u043c\u043d\u043e',
+      // The screen's main switch sits where the thumb is.
+      bottomNavigationBar: showCompletedOnly
+          ? SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: const AutonomousModeCard(),
               ),
+            )
+          : null,
+      appBar: AppBar(
+        title: Text(showCompletedOnly ? 'Скачанное' : 'Загрузки'),
+        actions: <Widget>[
+          if (!showCompletedOnly && active.isNotEmpty)
+            TextButton(
+              key: const Key('downloads-pause-all'),
+              // The text ends on the 16 dp edge, like the discs below.
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.only(left: 12),
+                minimumSize: const Size(48, 48),
+              ),
+              onPressed: () {
+                final DownloadsController controller =
+                    ref.read(downloadsControllerProvider.notifier);
+                for (final DownloadItem item in active) {
+                  controller.pause(item.videoId);
+                }
+              },
+              child: const Text('Приостановить все'),
+            )
+          else if (!showCompletedOnly && paused > 0)
+            TextButton(
+              key: const Key('downloads-resume-all'),
+              // The text ends on the 16 dp edge, like the discs below.
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.only(left: 12),
+                minimumSize: const Size(48, 48),
+              ),
+              onPressed: () {
+                final DownloadsController controller =
+                    ref.read(downloadsControllerProvider.notifier);
+                for (final DownloadItem item in visibleItems) {
+                  if (item.status == DownloadStatus.paused) {
+                    controller.resume(item.videoId);
+                  }
+                }
+              },
+              child: const Text('Продолжить все'),
             ),
-            Switch(
-              key: const Key('autonomous-mode-switch'),
-              value: useOfflinePlayback,
-              onChanged: isOffline
-                  ? null
-                  : (bool value) {
-                      ref.read(manualAutonomousModeProvider.notifier).state =
-                          value;
-                    },
-            ),
-            const SizedBox(width: 8),
-          ],
+          const SizedBox(width: LtSizes.gutter),
         ],
       ),
       body: Column(
         children: <Widget>[
+          if (showCompletedOnly && visibleItems.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _videoCountLabel(visibleItems.length),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ),
+            ),
+          if (!showCompletedOnly && visibleItems.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Text(
+                      <String>[
+                        if (downloading > 0) '$downloading\u00a0скачивается',
+                        if (waiting > 0) '$waiting\u00a0в\u00a0очереди',
+                        if (paused > 0) '$paused\u00a0на\u00a0паузе',
+                      ].join(' ·\u00a0'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (isOffline)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: StateFeedbackBanner(
-                message:
-                    'Offline mode: active downloads will resume on network.',
+                message: showCompletedOnly
+                    ? 'Нет сети — скачанное смотрится как обычно.'
+                    : 'Нет сети — загрузки продолжатся, когда она появится.',
                 tone: StateFeedbackTone.warning,
               ),
             ),
           if (state.errorMessage != null && state.items.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: StateFeedbackBanner(
                 message: state.errorMessage!,
                 tone: StateFeedbackTone.error,
@@ -133,39 +230,37 @@ class _DownloadsList extends ConsumerWidget {
     if (state.items.isEmpty) {
       final bool hasError = state.errorMessage != null;
       return Center(
-        child: StateFeedbackPlaceholder(
-          icon: hasError
-              ? Icons.error_outline
-              : isOffline
-                  ? Icons.cloud_off_outlined
-                  : Icons.download_done_outlined,
-          title: hasError
-              ? 'Unable to load downloads'
-              : isOffline
-                  ? 'Offline mode'
-                  : showCompletedOnly
-                      ? 'No downloaded files yet'
-                      : 'No downloads yet',
-          message: hasError
-              ? state.errorMessage!
-              : isOffline
-                  ? 'Downloaded videos will appear here when available locally.'
-                  : showCompletedOnly
-                      ? 'Completed local files will appear here.'
-                      : 'Queue downloads from Home to see progress here.',
-          actionLabel: hasError ? 'Retry' : null,
-          onAction: hasError
-              ? () => ref.read(downloadsControllerProvider.notifier).reload()
-              : null,
+        child: SingleChildScrollView(
+          child: StateFeedbackPlaceholder(
+            icon: hasError
+                ? Icons.error_outline_rounded
+                : showCompletedOnly
+                    ? Icons.download_done_rounded
+                    : Icons.downloading_rounded,
+            title: hasError
+                ? 'Не удалось загрузить список'
+                : showCompletedOnly
+                    ? 'На телефоне пока ничего нет'
+                    : 'Очередь пуста',
+            message: hasError
+                ? state.errorMessage!
+                : showCompletedOnly
+                    ? 'Скачайте видео из списка — потяните его строку вправо или нажмите «Скачать» в плеере.'
+                    : 'Здесь появятся видео, которые скачиваются на телефон.',
+            actionLabel: hasError ? 'Повторить' : null,
+            onAction: hasError
+                ? () => ref.read(downloadsControllerProvider.notifier).reload()
+                : null,
+          ),
         ),
       );
     }
 
-    return ListView.separated(
+    return ListView.builder(
       key: const PageStorageKey<String>('downloads-list'),
       scrollCacheExtent: const ScrollCacheExtent.pixels(700),
+      padding: ltListPadding(context, top: 4),
       itemCount: state.items.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (BuildContext context, int index) {
         final DownloadItem item = state.items[index];
         return Consumer(
@@ -179,12 +274,33 @@ class _DownloadsList extends ConsumerWidget {
                 allowNetworkFallback: !isOfflineFallback,
               );
             }
-            return _ActiveDownloadTile(item: item, metadata: metadata);
+            return _ActiveDownloadTile(
+              item: item,
+              metadata: metadata,
+              allowNetworkFallback: !isOfflineFallback,
+            );
           },
         );
       },
     );
   }
+}
+
+String _thumbnailUrl(WidgetRef ref, int videoId) {
+  final Uri baseUri = Uri.parse(ref.read(appConfigProvider).apiBaseUrl);
+  return baseUri
+      .resolve('/api/files/getImage?fileId=$videoId&isMobile=true')
+      .toString();
+}
+
+String _formatDuration(int totalSeconds) {
+  final int hours = totalSeconds ~/ 3600;
+  final int minutes = (totalSeconds % 3600) ~/ 60;
+  final int seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+  return '$minutes:${seconds.toString().padLeft(2, '0')}';
 }
 
 class _CompletedDownloadTile extends ConsumerWidget {
@@ -202,14 +318,16 @@ class _CompletedDownloadTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final DownloadsController controller =
         ref.read(downloadsControllerProvider.notifier);
-    final Uri baseUri = Uri.parse(ref.read(appConfigProvider).apiBaseUrl);
-    final String thumbnailUrl = baseUri
-        .resolve('/api/files/getImage?fileId=${item.videoId}&isMobile=true')
-        .toString();
+    final String thumbnailUrl = _thumbnailUrl(ref, item.videoId);
     final String title = _resolveTitle(item, metadata);
-    final String metadataLine = _buildMetadataLine(metadata);
     final bool isPortrait =
         MediaQuery.orientationOf(context) == Orientation.portrait;
+    final int durationSeconds = metadata?.durationSeconds ?? 0;
+    final double watchedSeconds =
+        ref.watch(_watchedSecondsProvider).valueOrNull?[item.videoId] ?? 0;
+    final double? watchedFraction = durationSeconds > 0 && watchedSeconds > 0
+        ? (watchedSeconds / durationSeconds).clamp(0.0, 1.0).toDouble()
+        : null;
 
     final Widget content = isPortrait
         ? PortraitVideoListItem(
@@ -218,9 +336,41 @@ class _CompletedDownloadTile extends ConsumerWidget {
             imageUrl: thumbnailUrl,
             allowNetworkFallback: allowNetworkFallback,
             title: title,
-            metadataLine: metadataLine,
-            watchedFraction: null,
-            isDownloaded: true,
+            metadataLine: (metadata?.seasonName ?? '').trim(),
+            durationLabel:
+                durationSeconds > 0 ? _formatDuration(durationSeconds) : null,
+            watchedFraction: watchedFraction,
+            accentLine: watchProgressLabel(
+              watchedFraction,
+              durationSeconds > 0 ? Duration(seconds: durationSeconds) : null,
+            ),
+            accentColor: watchProgressColor(context, watchedFraction),
+            // Everything here is on the phone; a mark on every row says nothing.
+            isDownloaded: false,
+            trailing: PopupMenuButton<void>(
+              tooltip: 'Действия с видео',
+              icon: Icon(
+                Icons.more_vert_rounded,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<void>>[
+                PopupMenuItem<void>(
+                  onTap: () => controller.delete(item.videoId),
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.phonelink_erase_rounded,
+                      color: LtPalette.of(context).danger.strong,
+                    ),
+                    title: Text(
+                      'Удалить с телефона',
+                      style: TextStyle(
+                        color: LtPalette.of(context).danger.strong,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             onTap: () => _openPlayer(context, ref, item, metadata),
           )
         : ListTile(
@@ -240,7 +390,7 @@ class _CompletedDownloadTile extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
             ),
             subtitle: Text(
-              metadataLine,
+              _buildMetadataLine(metadata),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -249,8 +399,9 @@ class _CompletedDownloadTile extends ConsumerWidget {
 
     return Slidable(
       key: ValueKey<String>('downloads-completed-slide-${item.videoId}'),
-      startActionPane: ActionPane(
+      endActionPane: ActionPane(
         motion: const ScrollMotion(),
+        extentRatio: 0.32,
         dismissible: DismissiblePane(
           onDismissed: () {},
           closeOnCancel: true,
@@ -262,11 +413,10 @@ class _CompletedDownloadTile extends ConsumerWidget {
         children: <Widget>[
           SlidableAction(
             onPressed: (_) => controller.delete(item.videoId),
-            backgroundColor: Colors.red,
+            backgroundColor: LtPalette.of(context).danger.strong,
             foregroundColor: Colors.white,
-            icon: Icons.delete_sweep_outlined,
-            label:
-                '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0438\u0437 \u0441\u043a\u0430\u0447\u0430\u043d\u043d\u044b\u0445',
+            icon: Icons.delete_outline_rounded,
+            label: 'Удалить с телефона',
           ),
         ],
       ),
@@ -276,12 +426,12 @@ class _CompletedDownloadTile extends ConsumerWidget {
 
   String _resolveTitle(DownloadItem item, LocalVideoMetadata? metadata) {
     final String title = metadata?.title.trim() ?? item.title?.trim() ?? '';
-    return title.isNotEmpty ? title : 'Video #${item.videoId}';
+    return title.isNotEmpty ? title : 'Видео №${item.videoId}';
   }
 
   String _buildMetadataLine(LocalVideoMetadata? metadata) {
     if (metadata == null) {
-      return '-';
+      return '';
     }
     final List<String> parts = <String>[
       if ((metadata.seasonName ?? '').trim().isNotEmpty)
@@ -289,17 +439,7 @@ class _CompletedDownloadTile extends ConsumerWidget {
       if ((metadata.durationSeconds ?? 0) > 0)
         _formatDuration(metadata.durationSeconds!),
     ];
-    return parts.isEmpty ? '-' : parts.join(' | ');
-  }
-
-  String _formatDuration(int totalSeconds) {
-    final int hours = totalSeconds ~/ 3600;
-    final int minutes = (totalSeconds % 3600) ~/ 60;
-    final int seconds = totalSeconds % 60;
-    if (hours > 0) {
-      return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    }
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+    return parts.join(' · ');
   }
 
   Future<void> _openPlayer(
@@ -325,52 +465,40 @@ class _CompletedDownloadTile extends ConsumerWidget {
   }
 }
 
+/// A download in progress, waiting, paused or broken: its cover, a status in
+/// colour, the progress bar with speed and time left, and what can be done.
 class _ActiveDownloadTile extends ConsumerWidget {
   const _ActiveDownloadTile({
     required this.item,
     required this.metadata,
+    required this.allowNetworkFallback,
   });
 
   final DownloadItem item;
   final LocalVideoMetadata? metadata;
+  final bool allowNetworkFallback;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ThemeData theme = Theme.of(context);
+    final TextTheme text = theme.textTheme;
     final String title = _resolveTitle();
-    final String description = (metadata?.description ?? '').trim();
     final String transferInfo = _transferInfoLabel(item);
-    final double? progressValue =
-        item.status == DownloadStatus.queued && item.progress <= 0
-            ? null
-            : item.progress;
+    final bool waiting =
+        item.status == DownloadStatus.queued && item.progress <= 0;
+    final double? progressValue = waiting ? null : item.progress;
+    final (String statusLabel, Color statusColor) = _status(context, item);
+    final bool openable = item.status == DownloadStatus.completed;
 
-    return ListTile(
+    final bool dark = theme.brightness == Brightness.dark;
+    // A paused bar is clearly duller than a running one, in both themes.
+    final Color barColor = item.status == DownloadStatus.paused
+        ? (dark ? const Color(0xFF6B7192) : LtColors.subtle)
+        : statusColor;
+
+    return InkWell(
       key: ValueKey<int>(item.videoId),
-      title: Text(title),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          if (description.isNotEmpty) ...<Widget>[
-            Text(
-              description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-          ],
-          Text(_statusLabel(item)),
-          if (transferInfo.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 4),
-            Text(transferInfo),
-          ],
-          const SizedBox(height: 6),
-          LinearProgressIndicator(value: progressValue),
-          const SizedBox(height: 4),
-          Text(_progressLabel(item)),
-        ],
-      ),
-      onTap: item.status == DownloadStatus.completed
+      onTap: openable
           ? () => unawaited(
                 context
                     .push<PlayerNavigationResult>(
@@ -387,9 +515,89 @@ class _ActiveDownloadTile extends ConsumerWidget {
                 }),
               )
           : null,
-      trailing: Wrap(
-        spacing: 4,
-        children: _buildActions(ref),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(LtSizes.gutter, 10, 12, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                VideoCover(
+                  width: 112,
+                  localImagePath: metadata?.thumbnailLocalPath,
+                  imageUrl: _thumbnailUrl(ref, item.videoId),
+                  allowNetworkFallback: allowNetworkFallback,
+                  watchedFraction: null,
+                  isDownloaded: false,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        keepShortWordsTogether(title),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.titleSmall?.copyWith(fontSize: 14.5),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        statusLabel,
+                        style: text.labelMedium?.copyWith(color: statusColor),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                ..._buildActions(context, ref),
+              ],
+            ),
+            // The progress runs under the whole row, the controls included.
+            if (!waiting) ...<Widget>[
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: LinearProgressIndicator(
+                  value: progressValue,
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(999),
+                  color: barColor,
+                  backgroundColor: dark
+                      ? const Color(0xFF2A2E44)
+                      : barColor.withValues(alpha: 0.18),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: <Widget>[
+                  Text(
+                    _progressLabel(item),
+                    style: text.labelMedium?.copyWith(
+                      color: item.status == DownloadStatus.paused
+                          ? theme.colorScheme.onSurfaceVariant
+                          : null,
+                      fontFeatures: const <FontFeature>[
+                        FontFeature.tabularFigures(),
+                      ],
+                    ),
+                  ),
+                  if (transferInfo.isNotEmpty) ...<Widget>[
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        transferInfo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.bodySmall,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -399,76 +607,93 @@ class _ActiveDownloadTile extends ConsumerWidget {
     if (title.isNotEmpty) {
       return title;
     }
-    return 'Video #${item.videoId}';
+    return 'Видео №${item.videoId}';
   }
 
-  List<Widget> _buildActions(WidgetRef ref) {
+  List<Widget> _buildActions(BuildContext context, WidgetRef ref) {
     final DownloadsController controller =
         ref.read(downloadsControllerProvider.notifier);
 
     switch (item.status) {
       case DownloadStatus.queued:
+        return <Widget>[
+          IconButton.filledTonal(
+            style: _queueDisc(context),
+            tooltip: 'Остановить',
+            onPressed: () => controller.stop(item.videoId),
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ];
       case DownloadStatus.downloading:
         return <Widget>[
-          IconButton(
-            tooltip: 'Pause',
+          IconButton.filledTonal(
+            style: _queueDisc(context),
+            tooltip: 'Пауза',
             onPressed: () => controller.pause(item.videoId),
-            icon: const Icon(Icons.pause),
+            icon: const Icon(Icons.pause_rounded),
           ),
-          IconButton(
-            tooltip: 'Stop',
+          IconButton.filledTonal(
+            style: _queueDisc(context),
+            tooltip: 'Остановить',
             onPressed: () => controller.stop(item.videoId),
-            icon: const Icon(Icons.stop),
+            icon: const Icon(Icons.close_rounded),
           ),
         ];
       case DownloadStatus.paused:
         return <Widget>[
-          IconButton(
-            tooltip: 'Resume',
+          IconButton.filledTonal(
+            style: _queueDisc(context),
+            tooltip: 'Продолжить',
             onPressed: () => controller.resume(item.videoId),
-            icon: const Icon(Icons.play_arrow),
+            icon: const Icon(Icons.play_arrow_rounded),
           ),
-          IconButton(
-            tooltip: 'Delete local',
+          IconButton.filledTonal(
+            style: _queueDisc(context),
+            tooltip: 'Убрать загрузку',
             onPressed: () => controller.delete(item.videoId),
-            icon: const Icon(Icons.delete_outline),
+            icon: const Icon(Icons.close_rounded),
           ),
         ];
       case DownloadStatus.completed:
       case DownloadStatus.damaged:
       case DownloadStatus.failed:
         return <Widget>[
-          IconButton(
-            tooltip:
-                item.status == DownloadStatus.failed ? 'Retry' : 'Redownload',
+          IconButton.filledTonal(
+            style: _queueDisc(context),
+            tooltip: item.status == DownloadStatus.failed
+                ? 'Повторить'
+                : 'Скачать заново',
             onPressed: () => controller.resume(item.videoId),
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
           ),
-          IconButton(
-            tooltip: 'Delete local',
+          IconButton.filledTonal(
+            style: _queueDisc(context),
+            tooltip: 'Убрать загрузку',
             onPressed: () => controller.delete(item.videoId),
-            icon: const Icon(Icons.delete_outline),
+            icon: const Icon(Icons.close_rounded),
           ),
         ];
     }
   }
 
-  String _statusLabel(DownloadItem item) {
+  (String, Color) _status(BuildContext context, DownloadItem item) {
+    final LtPalette palette = LtPalette.of(context);
     switch (item.status) {
       case DownloadStatus.queued:
-        return 'Queued';
+        return (
+          'В очереди',
+          Theme.of(context).colorScheme.onSurfaceVariant,
+        );
       case DownloadStatus.downloading:
-        return 'Downloading';
+        return ('Скачивается', palette.cobalt.strong);
       case DownloadStatus.paused:
-        return 'Paused';
+        return ('На паузе', Theme.of(context).colorScheme.onSurfaceVariant);
       case DownloadStatus.completed:
-        return item.localPath == null
-            ? 'Completed'
-            : 'Completed: ${item.localPath}';
+        return ('Скачано', palette.mint.strong);
       case DownloadStatus.failed:
-        return 'Failed';
+        return ('Не удалось скачать', palette.danger.strong);
       case DownloadStatus.damaged:
-        return 'Downloaded video is damaged. Download it again.';
+        return ('Файл повреждён — скачайте заново', palette.danger.strong);
     }
   }
 
@@ -481,16 +706,10 @@ class _ActiveDownloadTile extends ConsumerWidget {
   String _transferInfoLabel(DownloadItem item) {
     final String speedLabel = _formatSpeed(item.speedMbps);
     final String etaLabel = _formatEta(item.eta);
-    if (speedLabel.isEmpty && etaLabel.isEmpty) {
-      return '';
-    }
-    if (speedLabel.isNotEmpty && etaLabel.isNotEmpty) {
-      return 'Speed: $speedLabel | ETA: $etaLabel';
-    }
-    if (speedLabel.isNotEmpty) {
-      return 'Speed: $speedLabel';
-    }
-    return 'ETA: $etaLabel';
+    return <String>[
+      if (speedLabel.isNotEmpty) speedLabel,
+      if (etaLabel.isNotEmpty) 'ещё $etaLabel',
+    ].join(' · ');
   }
 
   String _formatSpeed(double? speedMbps) {
@@ -498,22 +717,42 @@ class _ActiveDownloadTile extends ConsumerWidget {
       return '';
     }
     if (speedMbps >= 1) {
-      return '${speedMbps.toStringAsFixed(2)} MB/s';
+      return '${speedMbps.toStringAsFixed(1).replaceAll('.', ',')} МБ/с';
     }
-    return '${(speedMbps * 1000).toStringAsFixed(0)} kB/s';
+    return '${(speedMbps * 1000).toStringAsFixed(0)} КБ/с';
   }
 
+  /// «≈1 мин», «≈2 ч 5 мин», «меньше минуты».
   String _formatEta(Duration? eta) {
     if (eta == null || eta.isNegative) {
       return '';
     }
-    final int totalSeconds = eta.inSeconds;
-    final int hours = totalSeconds ~/ 3600;
-    final int minutes = (totalSeconds % 3600) ~/ 60;
-    final int seconds = totalSeconds % 60;
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    final int minutes = (eta.inSeconds / 60).round();
+    if (minutes < 1) {
+      return 'меньше минуты';
     }
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    if (minutes >= 60) {
+      final int hours = minutes ~/ 60;
+      final int rest = minutes % 60;
+      return rest == 0 ? '≈$hours ч' : '≈$hours ч $rest мин';
+    }
+    return '≈$minutes мин';
   }
+}
+
+/// «4 видео» — the word does not change with the number.
+String _videoCountLabel(int count) => '$count видео';
+
+/// The queue's pause, resume and remove: the player's tinted 40 dp discs.
+ButtonStyle _queueDisc(BuildContext context) {
+  final ThemeData theme = Theme.of(context);
+  final bool dark = theme.brightness == Brightness.dark;
+  return IconButton.styleFrom(
+    fixedSize: const Size.square(40),
+    minimumSize: const Size.square(40),
+    backgroundColor:
+        dark ? const Color(0xFF1E2446) : theme.colorScheme.primaryContainer,
+    foregroundColor:
+        dark ? const Color(0xFFC9CEFF) : theme.colorScheme.onPrimaryContainer,
+  );
 }

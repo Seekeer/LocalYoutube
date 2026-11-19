@@ -67,7 +67,7 @@ void main() {
 
     expect(
         find.text('\u041d\u043e\u0432\u0438\u043d\u043a\u0438'), findsNothing);
-    expect(find.text('\u0421\u0435\u0440\u0438\u0438'), findsNothing);
+    expect(find.text('Сериалы'), findsNothing);
     expect(
       find.text('\u0418\u0441\u0442\u043e\u0440\u0438\u044f'),
       findsOneWidget,
@@ -76,7 +76,7 @@ void main() {
       find.text('\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c'),
       findsOneWidget,
     );
-    expect(find.text('Автономно'), findsOneWidget);
+    expect(find.text('Автономный режим'), findsOneWidget);
     final Switch autonomousSwitch = tester.widget<Switch>(
       find.byKey(const Key('autonomous-mode-switch')),
     );
@@ -128,7 +128,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(
-        find.text('No downloaded video available to continue.'),
+        find.text('Нет скачанного видео, которое можно продолжить.'),
         findsOneWidget,
       );
     },
@@ -170,7 +170,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(find.text('Автономно'), findsOneWidget);
+      expect(find.text('Автономный режим'), findsOneWidget);
       final ProviderContainer container = ProviderScope.containerOf(
         tester.element(find.byType(StartPage)),
       );
@@ -183,7 +183,7 @@ void main() {
       expect(autonomousSwitch.onChanged, isNotNull);
       expect(find.text('\u041d\u043e\u0432\u0438\u043d\u043a\u0438'),
           findsOneWidget);
-      expect(find.text('\u0421\u0435\u0440\u0438\u0438'), findsOneWidget);
+      expect(find.text('Сериалы'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('autonomous-mode-switch')));
       await tester.pump();
@@ -196,14 +196,14 @@ void main() {
       expect(autonomousSwitch.value, isTrue);
       expect(find.text('\u041d\u043e\u0432\u0438\u043d\u043a\u0438'),
           findsNothing);
-      expect(find.text('\u0421\u0435\u0440\u0438\u0438'), findsNothing);
+      expect(find.text('Сериалы'), findsNothing);
 
       await tester.tap(find.text(
           '\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c'));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       expect(
-        find.text('No downloaded video available to continue.'),
+        find.text('Нет скачанного видео, которое можно продолжить.'),
         findsOneWidget,
       );
 
@@ -222,7 +222,7 @@ void main() {
       expect(autonomousSwitch.value, isFalse);
       expect(find.text('\u041d\u043e\u0432\u0438\u043d\u043a\u0438'),
           findsOneWidget);
-      expect(find.text('\u0421\u0435\u0440\u0438\u0438'), findsOneWidget);
+      expect(find.text('Сериалы'), findsOneWidget);
     },
   );
 
@@ -324,13 +324,8 @@ void main() {
       ),
       findsNothing,
     );
-    final ElevatedButton onlineFreshButton = tester.widget<ElevatedButton>(
-      find.widgetWithText(
-        ElevatedButton,
-        '\u041d\u043e\u0432\u0438\u043d\u043a\u0438',
-      ),
-    );
-    expect(onlineFreshButton.onPressed, isNotNull);
+    final InkWell onlineFreshButton = _menuTile(tester, '\u041d\u043e\u0432\u0438\u043d\u043a\u0438');
+    expect(onlineFreshButton.onTap, isNotNull);
 
     networkController.add(NetworkStatus.offline);
     await tester.pump();
@@ -346,20 +341,10 @@ void main() {
       find.text('\u0418\u0441\u0442\u043e\u0440\u0438\u044f'),
       findsOneWidget,
     );
-    final ElevatedButton offlineHistoryButton = tester.widget<ElevatedButton>(
-      find.widgetWithText(
-        ElevatedButton,
-        '\u0418\u0441\u0442\u043e\u0440\u0438\u044f',
-      ),
-    );
-    expect(offlineHistoryButton.onPressed, isNotNull);
-    final ElevatedButton offlineContinueButton = tester.widget<ElevatedButton>(
-      find.widgetWithText(
-        ElevatedButton,
-        '\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c',
-      ),
-    );
-    expect(offlineContinueButton.onPressed, isNotNull);
+    final InkWell offlineHistoryButton = _menuTile(tester, '\u0418\u0441\u0442\u043e\u0440\u0438\u044f');
+    expect(offlineHistoryButton.onTap, isNotNull);
+    final InkWell offlineContinueButton = _menuTile(tester, '\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c');
+    expect(offlineContinueButton.onTap, isNotNull);
     expect(
         find.text('\u041d\u043e\u0432\u0438\u043d\u043a\u0438'), findsNothing);
   });
@@ -405,7 +390,7 @@ void main() {
 
     expect(find.text('\u041d\u043e\u0432\u0438\u043d\u043a\u0438'),
         findsOneWidget);
-    expect(find.text('\u0421\u0435\u0440\u0438\u0438'), findsOneWidget);
+    expect(find.text('Сериалы'), findsOneWidget);
     expect(find.text('Offline mode'), findsNothing);
     Switch autonomousSwitch = tester.widget<Switch>(
       find.byKey(const Key('autonomous-mode-switch')),
@@ -419,7 +404,7 @@ void main() {
 
     expect(
         find.text('\u041d\u043e\u0432\u0438\u043d\u043a\u0438'), findsNothing);
-    expect(find.text('\u0421\u0435\u0440\u0438\u0438'), findsNothing);
+    expect(find.text('Сериалы'), findsNothing);
     expect(
       find.text('\u0418\u0441\u0442\u043e\u0440\u0438\u044f'),
       findsOneWidget,
@@ -441,7 +426,7 @@ void main() {
 
     expect(find.text('\u041d\u043e\u0432\u0438\u043d\u043a\u0438'),
         findsOneWidget);
-    expect(find.text('\u0421\u0435\u0440\u0438\u0438'), findsOneWidget);
+    expect(find.text('Сериалы'), findsOneWidget);
     expect(find.text('Offline mode'), findsNothing);
     autonomousSwitch = tester.widget<Switch>(
       find.byKey(const Key('autonomous-mode-switch')),
@@ -677,7 +662,7 @@ void main() {
     WidgetTester tester,
   ) async {
     tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(380, 640);
+    tester.view.physicalSize = const Size(300, 640);
     addTearDown(tester.view.reset);
     await tester.pumpWidget(buildWithSettings(10));
     await tester.pump();
@@ -807,10 +792,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      final ElevatedButton filmsButton = tester.widget<ElevatedButton>(
+      final InkWell filmsButton = tester.widget<InkWell>(
         find.byKey(const Key('start-films-button')),
       );
-      expect(filmsButton.onPressed, isNotNull);
+      expect(filmsButton.onTap, isNotNull);
       expect(find.text('Фильмы'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('autonomous-mode-switch')));
@@ -831,7 +816,7 @@ void main() {
     expect(find.byKey(const Key('start-films-button')), findsNothing);
   });
 
-  testWidgets('notes are a button at the bottom of the menu, with their count',
+  testWidgets('notes are a menu tile with their count',
       (WidgetTester tester) async {
     await tester.pumpWidget(buildOnlineStartPage(extraOverrides: <Override>[
       notesShelfProvider.overrideWith(
@@ -846,11 +831,11 @@ void main() {
 
     expect(find.text('Лекция'), findsNothing);
     final Finder notes = find.byKey(const Key('start-notes-button'));
-    expect(find.descendant(of: notes, matching: find.text('Заметки · 140')),
+    expect(find.descendant(of: notes, matching: find.text('Заметки')),
         findsOneWidget);
-    final List<ElevatedButton> menu =
-        tester.widgetList<ElevatedButton>(find.byType(ElevatedButton)).toList();
-    expect(menu.last.key, const Key('start-notes-button'));
+    expect(find.descendant(of: notes, matching: find.text('140')),
+        findsOneWidget);
+    expect(tester.widget<InkWell>(notes).onTap, isNotNull);
   });
 }
 
@@ -878,4 +863,11 @@ class _DummyOfflineHistoryRepository extends OfflineHistoryRepository {
 
   @override
   Future<OfflineHistoryItem?> findLatestPlayable() async => null;
+}
+
+/// The tappable menu tile that shows [label].
+InkWell _menuTile(WidgetTester tester, String label) {
+  return tester.widget<InkWell>(
+    find.ancestor(of: find.text(label), matching: find.byType(InkWell)).first,
+  );
 }

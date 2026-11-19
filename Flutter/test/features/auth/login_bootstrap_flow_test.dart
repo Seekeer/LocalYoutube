@@ -36,7 +36,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(TextFormField, 'Login'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, 'Имя пользователя'), findsOneWidget);
     expect(tryAutoLoginUseCase.callCount, 1);
   });
 
@@ -58,15 +58,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'Login'), 'john');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Имя пользователя'), 'john');
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Password'),
+      find.widgetWithText(TextFormField, 'Пароль'),
       'secret',
     );
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Login'));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Войти'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Login request timed out. Please try again.'),
+    expect(find.text('Сервер долго не отвечает. Попробуйте ещё раз.'),
         findsOneWidget);
   });
 }

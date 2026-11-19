@@ -146,7 +146,7 @@ void main() {
           tester.getSize(find.byKey(const ValueKey<String>('player-chapter-segment-1'))).width;
       expect(find.byKey(const ValueKey<String>('player-chapter-segment-2')), findsOneWidget);
       expect(second / first, closeTo(3, 0.05));
-      expect(find.text('Глава: Середина'), findsOneWidget);
+      expect(find.text('Середина'), findsOneWidget);
     });
 
     testWidgets('tapping a segment seeks to the chapter start', (

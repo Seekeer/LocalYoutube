@@ -133,9 +133,9 @@ void main() {
     expect(CastEntryPoint.noReceiversMessage, contains('LocalTube'));
     expect(
       CastEntryPoint.noReceiversMessage,
-      contains('the device you want to watch on'),
+      contains('на устройстве, где'),
     );
-    expect(CastEntryPoint.noReceiversMessage, contains('Receiver Mode'));
+    expect(CastEntryPoint.noReceiversMessage, contains('режим приёмника'));
     expect(find.text(CastEntryPoint.noReceiversMessage), findsOneWidget);
   });
 

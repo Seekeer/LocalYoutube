@@ -16,7 +16,15 @@ class PlayerVolumeControl extends StatelessWidget {
     this.enabled = true,
     this.color,
     this.sliderWidth = 140,
+    this.sliderPadding,
+    this.trackColor,
   });
+
+  /// The slider's colour when it differs from the icon's.
+  final Color? trackColor;
+
+  /// The slider's own padding, to line its track up with something else.
+  final EdgeInsets? sliderPadding;
 
   static const Key muteButtonKey = Key('player-volume-mute');
   static const Key sliderKey = Key('player-volume-slider');
@@ -35,7 +43,7 @@ class PlayerVolumeControl extends StatelessWidget {
       builder: (BuildContext context, Widget? _) {
         final double heard = volume.value;
         final ThemeData theme = Theme.of(context);
-        final Color? tint = color;
+        final Color? tint = trackColor ?? color;
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -43,7 +51,7 @@ class PlayerVolumeControl extends StatelessWidget {
               key: muteButtonKey,
               onPressed: enabled ? volume.toggleMuted : null,
               tooltip: volume.isSilent ? 'Включить звук' : 'Без звука',
-              color: tint,
+              color: color,
               icon: Icon(_icon(heard)),
             ),
             SizedBox(
@@ -58,6 +66,7 @@ class PlayerVolumeControl extends StatelessWidget {
                       ),
                 child: Slider(
                   key: sliderKey,
+                  padding: sliderPadding,
                   min: PlayerVolume.minimum,
                   max: PlayerVolume.maximum,
                   value: heard,
@@ -81,5 +90,40 @@ class PlayerVolumeControl extends StatelessWidget {
       return Icons.volume_down;
     }
     return Icons.volume_up;
+  }
+}
+
+/// A rounded track whose played part is as thick as the rest. The stock
+/// shape draws it 2 dp thicker, which makes a quiet volume line look heavy.
+class EvenSliderTrackShape extends RoundedRectSliderTrackShape {
+  const EvenSliderTrackShape();
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+    double additionalActiveTrackHeight = 2,
+  }) {
+    super.paint(
+      context,
+      offset,
+      parentBox: parentBox,
+      sliderTheme: sliderTheme,
+      enableAnimation: enableAnimation,
+      textDirection: textDirection,
+      thumbCenter: thumbCenter,
+      secondaryOffset: secondaryOffset,
+      isDiscrete: isDiscrete,
+      isEnabled: isEnabled,
+      additionalActiveTrackHeight: 0,
+    );
   }
 }

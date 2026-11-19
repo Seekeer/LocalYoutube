@@ -18,34 +18,34 @@ import 'cast_controller.dart';
 class CastEntryPoint extends ConsumerWidget {
   const CastEntryPoint({super.key, this.videoId});
 
-  static const String title = 'Watch on another device';
+  static const String title = 'Смотреть на другом устройстве';
 
   /// Shown instead of the list while no Receiver is online on this server.
   static const String noReceiversMessage =
-      'No Receiver is online. Open LocalTube on the device you want to watch '
-      'on and turn on Receiver Mode there.';
+      'Ни один приёмник не в сети. Откройте LocalTube на устройстве, где '
+      'хотите смотреть, и включите там режим приёмника.';
 
   /// Shown on a Receiver that is playing for another phone. It cannot be cast to until that phone
   /// is done with it.
-  static const String busyLabel = 'Busy';
+  static const String busyLabel = 'Занят';
 
   /// The action that starts Handoff of the current video to the picked Receiver.
   static const String castLabel = 'Cast';
 
   /// Shown while the Receiver is loading the video and the phone is still playing it.
-  static const String preparingLabel = 'Preparing the Receiver...';
+  static const String preparingLabel = 'Приёмник готовит видео…';
 
   /// The way out of a Handoff that is taking too long. The phone never stopped playing, so backing
   /// out simply leaves the viewer where they already are.
-  static const String cancelLabel = 'Cancel';
+  static const String cancelLabel = 'Отмена';
 
   /// Shown when the API refused, so the viewer is not left wondering why nothing happened.
   ///
   /// The refusal means the Receiver went to another phone first - two phones pressing cast at the
   /// same moment, possibly on different accounts - or this phone is already casting.
   static const String alreadyCastingMessage =
-      'This Receiver is busy: another phone is already casting to it.';
-  static const String castFailedMessage = 'Could not start casting.';
+      'Приёмник занят: на него уже транслирует другой телефон.';
+  static const String castFailedMessage = 'Не удалось начать трансляцию.';
 
   static const Key noReceiversMessageKey = Key('cast-no-receivers-message');
   static const Key selectedReceiverKey = Key('cast-selected-receiver');

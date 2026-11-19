@@ -27,7 +27,7 @@ void main() {
 
     await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, 'Login'), findsNothing);
+    expect(find.widgetWithText(TextFormField, 'Имя пользователя'), findsNothing);
   });
 
   testWidgets('unauthorized app redirects to login',
@@ -57,7 +57,7 @@ void main() {
 
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
-    expect(find.text('Login'), findsWidgets);
+    expect(find.text('Войти'), findsWidgets);
   });
 }
 

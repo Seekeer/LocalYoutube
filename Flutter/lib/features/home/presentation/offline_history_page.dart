@@ -6,8 +6,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/bootstrap/bootstrap_providers.dart';
 import '../../../app/router/app_routes.dart';
+import '../../../shared/widgets/lt_widgets.dart';
+import '../../../shared/widgets/state_feedback.dart';
 import '../../../shared/widgets/video_list_item.dart';
+import '../../../shared/widgets/watch_progress.dart';
+import '../../../app/theme/app_theme.dart';
 import '../../downloads/data/offline_history_repository.dart';
+import '../../downloads/presentation/downloads_controller.dart';
 import '../../player/presentation/player_navigation_result.dart';
 
 final FutureProvider<List<OfflineHistoryItem>> offlineHistoryItemsProvider =
@@ -37,26 +42,41 @@ class OfflineHistoryPage extends ConsumerWidget {
             if (items.isEmpty) {
               return ListView(
                 children: const <Widget>[
-                  SizedBox(height: 120),
-                  Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 24),
-                      child: Text(
-                        'No local watch history yet.',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
+                  SizedBox(height: 96),
+                  StateFeedbackPlaceholder(
+                    icon: Icons.history_rounded,
+                    title: 'История пуста',
+                    message:
+                        'Здесь появятся видео, которые вы смотрели на этом телефоне.',
                   ),
                 ],
               );
             }
-            return ListView.separated(
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (BuildContext context, int index) {
-                final OfflineHistoryItem item = items[index];
-                return _OfflineHistoryTile(item: item);
-              },
+            // Newest first, under a heading per day.
+            final List<OfflineHistoryItem> sorted =
+                List<OfflineHistoryItem>.of(items)
+                  ..sort(
+                    (OfflineHistoryItem a, OfflineHistoryItem b) =>
+                        b.lastWatchedAt.compareTo(a.lastWatchedAt),
+                  );
+            final List<Widget> rows = <Widget>[];
+            String? day;
+            for (final OfflineHistoryItem item in sorted) {
+              final String itemDay = _dayLabel(item.lastWatchedAt);
+              if (itemDay != day) {
+                day = itemDay;
+                rows.add(
+                  LtSectionHeader(
+                    itemDay,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  ),
+                );
+              }
+              rows.add(_OfflineHistoryTile(item: item));
+            }
+            return ListView(
+              padding: ltListPadding(context, top: 0),
+              children: rows,
             );
           },
           loading: () => ListView(
@@ -67,25 +87,13 @@ class OfflineHistoryPage extends ConsumerWidget {
           ),
           error: (Object error, StackTrace stackTrace) => ListView(
             children: <Widget>[
-              const SizedBox(height: 120),
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: <Widget>[
-                      Text(
-                        'Unable to load offline history: $error',
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: () =>
-                            ref.invalidate(offlineHistoryItemsProvider),
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 96),
+              StateFeedbackPlaceholder(
+                icon: Icons.error_outline_rounded,
+                title: 'Не удалось загрузить историю',
+                message: '$error',
+                actionLabel: 'Повторить',
+                onAction: () => ref.invalidate(offlineHistoryItemsProvider),
               ),
             ],
           ),
@@ -109,22 +117,75 @@ class _OfflineHistoryTile extends ConsumerWidget {
     final bool isPortrait =
         MediaQuery.orientationOf(context) == Orientation.portrait;
     final Widget content = isPortrait
-        ? Opacity(
-            opacity: item.isPlayableOffline ? 1 : 0.6,
-            child: PortraitVideoListItem(
-              localImagePath: item.thumbnailLocalPath,
-              imageUrl: networkUrl,
-              allowNetworkFallback: false,
-              title: item.title,
-              metadataLine: _buildMetadataLine(),
-              watchedFraction: _resolveWatchedFraction(),
-              isDownloaded: item.isPlayableOffline,
-              onTap: () => unawaited(_handleTap(context)),
+        ? PortraitVideoListItem(
+            localImagePath: item.thumbnailLocalPath,
+            imageUrl: networkUrl,
+            allowNetworkFallback: false,
+            title: item.title,
+            // Line 2 is where and when, line 3 the state, as in every list.
+            metadataLine: <String>[
+              if ((item.seasonName ?? '').trim().isNotEmpty)
+                item.seasonName!.trim(),
+              _buildWhenLine(),
+            ].join(' · '),
+            accentLine: item.isPlayableOffline
+                ? watchProgressLabel(
+                    _resolveWatchedFraction(),
+                    (item.durationSeconds ?? 0) > 0
+                        ? Duration(seconds: item.durationSeconds!)
+                        : null,
+                  )
+                : 'Не скачано',
+            accentIcon: item.isPlayableOffline ? null : Icons.cloud_off_rounded,
+            accentColor:
+                item.isPlayableOffline && _resolveWatchedFraction() != null
+                    ? watchProgressColor(context, _resolveWatchedFraction())
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+            durationLabel: (item.durationSeconds ?? 0) > 0
+                ? _formatDuration(item.durationSeconds!)
+                : null,
+            watchedFraction: _resolveWatchedFraction(),
+            // Downloaded is the rule here; only the exception is marked.
+            isDownloaded: false,
+            dimmed: !item.isPlayableOffline,
+            onTap: () => unawaited(_handleTap(context)),
+            // The same «⋮» as the other lists; here it can only free the phone.
+            trailing: PopupMenuButton<void>(
+              tooltip: 'Действия с видео',
+              enabled: item.isPlayableOffline,
+              icon: Icon(
+                Icons.more_vert_rounded,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<void>>[
+                PopupMenuItem<void>(
+                  onTap: () async {
+                    final ProviderContainer container =
+                        ProviderScope.containerOf(context, listen: false);
+                    await container
+                        .read(downloadsControllerProvider.notifier)
+                        .delete(item.videoId);
+                    container.invalidate(offlineHistoryItemsProvider);
+                  },
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.phonelink_erase_rounded,
+                      color: LtPalette.of(context).danger.strong,
+                    ),
+                    title: Text(
+                      'Удалить с телефона',
+                      style: TextStyle(
+                        color: LtPalette.of(context).danger.strong,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           )
         : ListTile(
             enabled: item.isPlayableOffline,
-            contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            contentPadding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
             leading: VideoThumbnail(
               width: 84,
               height: 56,
@@ -140,40 +201,35 @@ class _OfflineHistoryTile extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
             ),
             subtitle: Text(
-              _buildSubtitle(),
+              <String>[
+                _buildMetadataLine(),
+                _dayLabel(item.lastWatchedAt),
+                _buildWhenLine(),
+              ].where((String s) => s.isNotEmpty).join(' · '),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
             trailing: item.isPlayableOffline
-                ? const Icon(Icons.play_circle_outline)
-                : const Icon(Icons.cloud_off_outlined),
+                ? const Icon(Icons.play_circle_outline_rounded)
+                : const Icon(Icons.cloud_off_rounded),
             onTap: () => unawaited(_handleTap(context)),
           );
 
     return content;
   }
 
-  String _buildSubtitle() {
-    final List<String> parts = <String>[
-      if ((item.seasonName ?? '').trim().isNotEmpty) item.seasonName!.trim(),
-      if ((item.durationSeconds ?? 0) > 0)
-        _formatDuration(item.durationSeconds!),
-      'Last watched ${_formatDate(item.lastWatchedAt)}',
-      'Position ${_formatPosition(item.positionSeconds)}',
-      if (!item.isPlayableOffline) 'Not downloaded',
-    ];
-    return parts.join(' | ');
-  }
-
   String _buildMetadataLine() {
     final List<String> parts = <String>[
       if ((item.seasonName ?? '').trim().isNotEmpty) item.seasonName!.trim(),
-      if ((item.durationSeconds ?? 0) > 0)
-        _formatDuration(item.durationSeconds!),
-      'Pos ${_formatPosition(item.positionSeconds)}',
-      if (!item.isPlayableOffline) 'Not downloaded',
+      if (!item.isPlayableOffline) 'не скачано',
     ];
-    return parts.isEmpty ? '-' : parts.join(' | ');
+    return parts.join(' · ');
+  }
+
+  /// «в 16:30».
+  String _buildWhenLine() {
+    final DateTime local = item.lastWatchedAt.toLocal();
+    return 'в ${local.hour}:${local.minute.toString().padLeft(2, '0')}';
   }
 
   double? _resolveWatchedFraction() {
@@ -208,7 +264,7 @@ class _OfflineHistoryTile extends ConsumerWidget {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('This video is no longer available offline.'),
+        content: Text('Этого видео больше нет на телефоне.'),
       ),
     );
   }
@@ -222,18 +278,36 @@ class _OfflineHistoryTile extends ConsumerWidget {
     }
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
+}
 
-  String _formatPosition(double secondsRaw) {
-    final int totalSeconds = secondsRaw < 0 ? 0 : secondsRaw.round();
-    return _formatDuration(totalSeconds);
-  }
+const List<String> _months = <String>[
+  'января',
+  'февраля',
+  'марта',
+  'апреля',
+  'мая',
+  'июня',
+  'июля',
+  'августа',
+  'сентября',
+  'октября',
+  'ноября',
+  'декабря',
+];
 
-  String _formatDate(DateTime value) {
-    final DateTime local = value.toLocal();
-    final String month = local.month.toString().padLeft(2, '0');
-    final String day = local.day.toString().padLeft(2, '0');
-    final String hour = local.hour.toString().padLeft(2, '0');
-    final String minute = local.minute.toString().padLeft(2, '0');
-    return '${local.year}-$month-$day $hour:$minute';
+/// «Сегодня», «Вчера» or «12 ноября» (with the year when it is not this one).
+String _dayLabel(DateTime value) {
+  final DateTime local = value.toLocal();
+  final DateTime now = DateTime.now();
+  final DateTime today = DateTime(now.year, now.month, now.day);
+  final DateTime day = DateTime(local.year, local.month, local.day);
+  final int daysAgo = today.difference(day).inDays;
+  if (daysAgo == 0) {
+    return 'Сегодня';
   }
+  if (daysAgo == 1) {
+    return 'Вчера';
+  }
+  final String year = local.year == now.year ? '' : ' ${local.year}';
+  return '${local.day} ${_months[local.month - 1]}$year';
 }

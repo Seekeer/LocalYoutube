@@ -487,8 +487,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Player'), findsOneWidget);
-    expect(find.text('Invalid video id'), findsOneWidget);
+    expect(find.text('Плеер'), findsOneWidget);
+    expect(find.text('Неверный номер видео'), findsOneWidget);
   });
 
   testWidgets('shows offline playback error without a loading indicator', (
@@ -517,7 +517,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(message), findsOneWidget);
-    expect(find.text('Video stream is unavailable'), findsOneWidget);
+    expect(find.text('Видео не открылось'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsNothing);
   });
 
@@ -538,7 +538,7 @@ void main() {
     expect(find.text(RemoteControlModeView.title), findsOneWidget);
     expect(find.text('Living room'), findsOneWidget);
     expect(find.byKey(RemoteControlModeView.connectionStatusKey), findsOneWidget);
-    expect(find.text('Connected'), findsOneWidget);
+    expect(find.text('На связи'), findsOneWidget);
 
     // No local video player, and none of the surface that would drive one. The sliders that are
     // here drive the Receiver instead, which is what the mode is for.
@@ -616,7 +616,7 @@ void main() {
     tester
         .widget<IconButton>(
           find.ancestor(
-            of: find.byTooltip('Back 10s'),
+            of: find.byTooltip('Назад на 10 с'),
             matching: find.byType(IconButton),
           ),
         )
@@ -838,7 +838,7 @@ void main() {
 
     // None of these belongs to a video playing on somebody else's screen, so none of them is built
     // at all while playback lives on the Receiver.
-    expect(find.byTooltip('Add bookmark'), findsNothing);
+    expect(find.byTooltip('Закладка'), findsNothing);
     expect(find.byIcon(Icons.download_outlined), findsNothing);
     expect(find.byIcon(Icons.delete_outline), findsNothing);
     expect(find.text('Bookmarks'), findsNothing);
@@ -961,8 +961,8 @@ void main() {
 
     expect(find.text(RemoteControlModeView.title), findsNothing);
     expect(find.byKey(RemoteControlModeView.seekSliderKey), findsNothing);
-    expect(find.byTooltip('Add bookmark'), findsOneWidget);
-    expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+    expect(find.byTooltip('Закладка'), findsOneWidget);
+    expect(find.byTooltip('Скопировать ссылку'), findsOneWidget);
     expect(find.byIcon(Icons.fullscreen), findsOneWidget);
     expect(find.byType(CastEntryPoint), findsOneWidget);
   });
@@ -985,7 +985,7 @@ void main() {
     // Fullscreen is opened while the Handoff is still being prepared, which is exactly when local
     // playback is still this device's: the viewer goes on watching here until the Receiver says
     // what it reached.
-    await tester.tap(find.byTooltip('Fullscreen'));
+    await tester.tap(find.byTooltip('На весь экран'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -1000,8 +1000,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     await tester.tapAt(playerCenter);
     await tester.pump(const Duration(milliseconds: 350));
-    expect(find.byTooltip('Exit fullscreen'), findsOneWidget);
-    expect(find.byTooltip('Add bookmark'), findsWidgets);
+    expect(find.byTooltip('Выйти из полноэкранного режима'), findsOneWidget);
+    expect(find.byTooltip('Закладка'), findsWidgets);
 
     // The Receiver confirms the state it reached, so playback lives there now.
     castController.emit(
@@ -1020,8 +1020,8 @@ void main() {
     // local-only affordance it carried went with it.
     expect(fullscreen, findsNothing);
     expect(find.byType(VideoPlayer), findsNothing);
-    expect(find.byTooltip('Add bookmark'), findsNothing);
-    expect(find.byTooltip('Exit fullscreen'), findsNothing);
+    expect(find.byTooltip('Закладка'), findsNothing);
+    expect(find.byTooltip('Выйти из полноэкранного режима'), findsNothing);
     expect(find.byIcon(Icons.undo), findsNothing);
 
     // And the viewer lands on the remote itself rather than on a blank screen.
@@ -1100,8 +1100,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final shareButton = find.byIcon(Icons.share_outlined);
+    // Copy link and delete sit in the action row with the others.
+    final shareButton = find.byIcon(Icons.link_rounded);
     expect(shareButton, findsOneWidget);
+    expect(find.byTooltip('Скопировать ссылку'), findsOneWidget);
+    expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+    expect(find.byKey(const Key('player-more-actions')), findsNothing);
   });
 
   testWidgets(
@@ -1158,7 +1162,7 @@ void main() {
       );
       await tester.pump();
 
-      await tester.tap(find.byTooltip('Fullscreen'));
+      await tester.tap(find.byTooltip('На весь экран'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -1170,16 +1174,15 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(find.byIcon(Icons.delete_outline), findsOneWidget);
-      expect(find.byTooltip('Next section'), findsOneWidget);
-      expect(find.byTooltip('Back'), findsOneWidget);
-      expect(find.byTooltip('Pause and minimize'), findsOneWidget);
-      expect(find.byTooltip('Minimize'), findsOneWidget);
+      expect(find.byTooltip('Следующая глава'), findsOneWidget);
+      expect(find.byTooltip('Вернуться назад'), findsOneWidget);
+      expect(find.byTooltip('Пауза и свернуть'), findsOneWidget);
+      expect(find.byTooltip('Свернуть'), findsOneWidget);
 
       tester
           .widget<IconButton>(
             find.ancestor(
-              of: find.byTooltip('Next section'),
+              of: find.byTooltip('Следующая глава'),
               matching: find.byType(IconButton),
             ),
           )
@@ -1191,7 +1194,7 @@ void main() {
       tester
           .widget<IconButton>(
             find.ancestor(
-              of: find.byTooltip('Back'),
+              of: find.byTooltip('Вернуться назад'),
               matching: find.byType(IconButton),
             ),
           )
@@ -1202,7 +1205,7 @@ void main() {
       tester
           .widget<IconButton>(
             find.ancestor(
-              of: find.byTooltip('Pause and minimize'),
+              of: find.byTooltip('Пауза и свернуть'),
               matching: find.byType(IconButton),
             ),
           )
@@ -1214,7 +1217,7 @@ void main() {
       tester
           .widget<IconButton>(
             find.ancestor(
-              of: find.byTooltip('Minimize'),
+              of: find.byTooltip('Свернуть'),
               matching: find.byType(IconButton),
             ),
           )
@@ -1252,7 +1255,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byTooltip('Fullscreen'));
+      await tester.tap(find.byTooltip('На весь экран'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -1265,14 +1268,14 @@ void main() {
       await tester.tapAt(playerCenter);
       await tester.pump(const Duration(milliseconds: 350));
 
-      expect(find.byTooltip('Lock screen'), findsOneWidget);
-      await tester.tap(find.byTooltip('Lock screen'));
+      expect(find.byTooltip('Заблокировать экран'), findsOneWidget);
+      await tester.tap(find.byTooltip('Заблокировать экран'));
       await tester.pump(kDoubleTapTimeout + const Duration(milliseconds: 50));
 
-      expect(find.byTooltip('Unlock screen'), findsOneWidget);
-      expect(find.byTooltip('Pause'), findsNothing);
-      expect(find.byTooltip('Next section'), findsNothing);
-      expect(find.byTooltip('Exit fullscreen'), findsNothing);
+      expect(find.byTooltip('Разблокировать экран'), findsOneWidget);
+      expect(find.byTooltip('Пауза'), findsNothing);
+      expect(find.byTooltip('Следующая глава'), findsNothing);
+      expect(find.byTooltip('Выйти из полноэкранного режима'), findsNothing);
       expect(find.byType(Slider), findsOneWidget);
       expect(tester.widget<Slider>(find.byType(Slider)).value, 15);
       expect(tester.widget<Slider>(find.byType(Slider)).max, 600);
@@ -1282,7 +1285,7 @@ void main() {
       expect(find.text('10:00'), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 5));
-      expect(find.byTooltip('Unlock screen'), findsNothing);
+      expect(find.byTooltip('Разблокировать экран'), findsNothing);
       expect(find.byType(Slider), findsNothing);
       expect(find.text('00:15'), findsNothing);
       expect(find.text('10:00'), findsNothing);
@@ -1292,15 +1295,15 @@ void main() {
       await tester.tapAt(playerCenter);
       await tester.pump();
       expect(mockController.togglePlaybackCallCount, 0);
-      expect(find.byTooltip('Unlock screen'), findsOneWidget);
+      expect(find.byTooltip('Разблокировать экран'), findsOneWidget);
       expect(tester.widget<Slider>(find.byType(Slider)).value, 30);
       expect(find.text('00:30'), findsOneWidget);
 
       await tester.pump(const Duration(milliseconds: 4999));
-      expect(find.byTooltip('Unlock screen'), findsOneWidget);
+      expect(find.byTooltip('Разблокировать экран'), findsOneWidget);
       expect(find.byType(Slider), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 1));
-      expect(find.byTooltip('Unlock screen'), findsNothing);
+      expect(find.byTooltip('Разблокировать экран'), findsNothing);
       expect(find.byType(Slider), findsNothing);
 
       await tester.tapAt(playerCenter);
@@ -1309,7 +1312,7 @@ void main() {
       await tester.tapAt(playerCenter);
       await tester.pump();
       await tester.pump(const Duration(seconds: 4));
-      expect(find.byTooltip('Unlock screen'), findsOneWidget);
+      expect(find.byTooltip('Разблокировать экран'), findsOneWidget);
       expect(find.byType(Slider), findsOneWidget);
       expect(mockController.togglePlaybackCallCount, 0);
 
@@ -1331,15 +1334,15 @@ void main() {
       expect(mockController.lastSeekPosition, isNull);
       expect(mockController.togglePlaybackCallCount, 0);
       expect(tester.widget<Slider>(find.byType(Slider)).value, 45);
-      expect(find.byTooltip('Unlock screen'), findsOneWidget);
-      expect(find.byTooltip('Pause'), findsNothing);
+      expect(find.byTooltip('Разблокировать экран'), findsOneWidget);
+      expect(find.byTooltip('Пауза'), findsNothing);
 
-      await tester.tap(find.byTooltip('Unlock screen'));
+      await tester.tap(find.byTooltip('Разблокировать экран'));
       await tester.pump(kDoubleTapTimeout + const Duration(milliseconds: 50));
 
-      expect(find.byTooltip('Lock screen'), findsOneWidget);
-      expect(find.byTooltip('Pause'), findsOneWidget);
-      expect(find.byTooltip('Exit fullscreen'), findsOneWidget);
+      expect(find.byTooltip('Заблокировать экран'), findsOneWidget);
+      expect(find.byTooltip('Пауза'), findsOneWidget);
+      expect(find.byTooltip('Выйти из полноэкранного режима'), findsOneWidget);
       // Unlocked, the volume is back beside the timeline.
       expect(find.byKey(PlayerVolumeControl.sliderKey), findsOneWidget);
       final Finder timeline = find.byWidgetPredicate(
@@ -1427,12 +1430,12 @@ void main() {
         expect(video.top, greaterThanOrEqualTo(0));
         expect(video.width / video.height, closeTo(16 / 9, 0.01));
         for (final String tooltip in <String>[
-          'Back 10s',
-          'Forward 10s',
-          'Add bookmark',
-          'Delete',
-          'Fullscreen',
-          'Share',
+          'Назад на 10 с',
+          'Вперёд на 10 с',
+          'Закладка',
+          'На весь экран',
+          'Скопировать ссылку',
+          'Удалить',
         ]) {
           expect(
             tester.getRect(find.byTooltip(tooltip)).bottom,
@@ -1441,7 +1444,7 @@ void main() {
           );
         }
         expect(
-          tester.getRect(find.text('Pause')).bottom,
+          tester.getRect(find.byTooltip('Пауза')).bottom,
           lessThanOrEqualTo(windowHeight),
         );
       }
@@ -1512,7 +1515,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byTooltip('Fullscreen'));
+      await tester.tap(find.byTooltip('На весь экран'));
       await finishTransition(tester);
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await finishTransition(tester);
@@ -1534,7 +1537,7 @@ void main() {
     await tester.pump();
     expect(controller.togglePlaybackCallCount, 1);
 
-    await tester.tap(find.byTooltip('Fullscreen'));
+    await tester.tap(find.byTooltip('На весь экран'));
     await finishTransition(tester);
     await tester.sendKeyEvent(LogicalKeyboardKey.space);
     await tester.pump();
@@ -1548,9 +1551,9 @@ void main() {
         buildPlayerPage(videoId: '42', controller: buildLocalPlayer()),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Fullscreen'));
+      await tester.tap(find.byTooltip('На весь экран'));
       await finishTransition(tester);
-      expect(find.byTooltip('Exit fullscreen'), findsNothing);
+      expect(find.byTooltip('Выйти из полноэкранного режима'), findsNothing);
 
       final TestGesture mouse = await tester.createGesture(
         kind: PointerDeviceKind.mouse,
@@ -1559,10 +1562,10 @@ void main() {
       addTearDown(mouse.removePointer);
       await mouse.moveTo(const Offset(420, 50));
       await tester.pump();
-      expect(find.byTooltip('Exit fullscreen'), findsOneWidget);
+      expect(find.byTooltip('Выйти из полноэкранного режима'), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 4));
-      expect(find.byTooltip('Exit fullscreen'), findsNothing);
+      expect(find.byTooltip('Выйти из полноэкранного режима'), findsNothing);
     },
   );
 
@@ -1659,8 +1662,8 @@ void main() {
     final RecordingNotesRepository notes =
         await openPlayerFromHome(tester, controller);
 
-    await tester.ensureVisible(find.byTooltip('Fullscreen'));
-    await tester.tap(find.byTooltip('Fullscreen'));
+    await tester.ensureVisible(find.byTooltip('На весь экран'));
+    await tester.tap(find.byTooltip('На весь экран'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     final Offset center =
@@ -1695,8 +1698,8 @@ void main() {
     await openPlayerFromHome(tester, controller);
     expect(find.byKey(PlayerVolumeControl.sliderKey), findsOneWidget);
 
-    await tester.ensureVisible(find.byTooltip('Fullscreen'));
-    await tester.tap(find.byTooltip('Fullscreen'));
+    await tester.ensureVisible(find.byTooltip('На весь экран'));
+    await tester.tap(find.byTooltip('На весь экран'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     final Offset center =

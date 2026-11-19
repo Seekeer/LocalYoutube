@@ -37,26 +37,26 @@ class RemoteControlModeView extends ConsumerStatefulWidget {
     this.timestamps = const <VideoTimestamp>[],
   });
 
-  static const String title = 'Playing on another device';
+  static const String title = 'Играет на другом устройстве';
 
   /// Shown while the session exists but the API has not named the Receiver.
-  static const String unknownReceiverName = 'Unnamed Receiver';
+  static const String unknownReceiverName = 'Приёмник без имени';
 
   /// The way back: playback stops on the Receiver and continues here. It is also the way out of
   /// waiting for a Receiver that has dropped off, which is why it is never disabled.
-  static const String returnHandoffLabel = 'Watch on this phone';
+  static const String returnHandoffLabel = 'Смотреть на телефоне';
 
   /// Shown while a participant is inside its one-minute reconnect window.
-  static const String reconnectingLabel = 'Reconnecting to the Receiver';
+  static const String reconnectingLabel = 'Переподключаемся к приёмнику';
 
-  static const String timestampsTitle = 'Timestamps';
+  static const String timestampsTitle = 'Главы';
 
   /// What the Receiver says it is doing, in the order a viewer cares about it.
-  static const String waitingLabel = 'Waiting for the Receiver';
-  static const String bufferingLabel = 'Buffering';
-  static const String finishedLabel = 'Finished';
-  static const String playingLabel = 'Playing';
-  static const String pausedLabel = 'Paused';
+  static const String waitingLabel = 'Ждём приёмник';
+  static const String bufferingLabel = 'Загрузка';
+  static const String finishedLabel = 'Досмотрено';
+  static const String playingLabel = 'Играет';
+  static const String pausedLabel = 'На паузе';
 
   static const Key receiverNameKey = Key('remote-control-receiver-name');
   static const Key connectionStatusKey = Key('remote-control-connection-status');
@@ -85,13 +85,13 @@ class RemoteControlModeView extends ConsumerStatefulWidget {
   static String connectionLabel(SyncConnectionState state) {
     switch (state) {
       case SyncConnectionState.disconnected:
-        return 'Disconnected';
+        return 'Нет связи';
       case SyncConnectionState.connecting:
-        return 'Connecting';
+        return 'Подключение';
       case SyncConnectionState.connected:
-        return 'Connected';
+        return 'На связи';
       case SyncConnectionState.reconnecting:
-        return 'Reconnecting';
+        return 'Переподключение';
     }
   }
 
@@ -246,7 +246,7 @@ class _RemoteControlModeViewState extends ConsumerState<RemoteControlModeView> {
             children: <Widget>[
               _buildSecondaryControlButton(
                 icon: Icons.replay_10,
-                tooltip: 'Back 10s',
+                tooltip: 'Назад на 10 с',
                 enabled: canControl,
                 onPressed: () => unawaited(
                   controller.seekReceiver(
@@ -268,13 +268,13 @@ class _RemoteControlModeViewState extends ConsumerState<RemoteControlModeView> {
                           unawaited(controller.setReceiverPlaying(!isPlaying))
                       : null,
                   icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                  label: Text(isPlaying ? 'Pause' : 'Play'),
+                  label: Text(isPlaying ? 'Пауза' : 'Играть'),
                 ),
               ),
               const SizedBox(width: 8),
               _buildSecondaryControlButton(
                 icon: Icons.forward_10,
-                tooltip: 'Forward 10s',
+                tooltip: 'Вперёд на 10 с',
                 enabled: canControl,
                 onPressed: () => unawaited(
                   controller.seekReceiver(

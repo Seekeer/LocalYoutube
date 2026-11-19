@@ -155,12 +155,15 @@ class _ResolvedThumbnailImageState
       width: widget.width,
       height: widget.height,
       child: ColoredBox(
-        color: Theme.of(context).colorScheme.surface,
-        child: const Center(
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
+        child: Center(
           child: SizedBox(
             width: 18,
             height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       ),
@@ -172,9 +175,13 @@ class _ResolvedThumbnailImageState
       width: widget.width,
       height: widget.height,
       child: ColoredBox(
-        color: Theme.of(context).colorScheme.surface,
-        child: const Center(
-          child: Icon(Icons.movie_outlined),
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
+        child: Center(
+          child: Icon(
+            Icons.smart_display_outlined,
+            size: 28,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ),
     );

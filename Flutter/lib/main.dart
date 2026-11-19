@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fvp/fvp.dart' as fvp;
 
@@ -31,6 +32,9 @@ Future<void> runLocalTubeApp({
   await runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+      // Android 15 draws apps edge to edge; the app's bars are transparent and every
+      // screen pads for the status bar and the gesture handle itself.
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
       _registerDesktopVideoBackend();
       await _initializeMediaControls();
       runApp(_ConfiguredApplication(

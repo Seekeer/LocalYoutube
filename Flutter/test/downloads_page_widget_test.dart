@@ -78,19 +78,19 @@ void main() {
     expect(find.text('Video 77'), findsOneWidget);
     expect(
       find.text(
-          '\u0421\u043a\u0430\u0447\u0438\u0432\u0430\u0435\u043c\u043e\u0435'),
+          'Загрузки'),
       findsOneWidget,
     );
-    expect(find.text('Downloading'), findsOneWidget);
+    expect(find.text('Скачивается'), findsOneWidget);
     expect(find.text('40%'), findsOneWidget);
-    expect(find.text('Downloaded video is damaged. Download it again.'),
+    expect(find.text('Файл повреждён — скачайте заново'),
         findsOneWidget);
-    expect(find.byTooltip('Redownload'), findsOneWidget);
-    await tester.tap(find.byTooltip('Redownload'));
+    expect(find.byTooltip('Скачать заново'), findsOneWidget);
+    await tester.tap(find.byTooltip('Скачать заново'));
     await tester.pump(const Duration(milliseconds: 100));
     expect(downloadService.resumedVideoIds, contains(78));
 
-    await tester.tap(find.byTooltip('Pause'));
+    await tester.tap(find.byTooltip('Пауза'));
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(downloadService.pausedVideoIds, contains(77));

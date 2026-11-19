@@ -64,9 +64,9 @@ void main() {
     expect(find.text('Заметки · 140'), findsOneWidget);
     expect(find.text('Видео 1'), findsOneWidget);
     expect(find.text('Видео 2'), findsOneWidget);
-    expect(find.text('разобрать · черновики'), findsOneWidget);
-    expect(find.text('разобрать'), findsOneWidget);
-    expect(find.text('И ещё 138'), findsOneWidget);
+    expect(find.text('Нужна тема'), findsNWidgets(2));
+    expect(find.text('Черновик'), findsOneWidget);
+    expect(find.text('Ещё 138 появятся, когда разберёте эти'), findsOneWidget);
 
     await tester.tap(find.text('Видео 2'));
     await tester.pumpAndSettle();

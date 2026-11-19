@@ -102,7 +102,8 @@ void main() {
       findsWidgets,
     );
     expect(find.text('Widget Test Video'), findsOneWidget);
-    expect(find.text('Season 1 | 1:50:33'), findsOneWidget);
+    expect(find.text('Season 1'), findsOneWidget);
+    expect(find.text('1:50:33'), findsOneWidget);
     expect(find.byIcon(Icons.download_done_rounded), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());

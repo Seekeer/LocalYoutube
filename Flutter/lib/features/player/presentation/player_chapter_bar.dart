@@ -48,6 +48,7 @@ class ChapterTimeline extends StatelessWidget {
     required this.chapterBar,
     required this.slider,
     this.sliderPadding,
+    this.merged = false,
   });
 
   final Widget chapterBar;
@@ -55,6 +56,18 @@ class ChapterTimeline extends StatelessWidget {
 
   /// The slider's own `padding`, if it has one.
   final EdgeInsets? sliderPadding;
+
+  /// Whether the chapter segments are the slider's track: one timeline, the
+  /// slider's thumb riding on the segments, instead of a chapter strip above
+  /// a separate seek bar. Only for a video that has chapters; without them the
+  /// bar is empty and the slider keeps its own track.
+  final bool merged;
+
+  /// The height the slider takes in a merged timeline.
+  static const double _mergedSliderHeight = 40;
+
+  /// The chapter bar's segment row, which the slider's thumb is centred on.
+  static const double _segmentsHeight = 16;
 
   @override
   Widget build(BuildContext context) {
@@ -66,12 +79,42 @@ class ChapterTimeline extends StatelessWidget {
       left: (sliderPadding?.left ?? 0) + inset,
       right: (sliderPadding?.right ?? 0) + inset,
     );
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    if (!merged) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Padding(padding: padding, child: chapterBar),
+          slider,
+        ],
+      );
+    }
+    // The bar's segments sit on the slider's centre line; the slider, drawn
+    // without a track, lies on top and takes the drags and taps.
+    return Stack(
+      clipBehavior: Clip.none,
       children: <Widget>[
-        Padding(padding: padding, child: chapterBar),
-        slider,
+        Padding(
+          padding: padding.copyWith(
+            bottom: (_mergedSliderHeight - _segmentsHeight) / 2,
+          ),
+          child: chapterBar,
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: _mergedSliderHeight,
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: Colors.transparent,
+              inactiveTrackColor: Colors.transparent,
+              disabledActiveTrackColor: Colors.transparent,
+              disabledInactiveTrackColor: Colors.transparent,
+            ),
+            child: slider,
+          ),
+        ),
       ],
     );
   }
@@ -149,7 +192,7 @@ class _PlayerChapterBarState extends State<PlayerChapterBar> {
         : Text(
             shown >= 0
                 ? '${_format(label.start)} · ${label.title}'
-                : 'Глава: ${label.title}',
+                : label.title,
             key: const ValueKey<String>('player-chapter-title'),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -227,7 +270,7 @@ class _PlayerChapterBarState extends State<PlayerChapterBar> {
           child: Center(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 100),
-              height: hovered ? 10 : 5,
+              height: hovered ? 10 : 6,
               decoration: BoxDecoration(
                 color: track,
                 borderRadius: BorderRadius.circular(1),

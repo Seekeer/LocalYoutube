@@ -7,10 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../app/bootstrap/bootstrap_providers.dart';
+import '../../../app/theme/app_theme.dart';
 import '../../app_updates/apk_update_controller.dart';
 import '../../../core/errors/failure.dart';
 import '../../../core/network/network_status.dart';
+import '../../../shared/widgets/lt_widgets.dart';
 import '../../../shared/widgets/state_feedback.dart';
+import '../../bookmarks/domain/bookmark_models.dart';
 import '../../cast/data/cast_playback_binding.dart';
 import '../../cast/domain/cast_playback_endpoint.dart';
 import '../../cast/presentation/cast_controller.dart';
@@ -68,7 +71,8 @@ enum _FullscreenRequest {
 /// The chapters the server imported for the video; until they arrive, or when
 /// they cannot (offline, an older server), the description's «00:00 Название»
 /// lines by the server's rule.
-List<VideoTimestamp> _chapters(WidgetRef ref, int videoId, String? description) {
+List<VideoTimestamp> _chapters(
+    WidgetRef ref, int videoId, String? description) {
   return ref.watch(videoChaptersProvider(videoId)).valueOrNull ??
       ref.read(extractTimestampsUseCaseProvider).call(description ?? '');
 }
@@ -124,6 +128,9 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
   bool _isDeleteDialogVisible = false;
   bool _isFullscreenOpen = false;
   bool _isFinishingViewing = false;
+
+  /// Whether the phone layout has scrolled the controls out of sight.
+  final ValueNotifier<bool> _controlsScrolledAway = ValueNotifier<bool>(false);
 
   /// The player's own keyboard focus: Space plays or pauses while it holds the focus, and Ctrl+F
   /// opens fullscreen from anywhere on the page.
@@ -235,6 +242,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
   @override
   void dispose() {
     _keyboardFocusNode.dispose();
+    _controlsScrolledAway.dispose();
     _updatePlaybackSurfaces?.leave();
     WidgetsBinding.instance.removeObserver(this);
     final Object? screenToken = _screenToken;
@@ -305,8 +313,8 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
     final int? videoId = _resolvedVideoId;
     if (videoId == null || videoId <= 0) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Player')),
-        body: const Center(child: Text('Invalid video id')),
+        appBar: AppBar(title: const Text('Плеер')),
+        body: const Center(child: Text('Неверный номер видео')),
       );
     }
 
@@ -404,6 +412,521 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
         !_isDeleteInProgress &&
         !_isFullscreenOpen;
 
+    final ThemeData theme = Theme.of(context);
+    final TextTheme text = theme.textTheme;
+    final LtPalette palette = LtPalette.of(context);
+    final bool playbackEnabled = state.errorMessage == null;
+    final Duration shownPosition =
+        Duration(milliseconds: (positionSeconds * 1000).round());
+
+    final Widget video = _buildVideoSurface(
+      videoId: videoId,
+      state: state,
+      controller: controller,
+      videoController: videoController,
+    );
+
+    final Widget controls = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: LtSizes.gutter),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (isOffline) ...<Widget>[
+            const SizedBox(height: 10),
+            StateFeedbackBanner(
+              message: state.sourceKind == PlayableSourceKind.localFile
+                  ? 'Нет сети — играет файл с телефона.'
+                  : 'Нет сети — видео с сервера может не открыться.',
+              tone: StateFeedbackTone.warning,
+            ),
+          ],
+          if (state.isRecovering) ...<Widget>[
+            const SizedBox(height: 10),
+            const StateFeedbackBanner(
+              message: 'Связь прервалась — переподключаемся…',
+              tone: StateFeedbackTone.warning,
+            ),
+          ],
+          if (state.errorMessage != null) ...<Widget>[
+            const SizedBox(height: 10),
+            StateFeedbackBanner(
+              message: state.errorMessage!,
+              tone: StateFeedbackTone.error,
+            ),
+          ],
+          if (state.isLoading) ...<Widget>[
+            const SizedBox(height: 12),
+            const LinearProgressIndicator(minHeight: 3),
+          ],
+          const SizedBox(height: 8),
+          // One timeline: the chapters are the track, the played part is coral
+          // as on every cover, and the thumb rides on it.
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: LtColors.coral,
+              inactiveTrackColor: theme.colorScheme.onSurface.withValues(
+                alpha: theme.brightness == Brightness.dark ? 0.24 : 0.14,
+              ),
+              thumbColor: LtColors.coral,
+              overlayColor: LtColors.coral.withValues(alpha: 0.14),
+              thumbShape: const RoundSliderThumbShape(
+                enabledThumbRadius: 10,
+                elevation: 0,
+                pressedElevation: 0,
+              ),
+            ),
+            child: ChapterTimeline(
+              merged: timestamps.isNotEmpty,
+              sliderPadding: EdgeInsets.zero,
+              chapterBar: PlayerChapterBar(
+                chapters: timestamps,
+                duration: state.duration,
+                position: shownPosition,
+                isSeeking: _dragSeconds != null,
+                enabled: playbackEnabled,
+                fillColor: LtColors.coral,
+                trackColor: theme.brightness == Brightness.dark
+                    ? const Color(0xFF3D4263)
+                    : const Color(0xFFCDD1E2),
+                onSeek: (Duration start) => unawaited(controller.seek(start)),
+              ),
+              slider: Slider(
+                min: 0,
+                max: maxSeconds,
+                value: positionSeconds,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 2,
+                  vertical: 12,
+                ),
+                onChanged: !playbackEnabled
+                    ? null
+                    : (double value) {
+                        setState(() {
+                          _dragSeconds = value;
+                        });
+                      },
+                onChangeEnd: !playbackEnabled
+                    ? null
+                    : (double value) {
+                        setState(() {
+                          _dragSeconds = null;
+                        });
+                        unawaited(
+                          controller.seek(
+                            Duration(milliseconds: (value * 1000).round()),
+                          ),
+                        );
+                      },
+              ),
+            ),
+          ),
+          // Times at the ends of the timeline, the volume between them.
+          Transform.translate(
+            offset: const Offset(0, -10),
+            child: Row(
+              children: <Widget>[
+                Text(
+                  _formatDuration(shownPosition),
+                  style: _timeStyle(text),
+                ),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (BuildContext context, BoxConstraints row) {
+                      // The mute button is 48 dp; below 56 dp of track a
+                      // slider is no use, and the phone's own volume remains.
+                      final double track = math.min(132, row.maxWidth - 56);
+                      if (track < 56) {
+                        return const SizedBox.shrink();
+                      }
+                      return Center(
+                        child: Theme(
+                          data: theme.copyWith(
+                            sliderTheme: theme.sliderTheme.copyWith(
+                              trackHeight: 4,
+                              trackShape: const EvenSliderTrackShape(),
+                              activeTrackColor:
+                                  theme.brightness == Brightness.dark
+                                      ? const Color(0xFF6A7096)
+                                      : const Color(0xFF8E94B3),
+                              inactiveTrackColor:
+                                  theme.brightness == Brightness.dark
+                                      ? const Color(0xFF2A2E44)
+                                      : const Color(0xFFDDE0EC),
+                              thumbColor: theme.brightness == Brightness.dark
+                                  ? const Color(0xFF8E94B3)
+                                  : const Color(0xFF6B7190),
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 8,
+                                elevation: 0,
+                                pressedElevation: 0,
+                              ),
+                            ),
+                          ),
+                          child: PlayerVolumeControl(
+                            volume: ref.watch(playerVolumeProvider),
+                            sliderWidth: track,
+                            sliderPadding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Text(
+                  _formatDuration(state.duration),
+                  style: _timeStyle(text)?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _EqualSlots(
+            children: <Widget>[
+              _buildTransportButton(
+                icon: Icons.undo_rounded,
+                tooltip: 'Вернуться туда, откуда перешли',
+                small: true,
+                enabled: playbackEnabled && state.navigationEntries.isNotEmpty,
+                onPressed: () => unawaited(
+                  controller.seekToNavigationOrigin(
+                    state.navigationEntries.last.id,
+                  ),
+                ),
+              ),
+              _buildTransportButton(
+                icon: Icons.replay_10_rounded,
+                tooltip: 'Назад на 10 с',
+                enabled: playbackEnabled,
+                onPressed: () => unawaited(
+                  controller.seekRelative(const Duration(seconds: -10)),
+                ),
+              ),
+              SizedBox.square(
+                dimension: 72,
+                child: IconButton.filled(
+                  tooltip: state.isPlaying ? 'Пауза' : 'Воспроизвести',
+                  style: IconButton.styleFrom(
+                    backgroundColor: LtColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: !playbackEnabled
+                      ? null
+                      : () => unawaited(controller.togglePlayback()),
+                  icon: Icon(
+                    state.isPlaying
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded,
+                    size: 42,
+                  ),
+                ),
+              ),
+              _buildTransportButton(
+                icon: Icons.forward_10_rounded,
+                tooltip: 'Вперёд на 10 с',
+                enabled: playbackEnabled,
+                onPressed: () => unawaited(
+                  controller.seekRelative(const Duration(seconds: 10)),
+                ),
+              ),
+              _buildTransportButton(
+                icon: Icons.skip_next_rounded,
+                tooltip: 'К следующей главе',
+                enabled: playbackEnabled && timestamps.isNotEmpty,
+                onPressed: () => unawaited(
+                  _jumpToNearestTimestamp(
+                    context: context,
+                    controller: controller,
+                    currentPosition: state.position,
+                    timestamps: timestamps,
+                    jumpToNearestTimestampUseCase:
+                        jumpToNearestTimestampUseCase,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _PlayerActionStrip(
+            actions: <_PlayerAction>[
+              _PlayerAction(
+                icon: Icons.bookmark_add_outlined,
+                label: 'Закладка',
+                enabled: playbackEnabled && !_isDeleteInProgress,
+                onPressed: () => unawaited(controller.addManualBookmark()),
+              ),
+              if (controller.hasSubtitleTracks)
+                _PlayerAction(
+                  icon: state.subtitlesEnabled
+                      ? Icons.closed_caption
+                      : Icons.closed_caption_off,
+                  label: 'Субтитры',
+                  tooltip: state.subtitlesEnabled
+                      ? 'Выключить субтитры'
+                      : 'Включить субтитры',
+                  selected: state.subtitlesEnabled,
+                  enabled: !state.isLoading && playbackEnabled,
+                  onPressed: controller.toggleSubtitles,
+                ),
+              if (state.sourceKind != PlayableSourceKind.localFile &&
+                  !_downloadStartedForCurrentVideo)
+                _PlayerAction(
+                  icon: Icons.download_outlined,
+                  label: 'Скачать',
+                  tooltip: remoteActionsDisabled
+                      ? 'Доступно после подключения'
+                      : 'Скачать на телефон',
+                  enabled: playbackEnabled &&
+                      !remoteActionsDisabled &&
+                      !_isDeleteInProgress,
+                  onPressed: () => unawaited(_downloadCurrentVideo(videoId)),
+                ),
+              _PlayerAction(
+                key: finishViewingButtonKey,
+                icon: Icons.task_alt,
+                label: 'Просмотрено',
+                tooltip: 'Завершить просмотр',
+                enabled: !state.isLoading &&
+                    playbackEnabled &&
+                    !_isDeleteInProgress &&
+                    !_isFinishingViewing,
+                onPressed: () => unawaited(
+                  _finishViewing(videoId: videoId, controller: controller),
+                ),
+              ),
+              _PlayerAction(
+                icon: Icons.link_rounded,
+                label: 'Ссылка',
+                tooltip: 'Скопировать ссылку',
+                enabled: playbackEnabled && !_isDeleteInProgress,
+                onPressed: () => unawaited(_shareVideo(videoId)),
+              ),
+              _PlayerAction(
+                icon: Icons.delete_outline,
+                label: 'Удалить',
+                danger: true,
+                enabled: playbackEnabled && !_isDeleteInProgress,
+                onPressed: () => unawaited(
+                  _startDeleteFlow(videoId: videoId, controller: controller),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final Widget sections = Padding(
+      padding: const EdgeInsets.fromLTRB(LtSizes.gutter, 8, LtSizes.gutter, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (state.navigationEntries.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 12),
+            LtSectionCard(
+              padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
+              child: SizedBox(
+                height: math.min(state.navigationEntries.length, 3) * 56.0,
+                child: ListView.builder(
+                  key: const PageStorageKey<String>('player-navigation'),
+                  primary: false,
+                  padding: EdgeInsets.zero,
+                  itemCount: state.navigationEntries.length,
+                  physics: state.navigationEntries.length > 3
+                      ? const ClampingScrollPhysics()
+                      : const NeverScrollableScrollPhysics(),
+                  itemBuilder: (BuildContext context, int index) {
+                    final PlayerNavigationEntry entry =
+                        state.navigationEntries[index];
+                    return ListTile(
+                      dense: true,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 12),
+                      leading: Icon(
+                        Icons.undo_rounded,
+                        color: theme.colorScheme.primary,
+                      ),
+                      title: Text(
+                        'Вернуться на ${_formatDuration(entry.fromPosition)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        'Вы перешли на ${_formatDuration(entry.toPosition)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: !playbackEnabled
+                          ? null
+                          : () => unawaited(
+                                controller.seekToNavigationOrigin(entry.id),
+                              ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+          if (timestamps.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 12),
+            Card(
+              child: ExpansionTile(
+                key: const PageStorageKey<String>('player-timestamps'),
+                initiallyExpanded: true,
+                visualDensity: VisualDensity.compact,
+                title: Text(
+                  'Главы · ${timestamps.length}',
+                  style: text.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                children: <Widget>[
+                  for (final VideoTimestamp timestamp in timestamps)
+                    _ChapterTile(
+                      label: timestamp.label,
+                      time: _formatDuration(timestamp.position),
+                      isCurrent: _isCurrentChapter(
+                        timestamps,
+                        timestamp,
+                        state.position,
+                      ),
+                      isPast: state.position >= timestamp.position,
+                      onTap: !playbackEnabled
+                          ? null
+                          : () => unawaited(
+                                controller.seek(timestamp.position),
+                              ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          if (state.bookmarks.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 12),
+            Card(
+              child: ExpansionTile(
+                key: const PageStorageKey<String>('player-bookmarks'),
+                initiallyExpanded: true,
+                visualDensity: VisualDensity.compact,
+                title: Text(
+                  'Закладки · ${state.bookmarks.length}',
+                  style: text.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                children: <Widget>[
+                  for (final BookmarkItem bookmark in state.bookmarks)
+                    ListTile(
+                      dense: true,
+                      contentPadding: const EdgeInsets.only(left: 8),
+                      leading: _TimeBadge(
+                        label: _formatDuration(bookmark.position),
+                      ),
+                      title: Text(
+                        bookmark.caption.isEmpty
+                            ? 'Закладка'
+                            : bookmark.caption,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.bodyLarge,
+                      ),
+                      subtitle: bookmark.isPendingSync
+                          ? const Text('ещё не отправлена')
+                          : null,
+                      trailing: IconButton(
+                        color: palette.subtle,
+                        onPressed: !playbackEnabled
+                            ? null
+                            : () => unawaited(
+                                  controller.deleteBookmark(bookmark.id),
+                                ),
+                        icon: const Icon(Icons.delete_outline),
+                        tooltip: 'Удалить закладку',
+                      ),
+                      onTap: !playbackEnabled
+                          ? null
+                          : () => unawaited(controller.seek(bookmark.position)),
+                      onLongPress: !playbackEnabled
+                          ? null
+                          : () => unawaited(
+                                _editBookmarkCaption(
+                                  controller: controller,
+                                  bookmarkId: bookmark.id,
+                                  caption: bookmark.caption,
+                                ),
+                              ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: NotesSection(
+                videoId: videoId,
+                title: (widget.videoTitle ?? '').trim(),
+                onPausePlayback: controller.pause,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TranscriptPanel(
+                videoId: int.parse(widget.videoId),
+                onSeek: (position) => controller.seek(position),
+                onBookmark: controller.addTextBookmark,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: CastEntryPoint(videoId: videoId),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final double bottomInset = MediaQuery.viewPaddingOf(context).bottom + 24;
+
+    // Fullscreen is where every player has it: a corner of the video.
+    final Widget videoWithFullscreen = Stack(
+      children: <Widget>[
+        video,
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: IconButton(
+            tooltip: 'На весь экран',
+            onPressed: playbackEnabled && !_isDeleteInProgress
+                ? () => unawaited(_openFullscreen(videoId: videoId))
+                : null,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.black.withValues(alpha: 0.55),
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.black.withValues(alpha: 0.25),
+              disabledForegroundColor: Colors.white38,
+              minimumSize: const Size.square(48),
+              fixedSize: const Size.square(48),
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.6)),
+            ),
+            icon: const Icon(Icons.fullscreen, size: 24),
+          ),
+        ),
+      ],
+    );
+
     return PlayerKeyboardShortcuts(
       focusNode: _keyboardFocusNode,
       onTogglePlayback: state.errorMessage != null
@@ -413,14 +936,100 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
           ? () => unawaited(_openFullscreen(videoId: videoId))
           : null,
       child: Scaffold(
-        appBar: AppBar(title: Text(_resolvedTitle(videoId))),
+        appBar: AppBar(
+          shape: theme.brightness == Brightness.dark
+              ? const Border(bottom: BorderSide(color: Color(0xFF1E2236)))
+              : null,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                _resolvedTitle(videoId),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              _SourceLabel(
+                icon: _sourceStatusIcon(state.sourceKind),
+                label: _sourceStatusLabel(state.sourceKind),
+              ),
+            ],
+          ),
+        ),
         body: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints viewport) {
+            final bool isPhonePortrait = viewport.maxWidth < 600 &&
+                viewport.maxHeight > viewport.maxWidth;
+            if (isPhonePortrait) {
+              // On a phone the video stays at the top while the controls,
+              // chapters and notes scroll under it, as in video apps. Once the
+              // controls have scrolled away, a slim bar under the video keeps
+              // play/pause and the progress in reach.
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  // A vertical video takes at most half the screen, so the
+                  // controls under it always have room.
+                  ColoredBox(
+                    color: Colors.black,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: viewport.maxHeight * 0.5,
+                      ),
+                      child: Align(
+                        heightFactor: 1,
+                        child: videoWithFullscreen,
+                      ),
+                    ),
+                  ),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _controlsScrolledAway,
+                    builder: (BuildContext context, bool away, _) =>
+                        AnimatedSize(
+                      duration: const Duration(milliseconds: 180),
+                      child: away
+                          ? _MiniPlaybackBar(
+                              isPlaying: state.isPlaying,
+                              enabled: playbackEnabled,
+                              position: state.position,
+                              duration: state.duration,
+                              chapter: _currentChapterTitle(
+                                timestamps,
+                                state.position,
+                              ),
+                              format: _formatDuration,
+                              onToggle: () =>
+                                  unawaited(controller.togglePlayback()),
+                              onSeekBy: (Duration by) =>
+                                  unawaited(controller.seekRelative(by)),
+                            )
+                          : const SizedBox(width: double.infinity),
+                    ),
+                  ),
+                  Divider(height: 1, color: theme.colorScheme.outlineVariant),
+                  Expanded(
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: (ScrollNotification n) {
+                        if (n.metrics.axis == Axis.vertical) {
+                          _controlsScrolledAway.value = n.metrics.pixels > 240;
+                        }
+                        return false;
+                      },
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.only(bottom: bottomInset),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[controls, sections],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: _pageVerticalPadding,
-              ),
+              padding: EdgeInsets.only(bottom: bottomInset),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
@@ -428,444 +1037,11 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
                   // web player caps its video: the page scrolls on to the notes and the rest,
                   // never down to the play button.
                   PlayerStageLayout(
-                    availableHeight:
-                        viewport.maxHeight - 2 * _pageVerticalPadding,
-                    video: _buildVideoSurface(
-                      videoId: videoId,
-                      state: state,
-                      controller: controller,
-                      videoController: videoController,
-                    ),
-                    controls: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        if (isOffline) ...<Widget>[
-                          const SizedBox(height: 8),
-                          StateFeedbackBanner(
-                            message: state.sourceKind == PlayableSourceKind.localFile
-                                ? 'Offline mode: local playback is available.'
-                                : 'Offline mode: remote playback may be unavailable.',
-                            tone: StateFeedbackTone.warning,
-                          ),
-                        ],
-                        if (state.isRecovering) ...<Widget>[
-                          const SizedBox(height: 8),
-                          const StateFeedbackBanner(
-                            message: 'Playback interrupted. Reconnecting stream...',
-                            tone: StateFeedbackTone.warning,
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        if (state.errorMessage != null)
-                          StateFeedbackBanner(
-                            message: state.errorMessage!,
-                            tone: StateFeedbackTone.error,
-                          ),
-                        if (state.isLoading) ...<Widget>[
-                          const SizedBox(height: 16),
-                          const LinearProgressIndicator(),
-                        ],
-                        const SizedBox(height: 8),
-                        Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: ChapterTimeline(
-                                sliderPadding: const EdgeInsets.symmetric(horizontal: 2),
-                                chapterBar: PlayerChapterBar(
-                                  chapters: timestamps,
-                                  duration: state.duration,
-                                  position: Duration(
-                                    milliseconds: (positionSeconds * 1000).round(),
-                                  ),
-                                  isSeeking: _dragSeconds != null,
-                                  enabled: state.errorMessage == null,
-                                  onSeek: (Duration start) =>
-                                      unawaited(controller.seek(start)),
-                                ),
-                                slider: SliderTheme(
-                                data: SliderTheme.of(context).copyWith(
-                                  trackHeight: 8,
-                                  thumbShape: const RoundSliderThumbShape(
-                                    enabledThumbRadius: 8,
-                                  ),
-                                ),
-                                child: Slider(
-                                  min: 0,
-                                  max: maxSeconds,
-                                  value: positionSeconds,
-                                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                                  onChanged: state.errorMessage != null
-                                      ? null
-                                      : (double value) {
-                                          setState(() {
-                                            _dragSeconds = value;
-                                          });
-                                        },
-                                  onChangeEnd: state.errorMessage != null
-                                      ? null
-                                      : (double value) {
-                                          setState(() {
-                                            _dragSeconds = null;
-                                          });
-                                          unawaited(
-                                            controller.seek(
-                                              Duration(
-                                                milliseconds: (value * 1000).round(),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                ),
-                              ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Tooltip(
-                              message: _sourceStatusLabel(state.sourceKind),
-                              child: Icon(
-                                _sourceStatusIcon(state.sourceKind),
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          children: <Widget>[
-                            Text(_formatDuration(state.position)),
-                            const Spacer(),
-                            PlayerVolumeControl(
-                              volume: ref.watch(playerVolumeProvider),
-                            ),
-                            const Spacer(),
-                            Text(_formatDuration(state.duration)),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              _buildSecondaryControlButton(
-                                icon: Icons.replay_10,
-                                tooltip: 'Back 10s',
-                                enabled: state.errorMessage == null,
-                                onPressed: () => unawaited(
-                                  controller.seekRelative(const Duration(seconds: -10)),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                height: 84,
-                                child: FilledButton.icon(
-                                  onPressed: state.errorMessage != null
-                                      ? null
-                                      : () => unawaited(controller.togglePlayback()),
-                                  icon: Icon(
-                                    state.isPlaying ? Icons.pause : Icons.play_arrow,
-                                  ),
-                                  label: Text(state.isPlaying ? 'Pause' : 'Play'),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              _buildSecondaryControlButton(
-                                icon: Icons.forward_10,
-                                tooltip: 'Forward 10s',
-                                enabled: state.errorMessage == null,
-                                onPressed: () => unawaited(
-                                  controller.seekRelative(const Duration(seconds: 10)),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              _buildSecondaryControlButton(
-                                icon: Icons.skip_next,
-                                tooltip: 'Next chapter',
-                                enabled:
-                                    state.errorMessage == null && timestamps.isNotEmpty,
-                                onPressed: () => unawaited(
-                                  _jumpToNearestTimestamp(
-                                    context: context,
-                                    controller: controller,
-                                    currentPosition: state.position,
-                                    timestamps: timestamps,
-                                    jumpToNearestTimestampUseCase:
-                                        jumpToNearestTimestampUseCase,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: <Widget>[
-                            if (controller.hasSubtitleTracks)
-                              _buildSecondaryControlButton(
-                                icon: state.subtitlesEnabled
-                                    ? Icons.closed_caption
-                                    : Icons.closed_caption_off,
-                                tooltip: state.subtitlesEnabled
-                                    ? 'Выключить субтитры'
-                                    : 'Включить субтитры',
-                                enabled: !state.isLoading && state.errorMessage == null,
-                                onPressed: controller.toggleSubtitles,
-                              ),
-                            _buildSecondaryControlButton(
-                              icon: Icons.bookmark_add_outlined,
-                              tooltip: 'Add bookmark',
-                              enabled: state.errorMessage == null && !_isDeleteInProgress,
-                              onPressed: () => unawaited(controller.addManualBookmark()),
-                            ),
-                            if (state.sourceKind != PlayableSourceKind.localFile &&
-                                !_downloadStartedForCurrentVideo)
-                              _buildSecondaryControlButton(
-                                icon: Icons.download_outlined,
-                                tooltip: remoteActionsDisabled
-                                    ? 'Available after reconnect'
-                                    : 'Download',
-                                enabled: state.errorMessage == null &&
-                                    !remoteActionsDisabled &&
-                                    !_isDeleteInProgress,
-                                onPressed: () => unawaited(_downloadCurrentVideo(videoId)),
-                              ),
-                            _buildSecondaryControlButton(
-                              icon: Icons.delete_outline,
-                              tooltip: 'Delete',
-                              enabled: state.errorMessage == null && !_isDeleteInProgress,
-                              onPressed: () => unawaited(
-                                _startDeleteFlow(
-                                  videoId: videoId,
-                                  controller: controller,
-                                ),
-                              ),
-                            ),
-                            _buildSecondaryControlButton(
-                              key: finishViewingButtonKey,
-                              icon: Icons.task_alt,
-                              tooltip: 'Завершить просмотр',
-                              enabled: !state.isLoading &&
-                                  state.errorMessage == null &&
-                                  !_isDeleteInProgress &&
-                                  !_isFinishingViewing,
-                              onPressed: () => unawaited(
-                                _finishViewing(
-                                  videoId: videoId,
-                                  controller: controller,
-                                ),
-                              ),
-                            ),
-                            _buildSecondaryControlButton(
-                              icon: Icons.fullscreen,
-                              tooltip: 'Fullscreen',
-                              enabled: state.errorMessage == null && !_isDeleteInProgress,
-                              onPressed: () => unawaited(_openFullscreen(videoId: videoId)),
-                            ),
-                            _buildSecondaryControlButton(
-                              icon: Icons.share_outlined,
-                              tooltip: 'Share',
-                              enabled: state.errorMessage == null && !_isDeleteInProgress,
-                              onPressed: () => unawaited(_shareVideo(videoId)),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                    availableHeight: viewport.maxHeight - _pageVerticalPadding,
+                    video: videoWithFullscreen,
+                    controls: controls,
                   ),
-                  if (state.navigationEntries.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 20),
-                    ExpansionTile(
-                      key: const PageStorageKey<String>('player-navigation'),
-                      initiallyExpanded: true,
-                      tilePadding: EdgeInsets.zero,
-                      shape: const Border(),
-                      collapsedShape: const Border(),
-                      title: Text(
-                        'Navigation',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      children: <Widget>[
-                        SizedBox(
-                          height: math.min(state.navigationEntries.length, 3) * 72.0,
-                          child: ListView.builder(
-                            primary: false,
-                            padding: EdgeInsets.zero,
-                            itemCount: state.navigationEntries.length,
-                            physics: state.navigationEntries.length > 3
-                                ? const ClampingScrollPhysics()
-                                : const NeverScrollableScrollPhysics(),
-                            itemBuilder: (BuildContext context, int index) {
-                              final PlayerNavigationEntry entry =
-                                  state.navigationEntries[index];
-                              return ListTile(
-                                dense: true,
-                                contentPadding: EdgeInsets.zero,
-                                leading: SizedBox(
-                                  width: 56,
-                                  child: Text(
-                                    _formatDuration(entry.fromPosition),
-                                    style: Theme.of(context).textTheme.labelLarge,
-                                  ),
-                                ),
-                                title: Text(
-                                  'Back to ${_formatDuration(entry.fromPosition)}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Text(
-                                  'Jumped to ${_formatDuration(entry.toPosition)}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                trailing: const Icon(Icons.undo),
-                                onTap: state.errorMessage != null
-                                    ? null
-                                    : () => unawaited(
-                                        controller.seekToNavigationOrigin(entry.id),
-                                      ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (state.bookmarks.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 20),
-                    Row(
-                      children: <Widget>[
-                        Text(
-                          'Bookmarks',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    ...state.bookmarks.map(
-                      (bookmark) => ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: SizedBox(
-                          width: 56,
-                          child: Text(
-                            _formatDuration(bookmark.position),
-                            style: Theme.of(context).textTheme.labelLarge,
-                          ),
-                        ),
-                        title: Text(
-                          bookmark.caption.isEmpty ? 'Bookmark' : bookmark.caption,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: bookmark.isPendingSync
-                            ? const Text('Pending sync')
-                            : null,
-                        trailing: IconButton(
-                          onPressed: state.errorMessage != null
-                              ? null
-                              : () =>
-                                  unawaited(controller.deleteBookmark(bookmark.id)),
-                          icon: const Icon(Icons.delete_outline),
-                          tooltip: 'Delete bookmark',
-                        ),
-                        onTap: state.errorMessage != null
-                            ? null
-                            : () => unawaited(controller.seek(bookmark.position)),
-                        onLongPress: state.errorMessage != null
-                            ? null
-                            : () => unawaited(
-                                  _editBookmarkCaption(
-                                    controller: controller,
-                                    bookmarkId: bookmark.id,
-                                    caption: bookmark.caption,
-                                  ),
-                                ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  NotesSection(
-                    videoId: videoId,
-                    title: (widget.videoTitle ?? '').trim(),
-                    onPausePlayback: controller.pause,
-                  ),
-                  const SizedBox(height: 8),
-                  TranscriptPanel(
-                    videoId: int.parse(widget.videoId),
-                    onSeek: (position) => controller.seek(position),
-                    onBookmark: controller.addTextBookmark,
-                  ),
-                  if (timestamps.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 20),
-                    ExpansionTile(
-                      key: const PageStorageKey<String>('player-timestamps'),
-                      initiallyExpanded: true,
-                      tilePadding: EdgeInsets.zero,
-                      shape: const Border(),
-                      collapsedShape: const Border(),
-                      title: Row(
-                        children: <Widget>[
-                          Text(
-                            'Timestamps',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const Spacer(),
-                          TextButton.icon(
-                            onPressed: state.errorMessage != null
-                                ? null
-                                : () => unawaited(
-                                    _jumpToNearestTimestamp(
-                                      context: context,
-                                      controller: controller,
-                                      currentPosition: state.position,
-                                      timestamps: timestamps,
-                                      jumpToNearestTimestampUseCase:
-                                          jumpToNearestTimestampUseCase,
-                                    ),
-                                  ),
-                            icon: const Icon(Icons.skip_next),
-                            label: const Text('Next'),
-                          ),
-                        ],
-                      ),
-                      children: <Widget>[
-                        const SizedBox(height: 6),
-                        ...timestamps.map(
-                          (VideoTimestamp timestamp) => ListTile(
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            leading: SizedBox(
-                              width: 56,
-                              child: Text(
-                                _formatDuration(timestamp.position),
-                                style: Theme.of(context).textTheme.labelLarge
-                                    ?.copyWith(
-                                      fontWeight: state.position >= timestamp.position
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                    ),
-                              ),
-                            ),
-                            title: Text(
-                              timestamp.label,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: state.errorMessage != null
-                                ? null
-                                : () =>
-                                      unawaited(controller.seek(timestamp.position)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  CastEntryPoint(videoId: videoId),
+                  sections,
                 ],
               ),
             );
@@ -875,27 +1051,106 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
     );
   }
 
+  TextStyle? _timeStyle(TextTheme text) => text.labelMedium?.copyWith(
+        fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+      );
+
+  String? _currentChapterTitle(
+    List<VideoTimestamp> timestamps,
+    Duration position,
+  ) {
+    String? title;
+    for (final VideoTimestamp t in timestamps) {
+      if (position >= t.position) {
+        title = t.label;
+      }
+    }
+    return title;
+  }
+
+  bool _isCurrentChapter(
+    List<VideoTimestamp> timestamps,
+    VideoTimestamp chapter,
+    Duration position,
+  ) {
+    VideoTimestamp? current;
+    for (final VideoTimestamp t in timestamps) {
+      if (position >= t.position) {
+        current = t;
+      }
+    }
+    return identical(current, chapter);
+  }
+
+  Widget _buildTransportButton({
+    required IconData icon,
+    required String tooltip,
+    required bool enabled,
+    required VoidCallback onPressed,
+    bool small = false,
+  }) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final Color tint = dark ? const Color(0xFF1E2446) : colors.primaryContainer;
+    final Color onTint =
+        dark ? const Color(0xFFC9CEFF) : colors.onPrimaryContainer;
+    // One size for the four around play, so none of them looks like an
+    // accident; the outer two only carry a lighter icon.
+    return SizedBox.square(
+      dimension: 56,
+      child: IconButton.filledTonal(
+        onPressed: enabled ? onPressed : null,
+        tooltip: tooltip,
+        style: IconButton.styleFrom(
+          backgroundColor: tint,
+          disabledBackgroundColor: tint.withValues(alpha: 0.5),
+          foregroundColor: onTint,
+        ),
+        icon: Icon(icon, size: small ? 26 : 30),
+      ),
+    );
+  }
+
   /// The live video, or a placeholder while there is none to show.
   ///
-  /// The video keeps its own aspect ratio inside whatever height [PlayerStageLayout] leaves it, so
-  /// a tall window and a short one both show the whole picture.
+  /// On a phone the video runs edge to edge, the way video apps show it. It keeps its own aspect
+  /// ratio inside whatever height [PlayerStageLayout] leaves it, so a tall window and a short one
+  /// both show the whole picture.
   Widget _buildVideoSurface({
     required int videoId,
     required PlayerUiState state,
     required PlayerController controller,
     required VideoPlayerController? videoController,
   }) {
+    final LtPalette palette = LtPalette.of(context);
     if (videoController == null || !videoController.value.isInitialized) {
-      return Container(
-        height: 220,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: ColoredBox(
+          color: palette.stage,
+          child: Center(
+            child: state.isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const Icon(
+                        Icons.videocam_off_outlined,
+                        color: Colors.white70,
+                        size: 36,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Видео не открылось',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(color: Colors.white70),
+                      ),
+                    ],
+                  ),
+          ),
         ),
-        alignment: Alignment.center,
-        child: state.isLoading
-            ? const CircularProgressIndicator()
-            : const Text('Video stream is unavailable'),
       );
     }
     return AspectRatio(
@@ -903,47 +1158,44 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       aspectRatio: videoController.value.aspectRatio > 0
           ? videoController.value.aspectRatio
           : (16 / 9),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: ColoredBox(
-          color: Colors.black,
-          child: Stack(
-            fit: StackFit.expand,
-            children: <Widget>[
-              VideoPlayer(videoController),
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onTap: state.errorMessage != null
-                      ? null
-                      : () {
-                          // A click on the picture also gives the keyboard back to the player,
-                          // out of a text field it was typing in, so Space works again.
-                          _keyboardFocusNode.requestFocus();
-                          unawaited(controller.togglePlayback());
-                        },
-                  child: const SizedBox.expand(),
-                ),
+      child: ColoredBox(
+        color: Colors.black,
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            VideoPlayer(videoController),
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: state.errorMessage != null
+                    ? null
+                    : () {
+                        // A click on the picture also gives the keyboard back to the player,
+                        // out of a text field it was typing in, so Space works again.
+                        _keyboardFocusNode.requestFocus();
+                        unawaited(controller.togglePlayback());
+                      },
+                child: const SizedBox.expand(),
               ),
-              Positioned.fill(
-                child: TranscriptCaptions(
-                  videoId: videoId,
-                  controller: videoController,
-                ),
+            ),
+            Positioned.fill(
+              child: TranscriptCaptions(
+                videoId: videoId,
+                controller: videoController,
               ),
-              if (state.isBuffering)
-                const Positioned.fill(
-                  child: IgnorePointer(
-                    child: ColoredBox(
-                      color: Color(0x55000000),
-                      child: Center(
-                        child: CircularProgressIndicator(),
-                      ),
+            ),
+            if (state.isBuffering)
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: ColoredBox(
+                    color: Color(0x55000000),
+                    child: Center(
+                      child: CircularProgressIndicator(color: Colors.white),
                     ),
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );
@@ -1056,7 +1308,9 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            started ? 'Download queued' : 'Unable to queue download',
+            started
+                ? 'Поставлено на скачивание'
+                : 'Не удалось поставить на скачивание',
           ),
         ),
       );
@@ -1066,7 +1320,9 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Unable to queue download')));
+      ).showSnackBar(
+        const SnackBar(content: Text('Не удалось поставить на скачивание')),
+      );
     }
   }
 
@@ -1087,7 +1343,7 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
     if (title.isNotEmpty) {
       return title;
     }
-    return 'Player #$videoId';
+    return 'Видео №$videoId';
   }
 
   bool _isPlaybackCompleted(PlayerUiState? state) {
@@ -1313,34 +1569,18 @@ class _PlayerPageState extends ConsumerState<PlayerPage>
 
   IconData _sourceStatusIcon(PlayableSourceKind? sourceKind) {
     return switch (sourceKind) {
-      PlayableSourceKind.localFile => Icons.sd_storage_outlined,
+      PlayableSourceKind.localFile => Icons.smartphone_rounded,
       PlayableSourceKind.remoteUrl => Icons.cloud_outlined,
-      null => Icons.hourglass_bottom_outlined,
+      null => Icons.hourglass_bottom_rounded,
     };
   }
 
   String _sourceStatusLabel(PlayableSourceKind? sourceKind) {
     return switch (sourceKind) {
-      PlayableSourceKind.localFile => 'Local file',
-      PlayableSourceKind.remoteUrl => 'Remote stream',
-      null => 'Preparing...',
+      PlayableSourceKind.localFile => 'Файл с телефона',
+      PlayableSourceKind.remoteUrl => 'С сервера',
+      null => 'Готовим видео…',
     };
-  }
-
-  Widget _buildSecondaryControlButton({
-    Key? key,
-    required IconData icon,
-    required String tooltip,
-    required bool enabled,
-    required VoidCallback onPressed,
-  }) {
-    return IconButton.filledTonal(
-      key: key,
-      onPressed: enabled ? onPressed : null,
-      tooltip: tooltip,
-      icon: Icon(icon, size: 30),
-      style: IconButton.styleFrom(minimumSize: const Size(56, 56)),
-    );
   }
 
   String _formatDuration(Duration value) {
@@ -1518,6 +1758,17 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
 
     final bool isOverlayVisible =
         _isScreenLocked ? _showLockedOverlay : _showControls;
+    // The punch-hole camera pads one side of a phone on its side; the other,
+    // curved edge gets as much room, so the controls sit symmetrically.
+    final EdgeInsets viewPadding = MediaQuery.viewPaddingOf(context);
+    final double edgeBalance =
+        math.max(0.0, viewPadding.left - viewPadding.right);
+    String? chapterTitle;
+    for (final VideoTimestamp t in timestamps) {
+      if (state.position >= t.position) {
+        chapterTitle = t.label;
+      }
+    }
 
     return PopScope<Object?>(
       // The window leaves fullscreen as the route starts closing, not once its animation is over.
@@ -1540,7 +1791,9 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
             bottom: false,
             child: MouseRegion(
               // The pointer is hidden together with the controls, so it does not sit over the video.
-              cursor: isOverlayVisible ? MouseCursor.defer : SystemMouseCursors.none,
+              cursor: isOverlayVisible
+                  ? MouseCursor.defer
+                  : SystemMouseCursors.none,
               onHover: _onPointerHover,
               child: GestureDetector(
                 key: const Key('fullscreen-player-gesture-area'),
@@ -1581,7 +1834,8 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
                         videoController.value.isInitialized)
                       Positioned.fill(
                           child: TranscriptCaptions(
-                              videoId: widget.videoId, controller: videoController)),
+                              videoId: widget.videoId,
+                              controller: videoController)),
                     if (state.isBuffering)
                       const Positioned.fill(
                         child: IgnorePointer(
@@ -1591,179 +1845,231 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
                           ),
                         ),
                       ),
-                    if (isOverlayVisible)
-                      Positioned.fill(
-                        child: ColoredBox(
-                          color: const Color(0x33000000),
+                    if (isOverlayVisible) ...<Widget>[
+                      // Top: the title and the lock, over a dark fade.
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: _Scrim(
+                          top: true,
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-                            child: Align(
-                              alignment: Alignment.bottomCenter,
-                              child: MouseRegion(
-                                // Controls under the pointer stay up while it rests on them.
-                                onEnter: (_) {
-                                  _isPointerOverControls = true;
-                                  _pointerControlsHideTimer?.cancel();
-                                },
-                                onExit: (_) {
-                                  _isPointerOverControls = false;
-                                  _restartPointerControlsTimer();
-                                },
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    Wrap(
-                                      alignment: WrapAlignment.center,
-                                      spacing: 16,
-                                      runSpacing: 16,
-                                      children: <Widget>[
-                                        _fullscreenActionButton(
-                                          icon: _isScreenLocked
-                                              ? Icons.lock_open
-                                              : Icons.lock_outline,
-                                          tooltip: _isScreenLocked
-                                              ? 'Unlock screen'
-                                              : 'Lock screen',
-                                          onPressed: _toggleScreenLock,
+                            padding: EdgeInsets.fromLTRB(
+                                24, 14, 9 + edgeBalance, 28),
+                            child: Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: _isScreenLocked
+                                      ? Text(
+                                          'Экран заблокирован — касания не работают',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(color: Colors.white70),
+                                        )
+                                      : Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: <Widget>[
+                                            Text(
+                                              (widget.videoTitle ?? '').trim(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium
+                                                  ?.copyWith(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                            ),
+                                            if (chapterTitle != null)
+                                              Text(
+                                                chapterTitle,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color: Colors.white70,
+                                                    ),
+                                              ),
+                                          ],
                                         ),
-                                        if (!_isScreenLocked) ...<Widget>[
-                                          _fullscreenActionButton(
-                                            icon: Icons.replay_10,
-                                            tooltip: 'Back 10s',
-                                            onPressed: () => unawaited(
-                                              controller.seekRelative(
-                                                const Duration(seconds: -10),
+                                ),
+                                const SizedBox(width: 8),
+                                // A locked screen is read-only, so it shows no volume either.
+                                if (!_isScreenLocked)
+                                  _holdControls(
+                                    Theme(
+                                      data: Theme.of(context).copyWith(
+                                        sliderTheme: Theme.of(context)
+                                            .sliderTheme
+                                            .copyWith(
+                                              trackHeight: 3,
+                                              trackShape:
+                                                  const EvenSliderTrackShape(),
+                                              thumbShape:
+                                                  const RoundSliderThumbShape(
+                                                enabledThumbRadius: 7,
+                                                elevation: 0,
+                                                pressedElevation: 0,
                                               ),
                                             ),
-                                          ),
-                                          _fullscreenActionButton(
-                                            icon: state.isPlaying
-                                                ? Icons.pause
-                                                : Icons.play_arrow,
-                                            tooltip: state.isPlaying ? 'Pause' : 'Play',
-                                            onPressed: controller.togglePlayback,
-                                          ),
-                                          _fullscreenActionButton(
-                                            icon: Icons.forward_10,
-                                            tooltip: 'Forward 10s',
-                                            onPressed: () => unawaited(
-                                              controller.seekRelative(
-                                                const Duration(seconds: 10),
-                                              ),
-                                            ),
-                                          ),
-                                          _fullscreenActionButton(
-                                            icon: Icons.bookmark_add_outlined,
-                                            tooltip: 'Add bookmark',
-                                            onPressed: _isDeleteInProgress
-                                                ? null
-                                                : () => unawaited(
-                                                    controller.addManualBookmark()),
-                                          ),
-                                          if (controller.hasSubtitleTracks)
-                                            _fullscreenActionButton(
-                                              icon: state.subtitlesEnabled
-                                                  ? Icons.closed_caption
-                                                  : Icons.closed_caption_off,
-                                              tooltip: state.subtitlesEnabled
-                                                  ? 'Выключить субтитры'
-                                                  : 'Включить субтитры',
-                                              onPressed: controller.toggleSubtitles,
-                                            ),
-                                          _fullscreenActionButton(
-                                            icon: Icons.skip_next,
-                                            tooltip: 'Next section',
-                                            onPressed: _isDeleteInProgress
-                                                ? null
-                                                : () => unawaited(
-                                                      _jumpToNearestTimestamp(
-                                                        context: context,
-                                                        controller: controller,
-                                                        currentPosition: state.position,
-                                                        timestamps: timestamps,
-                                                        jumpToNearestTimestampUseCase:
-                                                            jumpToNearestTimestampUseCase,
-                                                      ),
-                                                    ),
-                                          ),
-                                          _fullscreenActionButton(
-                                            icon: Icons.undo,
-                                            tooltip: 'Back',
-                                            onPressed: _isDeleteInProgress ||
-                                                    state.navigationEntries.isEmpty
-                                                ? null
-                                                : () => unawaited(
-                                                      controller.seekToNavigationOrigin(
-                                                        state.navigationEntries.last.id,
-                                                      ),
-                                                    ),
-                                          ),
-                                          _fullscreenActionButton(
-                                            icon: Icons.stop_screen_share_outlined,
-                                            tooltip: 'Pause and minimize',
-                                            onPressed: _isDeleteInProgress
-                                                ? null
-                                                : () => unawaited(
-                                                      _pauseAndMinimize(controller),
-                                                    ),
-                                          ),
-                                          _fullscreenActionButton(
-                                            icon: Icons.picture_in_picture_alt_outlined,
-                                            tooltip: 'Minimize',
-                                            onPressed: _isDeleteInProgress
-                                                ? null
-                                                : () => unawaited(_minimizeApp()),
-                                          ),
-                                          _fullscreenActionButton(
-                                            key: finishViewingButtonKey,
-                                            icon: Icons.task_alt,
-                                            tooltip: 'Завершить просмотр',
-                                            onPressed: _isDeleteInProgress ||
-                                                    _isDeleteDialogVisible ||
-                                                    state.isLoading ||
-                                                    state.errorMessage != null
-                                                ? null
-                                                : () => Navigator.of(context).pop(
-                                                      _FullscreenRequest.finishViewing,
-                                                    ),
-                                          ),
-                                          _fullscreenActionButton(
-                                            icon: Icons.fullscreen_exit,
-                                            tooltip: 'Exit fullscreen',
-                                            onPressed: () =>
-                                                Navigator.of(context).maybePop(),
-                                          ),
-                                        ],
-                                      ],
+                                      ),
+                                      child: PlayerVolumeControl(
+                                        volume: ref.watch(playerVolumeProvider),
+                                        // A white speaker like the lock, an
+                                        // opaque light-grey track.
+                                        color: Colors.white,
+                                        trackColor: const Color(0xFFBFBFBF),
+                                        sliderWidth: 132,
+                                        sliderPadding:
+                                            const EdgeInsets.fromLTRB(
+                                          0,
+                                          0,
+                                          8,
+                                          0,
+                                        ),
+                                      ),
                                     ),
-                                    const SizedBox(height: 14),
-                                    // The volume shares the timeline's row, so fullscreen's controls are no
-                                    // taller than before: a phone on its side has little height to give.
-                                    Row(
-                                      children: <Widget>[
-                                        Expanded(
-                                          child: ChapterTimeline(
-                                            chapterBar: PlayerChapterBar(
-                                              chapters: timestamps,
-                                              duration: state.duration,
-                                              position: Duration(
-                                                milliseconds:
-                                                    (positionSeconds * 1000).round(),
-                                              ),
-                                              isSeeking: _dragSeconds != null,
-                                              enabled: !_isScreenLocked,
-                                              onSeek: (Duration start) =>
-                                                  unawaited(controller.seek(start)),
-                                              trackColor: Colors.white24,
-                                              fillColor: Colors.white,
-                                              textColor: Colors.white,
-                                              compact: true,
+                                  ),
+                                _holdControls(
+                                  _fullscreenActionButton(
+                                    icon: _isScreenLocked
+                                        ? Icons.lock_open
+                                        : Icons.lock_outline,
+                                    tooltip: _isScreenLocked
+                                        ? 'Разблокировать экран'
+                                        : 'Заблокировать экран',
+                                    onPressed: _toggleScreenLock,
+                                    emphasized: _isScreenLocked,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (!_isScreenLocked)
+                        // Middle: the three buttons a thumb reaches for most.
+                        Center(
+                          child: _holdControls(
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                _fullscreenActionButton(
+                                  icon: Icons.replay_10_rounded,
+                                  tooltip: 'Назад на 10 с',
+                                  size: 60,
+                                  filled: true,
+                                  onPressed: () => unawaited(
+                                    controller.seekRelative(
+                                      const Duration(seconds: -10),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 36),
+                                _fullscreenActionButton(
+                                  icon: state.isPlaying
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                  tooltip: state.isPlaying
+                                      ? 'Пауза'
+                                      : 'Воспроизвести',
+                                  size: 76,
+                                  emphasized: true,
+                                  onPressed: controller.togglePlayback,
+                                ),
+                                const SizedBox(width: 36),
+                                _fullscreenActionButton(
+                                  icon: Icons.forward_10_rounded,
+                                  tooltip: 'Вперёд на 10 с',
+                                  size: 60,
+                                  filled: true,
+                                  onPressed: () => unawaited(
+                                    controller.seekRelative(
+                                      const Duration(seconds: 10),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      // Bottom: the timeline, then everything else in one row. A locked screen
+                      // keeps a live, read-only timeline so the viewer still sees where they are.
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: _Scrim(
+                          top: false,
+                          child: _holdControls(
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(24, 28,
+                                  24 + edgeBalance, 40 + viewPadding.bottom),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  Row(
+                                    children: <Widget>[
+                                      Transform.translate(
+                                        offset: const Offset(0, -6),
+                                        child: Text(
+                                          _formatDuration(Duration(
+                                            milliseconds:
+                                                (positionSeconds * 1000)
+                                                    .round(),
+                                          )),
+                                          style: _fullscreenTimeStyle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: ChapterTimeline(
+                                          merged: timestamps.isNotEmpty,
+                                          chapterBar: PlayerChapterBar(
+                                            chapters: timestamps,
+                                            duration: state.duration,
+                                            position: Duration(
+                                              milliseconds:
+                                                  (positionSeconds * 1000)
+                                                      .round(),
                                             ),
-                                            slider: SliderTheme(
-                                            data: SliderTheme.of(context).copyWith(
-                                              disabledActiveTrackColor: Colors.white,
-                                              disabledInactiveTrackColor: Colors.white24,
-                                              disabledThumbColor: Colors.white,
+                                            isSeeking: _dragSeconds != null,
+                                            enabled: !_isScreenLocked,
+                                            onSeek: (Duration start) =>
+                                                unawaited(
+                                                    controller.seek(start)),
+                                            trackColor: Colors.white
+                                                .withValues(alpha: 0.35),
+                                            fillColor: LtColors.coral,
+                                            textColor: Colors.white,
+                                            compact: true,
+                                          ),
+                                          slider: SliderTheme(
+                                            data: SliderTheme.of(context)
+                                                .copyWith(
+                                              // With chapters the segments are the track
+                                              // (gaps included); the slider adds its thumb.
+                                              activeTrackColor:
+                                                  timestamps.isNotEmpty
+                                                      ? Colors.transparent
+                                                      : LtColors.coral,
+                                              inactiveTrackColor:
+                                                  timestamps.isNotEmpty
+                                                      ? Colors.transparent
+                                                      : Colors.white24,
+                                              thumbColor: LtColors.coral,
+                                              overlayColor: Colors.white24,
+                                              trackHeight: 4,
+                                              thumbShape:
+                                                  const RoundSliderThumbShape(
+                                                enabledThumbRadius: 7,
+                                              ),
                                             ),
                                             child: Slider(
                                               min: 0,
@@ -1785,45 +2091,161 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
                                                       unawaited(
                                                         controller.seek(
                                                           Duration(
-                                                            milliseconds: (value * 1000)
-                                                                .round(),
+                                                            milliseconds:
+                                                                (value * 1000)
+                                                                    .round(),
                                                           ),
                                                         ),
                                                       );
                                                     },
                                             ),
                                           ),
-                                          ),
                                         ),
-                                        // A locked screen is read-only, so it shows no volume either.
-                                        if (!_isScreenLocked)
-                                          PlayerVolumeControl(
-                                            volume: ref.watch(playerVolumeProvider),
-                                            color: Colors.white,
-                                            sliderWidth: 120,
-                                          ),
-                                      ],
-                                    ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Transform.translate(
+                                        offset: const Offset(0, -6),
+                                        child: Text(
+                                          _formatDuration(state.duration),
+                                          style: _fullscreenTimeStyle,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (!_isScreenLocked)
                                     Row(
                                       children: <Widget>[
-                                        Text(
-                                          _formatDuration(state.position),
-                                          style: const TextStyle(color: Colors.white),
+                                        Expanded(
+                                          child: _fullscreenActionButton(
+                                            icon: Icons.bookmark_add_outlined,
+                                            tooltip: 'Закладка',
+                                            label: 'Закладка',
+                                            onPressed: _isDeleteInProgress
+                                                ? null
+                                                : () => unawaited(controller
+                                                    .addManualBookmark()),
+                                          ),
                                         ),
-                                        const Spacer(),
-                                        Text(
-                                          _formatDuration(state.duration),
-                                          style: const TextStyle(color: Colors.white),
+                                        if (controller.hasSubtitleTracks)
+                                          Expanded(
+                                            child: _fullscreenActionButton(
+                                              icon: state.subtitlesEnabled
+                                                  ? Icons.closed_caption
+                                                  : Icons.closed_caption_off,
+                                              tooltip: state.subtitlesEnabled
+                                                  ? 'Выключить субтитры'
+                                                  : 'Включить субтитры',
+                                              emphasized:
+                                                  state.subtitlesEnabled,
+                                              label: 'Субтитры',
+                                              onPressed:
+                                                  controller.toggleSubtitles,
+                                            ),
+                                          ),
+                                        Expanded(
+                                          child: _fullscreenActionButton(
+                                            icon: Icons.skip_next_rounded,
+                                            tooltip: 'Следующая глава',
+                                            label: 'След. глава',
+                                            onPressed: _isDeleteInProgress
+                                                ? null
+                                                : () => unawaited(
+                                                      _jumpToNearestTimestamp(
+                                                        context: context,
+                                                        controller: controller,
+                                                        currentPosition:
+                                                            state.position,
+                                                        timestamps: timestamps,
+                                                        jumpToNearestTimestampUseCase:
+                                                            jumpToNearestTimestampUseCase,
+                                                      ),
+                                                    ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: _fullscreenActionButton(
+                                            icon: Icons.undo_rounded,
+                                            tooltip: 'Вернуться назад',
+                                            label: state
+                                                    .navigationEntries.isEmpty
+                                                ? 'Вернуться'
+                                                : 'Назад к ${_formatDuration(state.navigationEntries.last.fromPosition)}',
+                                            onPressed: _isDeleteInProgress ||
+                                                    state.navigationEntries
+                                                        .isEmpty
+                                                ? null
+                                                : () => unawaited(
+                                                      controller
+                                                          .seekToNavigationOrigin(
+                                                        state.navigationEntries
+                                                            .last.id,
+                                                      ),
+                                                    ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: _fullscreenActionButton(
+                                            icon: Icons
+                                                .picture_in_picture_alt_outlined,
+                                            tooltip: 'Пауза и свернуть',
+                                            label: 'Свернуть',
+                                            onPressed: _isDeleteInProgress
+                                                ? null
+                                                : () => unawaited(
+                                                      _pauseAndMinimize(
+                                                          controller),
+                                                    ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: _fullscreenActionButton(
+                                            icon: Icons.headphones_rounded,
+                                            tooltip: 'Свернуть',
+                                            label: 'Фоном',
+                                            onPressed: _isDeleteInProgress
+                                                ? null
+                                                : () =>
+                                                    unawaited(_minimizeApp()),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: _fullscreenActionButton(
+                                            key: finishViewingButtonKey,
+                                            icon: Icons.task_alt,
+                                            tooltip: 'Завершить просмотр',
+                                            label: 'Просмотрено',
+                                            onPressed: _isDeleteInProgress ||
+                                                    _isDeleteDialogVisible ||
+                                                    state.isLoading ||
+                                                    state.errorMessage != null
+                                                ? null
+                                                : () =>
+                                                    Navigator.of(context).pop(
+                                                      _FullscreenRequest
+                                                          .finishViewing,
+                                                    ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: _fullscreenActionButton(
+                                            icon: Icons.fullscreen_exit,
+                                            tooltip:
+                                                'Выйти из полноэкранного режима',
+                                            label: 'Обычный вид',
+                                            onPressed: () =>
+                                                Navigator.of(context)
+                                                    .maybePop(),
+                                          ),
                                         ),
                                       ],
                                     ),
-                                  ],
-                                ),
+                                ],
                               ),
                             ),
                           ),
                         ),
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -1831,6 +2253,31 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
           ),
         ),
       ),
+    );
+  }
+
+  /// The height of the label under a fullscreen icon.
+  static const double _fullscreenLabelHeight = 16;
+
+  static const TextStyle _fullscreenTimeStyle = TextStyle(
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+  );
+
+  /// Controls under a mouse pointer stay up while it rests on them.
+  Widget _holdControls(Widget child) {
+    return MouseRegion(
+      onEnter: (_) {
+        _isPointerOverControls = true;
+        _pointerControlsHideTimer?.cancel();
+      },
+      onExit: (_) {
+        _isPointerOverControls = false;
+        _restartPointerControlsTimer();
+      },
+      child: child,
     );
   }
 
@@ -1954,18 +2401,80 @@ class _FullscreenPlayerViewState extends ConsumerState<_FullscreenPlayerView> {
     });
   }
 
+  /// A round white button over the video. [emphasized] fills it white, for
+  /// play/pause and for a switch that is on; [filled] gives it a glass circle;
+  /// [label] puts a short name under it.
   Widget _fullscreenActionButton({
     Key? key,
     required IconData icon,
     required String tooltip,
     required VoidCallback? onPressed,
+    double size = 48,
+    bool emphasized = false,
+    bool filled = false,
+    String? label,
   }) {
-    return IconButton.filledTonal(
+    // A labelled action is a compact 40 dp button so its name sits right
+    // under the icon.
+    final double box = label == null ? size : 40;
+    final Widget button = IconButton(
       key: key,
       onPressed: onPressed,
       tooltip: tooltip,
-      style: IconButton.styleFrom(minimumSize: const Size(88, 88)),
-      icon: Icon(icon, size: 44),
+      style: IconButton.styleFrom(
+        minimumSize: Size.square(box),
+        fixedSize: Size.square(box),
+        tapTargetSize: label == null
+            ? MaterialTapTargetSize.padded
+            : MaterialTapTargetSize.shrinkWrap,
+        backgroundColor: emphasized
+            ? LtColors.primary
+            : filled
+                ? Colors.black.withValues(alpha: 0.45)
+                : Colors.transparent,
+        side: filled
+            ? BorderSide(
+                color: Colors.white.withValues(alpha: 0.4),
+                width: 1.5,
+              )
+            : null,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: Colors.transparent,
+        disabledForegroundColor: Colors.white38,
+        highlightColor: Colors.white24,
+      ),
+      icon: Icon(icon, size: label == null ? size * 0.52 : 24),
+    );
+    if (label == null) {
+      return button;
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        button,
+        // Every label gets the same one-line box in an equal slot, so the
+        // icons share one line and the labels one size.
+        Transform.translate(
+          offset: const Offset(0, -3),
+          child: SizedBox(
+            height: _fullscreenLabelHeight,
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: onPressed == null
+                    ? Colors.white38
+                    : Colors.white.withValues(alpha: 0.85),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -2262,4 +2771,457 @@ class _PlayerCastLocalPlayer implements CastLocalPlayer {
 
   @override
   Future<void> setPlayerVolume(double volume) => setVolume(volume);
+}
+
+/// One action under the player: an icon in a tonal circle with a short label
+/// beneath, like the action row of a video app.
+class _PlayerAction {
+  const _PlayerAction({
+    this.key,
+    required this.icon,
+    required this.label,
+    required this.enabled,
+    required this.onPressed,
+    this.tooltip,
+    this.selected = false,
+    this.danger = false,
+  });
+
+  final Key? key;
+  final IconData icon;
+  final String label;
+  final String? tooltip;
+  final bool enabled;
+  final bool selected;
+  final bool danger;
+  final VoidCallback onPressed;
+}
+
+/// The player's secondary actions as equal slots across the screen, so none
+/// sits half-hidden on the curved edge. Up to five fit at one label size;
+/// beyond that the last ones (copy link, delete) move into «Ещё», a sheet
+/// with their full names.
+class _PlayerActionStrip extends StatelessWidget {
+  const _PlayerActionStrip({required this.actions});
+
+  final List<_PlayerAction> actions;
+
+  // Six actions (link and delete included) fit one row; «Ещё» only past that.
+  static const int _maxSlots = 6;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool overflow = actions.length > _maxSlots;
+    final List<_PlayerAction> shown =
+        overflow ? actions.sublist(0, _maxSlots - 1) : actions;
+    final List<_PlayerAction> rest =
+        overflow ? actions.sublist(_maxSlots - 1) : const <_PlayerAction>[];
+    return Row(
+      key: const Key('player-action-strip'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        for (final _PlayerAction action in shown)
+          Expanded(child: _PlayerActionButton(action: action)),
+        if (overflow)
+          Expanded(
+            child: _PlayerActionButton(
+              action: _PlayerAction(
+                key: const Key('player-more-actions'),
+                icon: Icons.more_horiz_rounded,
+                label: 'Ещё',
+                tooltip: 'Ещё действия',
+                enabled: true,
+                onPressed: () => _showMore(context, rest),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _showMore(
+    BuildContext context,
+    List<_PlayerAction> rest,
+  ) {
+    final LtPalette palette = LtPalette.of(context);
+    return showModalBottomSheet<void>(
+      context: context,
+      builder: (BuildContext sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              for (final _PlayerAction action in rest)
+                ListTile(
+                  key: action.key,
+                  enabled: action.enabled,
+                  leading: Icon(
+                    action.icon,
+                    color: action.danger ? palette.danger.strong : null,
+                  ),
+                  title: Text(
+                    action.tooltip ?? action.label,
+                    style: action.danger
+                        ? TextStyle(color: palette.danger.strong)
+                        : null,
+                  ),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    action.onPressed();
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Where the video plays from, a small line under the title.
+class _SourceLabel extends StatelessWidget {
+  const _SourceLabel({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Icon(icon, size: 14, color: colors.onSurfaceVariant),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+}
+
+class _PlayerActionButton extends StatelessWidget {
+  const _PlayerActionButton({required this.action});
+
+  final _PlayerAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final LtPalette palette = LtPalette.of(context);
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final Color foreground = action.danger
+        ? palette.danger.strong
+        : action.selected
+            ? (dark ? Colors.white : colors.onPrimary)
+            : (dark ? const Color(0xFFC9CEFF) : colors.onSurface);
+    final Color background = action.selected
+        ? LtColors.primary
+        : (dark ? const Color(0xFF1E2446) : colors.primaryContainer);
+    return Opacity(
+      opacity: action.enabled ? 1 : 0.4,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 1),
+        child: Column(
+          children: <Widget>[
+            IconButton(
+              key: action.key,
+              tooltip: action.tooltip ?? action.label,
+              onPressed: action.enabled ? action.onPressed : null,
+              style: IconButton.styleFrom(
+                backgroundColor: background,
+                disabledBackgroundColor: background,
+                foregroundColor: foreground,
+                disabledForegroundColor: foreground,
+                minimumSize: const Size(40, 40),
+                fixedSize: const Size(40, 40),
+                tapTargetSize: MaterialTapTargetSize.padded,
+              ),
+              icon: Icon(action.icon, size: 21),
+            ),
+            const SizedBox(height: 2),
+            // One size for every label; on a very narrow screen the longest
+            // («Просмотрено») scales down rather than being cut.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                action.label,
+                maxLines: 1,
+                softWrap: false,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: action.danger
+                          ? palette.danger.strong
+                          : colors.onSurfaceVariant,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A time such as «03:35» in a small tonal pill, the start of a list row.
+class _TimeBadge extends StatelessWidget {
+  const _TimeBadge({required this.label, this.highlighted = false});
+
+  final String label;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final Color fill = highlighted
+        ? LtColors.primary
+        : (dark ? const Color(0xFF1E2446) : colors.primaryContainer);
+    final Color ink = highlighted
+        ? Colors.white
+        : (dark ? const Color(0xFFAEB7FF) : colors.onPrimaryContainer);
+    return Container(
+      constraints: const BoxConstraints(minWidth: 58),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(LtSizes.radiusS),
+      ),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: ink,
+          fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+        ),
+      ),
+    );
+  }
+}
+
+/// A chapter in the list under the player; the one playing now stands out.
+class _ChapterTile extends StatelessWidget {
+  const _ChapterTile({
+    required this.label,
+    required this.time,
+    required this.isCurrent,
+    required this.isPast,
+    required this.onTap,
+  });
+
+  final String label;
+  final String time;
+  final bool isCurrent;
+  final bool isPast;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return ListTile(
+      dense: true,
+      selected: isCurrent,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+      selectedTileColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF1E2446)
+          : const Color(0xFFDDE2FB),
+      leading: _TimeBadge(label: time, highlighted: isCurrent),
+      title: Text(
+        label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w400,
+          color: isCurrent ? colors.onPrimaryContainer : colors.onSurface,
+        ),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(LtSizes.radiusM),
+      ),
+      trailing: isCurrent
+          ? Icon(Icons.graphic_eq_rounded, color: colors.primary, size: 20)
+          : isPast
+              ? Icon(
+                  Icons.check_rounded,
+                  color: colors.onSurfaceVariant,
+                  size: 18,
+                )
+              : null,
+      onTap: onTap,
+    );
+  }
+}
+
+/// A dark fade behind fullscreen controls at the top or bottom edge, so white
+/// controls read over any picture without a box around them.
+class _Scrim extends StatelessWidget {
+  const _Scrim({required this.top, required this.child});
+
+  final bool top;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: top ? Alignment.topCenter : Alignment.bottomCenter,
+          end: top ? Alignment.bottomCenter : Alignment.topCenter,
+          colors: const <Color>[Color(0xB3000000), Color(0x00000000)],
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
+/// A slim bar under the pinned video, shown once the full controls have
+/// scrolled away: play/pause, the time and a coral progress line.
+class _MiniPlaybackBar extends StatelessWidget {
+  static ButtonStyle _miniDisc(BuildContext context) {
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    return IconButton.styleFrom(
+      fixedSize: const Size.square(40),
+      minimumSize: const Size.square(40),
+      backgroundColor: dark
+          ? const Color(0xFF1E2446)
+          : Theme.of(context).colorScheme.primaryContainer,
+      foregroundColor: dark
+          ? const Color(0xFFC9CEFF)
+          : Theme.of(context).colorScheme.onPrimaryContainer,
+    );
+  }
+
+  const _MiniPlaybackBar({
+    required this.isPlaying,
+    required this.enabled,
+    required this.position,
+    required this.duration,
+    required this.format,
+    required this.onToggle,
+    required this.onSeekBy,
+    this.chapter,
+  });
+
+  final bool isPlaying;
+  final bool enabled;
+  final Duration position;
+  final Duration duration;
+  final String? chapter;
+  final String Function(Duration) format;
+  final VoidCallback onToggle;
+  final ValueChanged<Duration> onSeekBy;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final double fraction = duration.inMilliseconds <= 0
+        ? 0
+        : (position.inMilliseconds / duration.inMilliseconds)
+            .clamp(0.0, 1.0)
+            .toDouble();
+    return Material(
+      key: const Key('player-mini-bar'),
+      color: colors.surfaceContainerLow,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          LinearProgressIndicator(
+            value: fraction,
+            minHeight: 3,
+            color: LtColors.coral,
+            backgroundColor: colors.onSurface.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.zero,
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+            child: Row(
+              children: <Widget>[
+                // The same solid cobalt play/pause as the full controls.
+                IconButton.filled(
+                  onPressed: enabled ? onToggle : null,
+                  tooltip: isPlaying ? 'Пауза' : 'Воспроизвести',
+                  style: IconButton.styleFrom(
+                    backgroundColor: LtColors.primary,
+                    foregroundColor: Colors.white,
+                    fixedSize: const Size.square(40),
+                    minimumSize: const Size.square(40),
+                  ),
+                  icon: Icon(
+                    isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        '${format(position)} / ${format(duration)}',
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                          fontFeatures: const <FontFeature>[
+                            FontFeature.tabularFigures(),
+                          ],
+                        ),
+                      ),
+                      if (chapter != null)
+                        Text(
+                          chapter!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                    ],
+                  ),
+                ),
+                IconButton.filledTonal(
+                  onPressed: enabled
+                      ? () => onSeekBy(const Duration(seconds: -10))
+                      : null,
+                  tooltip: 'Назад на 10 с',
+                  style: _miniDisc(context),
+                  icon: const Icon(Icons.replay_10_rounded),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  onPressed: enabled
+                      ? () => onSeekBy(const Duration(seconds: 10))
+                      : null,
+                  tooltip: 'Вперёд на 10 с',
+                  style: _miniDisc(context),
+                  icon: const Icon(Icons.forward_10_rounded),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A row of equal columns, each child centred in its own: the transport
+/// circles sit right above the action discs below them.
+class _EqualSlots extends StatelessWidget {
+  const _EqualSlots({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        for (final Widget child in children)
+          Expanded(child: Center(child: child)),
+      ],
+    );
+  }
 }

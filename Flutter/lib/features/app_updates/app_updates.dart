@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/theme/app_theme.dart';
+import '../../shared/widgets/lt_widgets.dart';
+
 import 'update_models.dart';
 import 'update_sources.dart';
 export 'update_sources.dart';
@@ -188,41 +191,73 @@ class _AppUpdatesMenuState extends ConsumerState<AppUpdatesMenu> {
     final available = state.available;
     final download = apkEnabled ? (apk.apk?.update ?? available) : null;
     final message = appUpdateStatusMessage(state.status, installed) ?? '';
+    final ThemeData theme = Theme.of(context);
+    final TextTheme text = theme.textTheme;
+    final LtPalette palette = LtPalette.of(context);
+    final TextStyle? muted =
+        text.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant);
     return Card(
         key: const Key('app-updates-card'),
         child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            // The icon on the left, the title and everything under it in one
+            // text column, as in the settings rows below.
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              LtToneIcon(
+                icon: available == null
+                    ? Icons.system_update_rounded
+                    : Icons.new_releases_rounded,
+                tone: available == null ? palette.cobalt : palette.sun,
+                size: 40,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(available == null
-                      ? Icons.system_update
-                      : Icons.new_releases),
-                  const SizedBox(width: 8),
-                  const Text('Обновление приложения'),
-                ]),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text('Обновление приложения',
+                      style: text.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700)),
+                ),
+                const SizedBox(height: 4),
                 if (installed != null)
-                  Text(installed.channel == null
-                      ? 'Установлена: ${installed.versionName} (${installed.versionCode})'
-                      : '${installed.channelLabel} · Установлена: ${installed.versionName} (${installed.versionCode})'),
+                  Text(
+                      installed.channel == null
+                          ? 'Установлена: ${installed.versionName} (${installed.versionCode})'
+                          : '${installed.channelLabel} · Установлена: ${installed.versionName} (${installed.versionCode})',
+                      style: muted),
                 if (available != null)
                   Text(
-                      'Доступна: ${available.versionName} (${available.versionCode})'),
-                Text(message, textAlign: TextAlign.center),
+                      'Доступна: ${available.versionName} (${available.versionCode})',
+                      style: text.bodyMedium?.copyWith(
+                          color: palette.sun.strong,
+                          fontWeight: FontWeight.w600)),
+                if (message.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(message, style: muted),
+                ],
                 if (apk.apk != null)
                   Text(
-                      'APK: ${apk.apk!.update.versionName} (${apk.apk!.update.versionCode})'),
+                      'APK: ${apk.apk!.update.versionName} (${apk.apk!.update.versionCode})',
+                      style: muted),
                 if (apk.active) ...[
+                  const SizedBox(height: 12),
                   LinearProgressIndicator(
+                      minHeight: 6,
                       value: apk.phase == ApkUpdatePhase.downloading
                           ? apk.progress
                           : null),
-                  Text(apk.phase == ApkUpdatePhase.verifying
-                      ? 'Проверка APK…'
-                      : apk.phase == ApkUpdatePhase.canceling
-                          ? 'Отмена загрузки…'
-                          : 'Скачивание: ${(apk.progress * 100).round()}%'),
+                  const SizedBox(height: 6),
+                  Text(
+                      apk.phase == ApkUpdatePhase.verifying
+                          ? 'Проверка APK…'
+                          : apk.phase == ApkUpdatePhase.canceling
+                              ? 'Отмена загрузки…'
+                              : 'Скачивание: ${(apk.progress * 100).round()}%',
+                      style: muted),
                   if (apk.phase == ApkUpdatePhase.downloading)
                     TextButton(
                         onPressed: () => ref
@@ -232,32 +267,41 @@ class _AppUpdatesMenuState extends ConsumerState<AppUpdatesMenu> {
                 ],
                 if (ref.watch(windowsUpdatesEnabledProvider))
                   _WindowsUpdateActions(available: available),
-                if (apk.message != null)
-                  Text(apk.message!, textAlign: TextAlign.center),
+                if (apk.message != null) ...[
+                  const SizedBox(height: 4),
+                  Text(apk.message!, style: text.bodyMedium),
+                ],
                 if (apk.phase == ApkUpdatePhase.ready)
                   const _InstallApkAction(),
-                if (!apk.active &&
-                    apk.phase != ApkUpdatePhase.ready &&
-                    download != null)
-                  TextButton(
-                      onPressed: () => ref
-                          .read(apkUpdateControllerProvider.notifier)
-                          .download(download),
-                      child: Text(apk.phase == ApkUpdatePhase.failed ||
-                              apk.phase == ApkUpdatePhase.canceled
-                          ? 'Повторить скачивание'
-                          : 'Скачать обновление')),
-                // A build without a channel has nothing to check.
-                if (state.status != UpdateStatus.unsupported)
-                  TextButton(
-                      onPressed: state.status == UpdateStatus.checking
-                          ? null
-                          : () => ref
-                              .read(appUpdateControllerProvider.notifier)
-                              .check(),
-                      child: const Text('Проверить обновления')),
+                const SizedBox(height: 8),
+                Wrap(spacing: 8, runSpacing: 4, children: [
+                  if (!apk.active &&
+                      apk.phase != ApkUpdatePhase.ready &&
+                      download != null)
+                    FilledButton.icon(
+                        onPressed: () => ref
+                            .read(apkUpdateControllerProvider.notifier)
+                            .download(download),
+                        icon: const Icon(Icons.download_rounded),
+                        label: Text(apk.phase == ApkUpdatePhase.failed ||
+                                apk.phase == ApkUpdatePhase.canceled
+                            ? 'Повторить скачивание'
+                            : 'Скачать обновление')),
+                  // A build without a channel has nothing to check.
+                  if (state.status != UpdateStatus.unsupported)
+                    TextButton.icon(
+                        onPressed: state.status == UpdateStatus.checking
+                            ? null
+                            : () => ref
+                                .read(appUpdateControllerProvider.notifier)
+                                .check(),
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Проверить обновления')),
+                ]),
               ],
-            )));
+            ),
+              ),
+            ])));
   }
 }
 

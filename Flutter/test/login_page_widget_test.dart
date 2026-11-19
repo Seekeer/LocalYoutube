@@ -43,11 +43,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Login'));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Войти'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Login is required'), findsOneWidget);
-    expect(find.text('Password is required'), findsOneWidget);
+    expect(find.text('Введите имя пользователя'), findsOneWidget);
+    expect(find.text('Введите пароль'), findsOneWidget);
   });
 
   testWidgets('shows server failure message when login fails', (
@@ -69,12 +69,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'Login'), 'john');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Имя пользователя'), 'john');
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Password'),
+      find.widgetWithText(TextFormField, 'Пароль'),
       'bad_password',
     );
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Login'));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Войти'));
     await tester.pumpAndSettle();
 
     expect(find.text('Invalid credentials'), findsOneWidget);
@@ -103,7 +103,7 @@ void main() {
 
     expect(authRepository.lastLoginUserName, isNull);
     expect(authRepository.lastLoginPassword, isNull);
-    expect(find.widgetWithText(ElevatedButton, 'Login'), findsOneWidget);
+    expect(find.widgetWithText(ElevatedButton, 'Войти'), findsOneWidget);
   });
 }
 

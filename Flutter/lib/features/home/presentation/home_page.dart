@@ -9,10 +9,13 @@ import 'package:go_router/go_router.dart';
 import '../../../app/bootstrap/bootstrap_providers.dart';
 import '../../../app/router/auth_notifier.dart';
 import '../../../app/router/app_routes.dart';
+import '../../../app/theme/app_theme.dart';
 import '../../../core/errors/failure.dart';
 import '../../../core/network/network_status.dart';
+import '../../../shared/widgets/lt_widgets.dart';
 import '../../../shared/widgets/state_feedback.dart';
 import '../../../shared/widgets/video_list_item.dart';
+import '../../../shared/widgets/watch_progress.dart';
 import '../../catalog/domain/catalog_models.dart';
 import '../../catalog/presentation/catalog_controller.dart';
 import '../../downloads/domain/download_models.dart';
@@ -145,6 +148,7 @@ class HomePage extends ConsumerStatefulWidget {
 class _HomePageState extends ConsumerState<HomePage> {
   final Map<CatalogSection, Set<int>> _locallyRemovedIdsBySection =
       <CatalogSection, Set<int>>{};
+  bool _fabExtended = true;
 
   @override
   void initState() {
@@ -179,80 +183,68 @@ class _HomePageState extends ConsumerState<HomePage> {
         ref.watch(authNotifierProvider).isOfflineFallback;
     final bool remoteActionsDisabled = isOffline || isOfflineFallback;
 
+    final bool canDownloadTop = state.items.isNotEmpty &&
+        !remoteActionsDisabled &&
+        _supportsDownload(state.section);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(state.section.title),
+        // The chips below already say which list this is.
+        title: const Text('Видео'),
         actions: <Widget>[
-          IconButton(
+          TextButton.icon(
             onPressed: () => context.push(AppRoutes.downloads),
-            icon: const Icon(Icons.download),
-            tooltip: 'Скачиваемое',
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.only(left: 12),
+              minimumSize: const Size(48, 48),
+            ),
+            icon: const Icon(Icons.downloading_rounded),
+            label: const Text('Загрузки'),
           ),
-          IconButton(
-            onPressed: () => context.push(AppRoutes.logs),
-            icon: const Icon(Icons.article_outlined),
-            tooltip: 'Логи',
-          ),
+          const SizedBox(width: LtSizes.gutter),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: _SectionChips(
+            selected: state.section,
+            onSelected: (CatalogSection section) => ref
+                .read(catalogControllerProvider.notifier)
+                .scheduleLoadSection(section),
+          ),
+        ),
       ),
+      floatingActionButton: canDownloadTop
+          ? FloatingActionButton.extended(
+              key: const Key('catalog-download-top'),
+              isExtended: _fabExtended,
+              onPressed: () => _downloadTopN(context, count: 5),
+              icon: const Icon(Icons.download_rounded),
+              label: const Text('Скачать первые 5'),
+              tooltip: 'Поставить на скачивание пять видео сверху списка',
+            )
+          : null,
       body: Column(
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: DropdownButtonFormField<CatalogSection>(
-                    initialValue: state.section,
-                    items: CatalogSection.values
-                        .map(
-                          (CatalogSection section) =>
-                              DropdownMenuItem<CatalogSection>(
-                            value: section,
-                            child: Text(section.title),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (CatalogSection? section) {
-                      if (section == null) {
-                        return;
-                      }
-                      ref
-                          .read(catalogControllerProvider.notifier)
-                          .scheduleLoadSection(section);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: state.items.isEmpty || remoteActionsDisabled
-                      ? null
-                      : () => _downloadTopN(context, count: 5),
-                  child: const Text(
-                    '\u0421\u043a\u0430\u0447\u0430\u0442\u044c \u0442\u043e\u043f-5',
-                  ),
-                ),
-              ],
-            ),
-          ),
+          if (state.isLoading) const LinearProgressIndicator(minHeight: 2),
           if (isOffline)
             const Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: StateFeedbackBanner(
-                message: 'Offline mode: showing local data when available.',
+                message: 'Нет сети — показано то, что сохранено на телефоне.',
                 tone: StateFeedbackTone.warning,
               ),
             ),
-          if (state.isFromCache)
+          if (state.isFromCache && !isOffline)
             const Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: StateFeedbackBanner(
-                message: 'Loaded from cache.',
+                message: 'Сервер не ответил — показан сохранённый список.',
+                leadingIcon: Icons.history_rounded,
               ),
             ),
           if (state.error != null && state.items.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: StateFeedbackBanner(
                 message: state.error!.message,
                 tone: StateFeedbackTone.error,
@@ -262,19 +254,31 @@ class _HomePageState extends ConsumerState<HomePage> {
             child: RefreshIndicator(
               onRefresh: () =>
                   ref.read(catalogControllerProvider.notifier).refresh(),
-              child: _buildCatalogBody(
-                context: context,
-                state: state,
-                isOffline: isOffline,
-                remoteActionsDisabled: remoteActionsDisabled,
-                downloadsByVideoId: downloadsByVideoId,
-                watchProgressByVideoId: watchProgressByVideoId,
-                seasonNamesById: seasonNamesById,
-                thumbnailPathsById: thumbnailPathsById,
+              // The download button shrinks to its icon while the list
+              // scrolls down, so it covers less of the rows.
+              child: NotificationListener<UserScrollNotification>(
+                onNotification: (UserScrollNotification n) {
+                  final bool extend = n.direction != ScrollDirection.reverse;
+                  if (n.direction != ScrollDirection.idle &&
+                      extend != _fabExtended) {
+                    setState(() => _fabExtended = extend);
+                  }
+                  return false;
+                },
+                child: _buildCatalogBody(
+                  context: context,
+                  state: state,
+                  isOffline: isOffline,
+                  remoteActionsDisabled: remoteActionsDisabled,
+                  downloadsByVideoId: downloadsByVideoId,
+                  watchProgressByVideoId: watchProgressByVideoId,
+                  seasonNamesById: seasonNamesById,
+                  thumbnailPathsById: thumbnailPathsById,
+                  hasFab: canDownloadTop,
+                ),
               ),
             ),
           ),
-          if (state.isLoading) const LinearProgressIndicator(minHeight: 2),
         ],
       ),
     );
@@ -289,6 +293,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     required Map<int, double> watchProgressByVideoId,
     required Map<int, String> seasonNamesById,
     required Map<int, String> thumbnailPathsById,
+    bool hasFab = false,
   }) {
     final List<CatalogItem> visibleItems = _buildVisibleItems(
       state: state,
@@ -307,31 +312,31 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (visibleItems.isEmpty) {
       final bool hasError = state.error != null;
       final String title = hasError
-          ? 'Unable to load catalog'
+          ? 'Не удалось загрузить список'
           : isOffline
-              ? 'Offline mode'
-              : 'No videos found';
+              ? 'Нет сети'
+              : 'Здесь пока пусто';
       final String message = hasError
           ? state.error!.message
           : state.items.isNotEmpty && _supportsDownload(state.section)
-              ? 'All videos from this section are already downloaded.'
+              ? 'Все видео этого раздела уже скачаны.'
               : isOffline
-                  ? 'No cached videos available for this section.'
-                  : 'Try another section or refresh.';
+                  ? 'Для этого раздела на телефоне ничего не сохранено.'
+                  : 'Выберите другой раздел или потяните список вниз, чтобы обновить.';
 
       return ListView(
         key: PageStorageKey<String>('catalog-empty-${state.section.key}'),
         children: <Widget>[
-          const SizedBox(height: 92),
+          const SizedBox(height: 72),
           StateFeedbackPlaceholder(
             icon: hasError
                 ? Icons.cloud_off_rounded
                 : isOffline
-                    ? Icons.cloud_done_outlined
+                    ? Icons.wifi_off_rounded
                     : Icons.video_library_outlined,
             title: title,
             message: message,
-            actionLabel: hasError ? 'Retry' : null,
+            actionLabel: hasError ? 'Повторить' : null,
             onAction: hasError
                 ? () => ref.read(catalogControllerProvider.notifier).refresh()
                 : null,
@@ -340,16 +345,17 @@ class _HomePageState extends ConsumerState<HomePage> {
       );
     }
 
+    final bool isPortrait =
+        MediaQuery.orientationOf(context) == Orientation.portrait;
     return ListView.builder(
       key: PageStorageKey<String>('catalog-list-${state.section.key}'),
       scrollCacheExtent: const ScrollCacheExtent.pixels(800),
+      padding: ltListPadding(context, extraBottom: hasFab ? 96 : 16),
       itemCount: visibleItems.length,
       itemBuilder: (BuildContext context, int index) {
         final CatalogItem item = visibleItems[index];
         final bool shouldShowThumbnail = _supportsThumbnail(state.section);
         final bool canDownload = _supportsDownload(state.section);
-        final bool isPortrait =
-            MediaQuery.orientationOf(context) == Orientation.portrait;
         final DownloadItem? downloadItem = downloadsByVideoId[item.id];
         final bool isDownloaded = _isDownloaded(downloadItem);
         final double? watchedFraction = _resolveWatchedFraction(
@@ -373,26 +379,53 @@ class _HomePageState extends ConsumerState<HomePage> {
                   item,
                   seasonNamesById: seasonNamesById,
                 ),
+                durationLabel: _formatCatalogDuration(item.raw),
+                secondaryLine: _playlistMarker(
+                  state.playlistAssignments[item.id],
+                ),
+                accentLine: watchProgressLabel(
+                  watchedFraction,
+                  _readDuration(item.raw),
+                ),
+                accentColor: watchProgressColor(context, watchedFraction),
                 watchedFraction: watchedFraction,
                 isDownloaded: isDownloaded,
                 onTap: () => unawaited(_openPlayer(context, item)),
+                // The swipe actions, also as a menu anyone can find.
+                trailing: canDownload
+                    ? _RowMenu(
+                        isDownloaded: isDownloaded,
+                        remoteActionsEnabled: !remoteActionsDisabled,
+                        onDownload: () => _queueDownload(context, item),
+                        onExportToJellyfin: () =>
+                            unawaited(_exportToJellyfin(context, item)),
+                        onDeleteLocal: () => unawaited(
+                          _deleteFromDownloads(
+                            context,
+                            item,
+                            section: state.section,
+                          ),
+                        ),
+                        onDeleteEverywhere: () => unawaited(
+                          _deleteEverywhere(
+                            context,
+                            item,
+                            section: state.section,
+                          ),
+                        ),
+                      )
+                    : null,
               )
             : ListTile(
                 key: ValueKey<int>(item.id),
-                dense: isPortrait,
-                visualDensity: isPortrait
-                    ? const VisualDensity(horizontal: 0, vertical: -3)
-                    : VisualDensity.standard,
-                minVerticalPadding: isPortrait ? 0 : 4,
-                minTileHeight: thumbnailUrl == null
-                    ? null
-                    : isPortrait
-                        ? thumbnailSize.height
-                        : null,
                 minLeadingWidth:
                     thumbnailUrl == null ? null : thumbnailSize.width,
-                contentPadding:
-                    EdgeInsets.fromLTRB(12, isPortrait ? 1 : 6, 4, 1),
+                contentPadding: EdgeInsets.fromLTRB(
+                  LtSizes.gutter,
+                  4,
+                  thumbnailUrl == null ? LtSizes.gutter : 4,
+                  4,
+                ),
                 leading: thumbnailUrl == null
                     ? null
                     : VideoThumbnail(
@@ -406,7 +439,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                 title: Text(
                   item.title,
-                  maxLines: isPortrait ? 2 : 3,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: isPortrait
@@ -416,35 +449,39 @@ class _HomePageState extends ConsumerState<HomePage> {
                         state.playlistAssignments[item.id],
                       ),
                 onTap: () => unawaited(_openPlayer(context, item)),
-                trailing: isPortrait || !canDownload
-                    ? null
-                    : _LandscapeActions(
-                        onDownload: () => _queueDownload(context, item),
-                        onDeleteFromDownloads: () => unawaited(
-                          _deleteFromDownloads(
-                            context,
-                            item,
-                            section: state.section,
+                trailing: thumbnailUrl == null
+                    ? const Icon(Icons.chevron_right_rounded)
+                    : isPortrait || !canDownload
+                        ? null
+                        : _LandscapeActions(
+                            onDownload: () => _queueDownload(context, item),
+                            onDeleteFromDownloads: () => unawaited(
+                              _deleteFromDownloads(
+                                context,
+                                item,
+                                section: state.section,
+                              ),
+                            ),
+                            onDeleteEverywhere: () => unawaited(
+                              _deleteEverywhere(context, item,
+                                  section: state.section),
+                            ),
+                            onExportToJellyfin: () =>
+                                unawaited(_exportToJellyfin(context, item)),
+                            remoteActionsEnabled: !remoteActionsDisabled,
                           ),
-                        ),
-                        onDeleteEverywhere: () => unawaited(
-                          _deleteEverywhere(context, item,
-                              section: state.section),
-                        ),
-                        onExportToJellyfin: () =>
-                            unawaited(_exportToJellyfin(context, item)),
-                        remoteActionsEnabled: !remoteActionsDisabled,
-                      ),
               );
 
         if (!canDownload || !isPortrait) {
           return listItem;
         }
 
+        final LtPalette palette = LtPalette.of(context);
         final ActionPane? startActionPane = remoteActionsDisabled
             ? null
             : ActionPane(
                 motion: const ScrollMotion(),
+                extentRatio: isDownloaded ? 0.28 : 0.56,
                 // A full swipe queues the download; with the video already
                 // downloaded only the Jellyfin action remains, so no full swipe.
                 dismissible: isDownloaded
@@ -461,17 +498,17 @@ class _HomePageState extends ConsumerState<HomePage> {
                   if (!isDownloaded)
                     SlidableAction(
                       onPressed: (_) => _queueDownload(context, item),
-                      backgroundColor: Colors.green,
+                      backgroundColor: palette.mint.strong,
                       foregroundColor: Colors.white,
-                      icon: Icons.download_outlined,
-                      label: 'Download',
+                      icon: Icons.download_rounded,
+                      label: 'Скачать',
                     ),
                   SlidableAction(
                     onPressed: (_) =>
                         unawaited(_exportToJellyfin(context, item)),
-                    backgroundColor: Colors.deepPurple,
-                    foregroundColor: Colors.white,
-                    icon: Icons.live_tv_outlined,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    icon: Icons.live_tv_rounded,
                     label: 'В Jellyfin',
                   ),
                 ],
@@ -482,6 +519,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ? null
                 : ActionPane(
                     motion: const ScrollMotion(),
+                    extentRatio: 0.28,
                     dismissible: DismissiblePane(
                       onDismissed: () {},
                       closeOnCancel: true,
@@ -517,10 +555,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                                   section: state.section,
                                 ),
                         ),
-                        backgroundColor: Colors.red,
+                        backgroundColor: palette.danger.strong,
                         foregroundColor: Colors.white,
-                        icon: Icons.delete_outline,
-                        label: 'Delete',
+                        icon: Icons.delete_outline_rounded,
+                        label: isDownloaded ? 'С телефона' : 'Удалить',
                       ),
                     ],
                   );
@@ -536,6 +574,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  String? _playlistMarker(String? playlistName) {
+    final String name = (playlistName ?? '').trim();
+    return name.isEmpty ? null : 'В плейлисте «$name»';
+  }
+
   Future<void> _downloadTopN(BuildContext context, {required int count}) async {
     final int queued =
         await ref.read(catalogControllerProvider.notifier).downloadTopN(count);
@@ -544,7 +587,15 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('Queued downloads: $queued')));
+    ).showSnackBar(
+      SnackBar(
+        content: Text(
+          queued > 0
+              ? 'Поставлено на скачивание: $queued'
+              : 'Нечего ставить на скачивание',
+        ),
+      ),
+    );
   }
 
   Future<void> _queueDownload(BuildContext context, CatalogItem item) async {
@@ -554,7 +605,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (!context.mounted) {
       return;
     }
-    _showResult(context, failure, successMessage: 'Download queued');
+    _showResult(context, failure, successMessage: 'Поставлено на скачивание');
   }
 
   Future<void> _exportToJellyfin(BuildContext context, CatalogItem item) async {
@@ -581,7 +632,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (!context.mounted) {
       return false;
     }
-    _showResult(context, failure, successMessage: 'Removed from downloads');
+    _showResult(context, failure, successMessage: 'Удалено с телефона');
     final bool isSuccess = failure == null;
     if (isSuccess && section != null) {
       _markItemAsRemoved(section, item.id);
@@ -594,6 +645,17 @@ class _HomePageState extends ConsumerState<HomePage> {
     CatalogItem item, {
     CatalogSection? section,
   }) async {
+    // Deleting from the server cannot be undone, and a swipe is easy to make by accident.
+    final bool confirmed = await ltConfirm(
+      context,
+      title: 'Удалить видео с сервера?',
+      message: '«${item.title}» исчезнет из библиотеки на всех устройствах.',
+      confirmLabel: 'Удалить',
+      confirmKey: const Key('catalog-delete-confirm'),
+    );
+    if (!confirmed || !context.mounted) {
+      return false;
+    }
     final CatalogController controller = ref.read(
       catalogControllerProvider.notifier,
     );
@@ -616,7 +678,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     _showResult(
       context,
       null,
-      successMessage: 'Removed from downloads and server',
+      successMessage: 'Удалено с сервера и с телефона',
     );
     if (section != null) {
       _markItemAsRemoved(section, item.id);
@@ -650,7 +712,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         overflow: TextOverflow.ellipsis,
       );
     }
-    final String marker = 'Added to "${playlistName.trim()}"';
+    final String marker = 'В плейлисте «${playlistName.trim()}»';
     if (description.isEmpty) {
       return Text(
         marker,
@@ -714,12 +776,21 @@ class _HomePageState extends ConsumerState<HomePage> {
         seasonName = seasonNamesById[seasonId] ?? '';
       }
     }
-    final String durationLabel = _formatCatalogDuration(item.raw);
+    final String seriesName = _readRawString(
+      item.raw,
+      const <String>['seriesName', 'SeriesName', 'serieName', 'SerieName'],
+    );
+    // A title such as «Фиксики — Пылесос» already names its series.
+    final bool titleNamesSeries = seriesName.isNotEmpty &&
+        item.title.toLowerCase().startsWith(seriesName.toLowerCase());
     final List<String> parts = <String>[
+      if (seriesName.isNotEmpty &&
+          seriesName != seasonName &&
+          !titleNamesSeries)
+        seriesName,
       if (seasonName.isNotEmpty) seasonName,
-      if (durationLabel.isNotEmpty) durationLabel,
     ];
-    return parts.isEmpty ? '-' : parts.join(' | ');
+    return parts.join(' · ');
   }
 
   double? _resolveWatchedFraction({
@@ -940,8 +1011,9 @@ class _LandscapeActions extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         IconButton(
-          tooltip:
-              remoteActionsEnabled ? 'Download' : 'Available after reconnect',
+          tooltip: remoteActionsEnabled
+              ? 'Скачать на устройство'
+              : 'Доступно после подключения',
           onPressed: remoteActionsEnabled ? onDownload : null,
           padding: EdgeInsets.zero,
           visualDensity: VisualDensity.compact,
@@ -950,7 +1022,7 @@ class _LandscapeActions extends StatelessWidget {
           icon: const Icon(Icons.download_outlined),
         ),
         IconButton(
-          tooltip: 'Delete from downloads',
+          tooltip: 'Удалить с устройства',
           onPressed: onDeleteFromDownloads,
           padding: EdgeInsets.zero,
           visualDensity: VisualDensity.compact,
@@ -960,8 +1032,8 @@ class _LandscapeActions extends StatelessWidget {
         ),
         IconButton(
           tooltip: remoteActionsEnabled
-              ? 'Delete everywhere'
-              : 'Available after reconnect',
+              ? 'Удалить отовсюду'
+              : 'Доступно после подключения',
           onPressed: remoteActionsEnabled ? onDeleteEverywhere : null,
           padding: EdgeInsets.zero,
           visualDensity: VisualDensity.compact,
@@ -972,7 +1044,7 @@ class _LandscapeActions extends StatelessWidget {
         IconButton(
           tooltip: remoteActionsEnabled
               ? 'В Jellyfin'
-              : 'Available after reconnect',
+              : 'Доступно после подключения',
           onPressed: remoteActionsEnabled ? onExportToJellyfin : null,
           padding: EdgeInsets.zero,
           visualDensity: VisualDensity.compact,
@@ -993,4 +1065,137 @@ class _ThumbnailSize {
 
   final double width;
   final double height;
+}
+
+/// The catalogue's sections as a row of chips under the title: one tap to
+/// switch, all of them visible, instead of a drop-down to open first.
+class _SectionChips extends StatelessWidget {
+  const _SectionChips({required this.selected, required this.onSelected});
+
+  final CatalogSection selected;
+  final ValueChanged<CatalogSection> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    // A fade at the right edge says the row scrolls on.
+    return SizedBox(
+      height: 56,
+      child: ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (Rect bounds) => LinearGradient(
+          colors: const <Color>[Colors.black, Colors.black, Colors.transparent],
+          stops: <double>[0, 1 - 32 / bounds.width, 1],
+        ).createShader(bounds),
+        child: ListView.separated(
+          key: const Key('catalog-section-chips'),
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(LtSizes.gutter, 4, 32, 12),
+          itemCount: CatalogSection.values.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (BuildContext context, int index) {
+            final CatalogSection section = CatalogSection.values[index];
+            final bool isSelected = section == selected;
+            return ChoiceChip(
+              label: Text(_chipLabel(section)),
+              selected: isSelected,
+              onSelected: (_) {
+                if (!isSelected) {
+                  onSelected(section);
+                }
+              },
+              selectedColor: LtColors.primary,
+              // 40 dp drawn, as the website's chips.
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
+              labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: isSelected ? Colors.white : colors.onSurface,
+                  ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Short names, so the chips fit the phone's width.
+  static String _chipLabel(CatalogSection section) {
+    switch (section) {
+      case CatalogSection.series:
+        return 'Сериалы';
+      case CatalogSection.playlists:
+        return 'Плейлисты';
+      case CatalogSection.latest:
+      case CatalogSection.fresh:
+      case CatalogSection.history:
+        return section.title;
+    }
+  }
+}
+
+/// «⋮» at the end of a video row: what the swipes do, named.
+class _RowMenu extends StatelessWidget {
+  const _RowMenu({
+    required this.isDownloaded,
+    required this.remoteActionsEnabled,
+    required this.onDownload,
+    required this.onExportToJellyfin,
+    required this.onDeleteLocal,
+    required this.onDeleteEverywhere,
+  });
+
+  final bool isDownloaded;
+  final bool remoteActionsEnabled;
+  final VoidCallback onDownload;
+  final VoidCallback onExportToJellyfin;
+  final VoidCallback onDeleteLocal;
+  final VoidCallback onDeleteEverywhere;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color danger = LtPalette.of(context).danger.strong;
+    return PopupMenuButton<VoidCallback>(
+      tooltip: 'Действия с видео',
+      padding: EdgeInsets.zero,
+      icon: Icon(
+        Icons.more_vert_rounded,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      onSelected: (VoidCallback action) => action(),
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<VoidCallback>>[
+        if (!isDownloaded)
+          PopupMenuItem<VoidCallback>(
+            value: onDownload,
+            enabled: remoteActionsEnabled,
+            child: const ListTile(
+              leading: Icon(Icons.download_rounded),
+              title: Text('Скачать на телефон'),
+            ),
+          ),
+        PopupMenuItem<VoidCallback>(
+          value: onExportToJellyfin,
+          enabled: remoteActionsEnabled,
+          child: const ListTile(
+            leading: Icon(Icons.live_tv_rounded),
+            title: Text('Отправить в Jellyfin'),
+          ),
+        ),
+        if (isDownloaded)
+          PopupMenuItem<VoidCallback>(
+            value: onDeleteLocal,
+            child: const ListTile(
+              leading: Icon(Icons.phonelink_erase_rounded),
+              title: Text('Удалить с телефона'),
+            ),
+          ),
+        PopupMenuItem<VoidCallback>(
+          value: onDeleteEverywhere,
+          enabled: remoteActionsEnabled,
+          child: ListTile(
+            leading: Icon(Icons.delete_outline_rounded, color: danger),
+            title: Text('Удалить с сервера', style: TextStyle(color: danger)),
+          ),
+        ),
+      ],
+    );
+  }
 }
